@@ -22,38 +22,32 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.value.Value;
+import org.jboss.msc.inject.Injector;
 
 /**
- *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface ServiceBuilder<S> extends Value<ServiceController<S>> {
+public final class InjectingServiceListener<T> implements ServiceListener<T> {
+    private final Injector<T> injector;
 
-    /**
-     * Add a dependency.
-     * @param dependency
-     * @param <D>
-     */
-    <D extends Service> void addDependency(ServiceController<D> dependency);
+    public InjectingServiceListener(final Injector<T> injector) {
+        this.injector = injector;
+    }
 
-    ServiceBuilder<S> addListener(ServiceListener<S> listener);
+    public void serviceStarting(final ServiceController<? extends T> controller) {
+    }
 
-    ServiceBuilder<S> setInitialMode(ServiceController.Mode mode);
+    public void serviceStarted(final ServiceController<? extends T> controller) {
+        injector.inject(controller.getValue());
+    }
 
-    ServiceBuilder<S> setLocation(Location location);
+    public void serviceFailed(final ServiceController<? extends T> controller, final StartException reason) {
+    }
 
-    /**
-     * Set the location to be the caller's location.
-     *
-     * @return this builder
-     */
-    ServiceBuilder<S> setLocation();
+    public void serviceStopping(final ServiceController<? extends T> controller) {
+        injector.uninject();
+    }
 
-    /**
-     * Get the built service controller.  Once this method is called, no further changes may be made to the builder.
-     * Calling this method multiple times will return the same controller.
-     *
-     * @return the service controller
-     */
-    ServiceController<S> getValue();
+    public void serviceStopped(final ServiceController<? extends T> controller) {
+    }
 }

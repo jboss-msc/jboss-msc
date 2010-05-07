@@ -29,7 +29,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.jboss.msc.value.Value;
 
-public final class ServiceContainerImpl implements ServiceContainer {
+final class ServiceContainerImpl extends Dependable<ServiceContainer> implements ServiceContainer {
+    final Object lock = new Object();
 
     private static final class ExecutorHolder {
         private static final Executor VALUE;
@@ -47,8 +48,11 @@ public final class ServiceContainerImpl implements ServiceContainer {
 
     private volatile Executor executor;
 
+    ServiceContainerImpl() {
+    }
+
     public <T> ServiceBuilder<T> buildService(final Value<? extends Service> service, final Value<T> value) throws IllegalArgumentException {
-        return null;
+        return new ServiceBuilderImpl<T>(this, service, value);
     }
 
     public <S extends Service> ServiceBuilder<S> buildService(final Value<S> service) throws IllegalArgumentException {
@@ -56,20 +60,27 @@ public final class ServiceContainerImpl implements ServiceContainer {
     }
 
     public void setExecutor(final Executor executor) {
-        if (executor == null) {
-            this.executor = ExecutorHolder.VALUE;
-        } else {
-            this.executor = executor;
-        }
+        this.executor = executor;
     }
 
-    public void stop(final StopContext context) {
-    }
-
-    public void start(final StartContext context) throws StartException {
+    Executor getExecutor() {
+        final Executor executor = this.executor;
+        return executor != null ? executor : ExecutorHolder.VALUE;
     }
 
     public List<ServiceController<?>> getFailedServices() {
         return null;
+    }
+
+    void addDemand() {
+    }
+
+    void removeDemand() {
+    }
+
+    void dependentStarted() {
+    }
+
+    void dependentStopped() {
     }
 }

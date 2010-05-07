@@ -29,10 +29,7 @@ import org.jboss.msc.value.Value;
 /**
  *
  */
-public interface ServiceContainer extends Service {
-    void start(StartContext context) throws StartException;
-
-    void stop(StopContext context);
+public interface ServiceContainer {
 
     /**
      * Set the container executor.  If {@code null} is specified, a default single-thread executor is used.
@@ -61,4 +58,14 @@ public interface ServiceContainer extends Service {
      * @return the list of services that are in a failed state
      */
     List<ServiceController<?>> getFailedServices();
+
+    class Factory {
+
+        private Factory() {
+        }
+
+        public static ServiceContainer create() {
+            return new ServiceContainerImpl();
+        }
+    }
 }

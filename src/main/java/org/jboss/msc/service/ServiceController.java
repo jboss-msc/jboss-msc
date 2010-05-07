@@ -70,7 +70,7 @@ public interface ServiceController<S> extends Value<S> {
      *
      * @param serviceListener the service listener
      */
-    void addListener(ServiceListener<S> serviceListener);
+    void addListener(ServiceListener<? super S> serviceListener);
 
     /**
      * Get the reason why the last start failed.
@@ -80,20 +80,36 @@ public interface ServiceController<S> extends Value<S> {
     StartException getStartException();
 
     /**
+     * Retry a failed service.  Does nothing if the state is not {@link State#START_FAILED}.
+     */
+    void retry();
+
+    /**
+     * Demand that this service start immediately.  If the mode is {@code IMMEDIATE}, this has no effect.  If the mode
+     * is {@code AUTOMATIC} or {@code ON_DEMAND}, then until this handle is closed, the service will act as though it
+     * has a mode of {@code IMMEDIATE}.  If the mode is {@code NEVER}, then until the mode changes, this method will
+     * have no effect.
+     */
+    Handle<S> demand();
+
+    /**
      * A possible state for a service controller.
      */
     enum State {
 
         /**
-         * Down.
+         * Down.  All dependents are down.  This state may not be left until all dependencies are {@code UP}.
+         * Dependents may not enter the {@code STARTING} state.
          */
         DOWN,
         /**
-         * Service is starting.
+         * Service is starting.  Dependencies may not enter the {@code DOWN} state.  This state may not be left until
+         * the {@code start} method has finished or failed.
          */
         STARTING,
         /**
-         * Start failed.
+         * Start failed, or was cancelled.  From this state, the start may be retried or the service may enter the
+         * {@code DOWN} state.
          */
         START_FAILED,
         /**
@@ -101,7 +117,8 @@ public interface ServiceController<S> extends Value<S> {
          */
         UP,
         /**
-         * Service is stopping.
+         * Service is stopping.  Dependents may not enter the {@code STARTING} state.  This state may not be left until
+         * all dependents are {@code DOWN} and the {@code stop} method has finished.
          */
         STOPPING,
         /**
@@ -132,5 +149,12 @@ public interface ServiceController<S> extends Value<S> {
          */
         IMMEDIATE,
         ;
+    }
+
+    /**
+     * A handle to demand a service start.
+     */
+    interface Handle<S> extends Value<ServiceController<S>> {
+        void close();
     }
 }

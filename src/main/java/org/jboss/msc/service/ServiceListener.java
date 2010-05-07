@@ -26,13 +26,13 @@ package org.jboss.msc.service;
  *
  */
 public interface ServiceListener<S> {
-    void serviceStarting(ServiceController<S> controller);
+    void serviceStarting(ServiceController<? extends S> controller);
 
-    void serviceStarted(ServiceController<S> controller);
+    void serviceStarted(ServiceController<? extends S> controller);
 
-    void serviceFailed(ServiceController<S> controller);
+    void serviceFailed(ServiceController<? extends S> controller, StartException reason);
 
-    void serviceStopping(ServiceController<S> controller);
+    void serviceStopping(ServiceController<? extends S> controller);
 
-    void serviceStopped(ServiceController<S> controller);
+    void serviceStopped(ServiceController<? extends S> controller);
 }

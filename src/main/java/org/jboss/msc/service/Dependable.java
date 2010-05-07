@@ -22,38 +22,15 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.value.Value;
-
 /**
- *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface ServiceBuilder<S> extends Value<ServiceController<S>> {
+abstract class Dependable<S> {
+    abstract void addDemand();
 
-    /**
-     * Add a dependency.
-     * @param dependency
-     * @param <D>
-     */
-    <D extends Service> void addDependency(ServiceController<D> dependency);
+    abstract void removeDemand();
 
-    ServiceBuilder<S> addListener(ServiceListener<S> listener);
+    abstract void dependentStarted();
 
-    ServiceBuilder<S> setInitialMode(ServiceController.Mode mode);
-
-    ServiceBuilder<S> setLocation(Location location);
-
-    /**
-     * Set the location to be the caller's location.
-     *
-     * @return this builder
-     */
-    ServiceBuilder<S> setLocation();
-
-    /**
-     * Get the built service controller.  Once this method is called, no further changes may be made to the builder.
-     * Calling this method multiple times will return the same controller.
-     *
-     * @return the service controller
-     */
-    ServiceController<S> getValue();
+    abstract void dependentStopped();
 }

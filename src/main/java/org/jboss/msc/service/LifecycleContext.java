@@ -42,20 +42,4 @@ public interface LifecycleContext {
      * completed
      */
     void complete() throws IllegalStateException;
-
-    /**
-     * Call to indicate the beginning of a unit of work for an <em>asynchronous</em> lifecycle action.  Should be followed
-     * by a {@code try}/{@code finally} block which calls {@link #endTask()} from its {@code finally} section.  Calling
-     * this method may interrupt the current thread if the lifecycle action is cancelled.
-     *
-     * @throws IllegalStateException if called before {@link #asynchronous()} is called, or if the action is already
-     * complete
-     */
-    void beginTask() throws IllegalStateException;
-
-    /**
-     * Call to indicate the end of a unit of work for an <em>asynchronous</em> lifecycle action.  This method does not
-     * throw any exceptions, and is safe to use in a {@code finally} block.
-     */
-    void endTask();
 }
