@@ -72,6 +72,8 @@ public interface ServiceController<S> extends Value<S> {
      */
     void addListener(ServiceListener<? super S> serviceListener);
 
+    void removeListener(ServiceListener<? super S> serviceListener);
+
     /**
      * Get the reason why the last start failed.
      *

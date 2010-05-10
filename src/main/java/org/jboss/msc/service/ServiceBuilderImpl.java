@@ -22,54 +22,80 @@
 
 package org.jboss.msc.service;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.jboss.msc.value.Value;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
+final class ServiceBuilderImpl<S> implements ServiceBuilder<S> {
 
     private final ServiceContainerImpl container;
+    private final List<ServiceControllerImpl<?>> deps = new ArrayList<ServiceControllerImpl<?>>();
+    private final List<ServiceListener<? super S>> listeners = new ArrayList<ServiceListener<? super S>>();
     private final Value<? extends Service> service;
-    private final Value<T> value;
+    private final Value<S> value;
 
-    private ServiceController<T> controller;
+    private ServiceController.Mode mode;
+    private ServiceControllerImpl<S> controller;
     private Location location;
 
-    ServiceBuilderImpl(final ServiceContainerImpl container, final Value<? extends Service> service, final Value<T> value) {
+    ServiceBuilderImpl(final ServiceContainerImpl container, final Value<? extends Service> service, final Value<S> value) {
         this.container = container;
         this.service = service;
         this.value = value;
     }
 
-    public <D extends Service> void addDependency(final ServiceController<D> dependency) {
-        // does not accept a Value<> to prevent circularity
+    public void addDependency(final ServiceController<?> dependency) {
+        synchronized (this) {
+            if (controller != null) throw new IllegalStateException();
+            // does not accept a Value<> to prevent circularity
+            if (! (dependency instanceof ServiceControllerImpl)) {
+                throw new IllegalArgumentException("Given dependency has an invalid implementation");
+            }
+            deps.add((ServiceControllerImpl<?>) dependency);
+        }
     }
 
-    public ServiceBuilder<T> addListener(final ServiceListener<T> listener) {
-        return this;
+    public ServiceBuilderImpl<S> addListener(final ServiceListener<? super S> listener) {
+        synchronized (this) {
+            if (controller != null) throw new IllegalStateException();
+
+            listeners.add(listener);
+            return this;
+        }
     }
 
-    public ServiceBuilder<T> setInitialMode(final ServiceController.Mode mode) {
-        return this;
+    public ServiceBuilderImpl<S> setInitialMode(final ServiceController.Mode mode) {
+        synchronized (this) {
+            if (controller != null) throw new IllegalStateException();
+
+            this.mode = mode;
+            return this;
+        }
     }
 
-    public ServiceBuilder<T> setLocation(final Location location) {
-        this.location = location;
-        return this;
+    public ServiceBuilderImpl<S> setLocation(final Location location) {
+        synchronized (this) {
+            if (controller != null) throw new IllegalStateException();
+
+            this.location = location;
+            return this;
+        }
     }
 
-    public ServiceBuilder<T> setLocation() {
+    public ServiceBuilderImpl<S> setLocation() {
         final StackTraceElement element = new Throwable().getStackTrace()[1];
         final String fileName = element.getFileName();
         final int lineNumber = element.getLineNumber();
         return setLocation(new Location(fileName, lineNumber, -1, null));
     }
 
-    public ServiceController<T> getValue() {
+    public ServiceControllerImpl<S> getValue() {
         synchronized (this) {
-            final ServiceController<T> controller = this.controller;
-            return controller != null ? controller : (this.controller = new ServiceControllerImpl<T>(container, service, value, location, null));
+            final ServiceControllerImpl<S> controller = this.controller;
+            return controller != null ? controller : (this.controller = new ServiceControllerImpl<S>(container, service, value, location, deps.toArray(new ServiceControllerImpl<?>[deps.size()])));
         }
     }
 }

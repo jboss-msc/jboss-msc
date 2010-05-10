@@ -50,4 +50,7 @@ public final class InjectingServiceListener<T> implements ServiceListener<T> {
 
     public void serviceStopped(final ServiceController<? extends T> controller) {
     }
+
+    public void serviceRemoved(final ServiceController<? extends T> serviceController) {
+    }
 }

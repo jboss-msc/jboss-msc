@@ -35,4 +35,6 @@ public interface ServiceListener<S> {
     void serviceStopping(ServiceController<? extends S> controller);
 
     void serviceStopped(ServiceController<? extends S> controller);
+
+    void serviceRemoved(ServiceController<? extends S> controller);
 }

@@ -52,13 +52,6 @@ public interface ServiceContainer {
      */
     <T> ServiceBuilder<T> buildService(Value<? extends Service> service, Value<T> value) throws IllegalArgumentException;
 
-    /**
-     * Get a point-in-time snapshot of all failed services.
-     *
-     * @return the list of services that are in a failed state
-     */
-    List<ServiceController<?>> getFailedServices();
-
     class Factory {
 
         private Factory() {

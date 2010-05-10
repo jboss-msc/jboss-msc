@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import org.jboss.logging.Logger;
 import org.jboss.msc.value.Value;
 
-final class ServiceControllerImpl<S> extends Dependable<S> implements ServiceController<S> {
+final class ServiceControllerImpl<S> implements ServiceController<S> {
     private static final Logger log = Logger.getI18nLogger("org.jboss.msc.controller", null, "MSC");
 
     private static final String ILLEGAL_CONTROLLER_STATE = "Illegal controller state";
@@ -57,7 +57,7 @@ final class ServiceControllerImpl<S> extends Dependable<S> implements ServiceCon
     /**
      * The dependencies of this service.
      */
-    private final Dependable<?>[] dependencies;
+    private final ServiceControllerImpl<?>[] dependencies;
     /**
      * The set of registered service listeners.
      */
@@ -122,7 +122,48 @@ final class ServiceControllerImpl<S> extends Dependable<S> implements ServiceCon
     }
 
     public void addListener(final ServiceListener<? super S> listener) {
+        final State state;
+        synchronized (this) {
+            runningListeners ++;
+            state = this.state;
+        }
+        switch (state) {
+            case DOWN: {
+                listener.serviceStopped(this);
+                break;
+            }
+            case STARTING: {
+                listener.serviceStarting(this);
+                break;
+            }
+            case START_FAILED: {
+                listener.serviceFailed(this, startException);
+                break;
+            }
+            case UP: {
+                listener.serviceStarted(this);
+                break;
+            }
+            case STOPPING: {
+                listener.serviceStopping(this);
+                break;
+            }
+            case REMOVED: {
+                break;
+            }
+        }
+        synchronized (this) {
+            listeners.add(listener);
+            if (--runningListeners == 0) {
+                doFinishListener();
+            }
+        }
+    }
 
+    public void removeListener(final ServiceListener<? super S> listener) {
+        synchronized (this) {
+            listeners.remove(listener);
+        }
     }
 
     public StartException getStartException() {
@@ -290,13 +331,16 @@ final class ServiceControllerImpl<S> extends Dependable<S> implements ServiceCon
                         synchronized (ServiceControllerImpl.this) {
                             if (context.state == StartContextState.SYNC) {
                                 context.state = StartContextState.COMPLETE;
+                                // todo - if a listener is running, we're not really complete
                                 doStartComplete();
                             }
                         }
                     } catch (StartException e) {
                         synchronized (ServiceControllerImpl.this) {
-                            if (context.state == StartContextState.SYNC) {
+                            final StartContextState oldState = context.state;
+                            if (oldState == StartContextState.SYNC || oldState == StartContextState.ASYNC) {
                                 context.state = StartContextState.FAILED;
+                                // todo - if a listener is running, we're not really complete
                                 doFail(e);
                             } else {
                                 // todo log warning
@@ -304,8 +348,10 @@ final class ServiceControllerImpl<S> extends Dependable<S> implements ServiceCon
                         }
                     } catch (Throwable t) {
                         synchronized (ServiceControllerImpl.this) {
-                            if (context.state == StartContextState.SYNC) {
+                            final StartContextState oldState = context.state;
+                            if (oldState == StartContextState.SYNC || oldState == StartContextState.ASYNC) {
                                 context.state = StartContextState.FAILED;
+                                // todo - if a listener is running, we're not really complete
                                 doFail(new StartException("Failed to start service", t, location));
                             } else {
                                 // todo log warning
@@ -361,13 +407,13 @@ final class ServiceControllerImpl<S> extends Dependable<S> implements ServiceCon
     }
 
     private void doDemandParents() {
-        for (Dependable<?> dependency : dependencies) {
+        for (ServiceControllerImpl<?> dependency : dependencies) {
             dependency.addDemand();
         }
     }
 
     private void doUndemandParents() {
-        for (Dependable<?> dependency : dependencies) {
+        for (ServiceControllerImpl<?> dependency : dependencies) {
             dependency.removeDemand();
         }
     }

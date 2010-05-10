@@ -32,11 +32,10 @@ public interface ServiceBuilder<S> extends Value<ServiceController<S>> {
     /**
      * Add a dependency.
      * @param dependency
-     * @param <D>
      */
-    <D extends Service> void addDependency(ServiceController<D> dependency);
+    void addDependency(ServiceController<?> dependency);
 
-    ServiceBuilder<S> addListener(ServiceListener<S> listener);
+    ServiceBuilder<S> addListener(ServiceListener<? super S> listener);
 
     ServiceBuilder<S> setInitialMode(ServiceController.Mode mode);
 

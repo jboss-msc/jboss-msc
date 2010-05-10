@@ -22,15 +22,22 @@
 
 package org.jboss.msc.service;
 
-import java.util.List;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 
-final class ServiceContainerImpl extends Dependable<ServiceContainer> implements ServiceContainer {
+final class ServiceContainerImpl implements ServiceContainer {
     final Object lock = new Object();
+    final ServiceControllerImpl<ServiceContainer> root;
 
     private static final class ExecutorHolder {
         private static final Executor VALUE;
@@ -46,41 +53,101 @@ final class ServiceContainerImpl extends Dependable<ServiceContainer> implements
         }
     }
 
+    private static final class ShutdownHookHolder {
+        private static final Set<ServiceContainerImpl> containers;
+        private static boolean down = false;
+
+        static {
+            containers = Collections.synchronizedSet(new HashSet<ServiceContainerImpl>());
+            AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                public Void run() {
+                    final Thread hook = new Thread(new Runnable() {
+                        public void run() {
+                            // shut down all services in all containers.
+                            final Set<ServiceContainerImpl> set = containers;
+                            final LatchListener listener;
+                            synchronized (set) {
+                                down = true;
+                                listener = new LatchListener(set.size());
+                                for (ServiceContainerImpl container : set) {
+                                    final ServiceControllerImpl<ServiceContainer> root = container.root;
+                                    root.setMode(ServiceController.Mode.NEVER);
+                                    root.addListener(listener);
+                                }
+                                set.clear();
+                            }
+                            // wait for all services to finish.
+                            for (;;) try {
+                                listener.await();
+                                break;
+                            } catch (InterruptedException e) {
+                            }
+                        }
+                    });
+                    hook.setDaemon(true);
+                    Runtime.getRuntime().addShutdownHook(hook);
+                    return null;
+                }
+            });
+        }
+
+        private ShutdownHookHolder() {
+        }
+    }
+
     private volatile Executor executor;
 
     ServiceContainerImpl() {
+        final Set<ServiceContainerImpl> set = ShutdownHookHolder.containers;
+        synchronized (set) {
+            // if the shutdown hook was triggered, then no services can ever come up in any new containers.
+            final boolean down = ShutdownHookHolder.down;
+            root = buildService(null, new ImmediateValue<ServiceContainer>(this)).setInitialMode(down ? ServiceController.Mode.NEVER : ServiceController.Mode.AUTOMATIC).getValue();
+            if (! down) set.add(this);
+        }
     }
 
-    public <T> ServiceBuilder<T> buildService(final Value<? extends Service> service, final Value<T> value) throws IllegalArgumentException {
+    public <T> ServiceBuilderImpl<T> buildService(final Value<? extends Service> service, final Value<T> value) throws IllegalArgumentException {
         return new ServiceBuilderImpl<T>(this, service, value);
     }
 
-    public <S extends Service> ServiceBuilder<S> buildService(final Value<S> service) throws IllegalArgumentException {
-        return null;
+    public <S extends Service> ServiceBuilderImpl<S> buildService(final Value<S> service) throws IllegalArgumentException {
+        return new ServiceBuilderImpl<S>(this, service, service);
     }
 
     public void setExecutor(final Executor executor) {
         this.executor = executor;
     }
 
+    static final class LatchListener extends CountDownLatch implements ServiceListener<Object> {
+
+        public LatchListener(int count) {
+            super(count);
+        }
+
+        public void serviceStarting(final ServiceController<? extends Object> serviceController) {
+        }
+
+        public void serviceStarted(final ServiceController<? extends Object> serviceController) {
+        }
+
+        public void serviceFailed(final ServiceController<? extends Object> serviceController, final StartException reason) {
+        }
+
+        public void serviceStopping(final ServiceController<? extends Object> serviceController) {
+        }
+
+        public void serviceStopped(final ServiceController<? extends Object> serviceController) {
+            countDown();
+            serviceController.removeListener(this);
+        }
+
+        public void serviceRemoved(final ServiceController<? extends Object> serviceController) {
+        }
+    }
+
     Executor getExecutor() {
         final Executor executor = this.executor;
         return executor != null ? executor : ExecutorHolder.VALUE;
-    }
-
-    public List<ServiceController<?>> getFailedServices() {
-        return null;
-    }
-
-    void addDemand() {
-    }
-
-    void removeDemand() {
-    }
-
-    void dependentStarted() {
-    }
-
-    void dependentStopped() {
     }
 }
