@@ -149,6 +149,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 break;
             }
             case REMOVED: {
+                listener.serviceRemoved(this);
                 break;
             }
         }
