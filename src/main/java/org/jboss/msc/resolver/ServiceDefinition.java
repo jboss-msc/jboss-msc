@@ -16,6 +16,8 @@ public final class ServiceDefinition {
     private final Set<String> dependencies;
     private final ServiceController.Mode initialMode;
     private final Location location;
+    
+    // These should potentially be removed
     private boolean resolved;
     private boolean processed;
 
@@ -29,20 +31,58 @@ public final class ServiceDefinition {
         this.location = location;
     }
     
-    public static ServiceDefinition create(String name, ServiceController.Mode initialMode, Location location, Set<String> dependencies) {
-    	return new ServiceDefinition(name, initialMode, location, dependencies);
+    public static Builder build() {
+        return new Builder();
     }
     
-    public static ServiceDefinition create(String name, ServiceController.Mode initialMode, Location location, String... dependencies) {
-    	return create(name, initialMode, location, new HashSet<String>(Arrays.asList(dependencies)));
-    }
-    
-    public static ServiceDefinition create(String name, Location location, String... dependencies) {
-    	return create(name, ServiceController.Mode.AUTOMATIC, location, new HashSet<String>(Arrays.asList(dependencies)));
-    }
-    
-    public static ServiceDefinition create(String name, String... dependencies) {
-    	return create(name, ServiceController.Mode.AUTOMATIC, null, new HashSet<String>(Arrays.asList(dependencies)));
+    public static final class Builder {
+        private String name;
+        private Set<String> dependencies = new HashSet<String>();
+        private ServiceController.Mode initialMode = ServiceController.Mode.AUTOMATIC;
+        private Location location;
+        
+        public Builder setName(String name) {
+            this.name = name;
+            
+            return this;
+        }
+        
+        public Builder addDependency(String dependency) {
+            if (dependency == null)
+                throw new IllegalArgumentException("Dependency can not be null");
+            
+            dependencies.add(dependency);
+            
+            return this;
+        }
+        
+        public Builder addDependencies(Collection<String> dependencies)
+        {
+            if (dependencies == null)
+                throw new IllegalArgumentException("Dependencies can not be null");
+            
+            this.dependencies.addAll(dependencies);
+            
+            return this;
+        }
+        
+        public Builder addDependencies(String... dependencies)
+        {
+            for (String d : dependencies)
+                this.dependencies.add(d);
+            
+            return this;
+        }
+        
+        public Builder setLocation(Location location) {
+            this.location = location;
+            
+            return this;
+        }
+        
+        public ServiceDefinition create() {
+            return new ServiceDefinition(name, initialMode, location, dependencies);
+        }
     }
 
     public String getName() {

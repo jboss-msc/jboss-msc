@@ -47,14 +47,14 @@ public class ResolverTestCase {
       CollectingCallback handler = new CollectingCallback();
       resolver.resolve(
          toMap(Arrays.asList(
-            ServiceDefinition.create("7", "11", "8"),
-            ServiceDefinition.create("5", "11"),
-            ServiceDefinition.create("3", "11", "9"),
-            ServiceDefinition.create("11", "2", "9", "10"),
-            ServiceDefinition.create("8", "9"),
-            ServiceDefinition.create("2"),
-            ServiceDefinition.create("9"),
-            ServiceDefinition.create("10")
+            ServiceDefinition.build().setName("7").addDependencies("11", "8").create(),
+            ServiceDefinition.build().setName("5").addDependencies("11").create(),
+            ServiceDefinition.build().setName("3").addDependencies("11", "9").create(),
+            ServiceDefinition.build().setName("11").addDependencies("2", "9", "10").create(),
+            ServiceDefinition.build().setName("8").addDependencies("9").create(),
+            ServiceDefinition.build().setName("2").create(),
+            ServiceDefinition.build().setName("9").create(),
+            ServiceDefinition.build().setName("10").create()
          )),
          handler
       );
@@ -66,14 +66,14 @@ public class ResolverTestCase {
       try {
          resolver.resolve(
             toMap(Arrays.asList(
-               ServiceDefinition.create("7", "11", "8"),
-               ServiceDefinition.create("5", "11"),
-               ServiceDefinition.create("3", "11", "9"),
-               ServiceDefinition.create("11", "2", "9", "10"),
-               ServiceDefinition.create("8", "9"),
-               ServiceDefinition.create("2", "1"),
-               ServiceDefinition.create("9"),
-               ServiceDefinition.create("10")
+               ServiceDefinition.build().setName("7").addDependencies("11", "8").create(),
+               ServiceDefinition.build().setName("5").addDependencies("11").create(),
+               ServiceDefinition.build().setName("3").addDependencies("11", "9").create(),
+               ServiceDefinition.build().setName("11").addDependencies("2", "9", "10").create(),
+               ServiceDefinition.build().setName("8").addDependencies("9").create(),
+               ServiceDefinition.build().setName("2").addDependencies("1").create(),
+               ServiceDefinition.build().setName("9").create(),
+               ServiceDefinition.build().setName("10").create()
             )),
             NO_OP_CALLBACK
          );
@@ -88,9 +88,9 @@ public class ResolverTestCase {
       try {
          resolver.resolve(
             toMap(Arrays.asList(
-               ServiceDefinition.create("7", "5"),
-               ServiceDefinition.create("5", "11"),
-               ServiceDefinition.create("11", "7")
+               ServiceDefinition.build().setName("7").addDependency("5").create(),
+               ServiceDefinition.build().setName("5").addDependency("11").create(),
+               ServiceDefinition.build().setName("11").addDependency("7").create()
             )),
                  NO_OP_CALLBACK
          );
@@ -112,7 +112,7 @@ public class ResolverTestCase {
          for(int j = 1; j < numDeps + 1; j++) {
             deps.add("test" + (i+j));
          }
-         serviceDefinitions.add(ServiceDefinition.create("test" + i, deps.toArray(new String[deps.size()])));
+         serviceDefinitions.add(ServiceDefinition.build().setName("test" + i).addDependencies(deps).create());
       }
 
       Map<String, ServiceDefinition> allServiceDefinitions = new HashMap<String, ServiceDefinition>();
