@@ -25,6 +25,8 @@ package org.jboss.msc.service;
 import org.jboss.msc.inject.Injector;
 
 /**
+ * A service listener which injects the service value into an injector.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class InjectingServiceListener<T> implements ServiceListener<T> {

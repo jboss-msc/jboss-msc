@@ -167,7 +167,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         synchronized (this) {
             runningListeners ++;
             state = this.state;
-            listeners.add(listener);
+            if (state != Substate.REMOVED) listeners.add(listener);
         }
         invokeListener(listener, state.getState());
     }
@@ -266,6 +266,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         Substate newState = null;
         ServiceListener<? super S>[] listeners = null;
         synchronized (this) {
+            final Substate state = this.state;
+            if (state == Substate.REMOVED) {
+                throw new IllegalStateException(SERVICE_REMOVED);
+            }
             final Mode oldMode = mode;
             mode = newMode;
             switch (oldMode) {
