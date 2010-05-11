@@ -143,6 +143,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         this.value = value;
         this.location = location;
         this.dependencies = dependencies;
+        upperCount = - dependencies.length;
         for (ServiceControllerImpl<?> controller : dependencies) {
             controller.addListener(dependencyListener);
         }
@@ -714,7 +715,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     private class StartContextImpl implements StartContext {
 
-        private ContextState state;
+        private ContextState state = ContextState.SYNC;
 
         public void failed(final StartException reason) throws IllegalStateException {
             synchronized (ServiceControllerImpl.this) {
@@ -751,7 +752,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     private class StopContextImpl implements StopContext {
 
-        private ContextState state;
+        private ContextState state = ContextState.SYNC;
 
         public void asynchronous() throws IllegalStateException {
             synchronized (ServiceControllerImpl.this) {

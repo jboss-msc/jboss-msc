@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.jboss.msc.value.ImmediateValue;
@@ -45,7 +46,13 @@ final class ServiceContainerImpl implements ServiceContainer {
         private static final Executor VALUE;
 
         static {
-            final ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 30L, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+            final ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 30L, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
+                public Thread newThread(final Runnable r) {
+                    final Thread thread = new Thread(r);
+                    thread.setDaemon(true);
+                    return thread;
+                }
+            });
             executor.allowCoreThreadTimeOut(true);
             executor.setCorePoolSize(1);
             VALUE = executor;
@@ -62,7 +69,7 @@ final class ServiceContainerImpl implements ServiceContainer {
 
         static {
             containers = new HashSet<WeakReference<ServiceContainerImpl>>();
-            if (false) AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            AccessController.doPrivileged(new PrivilegedAction<Void>() {
                 public Void run() {
                     final Thread hook = new Thread(new Runnable() {
                         public void run() {
@@ -109,7 +116,8 @@ final class ServiceContainerImpl implements ServiceContainer {
         synchronized (set) {
             // if the shutdown hook was triggered, then no services can ever come up in any new containers.
             final boolean down = ShutdownHookHolder.down;
-            root = buildService(Service.NULL_VALUE, new ImmediateValue<ServiceContainer>(this)).setInitialMode(down ? ServiceController.Mode.NEVER : ServiceController.Mode.AUTOMATIC).create();
+            final ServiceBuilderImpl<ServiceContainer> builder = new ServiceBuilderImpl<ServiceContainer>(this, Service.NULL_VALUE, new ImmediateValue<ServiceContainer>(this));
+            root = builder.setInitialMode(down ? ServiceController.Mode.NEVER : ServiceController.Mode.AUTOMATIC).create();
             if (! down) {
                 set.add(new WeakReference<ServiceContainerImpl>(this, ShutdownHookHolder.queue));
                 Reference<? extends ServiceContainerImpl> reference;
@@ -121,15 +129,23 @@ final class ServiceContainerImpl implements ServiceContainer {
     }
 
     public <T> ServiceBuilderImpl<T> buildService(final Value<? extends Service> service, final Value<T> value) throws IllegalArgumentException {
-        return new ServiceBuilderImpl<T>(this, service, value);
+        final ServiceBuilderImpl<T> builder = new ServiceBuilderImpl<T>(this, service, value);
+        builder.addDependency(root);
+        return builder;
     }
 
     public <S extends Service> ServiceBuilderImpl<S> buildService(final Value<S> service) throws IllegalArgumentException {
-        return new ServiceBuilderImpl<S>(this, service, service);
+        final ServiceBuilderImpl<S> builder = new ServiceBuilderImpl<S>(this, service, service);
+        builder.addDependency(root);
+        return builder;
     }
 
     public void setExecutor(final Executor executor) {
         this.executor = executor;
+    }
+
+    public void shutdown() {
+        root.setMode(ServiceController.Mode.NEVER);
     }
 
     protected void finalize() throws Throwable {

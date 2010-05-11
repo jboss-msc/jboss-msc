@@ -52,6 +52,8 @@ public interface ServiceContainer {
      */
     <T> ServiceBuilder<T> buildService(Value<? extends Service> service, Value<T> value) throws IllegalArgumentException;
 
+    void shutdown();
+
     class Factory {
 
         private Factory() {
