@@ -62,7 +62,7 @@ final class ServiceBuilderImpl<S> implements ServiceBuilder<S> {
         }
     }
 
-    public <T> ServiceBuilder<S> addValueInjection(final ValueInjection<T> injection) {
+    public <T> ServiceBuilderImpl<S> addValueInjection(final ValueInjection<T> injection) {
         if (injection == null) {
             throw new IllegalArgumentException("injection is null");
         }
@@ -73,7 +73,7 @@ final class ServiceBuilderImpl<S> implements ServiceBuilder<S> {
         }
     }
 
-    public <T> ServiceBuilder<S> addValueInjection(final ServiceController<T> dependency, final Injector<T> injector) {
+    public <T> ServiceBuilderImpl<S> addValueInjection(final ServiceController<T> dependency, final Injector<T> injector) {
         if (dependency == null) {
             throw new IllegalArgumentException("dependency is null");
         }

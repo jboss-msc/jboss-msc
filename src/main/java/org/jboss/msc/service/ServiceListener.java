@@ -31,21 +31,21 @@ package org.jboss.msc.service;
 public interface ServiceListener<S> {
 
     /**
-     * The service is starting.
+     * The service is starting.  Called after the state transitions from {@code DOWN} to {@code STARTING}.
      *
      * @param controller the controller
      */
     void serviceStarting(ServiceController<? extends S> controller);
 
     /**
-     * The service is started (up).
+     * The service is started (up).  Called after the state transitions from {@code STARTING} to {@code UP}.
      *
      * @param controller the controller
      */
     void serviceStarted(ServiceController<? extends S> controller);
 
     /**
-     * The service start has failed.
+     * The service start has failed.  Called after the state transitions from {@code STARTING} to {@code START_FAILED}.
      *
      * @param controller the controller
      * @param reason the reason for failure
@@ -53,21 +53,22 @@ public interface ServiceListener<S> {
     void serviceFailed(ServiceController<? extends S> controller, StartException reason);
 
     /**
-     * The service is stopping.
+     * The service is stopping.  Called after the state transitions from {@code UP} to {@code STOPPING}.
      *
      * @param controller the controller
      */
     void serviceStopping(ServiceController<? extends S> controller);
 
     /**
-     * The service is stopped (down).
+     * The service is stopped (down).  Called after the state transitions from {@code STOPPING} to {@code DOWN}.
      *
      * @param controller the controller
      */
     void serviceStopped(ServiceController<? extends S> controller);
 
     /**
-     * The service has been removed.  The listener will automatically be unregistered after this call.
+     * The service has been removed.  The listener will automatically be unregistered after this call.  Called
+     * after the state transitions from {@code DOWN} to {@code REMOVED}.
      *
      * @param controller the controller
      */
