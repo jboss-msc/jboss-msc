@@ -36,25 +36,25 @@ import static org.junit.Assert.assertTrue;
 public class ResolverTestCase {
 
    private final Resolver resolver = new Resolver();
-   private final Resolver.ResolveHandler NO_OP_HANDLER = new Resolver.ResolveHandler() {
+   private final Resolver.ResolveCallback NO_OP_CALLBACK = new Resolver.ResolveCallback() {
       @Override
-      public void resolve(final Item item) {
+      public void resolve(final ServiceDefinition definition) {
       }
    };
 
-   @Test
+    @Test
    public void testResolvable() throws Exception {
-      CollectingHandler handler = new CollectingHandler();
+      CollectingCallback handler = new CollectingCallback();
       resolver.resolve(
          toMap(Arrays.asList(
-            new Item("7", "11", "8"),
-            new Item("5", "11"),
-            new Item("3", "11", "9"),
-            new Item("11", "2", "9", "10"),
-            new Item("8", "9"),
-            new Item("2"),
-            new Item("9"),
-            new Item("10")
+            new ServiceDefinition("7", "11", "8"),
+            new ServiceDefinition("5", "11"),
+            new ServiceDefinition("3", "11", "9"),
+            new ServiceDefinition("11", "2", "9", "10"),
+            new ServiceDefinition("8", "9"),
+            new ServiceDefinition("2"),
+            new ServiceDefinition("9"),
+            new ServiceDefinition("10")
          )),
          handler
       );
@@ -66,16 +66,16 @@ public class ResolverTestCase {
       try {
          resolver.resolve(
             toMap(Arrays.asList(
-               new Item("7", "11", "8"),
-               new Item("5", "11"),
-               new Item("3", "11", "9"),
-               new Item("11", "2", "9", "10"),
-               new Item("8", "9"),
-               new Item("2", "1"),
-               new Item("9"),
-               new Item("10")
+               new ServiceDefinition("7", "11", "8"),
+               new ServiceDefinition("5", "11"),
+               new ServiceDefinition("3", "11", "9"),
+               new ServiceDefinition("11", "2", "9", "10"),
+               new ServiceDefinition("8", "9"),
+               new ServiceDefinition("2", "1"),
+               new ServiceDefinition("9"),
+               new ServiceDefinition("10")
             )),
-            NO_OP_HANDLER
+            NO_OP_CALLBACK
          );
          fail("Should have thrown missing dependency exception");
       } catch(MissingDependencyException expected) {}
@@ -88,11 +88,11 @@ public class ResolverTestCase {
       try {
          resolver.resolve(
             toMap(Arrays.asList(
-               new Item("7", "5"),
-               new Item("5", "11"),
-               new Item("11", "7")
+               new ServiceDefinition("7", "5"),
+               new ServiceDefinition("5", "11"),
+               new ServiceDefinition("11", "7")
             )),
-            NO_OP_HANDLER
+                 NO_OP_CALLBACK
          );
          fail("SHould have thrown circular dependency exception");
       } catch(CircularDependencyException expected) {}
@@ -102,57 +102,57 @@ public class ResolverTestCase {
    @Test
    public void testMonster() throws Exception {
 
-      final int totalItems = 10000;
+      final int totalServiceDefinitions = 10000;
 
-      final List<Item> items = new ArrayList<Item>(totalItems);
-      for(int i = 0; i < totalItems; i++) {
+      final List<ServiceDefinition> serviceDefinitions = new ArrayList<ServiceDefinition>(totalServiceDefinitions);
+      for(int i = 0; i < totalServiceDefinitions; i++) {
          List<String> deps = new ArrayList<String>();
-         int numDeps = Math.min(10, totalItems - i - 1);
+         int numDeps = Math.min(10, totalServiceDefinitions - i - 1);
 
          for(int j = 1; j < numDeps + 1; j++) {
             deps.add("test" + (i+j));
          }
-         items.add(new Item("test" + i, deps.toArray(new String[deps.size()])));
+         serviceDefinitions.add(new ServiceDefinition("test" + i, deps.toArray(new String[deps.size()])));
       }
 
-      Map<String, Item> allItems = new HashMap<String, Item>();
-      for(Item item : items)
-         allItems.put(item.getName(), item);
+      Map<String, ServiceDefinition> allServiceDefinitions = new HashMap<String, ServiceDefinition>();
+      for(ServiceDefinition serviceDefinition : serviceDefinitions)
+         allServiceDefinitions.put(serviceDefinition.getName(), serviceDefinition);
 
-      CollectingHandler collectingHandler = new CollectingHandler();
+      CollectingCallback collectingHandler = new CollectingCallback();
       long start = System.currentTimeMillis();
-      resolver.resolve(allItems, collectingHandler);
+      resolver.resolve(allServiceDefinitions, collectingHandler);
       long end = System.currentTimeMillis();
       System.out.println("Time: " + (end-start));
       assertInDependencyOrder(collectingHandler.getResolved());
    }
 
-   private Map<String, Item> toMap(List<Item> items) {
-      Map<String, Item> allItems = new HashMap<String, Item>();
-      for(Item item : items)
-         allItems.put(item.getName(), item);
-      return allItems;
+   private Map<String, ServiceDefinition> toMap(List<ServiceDefinition> serviceDefinitions) {
+      Map<String, ServiceDefinition> allServiceDefinitions = new HashMap<String, ServiceDefinition>();
+      for(ServiceDefinition serviceDefinition : serviceDefinitions)
+         allServiceDefinitions.put(serviceDefinition.getName(), serviceDefinition);
+      return allServiceDefinitions;
    }
 
-   private void assertInDependencyOrder(final List<Item> items) {
+   private void assertInDependencyOrder(final List<ServiceDefinition> serviceDefinitions) {
       Set<String> viewed = new HashSet<String>();
-      for(Item item : items) {
-         for(String dep : item.getDependencies()) {
+      for(ServiceDefinition serviceDefinition : serviceDefinitions) {
+         for(String dep : serviceDefinition.getDependencies()) {
             assertTrue(viewed.contains(dep));
          }
-         viewed.add(item.getName());
+         viewed.add(serviceDefinition.getName());
       }
    }
 
-   private static class CollectingHandler implements Resolver.ResolveHandler {
-      private List<Item> resolved = new ArrayList<Item>();
+   private static class CollectingCallback implements Resolver.ResolveCallback {
+      private List<ServiceDefinition> resolved = new ArrayList<ServiceDefinition>();
       
       @Override
-      public void resolve(final Item item) {
-         resolved.add(item);
+      public void resolve(final ServiceDefinition serviceDefinition) {
+         resolved.add(serviceDefinition);
       }
 
-      public List<Item> getResolved() {
+      public List<ServiceDefinition> getResolved() {
          return resolved;
       }
    };

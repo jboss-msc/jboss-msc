@@ -23,10 +23,8 @@
 package org.jboss.msc.resolver;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -39,101 +37,100 @@ import java.util.Set;
 public class Resolver {
 
    /**
-    * Resolve the provided items and pass each resolved item to the handler. 
+    * Resolve the provided items and pass each resolved item to the callback.
     *
-    * @param items The map of items to be resolved
-    * @param handler The callback usd to handle resolved items
+    * @param serviceDefinitions The map of items to be resolved
+    * @param callback The callback usd to handle resolved items
     * @throws ResolutionException if any problem occur during resolution
     */
-   public void resolve(final Map<String, Item> items, final ResolveHandler handler) throws ResolutionException {
-      iterativeResolve(items, handler);
+   public void resolve(final Map<String, ServiceDefinition> serviceDefinitions, final ResolveCallback callback) throws ResolutionException {
+      iterativeResolve(serviceDefinitions, callback);
    }
 
    /**
     * Recursive depth-first resolution
     * 
-    * @param items The list of items to be resolved
-    * @param handler The callback usd to handle resolved items
+    * @param serviceDefinitions The list of items to be resolved
+    * @param callback The callback usd to handle resolved items
     * @throws ResolutionException if any problem occur during resolution
     */
-   private void recursiveResolve(final Map<String, Item> items, final ResolveHandler handler) throws ResolutionException {
-      final List<Item> resolved = new ArrayList<Item>(items.size());
-      final Set<Item> visited = new HashSet<Item>();
-      for(Item item : items.values()) {
-         resolve(item, items, visited, handler);
+   private void recursiveResolve(final Map<String, ServiceDefinition> serviceDefinitions, final ResolveCallback callback) throws ResolutionException {
+      final Set<ServiceDefinition> visited = new HashSet<ServiceDefinition>();
+      for(ServiceDefinition serviceDefinition : serviceDefinitions.values()) {
+         resolve(serviceDefinition, serviceDefinitions, visited, callback);
       }
    }
 
-   private void resolve(final Item item, final Map<String, Item> allItems, final Set<Item> visited, final ResolveHandler handler) throws ResolutionException {
-      if(visited.contains(item))
+   private void resolve(final ServiceDefinition serviceDefinition, final Map<String, ServiceDefinition> serviceDefinitions, final Set<ServiceDefinition> visited, final ResolveCallback callback) throws ResolutionException {
+      if(visited.contains(serviceDefinition))
             throw new CircularDependencyException("Circular dependency discovered: " + visited);
-      visited.add(item);
+      visited.add(serviceDefinition);
       try {
-         if(!item.isVisited()) {
-            item.setVisited(true);
-            for(String dep : item.getDependencies()) {
-               final Item depItem = allItems.get(dep);
-               if(depItem == null)
-                  throw new MissingDependencyException("Missing dependency: " + item.getName() + " depends on " + dep + " which can not be found");
-               resolve(depItem, allItems, visited, handler);
+         if(!serviceDefinition.isProcessed()) {
+            serviceDefinition.setProcessed(true);
+            for(String dep : serviceDefinition.getDependencies()) {
+               final ServiceDefinition dependencyDefinition = serviceDefinitions.get(dep);
+               if(dependencyDefinition == null)
+                  throw new MissingDependencyException("Missing dependency: " + serviceDefinition.getName() + " depends on " + dep + " which can not be found");
+               resolve(dependencyDefinition, serviceDefinitions, visited, callback);
             }
-            handler.resolve(item);
+            callback.resolve(serviceDefinition);
          }
       } finally {
-         visited.remove(item);
+         visited.remove(serviceDefinition);
       }
    }
 
    /**
     * Iterative depth-first resolution
     *
-    * @param items The list of items to be resolved
-    * @param handler The callback usd to handle resolved items
+    * @param serviceDefinitions The list of serviceDefinitions to be resolved
+    * @param callback The callback usd to handle resolved serviceDefinitions
     * @throws ResolutionException if any problem occur during resolution
     */
-   private void iterativeResolve(Map<String, Item> items, final ResolveHandler handler) throws ResolutionException {
-      final Deque<Item> toResolve = new ArrayDeque<Item>(100);
-      final Set<Item> visited = new HashSet<Item>();
+   private void iterativeResolve(Map<String, ServiceDefinition> serviceDefinitions, final ResolveCallback callback) throws ResolutionException {
+      final Deque<ServiceDefinition> toResolve = new ArrayDeque<ServiceDefinition>(100);
+      final Set<ServiceDefinition> visited = new HashSet<ServiceDefinition>();
 
-      for(Item item : items.values()) {
+      for(ServiceDefinition serviceDefinition : serviceDefinitions.values()) {
          toResolve.clear();
-         toResolve.addFirst(item);
+         toResolve.addFirst(serviceDefinition);
 
          while(!toResolve.isEmpty()) {
-            final Item itemToResolve = toResolve.getFirst();
-            visited.add(itemToResolve);
-            itemToResolve.setVisited(true);
+            final ServiceDefinition serviceToResolve = toResolve.getFirst();
+            visited.add(serviceToResolve);
+            serviceToResolve.setProcessed(true);
             boolean dependenciesResolved = true;
 
-            for(String dependency : itemToResolve.getDependencies()) {
-               final Item dependencyItem = items.get(dependency);
-               if(dependencyItem == null)
-                  throw new MissingDependencyException("Missing dependency: " + item.getName() + " depends on " + dependency + " which can not be found");
+            for(String dependency : serviceToResolve.getDependencies()) {
+               final ServiceDefinition dependencyDefinition = serviceDefinitions.get(dependency);
+               if(dependencyDefinition == null)
+                  throw new MissingDependencyException("Missing dependency: " + serviceDefinition.getName() + " depends on " + dependency + " which can not be found");
 
-               if(!dependencyItem.isResolved()) {
-                  if(visited.contains(dependencyItem))
+               if(!dependencyDefinition.isResolved()) {
+                  if(visited.contains(dependencyDefinition))
                      throw new CircularDependencyException("Circular dependency: " + visited);
                   dependenciesResolved = false;
                }
 
-               if(!dependencyItem.isVisited()) {
-                  toResolve.addFirst(dependencyItem);
+               if(!dependencyDefinition.isProcessed()) {
+                  toResolve.addFirst(dependencyDefinition);
                }
             }
 
             if(dependenciesResolved) {
                toResolve.removeFirst();
-               visited.remove(itemToResolve);
-               if(!itemToResolve.isResolved()) {
-                  itemToResolve.setResolved(true);
-                  handler.resolve(itemToResolve);
+               visited.remove(serviceToResolve);
+               if(!serviceToResolve.isResolved()) {
+                  serviceToResolve.setResolved(true);
+                  callback.resolve(serviceToResolve);
                }
             }
          }
       }
    }
 
-   public static interface ResolveHandler {
-      void resolve(Item item);
+   public static interface ResolveCallback {
+      void resolve(ServiceDefinition serviceDefinition);
    }
 }
