@@ -58,6 +58,12 @@
             <artifactId>jboss-logging</artifactId>
             <version>3.0.0.Beta2</version>
         </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.7</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
