@@ -482,7 +482,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     private void doStart(ServiceListener<? super S>[] listeners) {
         assert ! Thread.holdsLock(this);
-        assert state == Substate.DOWN || state == Substate.START_FAILED_RETRY_PENDING;
         try {
             final Service service = serviceValue.getValue();
             if (service == null) {
