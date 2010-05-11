@@ -1,19 +1,45 @@
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2010, Red Hat Middleware LLC, and individual contributors
+ * as indicated by the @author tags. See the copyright.txt file in the
+ * distribution for a full listing of individual contributors.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
 package org.jboss.msc.registry;
-
-import org.jboss.msc.resolver.*;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * ServiceRegistry -
+ * Service registry capable of installing batches of services and enforcing dependency order. 
  *
  * @author John Bailey
  */
 public class ServiceRegistry {
     private final ConcurrentMap<ServiceName, ServiceDefinition> registry = new ConcurrentHashMap<ServiceName, ServiceDefinition>();
 
+    /**
+     * Install a collection of service definitions into the registry.  Will install the services
+     * in dependency order.
+     *
+     * @param services The service definitions to install
+     * @throws ServiceRegistryException If any problems occur resolving the dependencies or adding to the registry.
+     */
     void install(Collection<ServiceDefinition> services) throws ServiceRegistryException {
         try {
             resolve(toMap(services));
@@ -22,9 +48,9 @@ public class ServiceRegistry {
         }
     }
 
-    private void addToRegistry(final ServiceDefinition serviceDefinition) {
+    private void addToRegistry(final ServiceDefinition serviceDefinition) throws ServiceRegistryException {
         if (registry.putIfAbsent(serviceDefinition.getName(), serviceDefinition) != null) {
-            throw new RuntimeException("Duplicate service name provided: " + serviceDefinition.getName());
+            throw new ServiceRegistryException("Duplicate service name provided: " + serviceDefinition.getName());
         }
     }
 
@@ -37,56 +63,41 @@ public class ServiceRegistry {
 
 
     /**
-     * Iterative depth-first resolution
+     * Recursive depth-first resolution
      *
-     * @param serviceDefinitions The list of serviceDefinitions to be resolved
-     * @throws org.jboss.msc.resolver.ResolutionException
-     *          if any problem occur during resolution
+     * @param serviceDefinitions The list of items to be resolved
+     * @throws ResolutionException if any problem occur during resolution
      */
-    private void resolve(Map<ServiceName, ServiceDefinition> serviceDefinitions) throws ResolutionException {
-        final Deque<ServiceDefinition> toResolve = new ArrayDeque<ServiceDefinition>(100);
-        
-        final Set<ServiceName> processed = new HashSet<ServiceName>();
+    private void resolve(final Map<ServiceName, ServiceDefinition> serviceDefinitions) throws ServiceRegistryException {
+        final Set<ServiceName> processed = new HashSet<ServiceName>(serviceDefinitions.size());
         final Set<ServiceName> visited = new HashSet<ServiceName>();
-
         for (ServiceDefinition serviceDefinition : serviceDefinitions.values()) {
-            if(processed.contains(serviceDefinition.getName()))
-               continue; 
+            resolve(serviceDefinition, serviceDefinitions, processed, visited);
+        }
+    }
 
-            toResolve.clear();
-            toResolve.addFirst(serviceDefinition);
-
-            while (!toResolve.isEmpty()) {
-                final ServiceDefinition serviceToResolve = toResolve.getFirst();
-                visited.add(serviceToResolve.getName());
+    private void resolve(final ServiceDefinition serviceDefinition, final Map<ServiceName, ServiceDefinition> serviceDefinitions, final Set<ServiceName> processed, final Set<ServiceName> visited) throws ServiceRegistryException {
+        if (visited.contains(serviceDefinition.getName()))
+            throw new CircularDependencyException("Circular dependency discovered: " + visited);
+        visited.add(serviceDefinition.getName());
+        try {
+            if (!processed.contains(serviceDefinition.getName())) {
                 processed.add(serviceDefinition.getName());
-                boolean dependenciesResolved = true;
-
-                for (String dependency : serviceToResolve.getDependencies()) {
-                    final ServiceName dependencyName = new ServiceName(dependency);
-                    // See if it is already in the registry.  If so just move to the next dependency
-                    if (registry.containsKey(dependencyName))
+                for (String dependency : serviceDefinition.getDependencies()) {
+                    final ServiceName dependencyName = ServiceName.create(dependency);
+                    if(registry.containsKey(dependencyName))
                         continue;
-
-                    dependenciesResolved = false;
+                    
                     final ServiceDefinition dependencyDefinition = serviceDefinitions.get(dependencyName);
                     if (dependencyDefinition == null)
-                        throw new MissingDependencyException("Missing dependency: " + serviceDefinition.getName() + " depends on " + dependency + " which can not be found");
+                        throw new MissingDependencyException("Missing dependency: " + serviceDefinition.getName() + " depends on " + dependencyName + " which can not be found");
 
-                    if (visited.contains(dependencyName))
-                        throw new CircularDependencyException("Circular dependency: " + visited);
-
-                    if (!processed.contains(dependencyName)) {
-                        toResolve.addFirst(dependencyDefinition);
-                    }
+                    resolve(dependencyDefinition, serviceDefinitions, processed, visited);
                 }
-
-                if (dependenciesResolved) {
-                    toResolve.removeFirst();
-                    visited.remove(serviceToResolve.getName());
-                    addToRegistry(serviceToResolve);
-                }
+                addToRegistry(serviceDefinition);
             }
+        } finally {
+            visited.remove(serviceDefinition.getName());
         }
     }
 }

@@ -1,4 +1,25 @@
-package org.jboss.msc.resolver;
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2010, Red Hat Middleware LLC, and individual contributors
+ * as indicated by the @author tags. See the copyright.txt file in the
+ * distribution for a full listing of individual contributors.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+package org.jboss.msc.registry;
 
 import org.jboss.msc.service.Location;
 import org.jboss.msc.service.ServiceController;
@@ -12,14 +33,12 @@ import java.util.*;
  * @author Jason T. Greene
  */
 public final class ServiceDefinition {
-    private final String name;
+    private final ServiceName name;
     private final Set<String> dependencies;
     private final ServiceController.Mode initialMode;
     private final Location location;
-    private boolean resolved;
-    private boolean processed;
 
-    private ServiceDefinition(String name, ServiceController.Mode initialMode, Location location, Set<String> dependencies) {
+    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Set<String> dependencies) {
     	if (name == null)
     		throw new IllegalArgumentException("Name can not be null");
     	
@@ -30,7 +49,7 @@ public final class ServiceDefinition {
     }
     
     public static ServiceDefinition create(String name, ServiceController.Mode initialMode, Location location, Set<String> dependencies) {
-    	return new ServiceDefinition(name, initialMode, location, dependencies);
+    	return new ServiceDefinition(new ServiceName(name), initialMode, location, dependencies);
     }
     
     public static ServiceDefinition create(String name, ServiceController.Mode initialMode, Location location, String... dependencies) {
@@ -45,7 +64,7 @@ public final class ServiceDefinition {
     	return create(name, ServiceController.Mode.AUTOMATIC, null, new HashSet<String>(Arrays.asList(dependencies)));
     }
 
-    public String getName() {
+    public ServiceName getName() {
         return name;
     }
 
@@ -59,22 +78,6 @@ public final class ServiceDefinition {
 
     public Location getLocation() {
         return location;
-    }
-
-    public boolean isProcessed() {
-        return processed;
-    }
-
-    void setProcessed(boolean processed) {
-        this.processed = processed;
-    }
-
-    public boolean isResolved() {
-        return resolved;
-    }
-
-    void setResolved(boolean resolved) {
-        this.resolved = resolved;
     }
 
     @Override
