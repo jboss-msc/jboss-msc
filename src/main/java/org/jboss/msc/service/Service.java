@@ -34,7 +34,7 @@ public interface Service {
 
     /**
      * Start the service.  Do not return until the service has been fully started, unless an asynchronous service
-     * start is performed.
+     * start is performed.  All injections will be complete before this method is called.
      *
      * @param context the context which can be used to trigger an asynchronous service start
      * @throws StartException if the service could not be started for some reason
@@ -43,7 +43,8 @@ public interface Service {
 
     /**
      * Stop the service.  Do not return until the service has been fully stopped, unless an asynchronous service
-     * stop is performed.
+     * stop is performed.  All injections will remain intact until the service is fully stopped.  This method should
+     * not throw an exception.
      *
      * @param context the context which can be used to trigger an asynchronous service stop
      */
