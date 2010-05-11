@@ -47,6 +47,9 @@ public final class ServiceBatch {
      * @return this batch
      */
     public ServiceBatch add(Collection<ServiceDefinition> definitions) {
+        if (definitions == null)
+            throw new IllegalArgumentException("Definitions can not be null");
+        
         for (ServiceDefinition d : definitions)
             this.definitions.put(d.getName(), d);
 
