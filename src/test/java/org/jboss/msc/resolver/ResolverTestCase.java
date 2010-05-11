@@ -21,11 +21,8 @@
  */
 package org.jboss.msc.resolver;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
 import org.junit.Test;
 
 import static org.junit.Assert.fail;
@@ -138,7 +135,7 @@ public class ResolverTestCase {
    }
 
    private void assertInDependencyOrder(final List<Item> items) {
-      List<String> viewed = new ArrayList<String>();
+      Set<String> viewed = new HashSet<String>();
       for(Item item : items) {
          for(String dep : item.getDependencies()) {
             assertTrue(viewed.contains(dep));
