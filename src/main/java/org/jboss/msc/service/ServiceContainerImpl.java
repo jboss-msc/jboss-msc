@@ -128,13 +128,13 @@ final class ServiceContainerImpl implements ServiceContainer {
         }
     }
 
-    public <T> ServiceBuilderImpl<T> buildService(final Value<? extends Service> service, final Value<T> value) throws IllegalArgumentException {
+    public <T> ServiceBuilderImpl<T> buildService(final Value<? extends Service> service, final Value<T> value) {
         final ServiceBuilderImpl<T> builder = new ServiceBuilderImpl<T>(this, service, value);
         builder.addDependency(root);
         return builder;
     }
 
-    public <S extends Service> ServiceBuilderImpl<S> buildService(final Value<S> service) throws IllegalArgumentException {
+    public <S extends Service> ServiceBuilderImpl<S> buildService(final Value<S> service) {
         final ServiceBuilderImpl<S> builder = new ServiceBuilderImpl<S>(this, service, service);
         builder.addDependency(root);
         return builder;
