@@ -33,6 +33,10 @@ import java.util.concurrent.ConcurrentMap;
 public class ServiceRegistry {
     private final ConcurrentMap<ServiceName, ServiceDefinition> registry = new ConcurrentHashMap<ServiceName, ServiceDefinition>();
 
+    public ServiceBatch createServiceBatch() {
+        return new ServiceBatch(this);
+    }
+
     /**
      * Install a collection of service definitions into the registry.  Will install the services
      * in dependency order.
@@ -40,9 +44,9 @@ public class ServiceRegistry {
      * @param services The service definitions to install
      * @throws ServiceRegistryException If any problems occur resolving the dependencies or adding to the registry.
      */
-    void install(Collection<ServiceDefinition> services) throws ServiceRegistryException {
+    void install(Map<ServiceName, ServiceDefinition> services) throws ServiceRegistryException {
         try {
-            resolve(toMap(services));
+            resolve(services);
         } catch (ResolutionException e) {
             throw new ServiceRegistryException("Failed to resolve dependencies", e);
         }

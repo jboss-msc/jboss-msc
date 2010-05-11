@@ -1,4 +1,4 @@
-package org.jboss.msc.resolver;
+package org.jboss.msc.registry;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -10,7 +10,16 @@ import java.util.LinkedHashMap;
  */
 public final class ServiceBatch {
 
-    private LinkedHashMap<String, ServiceDefinition> definitions;
+    private LinkedHashMap<ServiceName, ServiceDefinition> definitions = new LinkedHashMap<ServiceName, ServiceDefinition>();
+    private ServiceRegistry serviceRegistry;
+
+    ServiceBatch(final ServiceRegistry registry) {
+        this.serviceRegistry = registry;
+    }
+
+    public void install() throws ServiceRegistryException {
+        serviceRegistry.install(definitions);
+    }
 
     /**
      * Add a service definition to the batch.
@@ -56,7 +65,7 @@ public final class ServiceBatch {
         return this;
     }
 
-    LinkedHashMap<String, ServiceDefinition> definitionMap() {
+    LinkedHashMap<ServiceName, ServiceDefinition> definitionMap() {
         return definitions;
     }
 }

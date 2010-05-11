@@ -49,7 +49,7 @@ public final class ServiceDefinition {
     }
     
     public static ServiceDefinition create(String name, ServiceController.Mode initialMode, Location location, Set<String> dependencies) {
-    	return new ServiceDefinition(new ServiceName(name), initialMode, location, dependencies);
+    	return new ServiceDefinition(ServiceName.create(name), initialMode, location, dependencies);
     }
     
     public static ServiceDefinition create(String name, ServiceController.Mode initialMode, Location location, String... dependencies) {

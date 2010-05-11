@@ -23,7 +23,6 @@ package org.jboss.msc.registry;
 
 import java.util.*;
 
-import org.jboss.msc.registry.ServiceDefinition;
 import org.junit.Test;
 
 import static org.junit.Assert.fail;
@@ -35,62 +34,53 @@ import static org.junit.Assert.fail;
  */
 public class ServiceRegistryTestCase {
 
-    private final ServiceRegistry registry = new ServiceRegistry();
-
     @Test
     public void testResolvable() throws Exception {
-        registry.install(
-                Arrays.asList(
-                        ServiceDefinition.create("7", "11", "8"),
-                        ServiceDefinition.create("5", "11"),
-                        ServiceDefinition.create("3", "11", "9"),
-                        ServiceDefinition.create("11", "2", "9", "10"),
-                        ServiceDefinition.create("8", "9"),
-                        ServiceDefinition.create("2"),
-                        ServiceDefinition.create("9"),
-                        ServiceDefinition.create("10")
-                )
-        );
+         new ServiceRegistry().createServiceBatch()
+            .add(ServiceDefinition.create("7", "11", "8"))
+            .add(ServiceDefinition.create("5", "11"))
+            .add(ServiceDefinition.create("3", "11", "9"))
+            .add(ServiceDefinition.create("11", "2", "9", "10"))
+            .add(ServiceDefinition.create("8", "9"))
+            .add(ServiceDefinition.create("2"))
+            .add(ServiceDefinition.create("9"))
+            .add(ServiceDefinition.create("10"))
+            .install();
         //assertInDependencyOrder(handler.getResolved());
     }
 
     @Test
     public void testResolvableWithPreexistingDeps() throws Exception {
-        registry.install(
-            Arrays.asList(
-                ServiceDefinition.create("2"),
-                ServiceDefinition.create("9"),
-                ServiceDefinition.create("10")
-            )
-        );
+        final ServiceRegistry registry = new ServiceRegistry();
+        registry.createServiceBatch()
+                .add(ServiceDefinition.create("2"))
+                .add(ServiceDefinition.create("9"))
+                .add(ServiceDefinition.create("10"))
+                .install();
 
-        registry.install(
-            Arrays.asList(
-                ServiceDefinition.create("7", "11", "8"),
-                ServiceDefinition.create("5", "11"),
-                ServiceDefinition.create("3", "11", "9"),
-                ServiceDefinition.create("11", "2", "9", "10"),
-                ServiceDefinition.create("8", "9")
-            )
-        );
+        registry.createServiceBatch()
+                .add(ServiceDefinition.create("7", "11", "8"))
+                .add(ServiceDefinition.create("5", "11"))
+                .add(ServiceDefinition.create("3", "11", "9"))
+                .add(ServiceDefinition.create("11", "2", "9", "10"))
+                .add(ServiceDefinition.create("8", "9"))
+                .install();
     }
 
 
     @Test
     public void testMissingDependency() throws Exception {
         try {
-            registry.install(
-                Arrays.asList(
-                    ServiceDefinition.create("7", "11", "8"),
-                    ServiceDefinition.create("5", "11"),
-                    ServiceDefinition.create("3", "11", "9"),
-                    ServiceDefinition.create("11", "2", "9", "10"),
-                    ServiceDefinition.create("8", "9"),
-                    ServiceDefinition.create("2", "1"),
-                    ServiceDefinition.create("9"),
-                    ServiceDefinition.create("10")
-                )
-            );
+             new ServiceRegistry().createServiceBatch()
+                .add(ServiceDefinition.create("7", "11", "8"))
+                .add(ServiceDefinition.create("5", "11"))
+                .add(ServiceDefinition.create("3", "11", "9"))
+                .add(ServiceDefinition.create("11", "2", "9", "10"))
+                .add(ServiceDefinition.create("8", "9"))
+                .add(ServiceDefinition.create("2", "1"))
+                .add(ServiceDefinition.create("9"))
+                .add(ServiceDefinition.create("10"))
+                .install();
             fail("Should have thrown missing dependency exception");
         } catch (ServiceRegistryException expected) {
         }
@@ -101,18 +91,15 @@ public class ServiceRegistryTestCase {
     public void testCircular() throws Exception {
 
         try {
-            registry.install(
-                Arrays.asList(
-                    ServiceDefinition.create("7", "5"),
-                    ServiceDefinition.create("5", "11"),
-                    ServiceDefinition.create("11", "7")
-                )
-            );
+             new ServiceRegistry().createServiceBatch()
+                    .add(ServiceDefinition.create("7", "5"))
+                    .add(ServiceDefinition.create("5", "11"))
+                    .add(ServiceDefinition.create("11", "7"))
+                    .install();
             fail("SHould have thrown circular dependency exception");
         } catch (ServiceRegistryException expected) {
         }
     }
-
 
     @Test
     public void testMonster() throws Exception {
@@ -131,9 +118,17 @@ public class ServiceRegistryTestCase {
         }
 
         long start = System.currentTimeMillis();
-        registry.install(serviceDefinitions);
+         new ServiceRegistry().install(toMap(serviceDefinitions));
         long end = System.currentTimeMillis();
         System.out.println("Time: " + (end - start));
         //assertInDependencyOrder(collectingHandler.getResolved());
+    }
+
+    private Map<ServiceName, ServiceDefinition> toMap(final Collection<ServiceDefinition> definitions) {
+        final Map<ServiceName, ServiceDefinition> definitionMap = new HashMap<ServiceName, ServiceDefinition>();
+        for(ServiceDefinition definition : definitions) {
+            definitionMap.put(definition.getName(), definition);
+        }
+        return definitionMap;
     }
 }
