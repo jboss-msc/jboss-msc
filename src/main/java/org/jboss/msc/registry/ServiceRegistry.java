@@ -58,14 +58,6 @@ public class ServiceRegistry {
         }
     }
 
-    private Map<ServiceName, ServiceDefinition> toMap(Collection<ServiceDefinition> serviceDefinitions) {
-        final Map<ServiceName, ServiceDefinition> allServiceDefinitions = new HashMap<ServiceName, ServiceDefinition>();
-        for (ServiceDefinition serviceDefinition : serviceDefinitions)
-            allServiceDefinitions.put(serviceDefinition.getName(), serviceDefinition);
-        return allServiceDefinitions;
-    }
-
-
     /**
      * Recursive depth-first resolution
      *
