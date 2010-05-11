@@ -33,6 +33,7 @@ import java.util.Set;
  * is using an iterative and not recursive algorithm to avoid stack frame issues.  
  *
  * @author John Bailey
+ * @author Jason T. Greene
  */
 public class Resolver {
 
@@ -55,16 +56,16 @@ public class Resolver {
     * @throws ResolutionException if any problem occur during resolution
     */
    private void recursiveResolve(final Map<String, ServiceDefinition> serviceDefinitions, final ResolveCallback callback) throws ResolutionException {
-      final Set<ServiceDefinition> visited = new HashSet<ServiceDefinition>();
+      final Set<String> visited = new HashSet<String>();
       for(ServiceDefinition serviceDefinition : serviceDefinitions.values()) {
          resolve(serviceDefinition, serviceDefinitions, visited, callback);
       }
    }
 
-   private void resolve(final ServiceDefinition serviceDefinition, final Map<String, ServiceDefinition> serviceDefinitions, final Set<ServiceDefinition> visited, final ResolveCallback callback) throws ResolutionException {
-      if(visited.contains(serviceDefinition))
+   private void resolve(final ServiceDefinition serviceDefinition, final Map<String, ServiceDefinition> serviceDefinitions, final Set<String> visited, final ResolveCallback callback) throws ResolutionException {
+      if(visited.contains(serviceDefinition.getName()))
             throw new CircularDependencyException("Circular dependency discovered: " + visited);
-      visited.add(serviceDefinition);
+      visited.add(serviceDefinition.getName());
       try {
          if(!serviceDefinition.isProcessed()) {
             serviceDefinition.setProcessed(true);
@@ -90,7 +91,7 @@ public class Resolver {
     */
    private void iterativeResolve(Map<String, ServiceDefinition> serviceDefinitions, final ResolveCallback callback) throws ResolutionException {
       final Deque<ServiceDefinition> toResolve = new ArrayDeque<ServiceDefinition>(100);
-      final Set<ServiceDefinition> visited = new HashSet<ServiceDefinition>();
+      final Set<String> visited = new HashSet<String>();
 
       for(ServiceDefinition serviceDefinition : serviceDefinitions.values()) {
          toResolve.clear();
@@ -98,7 +99,7 @@ public class Resolver {
 
          while(!toResolve.isEmpty()) {
             final ServiceDefinition serviceToResolve = toResolve.getFirst();
-            visited.add(serviceToResolve);
+            visited.add(serviceToResolve.getName());
             serviceToResolve.setProcessed(true);
             boolean dependenciesResolved = true;
 
@@ -108,7 +109,7 @@ public class Resolver {
                   throw new MissingDependencyException("Missing dependency: " + serviceDefinition.getName() + " depends on " + dependency + " which can not be found");
 
                if(!dependencyDefinition.isResolved()) {
-                  if(visited.contains(dependencyDefinition))
+                  if(visited.contains(dependencyDefinition.getName()))
                      throw new CircularDependencyException("Circular dependency: " + visited);
                   dependenciesResolved = false;
                }

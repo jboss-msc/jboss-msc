@@ -9,22 +9,40 @@ import java.util.*;
  * Class representing the definition of a services prior to the service being installed.
  *
  * @author John Bailey
+ * @author Jason T. Greene
  */
-public class ServiceDefinition {
+public final class ServiceDefinition {
     private final String name;
-    private Set<String> dependencies;
-    private ServiceController.Mode initialMode;
-    private Location location;
+    private final Set<String> dependencies;
+    private final ServiceController.Mode initialMode;
+    private final Location location;
     private boolean resolved;
     private boolean processed;
 
-    public ServiceDefinition(final String name, String... dependencies) {
-        this(name, Arrays.asList(dependencies));            
-    }
-
-    public ServiceDefinition(final String name, Collection<String> dependencies) {
+    private ServiceDefinition(String name, ServiceController.Mode initialMode, Location location, Set<String> dependencies) {
+    	if (name == null)
+    		throw new IllegalArgumentException("Name can not be null");
+    	
         this.name = name;
         this.dependencies = new HashSet<String>(dependencies);
+        this.initialMode = ServiceController.Mode.AUTOMATIC;
+        this.location = location;
+    }
+    
+    public static ServiceDefinition create(String name, ServiceController.Mode initialMode, Location location, Set<String> dependencies) {
+    	return new ServiceDefinition(name, initialMode, location, dependencies);
+    }
+    
+    public static ServiceDefinition create(String name, ServiceController.Mode initialMode, Location location, String... dependencies) {
+    	return create(name, initialMode, location, new HashSet<String>(Arrays.asList(dependencies)));
+    }
+    
+    public static ServiceDefinition create(String name, Location location, String... dependencies) {
+    	return create(name, ServiceController.Mode.AUTOMATIC, location, new HashSet<String>(Arrays.asList(dependencies)));
+    }
+    
+    public static ServiceDefinition create(String name, String... dependencies) {
+    	return create(name, ServiceController.Mode.AUTOMATIC, null, new HashSet<String>(Arrays.asList(dependencies)));
     }
 
     public String getName() {
@@ -35,31 +53,19 @@ public class ServiceDefinition {
         return dependencies;
     }
 
-    public void setDependencies(Set<String> dependencies) {
-        this.dependencies = dependencies;
-    }
-
     public ServiceController.Mode getInitialMode() {
         return initialMode;
-    }
-
-    public void setInitialMode(ServiceController.Mode initialMode) {
-        this.initialMode = initialMode;
     }
 
     public Location getLocation() {
         return location;
     }
 
-    public void setLocation(Location location) {
-        this.location = location;
-    }
-
     public boolean isProcessed() {
         return processed;
     }
 
-    public void setProcessed(boolean processed) {
+    void setProcessed(boolean processed) {
         this.processed = processed;
     }
 
@@ -67,25 +73,8 @@ public class ServiceDefinition {
         return resolved;
     }
 
-    public void setResolved(boolean resolved) {
+    void setResolved(boolean resolved) {
         this.resolved = resolved;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        ServiceDefinition that = (ServiceDefinition) o;
-
-        if (name != null ? !name.equals(that.name) : that.name != null) return false;
-
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        return name != null ? name.hashCode() : 0;
     }
 
     @Override
