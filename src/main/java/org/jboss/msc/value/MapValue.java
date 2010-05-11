@@ -27,23 +27,23 @@ import java.util.List;
 import java.util.Map;
 
 public final class MapValue<K, V> implements Value<Map<K, V>> {
-    private final List<Pair<? extends Value<? extends K>, ? extends Value<? extends V>>> values;
+    private final List<MapEntry<? extends Value<? extends K>, ? extends Value<? extends V>>> values;
     private final Value<? extends Map<K, V>> mapValue;
 
-    public MapValue(final Value<? extends Map<K, V>> mapValue, final List<Pair<? extends Value<? extends K>, ? extends Value<? extends V>>> values) {
+    public MapValue(final Value<? extends Map<K, V>> mapValue, final List<MapEntry<? extends Value<? extends K>, ? extends Value<? extends V>>> values) {
         this.values = values;
         this.mapValue = mapValue;
     }
 
-    public MapValue(final Value<? extends Map<K, V>> mapValue, Pair<? extends Value<? extends K>, ? extends Value<? extends V>>... values) {
+    public MapValue(final Value<? extends Map<K, V>> mapValue, MapEntry<? extends Value<? extends K>, ? extends Value<? extends V>>... values) {
         this(mapValue, Arrays.asList(values));
     }
 
     public Map<K, V> getValue() throws IllegalStateException {
-        final List<Pair<? extends Value<? extends K>, ? extends Value<? extends V>>> values = this.values;
+        final List<MapEntry<? extends Value<? extends K>, ? extends Value<? extends V>>> values = this.values;
         final Map<K, V> map = mapValue.getValue();
-        for (Pair<? extends Value<? extends K>, ? extends Value<? extends V>> pair : values) {
-            map.put(pair.getA().getValue(), pair.getB().getValue());
+        for (MapEntry<? extends Value<? extends K>, ? extends Value<? extends V>> pair : values) {
+            map.put(pair.getKey().getValue(), pair.getValue().getValue());
         }
         return map;
     }

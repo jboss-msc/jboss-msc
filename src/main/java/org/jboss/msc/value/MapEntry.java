@@ -25,45 +25,49 @@ package org.jboss.msc.value;
 import java.io.Serializable;
 import java.util.Map;
 
-public final class Pair<A, B> implements Serializable {
+public final class MapEntry<K, V> implements Map.Entry<K, V>, Serializable {
 
     private static final long serialVersionUID = 3913554072275205665L;
 
-    private final A a;
-    private final B b;
+    private final K key;
+    private final V value;
 
-    public Pair(final A a, final B b) {
-        this.a = a;
-        this.b = b;
+    public MapEntry(final K key, final V value) {
+        this.key = key;
+        this.value = value;
     }
 
-    public static <A, B> Pair<A, B> of(A a, B b) {
-        return new Pair<A,B>(a, b);
+    public static <A, B> MapEntry<A, B> entry(A a, B b) {
+        return new MapEntry<A,B>(a, b);
     }
 
-    public A getA() {
-        return a;
+    public K getKey() {
+        return key;
     }
 
-    public B getB() {
-        return b;
+    public V getValue() {
+        return value;
+    }
+
+    public V setValue(final V value) {
+        throw new UnsupportedOperationException();
     }
 
     public boolean equals(final Object obj) {
-        return obj instanceof Pair && equals((Pair<?, ?>) obj);
+        return obj instanceof MapEntry && equals((MapEntry<?, ?>) obj);
     }
 
-    public boolean equals(final Pair<?, ?> obj) {
-        return obj != null && (a == null ? obj.a == null : a.equals(obj.a)) && (b == null ? obj.b == null : b.equals(obj.b));
+    public boolean equals(final MapEntry<?, ?> obj) {
+        return obj != null && (key == null ? obj.key == null : key.equals(obj.key)) && (value == null ? obj.value == null : value.equals(obj.value));
     }
 
     public int hashCode() {
-        return (a == null ? 0 : a.hashCode()) + 7 * (b == null ? 0 : b.hashCode());
+        return (key == null ? 0 : key.hashCode()) + 7 * (value == null ? 0 : value.hashCode());
     }
 
-    public static <K, V> Map<K, V> addTo(Map<K, V> map, Pair<? extends K, ? extends V>... pairs) {
-        for (Pair<? extends K, ? extends V> pair : pairs) {
-            map.put(pair.getA(), pair.getB());
+    public static <K, V> Map<K, V> addTo(Map<K, V> map, MapEntry<? extends K, ? extends V>... entries) {
+        for (MapEntry<? extends K, ? extends V> pair : entries) {
+            map.put(pair.getKey(), pair.getValue());
         }
         return map;
     }

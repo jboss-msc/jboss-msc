@@ -22,19 +22,19 @@
 
 package org.jboss.msc.value;
 
-public final class PairValue<A, B> implements Value<Pair<A, B>> {
-    private final Pair<Value<A>, Value<B>> pair;
+public final class MapEntryValue<A, B> implements Value<MapEntry<A, B>> {
+    private final MapEntry<Value<A>, Value<B>> entry;
 
-    public PairValue(final Pair<Value<A>, Value<B>> pair) {
-        this.pair = pair;
+    public MapEntryValue(final MapEntry<Value<A>, Value<B>> entry) {
+        this.entry = entry;
     }
 
-    public Pair<A, B> getValue() throws IllegalStateException {
-        final Pair<Value<A>, Value<B>> pair = this.pair;
-        return Pair.of(pair.getA().getValue(), pair.getB().getValue());
+    public MapEntry<A, B> getValue() throws IllegalStateException {
+        final MapEntry<Value<A>, Value<B>> entry = this.entry;
+        return MapEntry.entry(entry.getKey().getValue(), entry.getValue().getValue());
     }
 
-    public static <A, B> Value<Pair<A, B>> of(Value<A> a, Value<B> b) {
-        return new PairValue<A, B>(Pair.of(a, b));
+    public static <A, B> Value<MapEntry<A, B>> of(Value<A> a, Value<B> b) {
+        return new MapEntryValue<A, B>(MapEntry.entry(a, b));
     }
 }
