@@ -23,7 +23,7 @@
 package org.jboss.msc.service;
 
 /**
- *
+ * The start lifecycle context.
  */
 public interface StartContext extends LifecycleContext {
 

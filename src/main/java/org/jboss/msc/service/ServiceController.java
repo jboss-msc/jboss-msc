@@ -25,7 +25,7 @@ package org.jboss.msc.service;
 import org.jboss.msc.value.Value;
 
 /**
- *
+ * A controller for a single service instance.
  */
 public interface ServiceController<S> extends Value<S> {
 

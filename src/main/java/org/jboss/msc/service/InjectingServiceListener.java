@@ -32,27 +32,38 @@ import org.jboss.msc.inject.Injector;
 public final class InjectingServiceListener<T> implements ServiceListener<T> {
     private final Injector<T> injector;
 
+    /**
+     * Create a new instance.
+     *
+     * @param injector the injector to use
+     */
     public InjectingServiceListener(final Injector<T> injector) {
         this.injector = injector;
     }
 
+    /** {@inheritDoc} */
     public void serviceStarting(final ServiceController<? extends T> controller) {
     }
 
+    /** {@inheritDoc} */
     public void serviceStarted(final ServiceController<? extends T> controller) {
         injector.inject(controller.getValue());
     }
 
+    /** {@inheritDoc} */
     public void serviceFailed(final ServiceController<? extends T> controller, final StartException reason) {
     }
 
+    /** {@inheritDoc} */
     public void serviceStopping(final ServiceController<? extends T> controller) {
     }
 
+    /** {@inheritDoc} */
     public void serviceStopped(final ServiceController<? extends T> controller) {
         injector.uninject();
     }
 
+    /** {@inheritDoc} */
     public void serviceRemoved(final ServiceController<? extends T> serviceController) {
     }
 }

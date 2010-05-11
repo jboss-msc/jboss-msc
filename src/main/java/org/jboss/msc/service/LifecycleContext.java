@@ -23,7 +23,7 @@
 package org.jboss.msc.service;
 
 /**
- *
+ * A context object for lifecycle events.
  */
 public interface LifecycleContext {
 

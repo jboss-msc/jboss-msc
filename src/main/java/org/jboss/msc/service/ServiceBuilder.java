@@ -23,24 +23,43 @@
 package org.jboss.msc.service;
 
 /**
- *
+ * A builder for services.
  */
 public interface ServiceBuilder<S> {
 
     /**
      * Add a dependency.
-     * @param dependency
+     *
+     * @param dependency the dependency
      */
     void addDependency(ServiceController<?> dependency);
 
+    /**
+     * Add an initial listener.
+     *
+     * @param listener the initial listener
+     * @return this builder
+     */
     ServiceBuilder<S> addListener(ServiceListener<? super S> listener);
 
+    /**
+     * Set the initial mode.
+     *
+     * @param mode the initial mode
+     * @return this builder
+     */
     ServiceBuilder<S> setInitialMode(ServiceController.Mode mode);
 
+    /**
+     * Set the service definition location, if any.
+     *
+     * @param location the location
+     * @return this builder
+     */
     ServiceBuilder<S> setLocation(Location location);
 
     /**
-     * Set the location to be the caller's location.
+     * Set the service definition location to be the caller's location.
      *
      * @return this builder
      */

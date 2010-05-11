@@ -22,12 +22,11 @@
 
 package org.jboss.msc.service;
 
-import java.util.List;
 import java.util.concurrent.Executor;
 import org.jboss.msc.value.Value;
 
 /**
- *
+ * A service container which manages a set of running services.
  */
 public interface ServiceContainer {
 

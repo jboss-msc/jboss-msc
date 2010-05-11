@@ -23,8 +23,7 @@
 package org.jboss.msc.service;
 
 /**
- *
+ * The stop lifecycle context.
  */
 public interface StopContext extends LifecycleContext {
-
 }

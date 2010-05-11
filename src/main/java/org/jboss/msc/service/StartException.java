@@ -22,6 +22,9 @@
 
 package org.jboss.msc.service;
 
+/**
+ * A start exception, thrown when a service fails to start.
+ */
 public class StartException extends Exception {
 
     private static final long serialVersionUID = 239274385917008839L;
