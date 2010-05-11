@@ -26,6 +26,8 @@ import org.jboss.msc.value.Value;
 
 /**
  * A controller for a single service instance.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface ServiceController<S> extends Value<S> {
 

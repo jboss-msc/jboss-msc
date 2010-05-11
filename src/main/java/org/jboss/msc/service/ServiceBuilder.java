@@ -24,6 +24,8 @@ package org.jboss.msc.service;
 
 /**
  * A builder for services.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface ServiceBuilder<S> {
 

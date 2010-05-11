@@ -24,6 +24,8 @@ package org.jboss.msc.service;
 
 /**
  * A start exception, thrown when a service fails to start.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public class StartException extends Exception {
 

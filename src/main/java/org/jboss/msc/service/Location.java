@@ -24,6 +24,8 @@ package org.jboss.msc.service;
 
 /**
  * A location at which a service was defined.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class Location {
     private final String fileName;

@@ -25,6 +25,8 @@ package org.jboss.msc.service;
 /**
  * A listener for service lifecycle events.  The associated controller will not leave its current state until
  * all listeners finish running.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface ServiceListener<S> {
 

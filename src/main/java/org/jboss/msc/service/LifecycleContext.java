@@ -24,6 +24,8 @@ package org.jboss.msc.service;
 
 /**
  * A context object for lifecycle events.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface LifecycleContext {
 

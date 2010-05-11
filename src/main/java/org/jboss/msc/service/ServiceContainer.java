@@ -27,6 +27,8 @@ import org.jboss.msc.value.Value;
 
 /**
  * A service container which manages a set of running services.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface ServiceContainer {
 

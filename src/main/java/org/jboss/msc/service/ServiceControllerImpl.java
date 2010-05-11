@@ -29,6 +29,9 @@ import java.util.concurrent.Executor;
 import org.jboss.logging.Logger;
 import org.jboss.msc.value.Value;
 
+/**
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 final class ServiceControllerImpl<S> implements ServiceController<S> {
     private static final Logger log = Logger.getI18nLogger("org.jboss.msc.controller", null, "MSC");
 
@@ -216,14 +219,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         final ServiceListener<? super S>[] listeners;
         synchronized (this) {
             if (state == Substate.DOWN) {
-                state = Substate.REMOVED;
-                final ServiceListener<Object> dependencyListener = this.dependencyListener;
-                for (ServiceControllerImpl<?> controller : dependencies) {
-                    controller.removeListener(dependencyListener);
+                if (runningListeners == 0) {
+                    listeners = getListeners(0, Substate.REMOVED);
+                } else {
+                    state = Substate.DOWN_REMOVING;
+                    return;
                 }
-                listeners = getListeners(0, Substate.REMOVED);
-                this.listeners.clear();
-                Arrays.fill(dependencies, null);
             } else {
                 throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
             }
@@ -432,15 +433,28 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     @SuppressWarnings({ "unchecked" })
     ServiceListener<? super S>[] getListeners(int plusCount, Substate newState) {
         assert Thread.holdsLock(this);
-        state = newState;
-        if (newState == Substate.STARTING || newState == Substate.DOWN) {
-            // special case - clear out the old exception
-            startException = null;
-        }
         final Set<ServiceListener<? super S>> listeners = this.listeners;
         final int size = listeners.size();
         runningListeners = size + plusCount;
-        return listeners.toArray(new ServiceListener[size]);
+        final ServiceListener[] listenersArray = listeners.toArray(new ServiceListener[size]);
+        state = newState;
+        switch (newState) {
+            case STARTING:
+            case DOWN: {
+                startException = null;
+                break;
+            }
+            case REMOVED: {
+                final ServiceListener<Object> dependencyListener = this.dependencyListener;
+                for (ServiceControllerImpl<?> controller : dependencies) {
+                    controller.removeListener(dependencyListener);
+                }
+                this.listeners.clear();
+                Arrays.fill(dependencies, null);
+                break;
+            }
+        }
+        return listenersArray;
     }
 
     /**
@@ -535,6 +549,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                         }
                         break;
                     }
+                    case DOWN_REMOVING: {
+                        listeners = getListeners(0, Substate.REMOVED);
+                        break;
+                    }
                     case STARTING: {
                         if (startException != null) {
                             listeners = getListeners(0, newState = Substate.START_FAILED);
@@ -583,6 +601,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             }
             case DOWN: {
                 doStopComplete(listeners);
+                break;
+            }
+            case REMOVED: {
+                runListeners(listeners, State.REMOVED);
                 break;
             }
         }
@@ -782,6 +804,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     enum Substate {
         DOWN(State.DOWN),
+        DOWN_REMOVING(State.DOWN),
         STARTING(State.STARTING),
         START_FAILED(State.START_FAILED),
         START_FAILED_RETRY_PENDING(State.START_FAILED),
