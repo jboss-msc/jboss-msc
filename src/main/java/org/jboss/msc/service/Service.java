@@ -27,6 +27,8 @@ import org.jboss.msc.value.Value;
 
 /**
  * A service is a thing which can be started and stopped.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface Service {
 

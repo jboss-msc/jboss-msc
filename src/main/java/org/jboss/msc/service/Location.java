@@ -23,7 +23,9 @@
 package org.jboss.msc.service;
 
 /**
+ * A location at which a service was defined.
  *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class Location {
     private final String fileName;
@@ -31,6 +33,14 @@ public final class Location {
     private final int columnNumber;
     private final Location parentLocation;
 
+    /**
+     * Create a new instance.
+     *
+     * @param fileName the file name, or {@code null} if unknown
+     * @param lineNumber the line number, or {@code 0} if unknown
+     * @param columnNumber the column number, or {@code 0} if unknown
+     * @param parentLocation the parent location, or {@code null} for none
+     */
     public Location(final String fileName, final int lineNumber, final int columnNumber, final Location parentLocation) {
         this.fileName = fileName;
         this.lineNumber = lineNumber;
@@ -38,14 +48,29 @@ public final class Location {
         this.parentLocation = parentLocation;
     }
 
+    /**
+     * Get the file name.
+     *
+     * @return the file name, or {@code null} if unknown
+     */
     public String getFileName() {
         return fileName;
     }
 
+    /**
+     * Get the line number.
+     *
+     * @return the line number, or {@code 0} if unknown
+     */
     public int getLineNumber() {
         return lineNumber;
     }
 
+    /**
+     * Get the column number.
+     *
+     * @return the column number, or {@code 0} if unknown
+     */
     public int getColumnNumber() {
         return columnNumber;
     }
@@ -70,6 +95,11 @@ public final class Location {
         }
     }
 
+    /**
+     * Get the human-readable string representation of this location.
+     *
+     * @return the string
+     */
     public String toString() {
         StringBuilder b = new StringBuilder();
         toString(b);

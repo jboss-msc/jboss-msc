@@ -38,6 +38,9 @@ import java.util.concurrent.TimeUnit;
 import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 
+/**
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 final class ServiceContainerImpl implements ServiceContainer {
     final Object lock = new Object();
     final ServiceControllerImpl<ServiceContainer> root;

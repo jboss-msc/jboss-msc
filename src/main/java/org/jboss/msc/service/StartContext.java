@@ -23,7 +23,9 @@
 package org.jboss.msc.service;
 
 /**
+ * The start lifecycle context.
  *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface StartContext extends LifecycleContext {
 

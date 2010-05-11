@@ -23,25 +23,33 @@
 package org.jboss.msc.service;
 
 /**
- * A context object for lifecycle events.
+ * An abstract implementation of a service listener whose methods do nothing.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface LifecycleContext {
+public abstract class AbstractServiceListener<S> implements ServiceListener<S> {
 
-    /**
-     * Call within the service lifecycle method to trigger an <em>asynchronous</em> lifecycle action.  This action
-     * will not be considered complete until indicated so by calling a method on this interface.
-     *
-     * @throws IllegalStateException if called outside of the main service lifecycle method
-     */
-    void asynchronous() throws IllegalStateException;
+    /** {@inheritDoc} */
+    public void serviceStarting(final ServiceController<? extends S> controller) {
+    }
 
-    /**
-     * Call when an <em>asynchronous</em> lifecycle action is complete.
-     *
-     * @throws IllegalStateException if called before {@link #asynchronous()} is called, or if the action was already
-     * completed
-     */
-    void complete() throws IllegalStateException;
+    /** {@inheritDoc} */
+    public void serviceStarted(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
+    public void serviceFailed(final ServiceController<? extends S> controller, final StartException reason) {
+    }
+
+    /** {@inheritDoc} */
+    public void serviceStopping(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
+    public void serviceStopped(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
+    public void serviceRemoved(final ServiceController<? extends S> controller) {
+    }
 }

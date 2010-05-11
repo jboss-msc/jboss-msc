@@ -29,6 +29,9 @@ import java.util.concurrent.Executor;
 import org.jboss.logging.Logger;
 import org.jboss.msc.value.Value;
 
+/**
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 final class ServiceControllerImpl<S> implements ServiceController<S> {
     private static final Logger log = Logger.getI18nLogger("org.jboss.msc.controller", null, "MSC");
 
@@ -59,6 +62,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
      * The dependencies of this service.
      */
     private final ServiceControllerImpl<?>[] dependencies;
+    /**
+     * The injections of this service.
+     */
+    private final ValueInjection<?>[] injections;
     /**
      * The set of registered service listeners.
      */
@@ -137,12 +144,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         }
     };
 
-    ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service> serviceValue, final Value<S> value, final Location location, final ServiceControllerImpl<?>[] dependencies) {
+    ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service> serviceValue, final Value<S> value, final Location location, final ServiceControllerImpl<?>[] dependencies, final ValueInjection<?>[] injections) {
         this.container = container;
         this.serviceValue = serviceValue;
         this.value = value;
         this.location = location;
         this.dependencies = dependencies;
+        this.injections = injections;
         upperCount = - dependencies.length;
         for (ServiceControllerImpl<?> controller : dependencies) {
             controller.addListener(dependencyListener);
@@ -216,14 +224,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         final ServiceListener<? super S>[] listeners;
         synchronized (this) {
             if (state == Substate.DOWN) {
-                state = Substate.REMOVED;
-                final ServiceListener<Object> dependencyListener = this.dependencyListener;
-                for (ServiceControllerImpl<?> controller : dependencies) {
-                    controller.removeListener(dependencyListener);
+                if (runningListeners == 0) {
+                    listeners = getListeners(0, Substate.REMOVED);
+                } else {
+                    state = Substate.DOWN_REMOVING;
+                    return;
                 }
-                listeners = getListeners(0, Substate.REMOVED);
-                this.listeners.clear();
-                Arrays.fill(dependencies, null);
             } else {
                 throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
             }
@@ -432,15 +438,28 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     @SuppressWarnings({ "unchecked" })
     ServiceListener<? super S>[] getListeners(int plusCount, Substate newState) {
         assert Thread.holdsLock(this);
-        state = newState;
-        if (newState == Substate.STARTING || newState == Substate.DOWN) {
-            // special case - clear out the old exception
-            startException = null;
-        }
         final Set<ServiceListener<? super S>> listeners = this.listeners;
         final int size = listeners.size();
         runningListeners = size + plusCount;
-        return listeners.toArray(new ServiceListener[size]);
+        final ServiceListener[] listenersArray = listeners.toArray(new ServiceListener[size]);
+        state = newState;
+        switch (newState) {
+            case STARTING:
+            case DOWN: {
+                startException = null;
+                break;
+            }
+            case REMOVED: {
+                final ServiceListener<Object> dependencyListener = this.dependencyListener;
+                for (ServiceControllerImpl<?> controller : dependencies) {
+                    controller.removeListener(dependencyListener);
+                }
+                this.listeners.clear();
+                Arrays.fill(dependencies, null);
+                break;
+            }
+        }
+        return listenersArray;
     }
 
     /**
@@ -467,9 +486,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     private void doStart(ServiceListener<? super S>[] listeners) {
-        assert ! Thread.holdsLock(this);
-        assert state == Substate.DOWN || state == Substate.START_FAILED_RETRY_PENDING;
         try {
+            assert ! Thread.holdsLock(this);
             final Service service = serviceValue.getValue();
             if (service == null) {
                 throw new IllegalStateException(SERVICE_NOT_AVAILABLE);
@@ -481,6 +499,23 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     assert ! Thread.holdsLock(ServiceControllerImpl.this);
                     final StartContextImpl context = new StartContextImpl();
                     try {
+                        final ValueInjection<?>[] injections = ServiceControllerImpl.this.injections;
+                        final int injectionsLength = injections.length;
+                        boolean ok = false;
+                        int i = 0;
+                        try {
+                            for (; i < injectionsLength; i++) {
+                                final ValueInjection<?> injection = injections[i];
+                                doInject(injection);
+                            }
+                            ok = true;
+                        } finally {
+                            if (! ok) {
+                                for (; i >= 0; i--) {
+                                    injections[i].getTarget().uninject();
+                                }
+                            }
+                        }
                         service.start(context);
                         synchronized (ServiceControllerImpl.this) {
                             if (context.state == ContextState.SYNC) {
@@ -512,9 +547,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     }
                 }
             });
-        } catch (RuntimeException e) {
-            doFail(new StartException(START_FAIL_EXCEPTION, e));
+        } catch (Throwable t) {
+            doFail(new StartException(START_FAIL_EXCEPTION, t));
         }
+    }
+
+    private <T> void doInject(final ValueInjection<T> injection) {
+        injection.getTarget().inject(injection.getSource().getValue());
     }
 
     private void doStartComplete(final ServiceListener<? super S>[] listeners) {
@@ -533,6 +572,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                         if (upperCount > 0 && mode != Mode.NEVER) {
                             listeners = getListeners(1, newState = Substate.STARTING);
                         }
+                        break;
+                    }
+                    case DOWN_REMOVING: {
+                        listeners = getListeners(0, Substate.REMOVED);
                         break;
                     }
                     case STARTING: {
@@ -585,6 +628,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 doStopComplete(listeners);
                 break;
             }
+            case REMOVED: {
+                runListeners(listeners, State.REMOVED);
+                break;
+            }
         }
     }
 
@@ -615,6 +662,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                         synchronized (ServiceControllerImpl.this) {
                             if (context.state == ContextState.SYNC) {
                                 context.state = ContextState.COMPLETE;
+                                for (ValueInjection<?> injection : injections) {
+                                    injection.getTarget().uninject();
+                                }
                                 doFinishListener(null);
                             }
                         }
@@ -623,6 +673,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                             final ContextState oldState = context.state;
                             if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
                                 context.state = ContextState.FAILED;
+                                for (ValueInjection<?> injection : injections) {
+                                    injection.getTarget().uninject();
+                                }
                                 doFinishListener(null);
                             } else {
                             }
@@ -772,6 +825,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             synchronized (ServiceControllerImpl.this) {
                 if (state == ContextState.ASYNC) {
                     state = ContextState.COMPLETE;
+                    for (ValueInjection<?> injection : injections) {
+                        injection.getTarget().uninject();
+                    }
                     doFinishListener(null);
                 } else {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
@@ -782,6 +838,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     enum Substate {
         DOWN(State.DOWN),
+        DOWN_REMOVING(State.DOWN),
         STARTING(State.STARTING),
         START_FAILED(State.START_FAILED),
         START_FAILED_RETRY_PENDING(State.START_FAILED),

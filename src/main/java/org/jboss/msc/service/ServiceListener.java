@@ -23,18 +23,53 @@
 package org.jboss.msc.service;
 
 /**
+ * A listener for service lifecycle events.  The associated controller will not leave its current state until
+ * all listeners finish running.
  *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface ServiceListener<S> {
+
+    /**
+     * The service is starting.
+     *
+     * @param controller the controller
+     */
     void serviceStarting(ServiceController<? extends S> controller);
 
+    /**
+     * The service is started (up).
+     *
+     * @param controller the controller
+     */
     void serviceStarted(ServiceController<? extends S> controller);
 
+    /**
+     * The service start has failed.
+     *
+     * @param controller the controller
+     * @param reason the reason for failure
+     */
     void serviceFailed(ServiceController<? extends S> controller, StartException reason);
 
+    /**
+     * The service is stopping.
+     *
+     * @param controller the controller
+     */
     void serviceStopping(ServiceController<? extends S> controller);
 
+    /**
+     * The service is stopped (down).
+     *
+     * @param controller the controller
+     */
     void serviceStopped(ServiceController<? extends S> controller);
 
+    /**
+     * The service has been removed.  The listener will automatically be unregistered after this call.
+     *
+     * @param controller the controller
+     */
     void serviceRemoved(ServiceController<? extends S> controller);
 }

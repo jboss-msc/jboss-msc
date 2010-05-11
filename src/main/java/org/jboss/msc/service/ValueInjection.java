@@ -23,36 +23,43 @@
 package org.jboss.msc.service;
 
 import org.jboss.msc.inject.Injector;
+import org.jboss.msc.value.Value;
 
 /**
- * A service listener which injects the service value into an injector.
+ * An injection of a source value into a target injector.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class InjectingServiceListener<T> implements ServiceListener<T> {
-    private final Injector<T> injector;
+public final class ValueInjection<T> {
+    private final Value<? extends T> source;
+    private final Injector<? super T> target;
 
-    public InjectingServiceListener(final Injector<T> injector) {
-        this.injector = injector;
+    /**
+     * Construct a new instance.
+     *
+     * @param source the source value
+     * @param target the target injector
+     */
+    public ValueInjection(final Value<? extends T> source, final Injector<? super T> target) {
+        this.source = source;
+        this.target = target;
     }
 
-    public void serviceStarting(final ServiceController<? extends T> controller) {
+    /**
+     * Get the source value.
+     *
+     * @return the source value
+     */
+    public Value<? extends T> getSource() {
+        return source;
     }
 
-    public void serviceStarted(final ServiceController<? extends T> controller) {
-        injector.inject(controller.getValue());
-    }
-
-    public void serviceFailed(final ServiceController<? extends T> controller, final StartException reason) {
-    }
-
-    public void serviceStopping(final ServiceController<? extends T> controller) {
-    }
-
-    public void serviceStopped(final ServiceController<? extends T> controller) {
-        injector.uninject();
-    }
-
-    public void serviceRemoved(final ServiceController<? extends T> serviceController) {
+    /**
+     * Get the target injector.
+     *
+     * @return the target injector
+     */
+    public Injector<? super T> getTarget() {
+        return target;
     }
 }

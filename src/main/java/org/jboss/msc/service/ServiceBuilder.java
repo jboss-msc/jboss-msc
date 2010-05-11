@@ -22,25 +22,67 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.inject.Injector;
+
 /**
+ * A builder for services.
  *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface ServiceBuilder<S> {
 
     /**
      * Add a dependency.
-     * @param dependency
+     *
+     * @param dependency the dependency
      */
     void addDependency(ServiceController<?> dependency);
 
+    /**
+     * Add a value injection.
+     *
+     * @param injection the injection to add
+     * @param <T> the type of the injection
+     * @return this builder
+     */
+    <T> ServiceBuilder<S> addValueInjection(ValueInjection<T> injection);
+
+    /**
+     * Add a value injection as a dependency.
+     *
+     * @param dependency the dependency to add
+     * @param injector the injector to add
+     * @param <T> the type of the injection
+     * @return this builder
+     */
+    <T> ServiceBuilder<S> addValueInjection(ServiceController<T> dependency, Injector<T> injector);
+
+    /**
+     * Add an initial listener.
+     *
+     * @param listener the initial listener
+     * @return this builder
+     */
     ServiceBuilder<S> addListener(ServiceListener<? super S> listener);
 
+    /**
+     * Set the initial mode.
+     *
+     * @param mode the initial mode
+     * @return this builder
+     */
     ServiceBuilder<S> setInitialMode(ServiceController.Mode mode);
 
+    /**
+     * Set the service definition location, if any.
+     *
+     * @param location the location
+     * @return this builder
+     */
     ServiceBuilder<S> setLocation(Location location);
 
     /**
-     * Set the location to be the caller's location.
+     * Set the service definition location to be the caller's location.
      *
      * @return this builder
      */
