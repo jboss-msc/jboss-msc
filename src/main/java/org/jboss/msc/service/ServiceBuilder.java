@@ -22,6 +22,8 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.inject.Injector;
+
 /**
  * A builder for services.
  *
@@ -35,6 +37,25 @@ public interface ServiceBuilder<S> {
      * @param dependency the dependency
      */
     void addDependency(ServiceController<?> dependency);
+
+    /**
+     * Add a value injection.
+     *
+     * @param injection the injection to add
+     * @param <T> the type of the injection
+     * @return this builder
+     */
+    <T> ServiceBuilder<S> addValueInjection(ValueInjection<T> injection);
+
+    /**
+     * Add a value injection as a dependency.
+     *
+     * @param dependency the dependency to add
+     * @param injector the injector to add
+     * @param <T> the type of the injection
+     * @return this builder
+     */
+    <T> ServiceBuilder<S> addValueInjection(ServiceController<T> dependency, Injector<T> injector);
 
     /**
      * Add an initial listener.

@@ -63,6 +63,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
      */
     private final ServiceControllerImpl<?>[] dependencies;
     /**
+     * The injections of this service.
+     */
+    private final ValueInjection<?>[] injections;
+    /**
      * The set of registered service listeners.
      */
     private final Set<ServiceListener<? super S>> listeners = new HashSet<ServiceListener<? super S>>();
@@ -140,12 +144,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         }
     };
 
-    ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service> serviceValue, final Value<S> value, final Location location, final ServiceControllerImpl<?>[] dependencies) {
+    ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service> serviceValue, final Value<S> value, final Location location, final ServiceControllerImpl<?>[] dependencies, final ValueInjection<?>[] injections) {
         this.container = container;
         this.serviceValue = serviceValue;
         this.value = value;
         this.location = location;
         this.dependencies = dependencies;
+        this.injections = injections;
         upperCount = - dependencies.length;
         for (ServiceControllerImpl<?> controller : dependencies) {
             controller.addListener(dependencyListener);
@@ -494,6 +499,23 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     assert ! Thread.holdsLock(ServiceControllerImpl.this);
                     final StartContextImpl context = new StartContextImpl();
                     try {
+                        final ValueInjection<?>[] injections = ServiceControllerImpl.this.injections;
+                        final int injectionsLength = injections.length;
+                        boolean ok = false;
+                        int i = 0;
+                        try {
+                            for (; i < injectionsLength; i++) {
+                                final ValueInjection<?> injection = injections[i];
+                                doInject(injection);
+                            }
+                            ok = true;
+                        } finally {
+                            if (! ok) {
+                                for (; i >= 0; i--) {
+                                    injections[i].getTarget().uninject();
+                                }
+                            }
+                        }
                         service.start(context);
                         synchronized (ServiceControllerImpl.this) {
                             if (context.state == ContextState.SYNC) {
@@ -528,6 +550,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         } catch (Throwable t) {
             doFail(new StartException(START_FAIL_EXCEPTION, t));
         }
+    }
+
+    private <T> void doInject(final ValueInjection<T> injection) {
+        injection.getTarget().inject(injection.getSource().getValue());
     }
 
     private void doStartComplete(final ServiceListener<? super S>[] listeners) {
@@ -636,6 +662,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                         synchronized (ServiceControllerImpl.this) {
                             if (context.state == ContextState.SYNC) {
                                 context.state = ContextState.COMPLETE;
+                                for (ValueInjection<?> injection : injections) {
+                                    injection.getTarget().uninject();
+                                }
                                 doFinishListener(null);
                             }
                         }
@@ -644,6 +673,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                             final ContextState oldState = context.state;
                             if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
                                 context.state = ContextState.FAILED;
+                                for (ValueInjection<?> injection : injections) {
+                                    injection.getTarget().uninject();
+                                }
                                 doFinishListener(null);
                             } else {
                             }
@@ -793,6 +825,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             synchronized (ServiceControllerImpl.this) {
                 if (state == ContextState.ASYNC) {
                     state = ContextState.COMPLETE;
+                    for (ValueInjection<?> injection : injections) {
+                        injection.getTarget().uninject();
+                    }
                     doFinishListener(null);
                 } else {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
