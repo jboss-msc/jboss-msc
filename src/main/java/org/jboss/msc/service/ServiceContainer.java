@@ -33,13 +33,26 @@ public interface ServiceContainer {
 
     /**
      * Set the container executor.  If {@code null} is specified, a default single-thread executor is used.
+     * <p>
+     * You <b>must</b> adhere to the following rules when setting an executor:
+     * <ul>
+     * <li>The executor must always accept tasks (throwing {@link java.util.concurrent.RejectedExecutionException RejectedExecutionException}
+     * can cause significant problems)</li>
+     * <li>The executor must be removed (by setting this value to {@code null} or another executor) before it is shut down.</li>
+     * </ul>
      *
      * @param executor the executor to use
      */
     void setExecutor(Executor executor);
 
-
-    <S extends Service> ServiceBuilder<S> buildService(Value<S> service) throws IllegalArgumentException;
+    /**
+     * Get a service builder for a service.
+     *
+     * @param service the service
+     * @param <S> the service type
+     * @return a service builder
+     */
+    <S extends Service> ServiceBuilder<S> buildService(Value<S> service);
 
     /**
      * Build a service whose public type is different from the service type.
@@ -48,15 +61,27 @@ public interface ServiceContainer {
      * @param value the public service value
      * @param <T> the public service value
      * @return a service builder
-     * @throws IllegalArgumentException if another service is already registered with the given identifier
      */
-    <T> ServiceBuilder<T> buildService(Value<? extends Service> service, Value<T> value) throws IllegalArgumentException;
+    <T> ServiceBuilder<T> buildService(Value<? extends Service> service, Value<T> value);
 
+    /**
+     * Stop all services within this container.
+     */
+    void shutdown();
+
+    /**
+     * The factory class for service containers.
+     */
     class Factory {
 
         private Factory() {
         }
 
+        /**
+         * Create a new instance.
+         *
+         * @return a new service container instance
+         */
         public static ServiceContainer create() {
             return new ServiceContainerImpl();
         }
