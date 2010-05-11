@@ -62,7 +62,7 @@ final class ServiceContainerImpl implements ServiceContainer {
 
         static {
             containers = new HashSet<WeakReference<ServiceContainerImpl>>();
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            if (false) AccessController.doPrivileged(new PrivilegedAction<Void>() {
                 public Void run() {
                     final Thread hook = new Thread(new Runnable() {
                         public void run() {

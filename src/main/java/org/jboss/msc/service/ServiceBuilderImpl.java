@@ -95,7 +95,13 @@ final class ServiceBuilderImpl<S> implements ServiceBuilder<S> {
     public ServiceControllerImpl<S> create() {
         synchronized (this) {
             final ServiceControllerImpl<S> controller = this.controller;
-            return controller != null ? controller : (this.controller = new ServiceControllerImpl<S>(container, service, value, location, deps.toArray(new ServiceControllerImpl<?>[deps.size()])));
+            return controller != null ? controller : doCreate();
         }
+    }
+
+    private ServiceControllerImpl<S> doCreate() {
+        final ServiceControllerImpl<S> controller = this.controller = new ServiceControllerImpl<S>(container, service, value, location, deps.toArray(new ServiceControllerImpl<?>[deps.size()]));
+        controller.setMode(mode);
+        return controller;
     }
 }
