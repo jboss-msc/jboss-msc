@@ -23,47 +23,53 @@
 package org.jboss.msc.service;
 
 import org.jboss.msc.inject.Injector;
+import org.jboss.msc.value.Value;
 
 /**
- * A service listener which injects the service value into an injector.
+ * A service listener which injects a value into an injector.  The listener
+ * should be added to the controller corresponding to the service into which the value will be injected.  If
+ * the injection comes from another service, that service should typically be a dependency of the destination service.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class InjectingServiceListener<T> implements ServiceListener<T> {
-    private final Injector<T> injector;
+public final class InjectingServiceListener<T> implements ServiceListener<Object> {
+    private final Injector<? super T> injector;
+    private final Value<? extends T> source;
 
     /**
-     * Create a new instance.
+     * Construct a new instance.
      *
-     * @param injector the injector to use
+     * @param injector the injector to receive the value
+     * @param source the source for the injected value
      */
-    public InjectingServiceListener(final Injector<T> injector) {
+    public InjectingServiceListener(final Injector<? super T> injector, final Value<? extends T> source) {
         this.injector = injector;
+        this.source = source;
     }
 
     /** {@inheritDoc} */
-    public void serviceStarting(final ServiceController<? extends T> controller) {
+    public void serviceStarting(final ServiceController<?> controller) {
+        injector.inject(source.getValue());
     }
 
     /** {@inheritDoc} */
-    public void serviceStarted(final ServiceController<? extends T> controller) {
-        injector.inject(controller.getValue());
+    public void serviceStarted(final ServiceController<?> controller) {
     }
 
     /** {@inheritDoc} */
-    public void serviceFailed(final ServiceController<? extends T> controller, final StartException reason) {
+    public void serviceFailed(final ServiceController<?> controller, final StartException reason) {
     }
 
     /** {@inheritDoc} */
-    public void serviceStopping(final ServiceController<? extends T> controller) {
-    }
-
-    /** {@inheritDoc} */
-    public void serviceStopped(final ServiceController<? extends T> controller) {
+    public void serviceStopping(final ServiceController<?> controller) {
         injector.uninject();
     }
 
     /** {@inheritDoc} */
-    public void serviceRemoved(final ServiceController<? extends T> serviceController) {
+    public void serviceStopped(final ServiceController<?> controller) {
+    }
+
+    /** {@inheritDoc} */
+    public void serviceRemoved(final ServiceController<?> serviceController) {
     }
 }

@@ -481,8 +481,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     private void doStart(ServiceListener<? super S>[] listeners) {
-        assert ! Thread.holdsLock(this);
         try {
+            assert ! Thread.holdsLock(this);
             final Service service = serviceValue.getValue();
             if (service == null) {
                 throw new IllegalStateException(SERVICE_NOT_AVAILABLE);
@@ -525,8 +525,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     }
                 }
             });
-        } catch (RuntimeException e) {
-            doFail(new StartException(START_FAIL_EXCEPTION, e));
+        } catch (Throwable t) {
+            doFail(new StartException(START_FAIL_EXCEPTION, t));
         }
     }
 
