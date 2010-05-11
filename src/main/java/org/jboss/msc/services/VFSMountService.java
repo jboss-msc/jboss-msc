@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.vfs;
+package org.jboss.msc.services;
 
 import java.io.Closeable;
 import java.io.File;
