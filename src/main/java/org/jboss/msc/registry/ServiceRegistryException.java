@@ -19,26 +19,26 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.msc.resolver;
+package org.jboss.msc.registry;
 
 /**
- * Exception used to indicate there was a missing dependency discovered during resolution.
- *
+ * Base Exception class used for ServiceRegistry issues.
+ * 
  * @author John Bailey
  */
-public class MissingDependencyException extends ResolutionException {
-   public MissingDependencyException() {
-   }
+public class ServiceRegistryException extends Exception {
+    public ServiceRegistryException() {
+    }
 
-   public MissingDependencyException(final Throwable cause) {
-      super(cause);
-   }
+    public ServiceRegistryException(Throwable cause) {
+        super(cause);
+    }
 
-   public MissingDependencyException(final String message) {
-      super(message);
-   }
+    public ServiceRegistryException(String message) {
+        super(message);
+    }
 
-   public MissingDependencyException(final String message, final Throwable cause) {
-      super(message, cause);
-   }
+    public ServiceRegistryException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

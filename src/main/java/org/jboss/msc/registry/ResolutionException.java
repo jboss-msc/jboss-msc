@@ -19,26 +19,25 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.msc.resolver;
+package org.jboss.msc.registry;
 
 /**
- * Exception used to indicate there was a circular dependency discovered during resolution.
- * 
+ * Parent exception type used to indicate issue durring resolution. 
  * @author John Bailey
  */
-public class CircularDependencyException extends ResolutionException {
-   public CircularDependencyException() {
+public class ResolutionException extends ServiceRegistryException {
+   public ResolutionException() {
    }
 
-   public CircularDependencyException(final Throwable cause) {
+   public ResolutionException(final Throwable cause) {
       super(cause);
    }
 
-   public CircularDependencyException(final String message) {
+   public ResolutionException(final String message) {
       super(message);
    }
 
-   public CircularDependencyException(final String message, final Throwable cause) {
+   public ResolutionException(final String message, final Throwable cause) {
       super(message, cause);
    }
 }
