@@ -45,10 +45,10 @@ public final class InjectingServiceListener<T> implements ServiceListener<T> {
     }
 
     public void serviceStopping(final ServiceController<? extends T> controller) {
-        injector.uninject();
     }
 
     public void serviceStopped(final ServiceController<? extends T> controller) {
+        injector.uninject();
     }
 
     public void serviceRemoved(final ServiceController<? extends T> serviceController) {

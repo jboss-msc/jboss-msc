@@ -72,7 +72,19 @@ public interface ServiceController<S> extends Value<S> {
      */
     void addListener(ServiceListener<? super S> serviceListener);
 
+    /**
+     * Remove a service listener.
+     *
+     * @param serviceListener the service listener to remove
+     */
     void removeListener(ServiceListener<? super S> serviceListener);
+
+    /**
+     * Remove this service from the controller.  Once removed, this service may no longer be started.
+     *
+     * @throws IllegalStateException if the service is not in the {@code DOWN} state
+     */
+    void remove() throws IllegalStateException;
 
     /**
      * Get the reason why the last start failed.
@@ -100,22 +112,38 @@ public interface ServiceController<S> extends Value<S> {
     enum State {
 
         /**
-         * Down.  All dependents are down.  This state may not be left until all dependencies are {@code UP}.
-         * Dependents may not enter the {@code STARTING} state.
+         * Down.  All dependents are down.
+         *
+         * @enter all dependents are DOWN
+         * @exit STARTING all dependencies are UP
+         * @exit * running listener count = 0
+         * @exit STARTING mode is IMMEDIATE or AUTOMATIC, or mode is ON_DEMAND and demand count > 0
+         * @exit REMOVED no dependents exist
          */
         DOWN,
         /**
          * Service is starting.  Dependencies may not enter the {@code DOWN} state.  This state may not be left until
          * the {@code start} method has finished or failed.
+         *
+         * @enter all dependencies are UP
+         * @exit * running listener count = 0
          */
         STARTING,
         /**
          * Start failed, or was cancelled.  From this state, the start may be retried or the service may enter the
          * {@code DOWN} state.
+         *
+         * @enter all dependencies are UP
+         * @exit * running listener count = 0
+         * @exit STARTING retry == true
+         * @exit DOWN mode is ON_DEMAND and demand count == 0, or mode is NEVER, or a dependency enters STOPPING
          */
         START_FAILED,
         /**
          * Up.
+         *
+         * @enter all dependencies are UP
+         * @exit STOPPING mode is ON_DEMAND and demand count == 0, or mode is NEVER, or a dependency enters STOPPING
          */
         UP,
         /**
@@ -125,6 +153,9 @@ public interface ServiceController<S> extends Value<S> {
         STOPPING,
         /**
          * Removed from the container.
+         *
+         * @enter No dependents exist.
+         * @enter mode == NEVER
          */
         REMOVED,
         ;

@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -96,12 +97,52 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
      */
     private int runningListeners;
 
+    /**
+     * Listener which is added to dependencies of this service.
+     */
+    private final ServiceListener<Object> dependencyListener = new ServiceListener<Object>() {
+        public void serviceStarting(final ServiceController<? extends Object> serviceController) {
+        }
+
+        public void serviceStarted(final ServiceController<? extends Object> serviceController) {
+            synchronized (ServiceControllerImpl.this) {
+                if (++upperCount == 1) {
+                    if (runningListeners == 0 && state == State.DOWN) {
+                        doStart();
+                    }
+                }
+            }
+        }
+
+        public void serviceFailed(final ServiceController<? extends Object> serviceController, final StartException reason) {
+        }
+
+        public void serviceStopping(final ServiceController<? extends Object> serviceController) {
+            synchronized (ServiceControllerImpl.this) {
+                if (--upperCount == 0) {
+                    if (runningListeners == 0 && state == State.UP) {
+                        doStop();
+                    }
+                }
+            }
+        }
+
+        public void serviceStopped(final ServiceController<? extends Object> serviceController) {
+        }
+
+        public void serviceRemoved(final ServiceController<? extends Object> serviceController) {
+        }
+    };
+
     ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service> serviceValue, final Value<S> value, final Location location, final ServiceControllerImpl<?>[] dependencies) {
         this.container = container;
         this.serviceValue = serviceValue;
         this.value = value;
         this.location = location;
         this.dependencies = dependencies;
+        for (ServiceControllerImpl<?> controller : dependencies) {
+            controller.addListener(dependencyListener);
+        }
     }
 
     public Handle<S> demand() {
@@ -127,6 +168,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             runningListeners ++;
             state = this.state;
         }
+        invokeListener(listener, state);
+        synchronized (this) {
+            listeners.add(listener);
+            if (--runningListeners == 0) {
+                doFinishListener();
+            }
+        }
+    }
+
+    private void invokeListener(final ServiceListener<? super S> listener, final State state) {
         switch (state) {
             case DOWN: {
                 listener.serviceStopped(this);
@@ -153,17 +204,23 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 break;
             }
         }
-        synchronized (this) {
-            listeners.add(listener);
-            if (--runningListeners == 0) {
-                doFinishListener();
-            }
-        }
     }
 
     public void removeListener(final ServiceListener<? super S> listener) {
         synchronized (this) {
             listeners.remove(listener);
+        }
+    }
+
+    public void remove() throws IllegalStateException {
+        synchronized (this) {
+            if (state == State.DOWN) {
+                state = State.REMOVED;
+                for (ServiceControllerImpl<?> controller : dependencies) {
+                    controller.removeListener(dependencyListener);
+                }
+                Arrays.fill(dependencies, null);
+            }
         }
     }
 
@@ -320,8 +377,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     private void doStart() {
+        assert Thread.holdsLock(this);
         assert state == State.DOWN;
         state = State.STARTING;
+        runningListeners = 1;
+        doRunListeners();
         try {
             final Service service = serviceValue.getValue();
             container.getExecutor().execute(new Runnable() {
@@ -332,8 +392,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                         synchronized (ServiceControllerImpl.this) {
                             if (context.state == StartContextState.SYNC) {
                                 context.state = StartContextState.COMPLETE;
-                                // todo - if a listener is running, we're not really complete
-                                doStartComplete();
+                                doFinishListener();
                             }
                         }
                     } catch (StartException e) {
@@ -341,8 +400,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                             final StartContextState oldState = context.state;
                             if (oldState == StartContextState.SYNC || oldState == StartContextState.ASYNC) {
                                 context.state = StartContextState.FAILED;
-                                // todo - if a listener is running, we're not really complete
-                                doFail(e);
+                                startException = e;
+                                doFinishListener();
                             } else {
                                 // todo log warning
                             }
@@ -352,8 +411,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                             final StartContextState oldState = context.state;
                             if (oldState == StartContextState.SYNC || oldState == StartContextState.ASYNC) {
                                 context.state = StartContextState.FAILED;
-                                // todo - if a listener is running, we're not really complete
-                                doFail(new StartException("Failed to start service", t, location));
+                                startException = new StartException("Failed to start service", t, location);
+                                doFinishListener();
                             } else {
                                 // todo log warning
                             }
@@ -366,7 +425,29 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         }
     }
 
+    private void doRunListeners() {
+        assert ! Thread.holdsLock(this);
+        final ServiceListener[] toRun;
+        final int cnt;
+        synchronized (this) {
+            final Set<ServiceListener<? super S>> listeners = this.listeners;
+            toRun = listeners.toArray(new ServiceListener[this.listeners.size()]);
+            cnt = toRun.length;
+            runningListeners += cnt;
+        }
+        final Executor executor = container.getExecutor();
+        for (final ServiceListener listener : toRun) {
+            executor.execute(new Runnable() {
+                public void run() {
+                    invokeListener(listener, state);
+                }
+            });
+        }
+    }
+
     private void doStartComplete() {
+        assert Thread.holdsLock(this);
+        assert state == State.STARTING;
         state = State.UP;
         final Executor executor = container.getExecutor();
         final Set<ServiceListener<? super S>> listeners = this.listeners;
@@ -386,34 +467,39 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     private void doFinishListener() {
-        synchronized (this) {
-            if (--runningListeners == 0) {
-                
-            }
+        assert Thread.holdsLock(this);
+        if (--runningListeners == 0) {
+            
         }
     }
 
     private void doFail(final StartException e) {
+        assert Thread.holdsLock(this);
+        assert state == State.STARTING;
         state = State.START_FAILED;
         startException = e;
         // todo invoke listeners
     }
 
     private void doStop() {
-        
+        assert Thread.holdsLock(this);
+        assert state == State.UP;
     }
 
     private void doStopComplete() {
-
+        assert Thread.holdsLock(this);
+        assert state == State.STOPPING;
     }
 
     private void doDemandParents() {
+        assert Thread.holdsLock(this);
         for (ServiceControllerImpl<?> dependency : dependencies) {
             dependency.addDemand();
         }
     }
 
     private void doUndemandParents() {
+        assert Thread.holdsLock(this);
         for (ServiceControllerImpl<?> dependency : dependencies) {
             dependency.removeDemand();
         }

@@ -22,9 +22,11 @@
 
 package org.jboss.msc.service;
 
+import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -54,22 +56,27 @@ final class ServiceContainerImpl implements ServiceContainer {
     }
 
     private static final class ShutdownHookHolder {
-        private static final Set<ServiceContainerImpl> containers;
+        private static final ReferenceQueue<ServiceContainerImpl> queue = new ReferenceQueue<ServiceContainerImpl>();
+        private static final Set<WeakReference<ServiceContainerImpl>> containers;
         private static boolean down = false;
 
         static {
-            containers = Collections.synchronizedSet(new HashSet<ServiceContainerImpl>());
+            containers = new HashSet<WeakReference<ServiceContainerImpl>>();
             AccessController.doPrivileged(new PrivilegedAction<Void>() {
                 public Void run() {
                     final Thread hook = new Thread(new Runnable() {
                         public void run() {
                             // shut down all services in all containers.
-                            final Set<ServiceContainerImpl> set = containers;
+                            final Set<WeakReference<ServiceContainerImpl>> set = containers;
                             final LatchListener listener;
                             synchronized (set) {
                                 down = true;
                                 listener = new LatchListener(set.size());
-                                for (ServiceContainerImpl container : set) {
+                                for (WeakReference<ServiceContainerImpl> containerRef : set) {
+                                    final ServiceContainerImpl container = containerRef.get();
+                                    if (container == null) {
+                                        continue;
+                                    }
                                     final ServiceControllerImpl<ServiceContainer> root = container.root;
                                     root.setMode(ServiceController.Mode.NEVER);
                                     root.addListener(listener);
@@ -98,12 +105,18 @@ final class ServiceContainerImpl implements ServiceContainer {
     private volatile Executor executor;
 
     ServiceContainerImpl() {
-        final Set<ServiceContainerImpl> set = ShutdownHookHolder.containers;
+        final Set<WeakReference<ServiceContainerImpl>> set = ShutdownHookHolder.containers;
         synchronized (set) {
             // if the shutdown hook was triggered, then no services can ever come up in any new containers.
             final boolean down = ShutdownHookHolder.down;
-            root = buildService(null, new ImmediateValue<ServiceContainer>(this)).setInitialMode(down ? ServiceController.Mode.NEVER : ServiceController.Mode.AUTOMATIC).getValue();
-            if (! down) set.add(this);
+            root = buildService(Service.NULL_VALUE, new ImmediateValue<ServiceContainer>(this)).setInitialMode(down ? ServiceController.Mode.NEVER : ServiceController.Mode.AUTOMATIC).getValue();
+            if (! down) {
+                set.add(new WeakReference<ServiceContainerImpl>(this, ShutdownHookHolder.queue));
+                Reference<? extends ServiceContainerImpl> reference;
+                while ((reference = ShutdownHookHolder.queue.poll()) != null) {
+                    ShutdownHookHolder.containers.remove(reference);
+                }
+            }
         }
     }
 
@@ -117,6 +130,10 @@ final class ServiceContainerImpl implements ServiceContainer {
 
     public void setExecutor(final Executor executor) {
         this.executor = executor;
+    }
+
+    protected void finalize() throws Throwable {
+        root.setMode(ServiceController.Mode.NEVER);
     }
 
     static final class LatchListener extends CountDownLatch implements ServiceListener<Object> {

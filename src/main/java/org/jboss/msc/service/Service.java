@@ -22,6 +22,9 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.value.ImmediateValue;
+import org.jboss.msc.value.Value;
+
 /**
  * A service is a thing which can be started and stopped.
  */
@@ -54,4 +57,9 @@ public interface Service {
         public void stop(final StopContext context) {
         }
     };
+
+    /**
+     * A value which resolves to the {@link #NULL null service}.
+     */
+    Value<Service> NULL_VALUE = new ImmediateValue<Service>(NULL);
 }
