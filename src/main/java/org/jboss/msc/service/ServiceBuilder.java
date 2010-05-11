@@ -22,12 +22,10 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.value.Value;
-
 /**
  *
  */
-public interface ServiceBuilder<S> extends Value<ServiceController<S>> {
+public interface ServiceBuilder<S> {
 
     /**
      * Add a dependency.
@@ -54,5 +52,5 @@ public interface ServiceBuilder<S> extends Value<ServiceController<S>> {
      *
      * @return the service controller
      */
-    ServiceController<S> getValue();
+    ServiceController<S> create();
 }

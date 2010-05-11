@@ -38,6 +38,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     private static final String START_FAIL_EXCEPTION = "Start failed due to exception";
     private static final String SERVICE_REMOVED = "Service has been removed";
     private static final String SERVICE_IS_NOT_UP = "Service is not up";
+    private static final String SERVICE_NOT_AVAILABLE = "Service is not available";
 
     /**
      * The service container which contains this instance.
@@ -74,8 +75,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     /**
      * The controller state.
      */
-    private State state = State.DOWN;
-
+    private Substate state = Substate.DOWN;
     /**
      * The number of dependents which place a demand-to-start on this dependency.  If this value is >0, propagate a demand
      * up to all parent dependents.  If this value is >0 and mode is ON_DEMAND, put a load of +1 on {@code upperCount}.
@@ -105,26 +105,30 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         }
 
         public void serviceStarted(final ServiceController<? extends Object> serviceController) {
+            ServiceListener<? super S>[] listeners = null;
             synchronized (ServiceControllerImpl.this) {
-                if (++upperCount == 1) {
-                    if (runningListeners == 0 && state == State.DOWN) {
-                        doStart();
+                if (++upperCount == 1 && mode != Mode.NEVER) {
+                    if (runningListeners == 0 && state == Substate.DOWN) {
+                        listeners = getListeners(1, Substate.STARTING);
                     }
                 }
             }
+            if (listeners != null) doStart(listeners);
         }
 
         public void serviceFailed(final ServiceController<? extends Object> serviceController, final StartException reason) {
         }
 
         public void serviceStopping(final ServiceController<? extends Object> serviceController) {
+            ServiceListener<? super S>[] listeners = null;
             synchronized (ServiceControllerImpl.this) {
-                if (--upperCount == 0) {
-                    if (runningListeners == 0 && state == State.UP) {
-                        doStop();
+                if (--upperCount == 0 || mode == Mode.NEVER) {
+                    if (runningListeners == 0 && state == Substate.UP) {
+                        listeners = getListeners(1, Substate.STOPPING);
                     }
                 }
             }
+            if (listeners != null) doStop(listeners);
         }
 
         public void serviceStopped(final ServiceController<? extends Object> serviceController) {
@@ -145,17 +149,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         }
     }
 
-    public Handle<S> demand() {
-        addDemand();
-        return new HandleImpl<S>(this);
-    }
-
     public ServiceContainer getServiceContainer() {
         return container;
     }
 
     public State getState() {
-        return state;
+        return state.getState();
     }
 
     public S getValue() throws IllegalStateException {
@@ -163,46 +162,47 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     public void addListener(final ServiceListener<? super S> listener) {
-        final State state;
+        assert ! Thread.holdsLock(this);
+        final Substate state;
         synchronized (this) {
             runningListeners ++;
             state = this.state;
-        }
-        invokeListener(listener, state);
-        synchronized (this) {
             listeners.add(listener);
-            if (--runningListeners == 0) {
-                doFinishListener();
-            }
         }
+        invokeListener(listener, state.getState());
     }
 
     private void invokeListener(final ServiceListener<? super S> listener, final State state) {
-        switch (state) {
-            case DOWN: {
-                listener.serviceStopped(this);
-                break;
+        assert ! Thread.holdsLock(this);
+        try {
+            switch (state) {
+                case DOWN: {
+                    listener.serviceStopped(this);
+                    break;
+                }
+                case STARTING: {
+                    listener.serviceStarting(this);
+                    break;
+                }
+                case START_FAILED: {
+                    listener.serviceFailed(this, startException);
+                    break;
+                }
+                case UP: {
+                    listener.serviceStarted(this);
+                    break;
+                }
+                case STOPPING: {
+                    listener.serviceStopping(this);
+                    break;
+                }
+                case REMOVED: {
+                    listener.serviceRemoved(this);
+                    break;
+                }
             }
-            case STARTING: {
-                listener.serviceStarting(this);
-                break;
-            }
-            case START_FAILED: {
-                listener.serviceFailed(this, startException);
-                break;
-            }
-            case UP: {
-                listener.serviceStarted(this);
-                break;
-            }
-            case STOPPING: {
-                listener.serviceStopping(this);
-                break;
-            }
-            case REMOVED: {
-                listener.serviceRemoved(this);
-                break;
-            }
+        } finally {
+            doFinishListener(null);
         }
     }
 
@@ -213,27 +213,46 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     public void remove() throws IllegalStateException {
+        final ServiceListener<? super S>[] listeners;
         synchronized (this) {
-            if (state == State.DOWN) {
-                state = State.REMOVED;
+            if (state == Substate.DOWN) {
+                state = Substate.REMOVED;
+                final ServiceListener<Object> dependencyListener = this.dependencyListener;
                 for (ServiceControllerImpl<?> controller : dependencies) {
                     controller.removeListener(dependencyListener);
                 }
+                listeners = getListeners(0, Substate.REMOVED);
+                this.listeners.clear();
                 Arrays.fill(dependencies, null);
+            } else {
+                throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
             }
         }
+        runListeners(listeners, State.REMOVED);
     }
 
     public StartException getStartException() {
-        return startException;
+        synchronized (this) {
+            return startException;
+        }
     }
 
     public void retry() {
+        assert ! Thread.holdsLock(this);
+        final ServiceListener<? super S>[] listeners;
         synchronized (this) {
-            if (state == State.START_FAILED) {
-                doStart();
+            if (state.getState() != State.START_FAILED) {
+                return;
+            }
+            if (upperCount == 1) {
+                assert mode != Mode.NEVER;
+                listeners = getListeners(1, Substate.STARTING);
+            } else {
+                state = Substate.START_FAILED_RETRY_PENDING;
+                return;
             }
         }
+        doStart(listeners);
     }
 
     public Mode getMode() {
@@ -243,6 +262,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     public void setMode(final Mode newMode) {
+        assert ! Thread.holdsLock(this);
+        Substate newState = null;
+        ServiceListener<? super S>[] listeners = null;
         synchronized (this) {
             final Mode oldMode = mode;
             mode = newMode;
@@ -256,25 +278,26 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                             if (demandedByCount > 0) {
                                 upperCount++;
                             }
-                            if (state == State.DOWN && upperCount > 0) {
-                                doStart();
+                            if (state == Substate.DOWN && upperCount > 0) {
+                                listeners = getListeners(1, newState = Substate.STARTING);
                             }
-                            return;
+                            break;
                         }
                         case AUTOMATIC: {
-                            if (upperCount++ == 0 && state == State.DOWN) {
-                                doStart();
+                            if (upperCount++ == 0 && state == Substate.DOWN) {
+                                listeners = getListeners(1, newState = Substate.STARTING);
                             }
-                            return;
+                            break;
                         }
                         case IMMEDIATE: {
                             doDemandParents();
-                            if (upperCount++ == 0 && state == State.DOWN) {
-                                doStart();
+                            if (upperCount++ == 0 && state == Substate.DOWN) {
+                                listeners = getListeners(1, newState = Substate.STARTING);
                             }
-                            return;
+                            break;
                         }
                     }
+                    break;
                 }
                 case ON_DEMAND: {
                     switch (newMode) {
@@ -282,10 +305,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                             if (demandedByCount > 0) {
                                 upperCount--;
                             }
-                            if (state == State.UP) {
-                                doStop();
+                            if (state == Substate.UP) {
+                                listeners = getListeners(1, newState = Substate.STOPPING);
+                            } else if (state.getState() == State.START_FAILED) {
+                                listeners = getListeners(0, newState = Substate.DOWN);
                             }
-                            return;
+                            break;
                         }
                         case ON_DEMAND: {
                             return;
@@ -294,125 +319,188 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                             if (demandedByCount == 0) {
                                 upperCount++;
                             }
-                            if (upperCount > 0 && state == State.DOWN) {
-                                doStart();
+                            if (upperCount > 0 && state == Substate.DOWN) {
+                                listeners = getListeners(1, newState = Substate.STARTING);
                             }
-                            return;
+                            break;
                         }
                         case IMMEDIATE: {
                             doDemandParents();
                             if (demandedByCount == 0) {
                                 upperCount++;
                             }
-                            if (upperCount > 0 && state == State.DOWN) {
-                                doStart();
+                            if (upperCount > 0 && state == Substate.DOWN) {
+                                listeners = getListeners(1, newState = Substate.STARTING);
                             }
-                            return;
+                            break;
                         }
                     }
+                    break;
                 }
                 case AUTOMATIC: {
                     switch (newMode) {
                         case NEVER: {
                             upperCount--;
-                            if (state == State.UP) {
-                                doStop();
+                            if (state == Substate.UP) {
+                                listeners = getListeners(1, newState = Substate.STOPPING);
                             }
-                            return;
+                            break;
                         }
                         case ON_DEMAND: {
                             if (demandedByCount == 0) {
                                 upperCount--;
                             }
-                            if (state == State.UP && upperCount == 0) {
-                                doStop();
+                            if (state == Substate.UP && upperCount == 0) {
+                                listeners = getListeners(1, newState = Substate.STOPPING);
                             }
-                            return;
+                            break;
                         }
                         case AUTOMATIC: {
                             return;
                         }
                         case IMMEDIATE: {
                             doDemandParents();
-                            return;
+                            break;
                         }
                     }
+                    break;
                 }
                 case IMMEDIATE: {
                     switch (newMode) {
                         case NEVER: {
                             upperCount--;
-                            if (state == State.UP) {
-                                doStop();
+                            if (state == Substate.UP) {
+                                listeners = getListeners(1, newState = Substate.STOPPING);
                             }
-                            return;
+                            break;
                         }
                         case ON_DEMAND: {
                             if (demandedByCount == 0) {
                                 upperCount--;
                             }
-                            if (state == State.UP && upperCount == 0) {
-                                doStop();
+                            if (state == Substate.UP && upperCount == 0) {
+                                listeners = getListeners(1, newState = Substate.STOPPING);
                             }
-                            return;
+                            break;
                         }
                         case AUTOMATIC: {
                             doUndemandParents();
-                            return;
+                            break;
                         }
                         case IMMEDIATE: {
                             return;
                         }
                     }
+                    break;
                 }
+            }
+        }
+        if (newState != null) switch (newState) {
+            case STARTING: {
+                doStart(listeners);
+                break;
+            }
+            case STOPPING: {
+                doStop(listeners);
+                break;
+            }
+            case DOWN: {
+                doStopComplete(listeners);
+                break;
             }
         }
     }
 
-    enum StartContextState {
+    enum ContextState {
         SYNC,
         ASYNC,
         COMPLETE,
         FAILED,
     }
 
-    private void doStart() {
+    /**
+     * Set a new state and get the state listeners under the lock.
+     *
+     * @param plusCount the number of extra listeners to register, if any
+     * @param newState the new state to set
+     * @return the listeners
+     */
+    @SuppressWarnings({ "unchecked" })
+    ServiceListener<? super S>[] getListeners(int plusCount, Substate newState) {
         assert Thread.holdsLock(this);
-        assert state == State.DOWN;
-        state = State.STARTING;
-        runningListeners = 1;
-        doRunListeners();
+        state = newState;
+        if (newState == Substate.STARTING || newState == Substate.DOWN) {
+            // special case - clear out the old exception
+            startException = null;
+        }
+        final Set<ServiceListener<? super S>> listeners = this.listeners;
+        final int size = listeners.size();
+        runningListeners = size + plusCount;
+        return listeners.toArray(new ServiceListener[size]);
+    }
+
+    /**
+     * Run the service listeners outside of the lock.
+     *
+     * @param listeners the listeners
+     * @param state the state we are in
+     */
+    void runListeners(final ServiceListener<? super S>[] listeners, final State state) {
+        assert ! Thread.holdsLock(this);
+        final Executor executor = container.getExecutor();
+        for (final ServiceListener<? super S> listener : listeners) {
+            try {
+                executor.execute(new Runnable() {
+                    public void run() {
+                        assert ! Thread.holdsLock(ServiceControllerImpl.this);
+                        invokeListener(listener, state);
+                    }
+                });
+            } catch (RuntimeException e) {
+                // todo log it and continue
+            }
+        }
+    }
+
+    private void doStart(ServiceListener<? super S>[] listeners) {
+        assert ! Thread.holdsLock(this);
+        assert state == Substate.DOWN || state == Substate.START_FAILED_RETRY_PENDING;
         try {
             final Service service = serviceValue.getValue();
-            container.getExecutor().execute(new Runnable() {
+            if (service == null) {
+                throw new IllegalStateException(SERVICE_NOT_AVAILABLE);
+            }
+            runListeners(listeners, State.STARTING);
+            final Executor executor = container.getExecutor();
+            executor.execute(new Runnable() {
                 public void run() {
+                    assert ! Thread.holdsLock(ServiceControllerImpl.this);
                     final StartContextImpl context = new StartContextImpl();
                     try {
                         service.start(context);
                         synchronized (ServiceControllerImpl.this) {
-                            if (context.state == StartContextState.SYNC) {
-                                context.state = StartContextState.COMPLETE;
-                                doFinishListener();
+                            if (context.state == ContextState.SYNC) {
+                                context.state = ContextState.COMPLETE;
+                                doFinishListener(null);
                             }
                         }
                     } catch (StartException e) {
                         synchronized (ServiceControllerImpl.this) {
-                            final StartContextState oldState = context.state;
-                            if (oldState == StartContextState.SYNC || oldState == StartContextState.ASYNC) {
-                                context.state = StartContextState.FAILED;
-                                startException = e;
-                                doFinishListener();
+                            final ContextState oldState = context.state;
+                            if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
+                                context.state = ContextState.FAILED;
+                                doFinishListener(e);
                             } else {
                                 // todo log warning
                             }
                         }
                     } catch (Throwable t) {
                         synchronized (ServiceControllerImpl.this) {
-                            final StartContextState oldState = context.state;
-                            if (oldState == StartContextState.SYNC || oldState == StartContextState.ASYNC) {
-                                context.state = StartContextState.FAILED;
+                            final ContextState oldState = context.state;
+                            if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
+                                context.state = ContextState.FAILED;
                                 startException = new StartException("Failed to start service", t, location);
-                                doFinishListener();
+                                doFinishListener(null);
                             } else {
                                 // todo log warning
                             }
@@ -421,74 +509,131 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 }
             });
         } catch (RuntimeException e) {
-            doFail(new StartException("Failed to start service", e));
+            doFail(new StartException(START_FAIL_EXCEPTION, e));
         }
     }
 
-    private void doRunListeners() {
+    private void doStartComplete(final ServiceListener<? super S>[] listeners) {
+        runListeners(listeners, State.UP);
+    }
+
+    private void doFinishListener(StartException e) {
         assert ! Thread.holdsLock(this);
-        final ServiceListener[] toRun;
-        final int cnt;
+        Substate newState = null;
+        ServiceListener<? super S>[] listeners = null;
         synchronized (this) {
-            final Set<ServiceListener<? super S>> listeners = this.listeners;
-            toRun = listeners.toArray(new ServiceListener[this.listeners.size()]);
-            cnt = toRun.length;
-            runningListeners += cnt;
-        }
-        final Executor executor = container.getExecutor();
-        for (final ServiceListener listener : toRun) {
-            executor.execute(new Runnable() {
-                public void run() {
-                    invokeListener(listener, state);
-                }
-            });
-        }
-    }
-
-    private void doStartComplete() {
-        assert Thread.holdsLock(this);
-        assert state == State.STARTING;
-        state = State.UP;
-        final Executor executor = container.getExecutor();
-        final Set<ServiceListener<? super S>> listeners = this.listeners;
-        final int cnt = listeners.size();
-        runningListeners = cnt;
-        for (final ServiceListener<? super S> listener : listeners) {
-            executor.execute(new Runnable() {
-                public void run() {
-                    try {
-                        listener.serviceStarted(ServiceControllerImpl.this);
-                    } finally {
-                        doFinishListener();
+            if (e != null) startException = e;
+            if (--runningListeners == 0) {
+                switch (state) {
+                    case DOWN: {
+                        if (upperCount > 0 && mode != Mode.NEVER) {
+                            listeners = getListeners(1, newState = Substate.STARTING);
+                        }
+                        break;
+                    }
+                    case STARTING: {
+                        if (startException != null) {
+                            listeners = getListeners(0, newState = Substate.START_FAILED);
+                        } else {
+                            listeners = getListeners(0, newState = Substate.UP);
+                        }
+                        break;
+                    }
+                    case START_FAILED: {
+                        if (upperCount <= 0 || mode == Mode.NEVER) {
+                            listeners = getListeners(0, newState = Substate.DOWN);
+                        } else if (state == Substate.START_FAILED_RETRY_PENDING) {
+                            listeners = getListeners(1, newState = Substate.STARTING);
+                        }
+                        break;
+                    }
+                    case UP: {
+                        if (upperCount <= 0 || mode == Mode.NEVER) {
+                            listeners = getListeners(1, newState = Substate.STOPPING);
+                        }
+                        break;
+                    }
+                    case STOPPING: {
+                        listeners = getListeners(0, newState = Substate.DOWN);
+                        break;
+                    }
+                    case REMOVED: {
+                        // nothing to do; the service is utterly done
+                        break;
                     }
                 }
-            });
+            }
         }
-    }
-
-    private void doFinishListener() {
-        assert Thread.holdsLock(this);
-        if (--runningListeners == 0) {
-            
+        if (newState != null) switch (newState) {
+            case STARTING: {
+                doStart(listeners);
+                break;
+            }
+            case UP: {
+                doStartComplete(listeners);
+                break;
+            }
+            case STOPPING: {
+                doStop(listeners);
+                break;
+            }
+            case DOWN: {
+                doStopComplete(listeners);
+                break;
+            }
         }
     }
 
     private void doFail(final StartException e) {
         assert Thread.holdsLock(this);
-        assert state == State.STARTING;
-        state = State.START_FAILED;
+        assert state == Substate.STARTING;
+        state = Substate.START_FAILED;
         startException = e;
         // todo invoke listeners
     }
 
-    private void doStop() {
+    private void doStop(final ServiceListener<? super S>[] listeners) {
         assert Thread.holdsLock(this);
-        assert state == State.UP;
+        assert state == Substate.UP;
+        try {
+            final Service service = serviceValue.getValue();
+            if (service == null) {
+                throw new IllegalStateException(SERVICE_NOT_AVAILABLE);
+            }
+            runListeners(listeners, State.STOPPING);
+            final Executor executor = container.getExecutor();
+            executor.execute(new Runnable() {
+                public void run() {
+                    assert ! Thread.holdsLock(ServiceControllerImpl.this);
+                    final StopContextImpl context = new StopContextImpl();
+                    try {
+                        service.stop(context);
+                        synchronized (ServiceControllerImpl.this) {
+                            if (context.state == ContextState.SYNC) {
+                                context.state = ContextState.COMPLETE;
+                                doFinishListener(null);
+                            }
+                        }
+                    } catch (Throwable t) {
+                        synchronized (ServiceControllerImpl.this) {
+                            final ContextState oldState = context.state;
+                            if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
+                                context.state = ContextState.FAILED;
+                                doFinishListener(null);
+                            } else {
+                            }
+                        }
+                        // todo log warning
+                    }
+                }
+            });
+        } catch (RuntimeException e) {
+            doFail(new StartException(START_FAIL_EXCEPTION, e));
+        }
     }
 
-    private void doStopComplete() {
-        assert Thread.holdsLock(this);
-        assert state == State.STOPPING;
+    private void doStopComplete(final ServiceListener<? super S>[] listeners) {
+        runListeners(listeners, State.DOWN);
     }
 
     private void doDemandParents() {
@@ -506,28 +651,45 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     void addDemand() {
+        final ServiceListener<? super S>[] listeners;
         synchronized (this) {
             final int cnt = demandedByCount++;
-            if (cnt == 0 && mode == Mode.ON_DEMAND) {
-                if (upperCount++ == 0 && state == State.DOWN) {
-                    doStart();
-                }
+            if (cnt != 0 || mode != Mode.ON_DEMAND) {
+                return;
             }
+            if (upperCount++ != 0 || state != Substate.DOWN || runningListeners != 0) {
+                return;
+            }
+            listeners = getListeners(1, Substate.STARTING);
         }
+        if (listeners != null) doStart(listeners);
     }
 
     void removeDemand() {
+        final boolean stop;
+        final ServiceListener<? super S>[] listeners;
         synchronized (this) {
             final int cnt = --demandedByCount;
-            if (cnt == 0 && mode == Mode.ON_DEMAND) {
-                if (--upperCount == 0) {
-                    if (state == State.UP) {
-                        doStop();
-                    } else if (state == State.START_FAILED) {
-                        doStopComplete();
-                    }
-                }
+            if (cnt != 0 || mode != Mode.ON_DEMAND) {
+                return;
             }
+            if (--upperCount != 0 || runningListeners != 0) {
+                return;
+            }
+            if (state == Substate.UP) {
+                stop = true;
+                listeners = getListeners(1, Substate.STOPPING);
+            } else if (state.getState() == State.START_FAILED) {
+                stop = false;
+                listeners = getListeners(0, Substate.DOWN);
+            } else {
+                return;
+            }
+        }
+        if (stop) {
+            doStop(listeners);
+        } else {
+            doStopComplete(listeners);
         }
     }
 
@@ -538,55 +700,28 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     void dependentStopped() {
+        final ServiceListener<? super S>[] listeners;
         synchronized (this) {
-            if (--runningDependents == 0) {
-                if (state == State.STOPPING && runningListeners == 0) {
-                    doStopComplete();
-                }
+            if (--runningDependents != 0) {
+                return;
             }
-        }
-    }
-
-    private static class HandleImpl<S> implements Handle<S> {
-
-        private volatile ServiceControllerImpl<S> serviceController;
-
-        private static final AtomicReferenceFieldUpdater<HandleImpl, ServiceControllerImpl> serviceControllerUpdater = AtomicReferenceFieldUpdater.newUpdater(HandleImpl.class, ServiceControllerImpl.class, "serviceController");
-
-        public HandleImpl(final ServiceControllerImpl<S> serviceController) {
-            this.serviceController = serviceController;
-        }
-
-        @SuppressWarnings({ "unchecked" })
-        public void close() {
-            final ServiceControllerImpl<S> controller = serviceControllerUpdater.getAndSet(this, null);
-            if (controller != null) {
-                controller.removeDemand();
+            if (state != Substate.STOPPING || runningListeners != 0) {
+                return;
             }
+            listeners = getListeners(0, Substate.DOWN);
         }
-
-        protected void finalize() {
-            close();
-        }
-
-        public ServiceController<S> getValue() throws IllegalStateException {
-            final ServiceControllerImpl<S> controller = serviceController;
-            if (controller == null) {
-                throw new IllegalStateException("Handle was already closed");
-            }
-            return controller;
-        }
+        doStopComplete(listeners);
     }
 
     private class StartContextImpl implements StartContext {
 
-        private StartContextState state;
+        private ContextState state;
 
         public void failed(final StartException reason) throws IllegalStateException {
             synchronized (ServiceControllerImpl.this) {
-                if (state == StartContextState.ASYNC) {
-                    state = StartContextState.FAILED;
-                    doFail(reason);
+                if (state == ContextState.ASYNC) {
+                    state = ContextState.FAILED;
+                    doFinishListener(reason);
                 } else {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
@@ -595,8 +730,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
         public void asynchronous() throws IllegalStateException {
             synchronized (ServiceControllerImpl.this) {
-                if (state == StartContextState.SYNC) {
-                    state = StartContextState.ASYNC;
+                if (state == ContextState.SYNC) {
+                    state = ContextState.ASYNC;
                 } else {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
@@ -605,22 +740,59 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
         public void complete() throws IllegalStateException {
             synchronized (ServiceControllerImpl.this) {
-                if (state == StartContextState.ASYNC) {
-                    state = StartContextState.COMPLETE;
-                    doStartComplete();
+                if (state == ContextState.ASYNC) {
+                    state = ContextState.COMPLETE;
+                    doFinishListener(null);
+                } else {
+                    throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
+                }
+            }
+        }
+    }
+
+    private class StopContextImpl implements StopContext {
+
+        private ContextState state;
+
+        public void asynchronous() throws IllegalStateException {
+            synchronized (ServiceControllerImpl.this) {
+                if (state == ContextState.SYNC) {
+                    state = ContextState.ASYNC;
                 } else {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
             }
         }
 
-        protected void finalize() throws Throwable {
+        public void complete() throws IllegalStateException {
             synchronized (ServiceControllerImpl.this) {
-                if (state == StartContextState.ASYNC) {
-                    state = StartContextState.FAILED;
-                    doFail(new StartException("Asynchronous service never started"));
+                if (state == ContextState.ASYNC) {
+                    state = ContextState.COMPLETE;
+                    doFinishListener(null);
+                } else {
+                    throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
             }
+        }
+    }
+
+    enum Substate {
+        DOWN(State.DOWN),
+        STARTING(State.STARTING),
+        START_FAILED(State.START_FAILED),
+        START_FAILED_RETRY_PENDING(State.START_FAILED),
+        UP(State.UP),
+        STOPPING(State.STOPPING),
+        REMOVED(State.REMOVED),
+        ;
+        private final State state;
+
+        Substate(final State state) {
+            this.state = state;
+        }
+
+        public State getState() {
+            return state;
         }
     }
 }

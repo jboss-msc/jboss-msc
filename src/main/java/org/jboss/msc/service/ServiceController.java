@@ -99,14 +99,6 @@ public interface ServiceController<S> extends Value<S> {
     void retry();
 
     /**
-     * Demand that this service start immediately.  If the mode is {@code IMMEDIATE}, this has no effect.  If the mode
-     * is {@code AUTOMATIC} or {@code ON_DEMAND}, then until this handle is closed, the service will act as though it
-     * has a mode of {@code IMMEDIATE}.  If the mode is {@code NEVER}, then until the mode changes, this method will
-     * have no effect.
-     */
-    Handle<S> demand();
-
-    /**
      * A possible state for a service controller.
      */
     enum State {
@@ -182,12 +174,5 @@ public interface ServiceController<S> extends Value<S> {
          */
         IMMEDIATE,
         ;
-    }
-
-    /**
-     * A handle to demand a service start.
-     */
-    interface Handle<S> extends Value<ServiceController<S>> {
-        void close();
     }
 }

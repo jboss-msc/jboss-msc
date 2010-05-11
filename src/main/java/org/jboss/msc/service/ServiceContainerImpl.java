@@ -109,7 +109,7 @@ final class ServiceContainerImpl implements ServiceContainer {
         synchronized (set) {
             // if the shutdown hook was triggered, then no services can ever come up in any new containers.
             final boolean down = ShutdownHookHolder.down;
-            root = buildService(Service.NULL_VALUE, new ImmediateValue<ServiceContainer>(this)).setInitialMode(down ? ServiceController.Mode.NEVER : ServiceController.Mode.AUTOMATIC).getValue();
+            root = buildService(Service.NULL_VALUE, new ImmediateValue<ServiceContainer>(this)).setInitialMode(down ? ServiceController.Mode.NEVER : ServiceController.Mode.AUTOMATIC).create();
             if (! down) {
                 set.add(new WeakReference<ServiceContainerImpl>(this, ShutdownHookHolder.queue));
                 Reference<? extends ServiceContainerImpl> reference;

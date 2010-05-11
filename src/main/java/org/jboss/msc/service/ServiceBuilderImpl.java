@@ -92,7 +92,7 @@ final class ServiceBuilderImpl<S> implements ServiceBuilder<S> {
         return setLocation(new Location(fileName, lineNumber, -1, null));
     }
 
-    public ServiceControllerImpl<S> getValue() {
+    public ServiceControllerImpl<S> create() {
         synchronized (this) {
             final ServiceControllerImpl<S> controller = this.controller;
             return controller != null ? controller : (this.controller = new ServiceControllerImpl<S>(container, service, value, location, deps.toArray(new ServiceControllerImpl<?>[deps.size()])));
