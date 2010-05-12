@@ -75,7 +75,8 @@ public class ServiceRegistry {
     private void resolve(final Map<ServiceName, ServiceDefinition> serviceDefinitions) throws ServiceRegistryException {
         final Set<ServiceName> visited = new HashSet<ServiceName>();
         for (ServiceDefinition serviceDefinition : serviceDefinitions.values()) {
-            resolve(serviceDefinition, serviceDefinitions, visited);
+            if(!registry.containsKey(serviceDefinition.getName()))
+                resolve(serviceDefinition, serviceDefinitions, visited);
         }
     }
 
@@ -104,7 +105,7 @@ public class ServiceRegistry {
             }
 
             // We are resolved.  Lets install
-            builder.addListener(new ServiceUnregisterListner(name));
+            builder.addListener(new ServiceUnregisterListener(name));
 
             final ServiceController<?> serviceController = builder.create();
             if (registry.putIfAbsent(name, serviceController) != null) {
@@ -117,10 +118,10 @@ public class ServiceRegistry {
 
     }
 
-    private class ServiceUnregisterListner extends AbstractServiceListener<Service> {
+    private class ServiceUnregisterListener extends AbstractServiceListener<Service> {
         private final ServiceName serviceName;
 
-        private ServiceUnregisterListner(ServiceName serviceName) {
+        private ServiceUnregisterListener(ServiceName serviceName) {
             this.serviceName = serviceName;
         }
 
