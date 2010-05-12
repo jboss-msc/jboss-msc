@@ -106,10 +106,10 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testMonster() throws Exception {
+        ServiceBatch batch = new ServiceRegistry(ServiceContainer.Factory.create()).create();
 
         final int totalServiceDefinitions = 10000;
 
-        final List<ServiceDefinition> serviceDefinitions = new ArrayList<ServiceDefinition>(totalServiceDefinitions);
         for (int i = 0; i < totalServiceDefinitions; i++) {
             List<String> deps = new ArrayList<String>();
             int numDeps = Math.min(10, totalServiceDefinitions - i - 1);
@@ -117,39 +117,29 @@ public class ServiceRegistryTestCase {
             for (int j = 1; j < numDeps + 1; j++) {
                 deps.add("test" + (i + j));
             }
-            serviceDefinitions.add(ServiceDefinition.build("test" + i, Service.NULL_VALUE).addDependencies(deps.toArray(new String[deps.size()])).create());
+            batch.add(ServiceDefinition.build("test" + i, Service.NULL_VALUE).addDependencies(deps.toArray(new String[deps.size()])).create());
         }
 
         long start = System.currentTimeMillis();
-        new ServiceRegistry(ServiceContainer.Factory.create()).install(toMap(serviceDefinitions));
+        batch.install();
         long end = System.currentTimeMillis();
         System.out.println("Time: " + (end - start));
-        //assertInDependencyOrder(collectingHandler.getResolved());
     }
 
 
     @Test
     public void testLargeNoDeps() throws Exception {
+        ServiceBatch batch = new ServiceRegistry(ServiceContainer.Factory.create()).create();
 
         final int totalServiceDefinitions = 10000;
 
-        final List<ServiceDefinition> serviceDefinitions = new ArrayList<ServiceDefinition>(totalServiceDefinitions);
         for (int i = 0; i < totalServiceDefinitions; i++) {
-            serviceDefinitions.add(ServiceDefinition.build("test" + i, Service.NULL_VALUE).create());
+            batch.add(ServiceDefinition.build("test" + i, Service.NULL_VALUE).create());
         }
 
         long start = System.currentTimeMillis();
-        new ServiceRegistry(ServiceContainer.Factory.create()).install(toMap(serviceDefinitions));
+        batch.install();
         long end = System.currentTimeMillis();
         System.out.println("Time: " + (end - start));
-        //assertInDependencyOrder(collectingHandler.getResolved());
-    }
-
-    private Map<ServiceName, ServiceDefinition> toMap(final Collection<ServiceDefinition> definitions) {
-        final Map<ServiceName, ServiceDefinition> definitionMap = new HashMap<ServiceName, ServiceDefinition>();
-        for(ServiceDefinition definition : definitions) {
-            definitionMap.put(definition.getName(), definition);
-        }
-        return definitionMap;
     }
 }
