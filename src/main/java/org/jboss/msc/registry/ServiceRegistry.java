@@ -88,8 +88,6 @@ public class ServiceRegistry {
 
         try {
             final ConcurrentMap<ServiceName, ServiceController<?>> registry = this.registry;
-            final ServiceContainer serviceContainer = this.serviceContainer;
-            
             final ServiceBuilder<Service> builder = serviceContainer.buildService(serviceDefinition.getService());
 
             for (String dependency : serviceDefinition.getDependenciesDirect()) {
