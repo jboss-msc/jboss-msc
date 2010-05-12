@@ -47,7 +47,7 @@ public interface ServiceContainer {
     void setExecutor(Executor executor);
 
     /**
-     * Get a service builder for a service.
+     * Build a service.
      *
      * @param service the service
      * @param <S> the service type
