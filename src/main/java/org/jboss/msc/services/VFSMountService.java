@@ -39,7 +39,7 @@ import org.jboss.vfs.VirtualFile;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class VFSMountService implements Service {
+public final class VFSMountService implements Service<Void> {
 
     // Configuration properties
     private final String path;
@@ -84,5 +84,10 @@ public final class VFSMountService implements Service {
     public void stop(final StopContext context) {
         VFSUtils.safeClose(handle);
         handle = null;
+    }
+
+    /** {@inheritDoc} */
+    public Void getValue() throws IllegalStateException {
+        return null;
     }
 }

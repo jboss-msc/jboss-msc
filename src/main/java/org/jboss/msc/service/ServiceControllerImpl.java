@@ -26,20 +26,16 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.Executor;
-import org.jboss.logging.Logger;
 import org.jboss.msc.value.Value;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 final class ServiceControllerImpl<S> implements ServiceController<S> {
-    private static final Logger log = Logger.getI18nLogger("org.jboss.msc.controller", null, "MSC");
 
     private static final String ILLEGAL_CONTROLLER_STATE = "Illegal controller state";
-    private static final String ILLEGAL_LOCK_STATE = "Illegal lock state";
     private static final String START_FAIL_EXCEPTION = "Start failed due to exception";
     private static final String SERVICE_REMOVED = "Service has been removed";
-    private static final String SERVICE_IS_NOT_UP = "Service is not up";
     private static final String SERVICE_NOT_AVAILABLE = "Service is not available";
 
     /**
@@ -49,11 +45,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     /**
      * The service itself.
      */
-    private final Value<? extends Service> serviceValue;
-    /**
-     * The value which is passed to listeners.
-     */
-    private final Value<S> value;
+    private final Value<? extends Service<? extends S>> serviceValue;
     /**
      * The source location in which this service was defined.
      */
@@ -144,10 +136,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         }
     };
 
-    ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service> serviceValue, final Value<S> value, final Location location, final ServiceControllerImpl<?>[] dependencies, final ValueInjection<?>[] injections) {
+    ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service<? extends S>> serviceValue, final Location location, final ServiceControllerImpl<?>[] dependencies, final ValueInjection<?>[] injections) {
         this.container = container;
         this.serviceValue = serviceValue;
-        this.value = value;
         this.location = location;
         this.dependencies = dependencies;
         this.injections = injections;
@@ -166,7 +157,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     public S getValue() throws IllegalStateException {
-        return value.getValue();
+        return serviceValue.getValue().getValue();
     }
 
     public void addListener(final ServiceListener<? super S> listener) {

@@ -37,7 +37,7 @@ import javax.management.ObjectName;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class MBeanService implements Service {
+public final class MBeanService implements Service<Void> {
     private final Value<? extends MBeanServer> mbeanServer;
     private final Value<?> value;
     private final ObjectName objectName;
@@ -71,5 +71,10 @@ public final class MBeanService implements Service {
         } catch (JMException e) {
             // todo log
         }
+    }
+
+    /** {@inheritDoc} */
+    public Void getValue() throws IllegalStateException {
+        return null;
     }
 }

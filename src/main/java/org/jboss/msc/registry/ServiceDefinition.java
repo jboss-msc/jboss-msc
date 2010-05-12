@@ -1,6 +1,7 @@
 package org.jboss.msc.registry;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jboss.msc.service.Location;
 import org.jboss.msc.service.Service;
@@ -16,16 +17,16 @@ import java.util.Collection;
  * @author Jason T. Greene
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class ServiceDefinition {
+public final class ServiceDefinition<T> {
     private final ServiceName name;
     private final String[] dependencies;
     private final ServiceController.Mode initialMode;
     private final Location location;
-    private final Value<Service> service;
+    private final Value<? extends Service<T>> service;
 
     private static final String[] NO_DEPS = new String[0];
 
-    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<Service> service, String[] dependencies) {
+    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<? extends Service<T>> service, String[] dependencies) {
         if (name == null) {
             throw new IllegalArgumentException("Name can not be null");
         }
@@ -36,19 +37,19 @@ public final class ServiceDefinition {
         this.service = service;
     }
     
-    public static Builder build(final String name, final Value<Service> service) {
-        return new Builder(name, service);
+    public static <T> Builder<T> build(final String name, final Value<? extends Service<T>> service) {
+        return new Builder<T>(name, service);
     }
     
-    public static final class Builder {
+    public static final class Builder<T> {
         private final String name;
-        private final Value<Service> service;
+        private final Value<? extends Service<T>> service;
         private List<String> dependencies = new ArrayList<String>(0);
         private ServiceController.Mode initialMode = ServiceController.Mode.AUTOMATIC;
         private Location location;
 
 
-        private Builder(final String name, final Value<Service> service) {
+        private Builder(final String name, final Value<? extends Service<T>> service) {
             if(name == null) throw new IllegalArgumentException("Name is required");
             if(service == null) throw new IllegalArgumentException("Service is required");
             this.name = name;
@@ -97,9 +98,9 @@ public final class ServiceDefinition {
         public ServiceDefinition create() {
             final int size = dependencies.size();
             if (size == 0) {
-                return new ServiceDefinition(ServiceName.create(name), initialMode, location, service, NO_DEPS);
+                return new ServiceDefinition<T>(ServiceName.create(name), initialMode, location, service, NO_DEPS);
             } else {
-                return new ServiceDefinition(ServiceName.create(name), initialMode, location, service, dependencies.toArray(new String[size]));
+                return new ServiceDefinition<T>(ServiceName.create(name), initialMode, location, service, dependencies.toArray(new String[size]));
             }
         }
     }
@@ -124,17 +125,16 @@ public final class ServiceDefinition {
         return location;
     }
 
-    public Value<Service> getService() {
+    public Value<? extends Service<T>> getService() {
         return service;
     }
 
     @Override
     public String toString() {
-        return "ServiceDefinition{" +
-                "dependencies=" + dependencies +
-                ", name='" + name + '\'' +
-                ", initialMode=" + initialMode +
-                ", location=" + location +
-                '}';
+        return String.format("ServiceDefinition{dependencies=%s, name='%s', initialMode=%s, location=%s}",
+                Arrays.toString(dependencies),
+                name,
+                initialMode,
+                location);
     }
 }

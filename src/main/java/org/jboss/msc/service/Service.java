@@ -31,10 +31,15 @@ import org.jboss.msc.value.Value;
  * always happen from the same thread that had called {@code stop()}.  However no other guarantees are made with respect
  * to locking or thread safety; a robust service implementation should always take care to protect any mutable state
  * appropriately.
+ * <p>
+ * The value type specified by this service is used by default by consumers of this service, and should represent the
+ * public interface of this service, which may or may not be the same as the implementing type of this service.
+ *
+ * @param <T> the type of value that this service provides; may be {@link Void}
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface Service {
+public interface Service<T> extends Value<T> {
 
     /**
      * Start the service.  Do not return until the service has been fully started, unless an asynchronous service
@@ -57,16 +62,20 @@ public interface Service {
     /**
      * A simple null service which performs no start or stop action.
      */
-    Service NULL = new Service() {
+    Service<Void> NULL = new Service<Void>() {
         public void start(final StartContext context) {
         }
 
         public void stop(final StopContext context) {
+        }
+
+        public Void getValue() {
+            return null;
         }
     };
 
     /**
      * A value which resolves to the {@link #NULL null service}.
      */
-    Value<Service> NULL_VALUE = new ImmediateValue<Service>(NULL);
+    Value<Service<Void>> NULL_VALUE = new ImmediateValue<Service<Void>>(NULL);
 }

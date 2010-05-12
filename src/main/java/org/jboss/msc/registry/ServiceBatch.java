@@ -4,7 +4,6 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceBuilder;
 
 /**
@@ -44,7 +43,7 @@ public final class ServiceBatch {
      *        order of the list
      * @return this batch
      */
-    public ServiceBatch add(ServiceDefinition... definitions) {
+    public ServiceBatch add(ServiceDefinition<?>... definitions) {
         final Map<ServiceName, BatchEntry> batchEntries = this.batchEntries;
 
         for (ServiceDefinition definition : definitions) {
@@ -62,7 +61,7 @@ public final class ServiceBatch {
      *        order of the list
      * @return this batch
      */
-    public ServiceBatch add(Collection<ServiceDefinition> definitions) {
+    public ServiceBatch add(Collection<ServiceDefinition<?>> definitions) {
         if (definitions == null)
             throw new IllegalArgumentException("Definitions can not be null");
 
@@ -84,19 +83,19 @@ public final class ServiceBatch {
      * maintain some state information for resolution.
      */
     public class BatchEntry {
-        private final ServiceDefinition serviceDefinition;
+        private final ServiceDefinition<?> serviceDefinition;
         private boolean processed;
         private boolean visited;
         BatchEntry prev;
-        ServiceBuilder<Service> builder;
+        ServiceBuilder<?> builder;
         int i;
         
 
-        public BatchEntry(ServiceDefinition serviceDefinition) {
+        public BatchEntry(ServiceDefinition<?> serviceDefinition) {
             this.serviceDefinition = serviceDefinition;
         }
 
-        public ServiceDefinition getServiceDefinition() {
+        public ServiceDefinition<?> getServiceDefinition() {
             return serviceDefinition;
         }
 

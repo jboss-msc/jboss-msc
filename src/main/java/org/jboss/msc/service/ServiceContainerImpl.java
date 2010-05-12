@@ -126,7 +126,17 @@ final class ServiceContainerImpl implements ServiceContainer {
         synchronized (set) {
             // if the shutdown hook was triggered, then no services can ever come up in any new containers.
             final boolean down = ShutdownHookHolder.down;
-            final ServiceBuilderImpl<ServiceContainer> builder = new ServiceBuilderImpl<ServiceContainer>(this, Service.NULL_VALUE, new ImmediateValue<ServiceContainer>(this));
+            final ServiceBuilderImpl<ServiceContainer> builder = new ServiceBuilderImpl<ServiceContainer>(this, new ImmediateValue<Service<ServiceContainer>>(new Service<ServiceContainer>() {
+                public void start(final StartContext context) throws StartException {
+                }
+
+                public void stop(final StopContext context) {
+                }
+
+                public ServiceContainer getValue() throws IllegalStateException {
+                    return ServiceContainerImpl.this;
+                }
+            }));
             root = builder.setInitialMode(down ? ServiceController.Mode.NEVER : ServiceController.Mode.AUTOMATIC).create();
             if (! down) {
                 set.add(new WeakReference<ServiceContainerImpl, Void>(this, null, new Reaper<ServiceContainerImpl, Void>() {
@@ -138,14 +148,8 @@ final class ServiceContainerImpl implements ServiceContainer {
         }
     }
 
-    public <T> ServiceBuilderImpl<T> buildService(final Value<? extends Service> service, final Value<T> value) {
-        final ServiceBuilderImpl<T> builder = new ServiceBuilderImpl<T>(this, service, value);
-        builder.addDependency(root);
-        return builder;
-    }
-
-    public <S extends Service> ServiceBuilderImpl<S> buildService(final Value<S> service) {
-        final ServiceBuilderImpl<S> builder = new ServiceBuilderImpl<S>(this, service, service);
+    public <T> ServiceBuilderImpl<T> buildService(final Value<? extends Service<? extends T>> service) {
+        final ServiceBuilderImpl<T> builder = new ServiceBuilderImpl<T>(this, service);
         builder.addDependency(root);
         return builder;
     }

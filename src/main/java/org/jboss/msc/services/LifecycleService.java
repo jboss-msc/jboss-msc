@@ -40,7 +40,7 @@ import org.jboss.msc.value.Values;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class LifecycleService<T> implements Service {
+public final class LifecycleService<T> implements Service<T> {
     private final Value<T> target;
     private final Value<Method> startMethod;
     private final List<Value<?>> startParams;
@@ -117,5 +117,10 @@ public final class LifecycleService<T> implements Service {
         } catch (Exception e) {
             // todo log it
         }
+    }
+
+    /** {@inheritDoc} */
+    public T getValue() throws IllegalStateException {
+        return target.getValue();
     }
 }

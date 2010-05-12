@@ -22,7 +22,6 @@
 package org.jboss.msc.registry;
 
 import org.jboss.msc.service.AbstractServiceListener;
-import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceController;
@@ -78,7 +77,7 @@ public class ServiceRegistry {
     }
 
     private ServiceController<?> resolve(final ServiceBatch.BatchEntry entry, final Map<ServiceName, ServiceBatch.BatchEntry> services) throws ServiceRegistryException {
-        final ServiceDefinition serviceDefinition = entry.getServiceDefinition();
+        final ServiceDefinition<?> serviceDefinition = entry.getServiceDefinition();
         entry.setProcessed(true);
         final ServiceName name = serviceDefinition.getName();
         if (entry.isVisited())
@@ -88,7 +87,7 @@ public class ServiceRegistry {
 
         try {
             final ConcurrentMap<ServiceName, ServiceController<?>> registry = this.registry;
-            final ServiceBuilder<Service> builder = serviceContainer.buildService(serviceDefinition.getService());
+            final ServiceBuilder<?> builder = serviceContainer.buildService(serviceDefinition.getService());
 
             for (String dependency : serviceDefinition.getDependenciesDirect()) {
                 final ServiceName dependencyName = ServiceName.create(dependency);
@@ -168,7 +167,7 @@ public class ServiceRegistry {
         }
     }
 
-    private class ServiceUnregisterListener extends AbstractServiceListener<Service> {
+    private class ServiceUnregisterListener extends AbstractServiceListener<Object> {
         private final ServiceName serviceName;
 
         private ServiceUnregisterListener(ServiceName serviceName) {

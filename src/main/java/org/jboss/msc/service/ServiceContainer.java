@@ -50,20 +50,10 @@ public interface ServiceContainer {
      * Build a service.
      *
      * @param service the service
-     * @param <S> the service type
+     * @param <T> the service value type
      * @return a service builder
      */
-    <S extends Service> ServiceBuilder<S> buildService(Value<S> service);
-
-    /**
-     * Build a service whose public type is different from the service type.
-     *
-     * @param service the service itself
-     * @param value the public service value
-     * @param <T> the public service value
-     * @return a service builder
-     */
-    <T> ServiceBuilder<T> buildService(Value<? extends Service> service, Value<T> value);
+    <T> ServiceBuilder<T> buildService(Value<? extends Service<? extends T>> service);
 
     /**
      * Stop all services within this container.

@@ -34,21 +34,14 @@ import org.jboss.msc.service.Service;
 import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
-import org.jboss.msc.value.Value;
 import org.jboss.threads.JBossExecutors;
 
 /**
- * A thread pool executor service, which is configurable at runtime.  Instances of this service should be registered
- * using the value returned by {@link #getExecutorValue()}.
+ * A thread pool executor service, which is configurable at runtime.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class ThreadPoolExecutorService implements Service {
-    private final Value<ExecutorService> executorServiceValue = new Value<ExecutorService>() {
-        public ExecutorService getValue() throws IllegalStateException {
-            return getExecutorService();
-        }
-    };
+public final class ThreadPoolExecutorService implements Service<ExecutorService> {
 
     private boolean allowCoreTimeout = false;
     private int corePoolSize = 10;
@@ -227,22 +220,13 @@ public final class ThreadPoolExecutorService implements Service {
     private StopContext stopContext;
 
     /**
-     * Get the public executor service value for this thread pool.
-     *
-     * @return the value
-     */
-    public Value<ExecutorService> getExecutorValue() {
-        return executorServiceValue;
-    }
-
-    /**
      * Get the public executor service for this thread pool.
      *
      * @return the public executor service
      *
      * @throws IllegalStateException if the service is not started
      */
-    public synchronized ExecutorService getExecutorService() throws IllegalStateException {
+    public synchronized ExecutorService getValue() throws IllegalStateException {
         final ExecutorService publicExecutor = this.publicExecutor;
         if (publicExecutor == null) {
             throw new IllegalStateException();

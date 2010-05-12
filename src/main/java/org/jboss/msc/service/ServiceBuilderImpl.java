@@ -36,17 +36,15 @@ final class ServiceBuilderImpl<S> implements ServiceBuilder<S> {
     private final List<ServiceControllerImpl<?>> deps = new ArrayList<ServiceControllerImpl<?>>(0);
     private final List<ValueInjection<?>> injections = new ArrayList<ValueInjection<?>>(0);
     private final List<ServiceListener<? super S>> listeners = new ArrayList<ServiceListener<? super S>>(0);
-    private final Value<? extends Service> service;
-    private final Value<S> value;
+    private final Value<? extends Service<? extends S>> service;
 
     private ServiceController.Mode mode = ServiceController.Mode.AUTOMATIC;
     private ServiceControllerImpl<S> controller;
     private Location location;
 
-    ServiceBuilderImpl(final ServiceContainerImpl container, final Value<? extends Service> service, final Value<S> value) {
+    ServiceBuilderImpl(final ServiceContainerImpl container, final Value<? extends Service<? extends S>> service) {
         this.container = container;
         this.service = service;
-        this.value = value;
     }
 
     public void addDependency(final ServiceController<?> dependency) {
@@ -149,7 +147,7 @@ final class ServiceBuilderImpl<S> implements ServiceBuilder<S> {
             final int injectionsSize = injections.size();
             final ServiceControllerImpl<?>[] depArray = depsSize == 0 ? NO_DEPS : deps.toArray(new ServiceControllerImpl<?>[depsSize]);
             final ValueInjection<?>[] injectionArray = injectionsSize == 0 ? NO_INJECTIONS : injections.toArray(new ValueInjection<?>[injectionsSize]);
-            final ServiceControllerImpl<S> controller = this.controller = new ServiceControllerImpl<S>(container, service, value, location, depArray, injectionArray);
+            final ServiceControllerImpl<S> controller = this.controller = new ServiceControllerImpl<S>(container, service, location, depArray, injectionArray);
             for (ServiceListener<? super S> listener : listeners) {
                 controller.addListener(listener);
             }
