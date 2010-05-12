@@ -22,6 +22,11 @@
 
 package org.jboss.msc;
 
+/**
+ * The current version of this module.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class Version {
     private Version() {}
 

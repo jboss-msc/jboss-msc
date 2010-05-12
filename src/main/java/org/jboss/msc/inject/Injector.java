@@ -23,10 +23,25 @@
 package org.jboss.msc.inject;
 
 /**
+ * A receiver for values that are injected from another source, typically connected to a service lifecycle.
  *
+ * @param <T> the injected value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface Injector<T> {
+
+    /**
+     * Inject the given value.
+     *
+     * @param value the value
+     * @throws InjectionException if the injection failed
+     */
     void inject(T value) throws InjectionException;
 
+    /**
+     * Uninject the given value (in other words, cancel or undo a previous injection).  Only called after {@code inject()}
+     * has been called.
+     */
     void uninject();
 }
