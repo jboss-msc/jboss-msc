@@ -2,6 +2,7 @@ package org.jboss.msc.registry;
 
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * An ordered set of service batchEntries that should be processed as one.
@@ -13,8 +14,8 @@ public final class ServiceBatch {
     private final LinkedHashMap<ServiceName, BatchEntry> batchEntries = new LinkedHashMap<ServiceName, BatchEntry>();
     private final ServiceRegistry serviceRegistry;
 
-    ServiceBatch(final ServiceRegistry registry) {
-        this.serviceRegistry = registry;
+    ServiceBatch(final ServiceRegistry serviceRegistry) {
+        this.serviceRegistry = serviceRegistry;
     }
 
     public void install() throws ServiceRegistryException {
@@ -41,8 +42,11 @@ public final class ServiceBatch {
      * @return this batch
      */
     public ServiceBatch add(ServiceDefinition... definitions) {
-        for (ServiceDefinition definition : definitions)
-            this.batchEntries.put(definition.getName(), new BatchEntry(definition));
+        final Map<ServiceName, BatchEntry> batchEntries = this.batchEntries;
+
+        for (ServiceDefinition definition : definitions) {
+            batchEntries.put(definition.getName(), new BatchEntry(definition));
+        }
 
         return this;
     }
@@ -58,9 +62,12 @@ public final class ServiceBatch {
     public ServiceBatch add(Collection<ServiceDefinition> definitions) {
         if (definitions == null)
             throw new IllegalArgumentException("Definitions can not be null");
-        
-        for (ServiceDefinition definition : definitions)
-            this.batchEntries.put(definition.getName(), new BatchEntry(definition));
+
+        final Map<ServiceName, BatchEntry> batchEntries = this.batchEntries;
+
+        for (ServiceDefinition definition : definitions) {
+            batchEntries.put(definition.getName(), new BatchEntry(definition));
+        }
 
         return this;
     }

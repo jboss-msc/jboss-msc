@@ -14,6 +14,7 @@ import java.util.Set;
  *
  * @author John Bailey
  * @author Jason T. Greene
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class ServiceDefinition {
     private final ServiceName name;
@@ -23,12 +24,12 @@ public final class ServiceDefinition {
     private final Value<Service> service;
 
     private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<Service> service, Set<String> dependencies) {
-    	if (name == null)
-    		throw new IllegalArgumentException("Name can not be null");
-    	
+        if (name == null) {
+            throw new IllegalArgumentException("Name can not be null");
+        }
         this.name = name;
         this.dependencies = new HashSet<String>(dependencies);
-        this.initialMode = ServiceController.Mode.AUTOMATIC;
+        this.initialMode = initialMode;
         this.location = location;
         this.service = service;
     }
@@ -83,6 +84,11 @@ public final class ServiceDefinition {
         public Builder setLocation(Location location) {
             this.location = location;
             
+            return this;
+        }
+
+        public Builder setInitialMode(ServiceController.Mode initialMode) {
+            this.initialMode = initialMode;
             return this;
         }
 
