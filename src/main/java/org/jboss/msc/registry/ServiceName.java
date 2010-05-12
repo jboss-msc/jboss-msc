@@ -26,7 +26,7 @@ package org.jboss.msc.registry;
  *
  * @author John Bailey
  */
-public class ServiceName {
+public final class ServiceName {
     private final String name;
     private final int hashCode;
 
@@ -41,20 +41,20 @@ public class ServiceName {
     }
 
     private ServiceName(String name) {
+        if (name == null) {
+            throw new IllegalArgumentException("name is null");
+        }
         this.name = name;
         hashCode = name.hashCode();
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        return this == o || o instanceof ServiceName && equals((ServiceName)o);
+    }
 
-        ServiceName that = (ServiceName) o;
-
-        if (name != null ? !name.equals(that.name) : that.name != null) return false;
-
-        return true;
+    public boolean equals(ServiceName o) {
+        return this == o || o != null && name.equals(o.name);
     }
 
     @Override
