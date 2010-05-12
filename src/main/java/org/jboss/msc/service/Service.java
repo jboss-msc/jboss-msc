@@ -26,7 +26,11 @@ import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 
 /**
- * A service is a thing which can be started and stopped.
+ * A service is a thing which can be started and stopped.  A service may be started or stopped from any thread.  In
+ * general, injections will always happen from the same thread that will call {@code start()}, and uninjections will
+ * always happen from the same thread that had called {@code stop()}.  However no other guarantees are made with respect
+ * to locking or thread safety; a robust service implementation should always take care to protect any mutable state
+ * appropriately.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */

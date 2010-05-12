@@ -38,6 +38,9 @@ import org.jboss.msc.value.Value;
 import org.jboss.threads.JBossExecutors;
 
 /**
+ * A thread pool executor service, which is configurable at runtime.  Instances of this service should be registered
+ * using the value returned by {@link #getExecutorValue()}.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class ThreadPoolExecutorService implements Service {
@@ -56,13 +59,27 @@ public final class ThreadPoolExecutorService implements Service {
     private ThreadFactory threadFactory = Executors.defaultThreadFactory();
     private RejectedExecutionHandler handler = new ThreadPoolExecutor.AbortPolicy();
 
+    /**
+     * Construct a new instance.
+     */
     public ThreadPoolExecutorService() {
     }
 
+    /**
+     * Determine whether core threads are allowed to time out.
+     *
+     * @return {@code true} if core threads are allowed to time out
+     */
     public synchronized boolean isAllowCoreTimeout() {
         return allowCoreTimeout;
     }
 
+    /**
+     * Specify whether core threads are allowed to time out.  If the service is already started, the change will
+     * take effect immediately.
+     *
+     * @param allowCoreTimeout {@code true} if core threads are allowed to time out
+     */
     public synchronized void setAllowCoreTimeout(final boolean allowCoreTimeout) {
         this.allowCoreTimeout = allowCoreTimeout;
         final ThreadPoolExecutor realExecutor = this.realExecutor;
@@ -71,10 +88,20 @@ public final class ThreadPoolExecutorService implements Service {
         }
     }
 
+    /**
+     * Get the configured core pool size.
+     *
+     * @return the core pool size
+     */
     public synchronized int getCorePoolSize() {
         return corePoolSize;
     }
 
+    /**
+     * Set the configured core pool size.  If the service is already started, the change will take effect immediately.
+     *
+     * @param corePoolSize the core pool size
+     */
     public synchronized void setCorePoolSize(final int corePoolSize) {
         this.corePoolSize = corePoolSize;
         final ThreadPoolExecutor realExecutor = this.realExecutor;
@@ -83,10 +110,20 @@ public final class ThreadPoolExecutorService implements Service {
         }
     }
 
+    /**
+     * Get the configured maximum pool size.
+     *
+     * @return the maximum pool size
+     */
     public synchronized int getMaximumPoolSize() {
         return maximumPoolSize;
     }
 
+    /**
+     * Set the configured maximum pool size.  If the service is already started, the change will take effect immediately.
+     *
+     * @param maximumPoolSize the maximum pool size
+     */
     public synchronized void setMaximumPoolSize(final int maximumPoolSize) {
         this.maximumPoolSize = maximumPoolSize;
         final ThreadPoolExecutor realExecutor = this.realExecutor;
@@ -95,10 +132,22 @@ public final class ThreadPoolExecutorService implements Service {
         }
     }
 
+    /**
+     * Get the keep-alive time.
+     *
+     * @param unit the units to use
+     * @return the keep-alive time
+     */
     public synchronized long getKeepAliveTime(final TimeUnit unit) {
         return unit.convert(keepAliveTime, this.unit);
     }
 
+    /**
+     * Set the keep-alive time.  If the service is already started, the change will take effect immediately.
+     *
+     * @param keepAliveTime the keep-alive time
+     * @param unit the time unit
+     */
     public synchronized void setKeepAliveTime(final long keepAliveTime, final TimeUnit unit) {
         if (unit == null) {
             throw new IllegalArgumentException("unit is null");
@@ -111,10 +160,11 @@ public final class ThreadPoolExecutorService implements Service {
         }
     }
 
-    public synchronized BlockingQueue<Runnable> getWorkQueue() {
-        return workQueue;
-    }
-
+    /**
+     * Set the configured work queue.  If the service is already started, the change will take effect upon next restart.
+     *
+     * @param workQueue the work queue
+     */
     public synchronized void setWorkQueue(final BlockingQueue<Runnable> workQueue) {
         if (workQueue == null) {
             throw new IllegalArgumentException("workQueue is null");
@@ -122,10 +172,20 @@ public final class ThreadPoolExecutorService implements Service {
         this.workQueue = workQueue;
     }
 
+    /**
+     * Get the configured thread factory.
+     *
+     * @return the thread factory
+     */
     public synchronized ThreadFactory getThreadFactory() {
         return threadFactory;
     }
 
+    /**
+     * Set the configured thread factory.  If the service is already started, the change will take effect immediately.
+     *
+     * @param threadFactory the thread factory
+     */
     public synchronized void setThreadFactory(final ThreadFactory threadFactory) {
         if (threadFactory == null) {
             throw new IllegalArgumentException("threadFactory is null");
@@ -137,10 +197,20 @@ public final class ThreadPoolExecutorService implements Service {
         }
     }
 
+    /**
+     * Get the rejected execution handler.
+     *
+     * @return the rejected execution handler
+     */
     public synchronized RejectedExecutionHandler getHandler() {
         return handler;
     }
 
+    /**
+     * Set the rejected execution handler.  If the service is already started, the change will take effect immediately.
+     *
+     * @param handler the rejected execution handler
+     */
     public synchronized void setHandler(final RejectedExecutionHandler handler) {
         if (handler == null) {
             throw new IllegalArgumentException("handler is null");
@@ -156,11 +226,23 @@ public final class ThreadPoolExecutorService implements Service {
     private ThreadPoolExecutor realExecutor;
     private StopContext stopContext;
 
+    /**
+     * Get the public executor service value for this thread pool.
+     *
+     * @return the value
+     */
     public Value<ExecutorService> getExecutorValue() {
         return executorServiceValue;
     }
 
-    public synchronized ExecutorService getExecutorService() {
+    /**
+     * Get the public executor service for this thread pool.
+     *
+     * @return the public executor service
+     *
+     * @throws IllegalStateException if the service is not started
+     */
+    public synchronized ExecutorService getExecutorService() throws IllegalStateException {
         final ExecutorService publicExecutor = this.publicExecutor;
         if (publicExecutor == null) {
             throw new IllegalStateException();
@@ -168,12 +250,14 @@ public final class ThreadPoolExecutorService implements Service {
         return publicExecutor;
     }
 
+    /** {@inheritDoc} */
     public synchronized void start(final StartContext context) throws StartException {
         realExecutor = new OurExecutor(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory, handler);
         realExecutor.allowCoreThreadTimeOut(allowCoreTimeout);
         publicExecutor = JBossExecutors.protectedExecutorService(realExecutor);
     }
 
+    /** {@inheritDoc} */
     public synchronized void stop(final StopContext context) {
         stopContext = context;
         context.asynchronous();
