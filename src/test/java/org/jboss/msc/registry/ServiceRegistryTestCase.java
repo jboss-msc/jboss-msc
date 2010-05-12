@@ -25,7 +25,6 @@ import java.util.*;
 
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
-import org.jboss.msc.value.Value;
 import org.junit.Test;
 
 import static org.junit.Assert.fail;
@@ -49,7 +48,6 @@ public class ServiceRegistryTestCase {
             .add(ServiceDefinition.build("9", Service.NULL_VALUE).create())
             .add(ServiceDefinition.build("10", Service.NULL_VALUE).create())
             .install();
-        //assertInDependencyOrder(handler.getResolved());
     }
 
     @Test
