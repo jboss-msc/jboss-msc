@@ -80,42 +80,39 @@ public class ServiceRegistry {
     }
 
     private ServiceController<?> resolve(final ServiceDefinition serviceDefinition, final Map<ServiceName, ServiceDefinition> serviceDefinitions, final Set<ServiceName> visited) throws ServiceRegistryException {
-        ServiceController<?> serviceController = registry.get(serviceDefinition.getName());
-        if(serviceController != null)
-            return serviceController;
+        final ServiceName name = serviceDefinition.getName();
 
-        if (!visited.add(serviceDefinition.getName()))
+        if (!visited.add(name)) {
             throw new CircularDependencyException("Circular dependency discovered: " + visited);
-            
+        }
+
         try {
+            final ConcurrentMap<ServiceName, ServiceController<?>> registry = this.registry;
             final ServiceBuilder<Service> builder = serviceContainer.buildService(serviceDefinition.getService());
 
             for (String dependency : serviceDefinition.getDependencies()) {
                 final ServiceName dependencyName = ServiceName.create(dependency);
 
                 ServiceController<?> dependencyController = registry.get(dependencyName);
-                if(dependencyController != null) {
-                    builder.addDependency(dependencyController);
-                    continue;
+                if (dependencyController == null) {
+                    final ServiceDefinition dependencyDefinition = serviceDefinitions.get(dependencyName);
+                    if (dependencyDefinition == null)
+                        throw new MissingDependencyException("Missing dependency: " + name + " depends on " + dependencyName + " which can not be found");
+                    dependencyController = resolve(dependencyDefinition, serviceDefinitions, visited);
                 }
-
-                final ServiceDefinition dependencyDefinition = serviceDefinitions.get(dependencyName);
-                if (dependencyDefinition == null)
-                    throw new MissingDependencyException("Missing dependency: " + serviceDefinition.getName() + " depends on " + dependencyName + " which can not be found");
-
-                dependencyController = resolve(dependencyDefinition, serviceDefinitions, visited);
                 builder.addDependency(dependencyController);
             }
 
             // We are resolved.  Lets install
-            builder.addListener(new ServiceUnregisterListner(serviceDefinition.getName()));
-            serviceController = builder.create();
-            if (registry.putIfAbsent(serviceDefinition.getName(), serviceController) != null) {
-                throw new ServiceRegistryException("Duplicate service name provided: " + serviceDefinition.getName());
+            builder.addListener(new ServiceUnregisterListner(name));
+
+            final ServiceController<?> serviceController = builder.create();
+            if (registry.putIfAbsent(name, serviceController) != null) {
+                throw new ServiceRegistryException("Duplicate service name provided: " + name);
             }
             return serviceController;
         } finally {
-            visited.remove(serviceDefinition.getName());
+            visited.remove(name);
         }
 
     }
