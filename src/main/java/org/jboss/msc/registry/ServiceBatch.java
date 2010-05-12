@@ -84,36 +84,15 @@ public final class ServiceBatch {
      * maintain some state information for resolution.
      */
     public class BatchEntry {
-        private final ServiceDefinition serviceDefinition;
-        private boolean processed;
-        private boolean visited;
+        final ServiceDefinition serviceDefinition;
+        boolean processed;
+        boolean visited;
         BatchEntry prev;
         ServiceBuilder<Service> builder;
         int i;
-        
 
         public BatchEntry(ServiceDefinition serviceDefinition) {
             this.serviceDefinition = serviceDefinition;
-        }
-
-        public ServiceDefinition getServiceDefinition() {
-            return serviceDefinition;
-        }
-
-        public boolean isProcessed() {
-            return processed;
-        }
-
-        public void setProcessed(boolean processed) {
-            this.processed = processed;
-        }
-
-        public boolean isVisited() {
-            return visited;
-        }
-
-        public void setVisited(boolean visited) {
-            this.visited = visited;
         }
     }
 }

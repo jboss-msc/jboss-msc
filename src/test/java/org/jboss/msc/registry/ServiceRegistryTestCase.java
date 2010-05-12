@@ -130,7 +130,7 @@ public class ServiceRegistryTestCase {
     public void testLargeNoDeps() throws Exception {
         ServiceBatch batch = new ServiceRegistry(ServiceContainer.Factory.create()).create();
 
-        final int totalServiceDefinitions = 1000000;
+        final int totalServiceDefinitions = 100000;
 
         for (int i = 0; i < totalServiceDefinitions; i++) {
             batch.add(ServiceDefinition.build("test" + i, Service.NULL_VALUE).create());
