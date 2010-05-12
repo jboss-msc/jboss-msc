@@ -4,6 +4,9 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.jboss.msc.service.Service;
+import org.jboss.msc.service.ServiceBuilder;
+
 /**
  * An ordered set of service batchEntries that should be processed as one.
  * 
@@ -84,6 +87,10 @@ public final class ServiceBatch {
         private final ServiceDefinition serviceDefinition;
         private boolean processed;
         private boolean visited;
+        BatchEntry prev;
+        ServiceBuilder<Service> builder;
+        int i;
+        
 
         public BatchEntry(ServiceDefinition serviceDefinition) {
             this.serviceDefinition = serviceDefinition;
