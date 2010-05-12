@@ -110,7 +110,7 @@ public class ServiceRegistry {
 
             final ServiceController<?> serviceController = builder.create();
             if (registry.putIfAbsent(name, serviceController) != null) {
-                throw new ServiceRegistryException("Duplicate service name provided: " + name);
+                throw new DuplicateServiceException("Duplicate service name provided: " + name);
             }
             return serviceController;
         } finally {
