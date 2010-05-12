@@ -22,9 +22,6 @@
 
 package org.jboss.msc.service;
 
-import java.lang.ref.Reference;
-import java.lang.ref.ReferenceQueue;
-import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashSet;
@@ -35,6 +32,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import org.jboss.msc.ref.Reaper;
+import org.jboss.msc.ref.Reference;
+import org.jboss.msc.ref.WeakReference;
 import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 
@@ -71,23 +71,22 @@ final class ServiceContainerImpl implements ServiceContainer {
     }
 
     private static final class ShutdownHookHolder {
-        private static final ReferenceQueue<ServiceContainerImpl> queue = new ReferenceQueue<ServiceContainerImpl>();
-        private static final Set<WeakReference<ServiceContainerImpl>> containers;
+        private static final Set<Reference<ServiceContainerImpl, Void>> containers;
         private static boolean down = false;
 
         static {
-            containers = new HashSet<WeakReference<ServiceContainerImpl>>();
+            containers = new HashSet<Reference<ServiceContainerImpl, Void>>();
             AccessController.doPrivileged(new PrivilegedAction<Void>() {
                 public Void run() {
                     final Thread hook = new Thread(new Runnable() {
                         public void run() {
                             // shut down all services in all containers.
-                            final Set<WeakReference<ServiceContainerImpl>> set = containers;
+                            final Set<Reference<ServiceContainerImpl, Void>> set = containers;
                             final LatchListener listener;
                             synchronized (set) {
                                 down = true;
                                 listener = new LatchListener(set.size());
-                                for (WeakReference<ServiceContainerImpl> containerRef : set) {
+                                for (Reference<ServiceContainerImpl, Void> containerRef : set) {
                                     final ServiceContainerImpl container = containerRef.get();
                                     if (container == null) {
                                         continue;
@@ -123,18 +122,18 @@ final class ServiceContainerImpl implements ServiceContainer {
     private volatile Executor executor;
 
     ServiceContainerImpl() {
-        final Set<WeakReference<ServiceContainerImpl>> set = ShutdownHookHolder.containers;
+        final Set<Reference<ServiceContainerImpl, Void>> set = ShutdownHookHolder.containers;
         synchronized (set) {
             // if the shutdown hook was triggered, then no services can ever come up in any new containers.
             final boolean down = ShutdownHookHolder.down;
             final ServiceBuilderImpl<ServiceContainer> builder = new ServiceBuilderImpl<ServiceContainer>(this, Service.NULL_VALUE, new ImmediateValue<ServiceContainer>(this));
             root = builder.setInitialMode(down ? ServiceController.Mode.NEVER : ServiceController.Mode.AUTOMATIC).create();
             if (! down) {
-                set.add(new WeakReference<ServiceContainerImpl>(this, ShutdownHookHolder.queue));
-                Reference<? extends ServiceContainerImpl> reference;
-                while ((reference = ShutdownHookHolder.queue.poll()) != null) {
-                    ShutdownHookHolder.containers.remove(reference);
-                }
+                set.add(new WeakReference<ServiceContainerImpl, Void>(this, null, new Reaper<ServiceContainerImpl, Void>() {
+                    public void reap(final org.jboss.msc.ref.Reference<ServiceContainerImpl, Void> reference) {
+                        ShutdownHookHolder.containers.remove(reference);
+                    }
+                }));
             }
         }
     }
