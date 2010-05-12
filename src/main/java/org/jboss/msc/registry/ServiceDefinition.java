@@ -57,7 +57,7 @@ public final class ServiceDefinition<T> {
 
         }
         
-        public Builder addDependency(String dependency) {
+        public Builder<T> addDependency(String dependency) {
             if (dependency == null)
                 throw new IllegalArgumentException("Dependency can not be null");
             
@@ -66,7 +66,7 @@ public final class ServiceDefinition<T> {
             return this;
         }
         
-        public Builder addDependencies(Collection<String> dependencies)
+        public Builder<T> addDependencies(Collection<String> dependencies)
         {
             if (dependencies == null)
                 throw new IllegalArgumentException("Dependencies can not be null");
@@ -76,7 +76,7 @@ public final class ServiceDefinition<T> {
             return this;
         }
         
-        public Builder addDependencies(String... dependencies)
+        public Builder<T> addDependencies(String... dependencies)
         {
             for (String d : dependencies)
                 this.dependencies.add(d);
@@ -84,18 +84,18 @@ public final class ServiceDefinition<T> {
             return this;
         }
         
-        public Builder setLocation(Location location) {
+        public Builder<T> setLocation(Location location) {
             this.location = location;
             
             return this;
         }
 
-        public Builder setInitialMode(ServiceController.Mode initialMode) {
+        public Builder<T> setInitialMode(ServiceController.Mode initialMode) {
             this.initialMode = initialMode;
             return this;
         }
 
-        public ServiceDefinition create() {
+        public ServiceDefinition<T> create() {
             final int size = dependencies.size();
             if (size == 0) {
                 return new ServiceDefinition<T>(ServiceName.create(name), initialMode, location, service, NO_DEPS);
