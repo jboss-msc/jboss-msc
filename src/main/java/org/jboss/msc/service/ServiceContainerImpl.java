@@ -53,6 +53,11 @@ final class ServiceContainerImpl implements ServiceContainer {
                 public Thread newThread(final Runnable r) {
                     final Thread thread = new Thread(r);
                     thread.setDaemon(true);
+                    thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+                        public void uncaughtException(final Thread t, final Throwable e) {
+                            e.printStackTrace(System.err);
+                        }
+                    });
                     return thread;
                 }
             });
@@ -95,7 +100,10 @@ final class ServiceContainerImpl implements ServiceContainer {
                             }
                             // wait for all services to finish.
                             for (;;) try {
-                                listener.await();
+                                if (! listener.await(10L, TimeUnit.SECONDS)) {
+                                    System.err.println("Failed to shut down in 10 seconds; exiting");
+                                    return;
+                                }
                                 break;
                             } catch (InterruptedException e) {
                             }
