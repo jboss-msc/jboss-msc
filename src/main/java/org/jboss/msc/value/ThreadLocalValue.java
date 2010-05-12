@@ -22,17 +22,42 @@
 
 package org.jboss.msc.value;
 
+/**
+ * A thread-local value.  Used to pass values in special situations.
+ *
+ * @param <T> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class ThreadLocalValue<T> implements Value<T> {
     private final ThreadLocal<T> threadLocal = new ThreadLocal<T>();
 
+    /**
+     * Construct a new instance.
+     */
+    public ThreadLocalValue() {
+    }
+
+    /** {@inheritDoc} */
     public T getValue() {
         return threadLocal.get();
     }
 
+    /**
+     * Set this value, replacing any current value.
+     *
+     * @param newValue the new value to set
+     */
     public void setValue(T newValue) {
         threadLocal.set(newValue);
     }
 
+    /**
+     * Get and set the value.  Returns the old value so it can be restored later on (typically in a {@code finally} block).
+     *
+     * @param newValue the new value
+     * @return the old value
+     */
     public T getAndSetValue(T newValue) {
         try {
             return threadLocal.get();

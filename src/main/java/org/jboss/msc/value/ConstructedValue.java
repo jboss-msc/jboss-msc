@@ -26,15 +26,30 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
+/**
+ * A value which is created on demand from a constructor.  Each call to {@link #getValue()} will create a new instance,
+ * so if the same instance should be returned, this should be used in conjunction with {@link CachedValue}.
+ *
+ * @param <T> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class ConstructedValue<T> implements Value<T> {
     private final Value<Constructor<T>> constructorValue;
     private final List<? extends Value<?>> parameters;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param constructorValue the constructor to use
+     * @param parameters the parameters ot pass to the constructor
+     */
     public ConstructedValue(final Value<Constructor<T>> constructorValue, final List<? extends Value<?>> parameters) {
         this.constructorValue = constructorValue;
         this.parameters = parameters;
     }
 
+    /** {@inheritDoc} */
     public T getValue() throws IllegalStateException {
         try {
             return constructorValue.getValue().newInstance(Values.getValues(parameters));

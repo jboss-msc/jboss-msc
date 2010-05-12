@@ -24,15 +24,29 @@ package org.jboss.msc.value;
 
 import java.lang.reflect.Field;
 
+/**
+ * A value which reads a field of an object.
+ *
+ * @param <T> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class FieldValue<T> implements Value<T> {
     private final Value<Field> fieldValue;
     private final Value<?> targetValue;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param fieldValue the field to access
+     * @param targetValue the target object containing the field
+     */
     public FieldValue(final Value<Field> fieldValue, final Value<?> targetValue) {
         this.fieldValue = fieldValue;
         this.targetValue = targetValue;
     }
 
+    /** {@inheritDoc} */
     @SuppressWarnings({ "unchecked" })
     public T getValue() throws IllegalStateException {
         try {

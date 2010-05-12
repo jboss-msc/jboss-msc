@@ -25,19 +25,35 @@ package org.jboss.msc.inject;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import org.jboss.msc.value.Value;
 
+/**
+ * An injector which updates the value of an {@link AtomicReferenceFieldUpdater}.
+ *
+ * @param <C> the class which holds the target field
+ * @param <T> the type of the value to inject
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class AtomicReferenceFieldUpdaterInjector<C, T> implements Injector<T> {
-    private final AtomicReferenceFieldUpdater<C, T> updater;
+    private final AtomicReferenceFieldUpdater<C, ? super T> updater;
     private final Value<C> target;
 
-    public AtomicReferenceFieldUpdaterInjector(final AtomicReferenceFieldUpdater<C, T> updater, final Value<C> target) {
+    /**
+     * Construct a new instance.
+     *
+     * @param updater the updater to inject to
+     * @param target the target object upon which to inject
+     */
+    public AtomicReferenceFieldUpdaterInjector(final AtomicReferenceFieldUpdater<C, ? super T> updater, final Value<C> target) {
         this.updater = updater;
         this.target = target;
     }
 
+    /** {@inheritDoc} */
     public void inject(final T value) {
         updater.set(target.getValue(), value);
     }
 
+    /** {@inheritDoc} */
     public void uninject() {
         updater.set(target.getValue(), null);
     }

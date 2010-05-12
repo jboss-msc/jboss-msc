@@ -24,17 +24,31 @@ package org.jboss.msc.inject;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * An injector which updates the value of an {@link AtomicReference}.
+ *
+ * @param <T> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class AtomicReferenceInjector<T> implements Injector<T> {
     private final AtomicReference<T> reference;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param reference the reference to update
+     */
     public AtomicReferenceInjector(final AtomicReference<T> reference) {
         this.reference = reference;
     }
 
+    /** {@inheritDoc} */
     public void inject(final T value) {
         reference.set(value);
     }
 
+    /** {@inheritDoc} */
     public void uninject() {
         reference.set(null);
     }

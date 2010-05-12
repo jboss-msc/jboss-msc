@@ -5,7 +5,9 @@ import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.value.Value;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Class representing the definition of a services prior to the service being installed.
@@ -19,7 +21,7 @@ public final class ServiceDefinition {
     private final ServiceController.Mode initialMode;
     private final Location location;
     private final Value<Service> service;
-    
+
     private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<Service> service, Set<String> dependencies) {
     	if (name == null)
     		throw new IllegalArgumentException("Name can not be null");

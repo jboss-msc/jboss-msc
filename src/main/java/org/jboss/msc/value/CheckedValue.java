@@ -22,15 +22,29 @@
 
 package org.jboss.msc.value;
 
+/**
+ * A value whose type is checked before it is returned.
+ *
+ * @param <T> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class CheckedValue<T> implements Value<T> {
     private final Class<T> valueClass;
     private final Value<?> value;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param valueClass the value class
+     * @param value the delegate value
+     */
     public CheckedValue(final Class<T> valueClass, final Value<?> value) {
         this.valueClass = valueClass;
         this.value = value;
     }
 
+    /** {@inheritDoc} */
     public T getValue() throws IllegalStateException {
         return valueClass.cast(value.getValue());
     }

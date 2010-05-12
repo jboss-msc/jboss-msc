@@ -22,6 +22,22 @@
 
 package org.jboss.msc.value;
 
+/**
+ * An indirect value.  A value may be available trivially (without any computation), or it may involve a complex calculation
+ * to produce.  The value may also be <em>time-sensitive</em>, such that it is only available under certain circumstances
+ * (e.g. when the corresponding service is "up").
+ *
+ * @param <T> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public interface Value<T> {
+
+    /**
+     * Get the actual value.
+     *
+     * @return the actual value
+     * @throws IllegalStateException if the value is time-sensitive and the current state does not allow retrieval.
+     */
     T getValue() throws IllegalStateException;
 }

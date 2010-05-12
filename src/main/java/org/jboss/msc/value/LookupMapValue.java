@@ -24,16 +24,30 @@ package org.jboss.msc.value;
 
 import java.util.Map;
 
-public final class LookupMapValue<V> implements Value<V> {
+/**
+ * A value which is acquired from a map by key.
+ *
+ * @param <T> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
+public final class LookupMapValue<T> implements Value<T> {
     private final Value<?> keyValue;
-    private final Value<? extends Map<?, ? extends V>> mapValue;
+    private final Value<? extends Map<?, ? extends T>> mapValue;
 
-    public LookupMapValue(final Value<?> keyValue, final Value<? extends Map<?, ? extends V>> mapValue) {
+    /**
+     * Construct a new instance.
+     *
+     * @param keyValue the map key
+     * @param mapValue the map to look into
+     */
+    public LookupMapValue(final Value<?> keyValue, final Value<? extends Map<?, ? extends T>> mapValue) {
         this.keyValue = keyValue;
         this.mapValue = mapValue;
     }
 
-    public V getValue() throws IllegalStateException {
+    /** {@inheritDoc} */
+    public T getValue() throws IllegalStateException {
         return mapValue.getValue().get(keyValue.getValue());
     }
 }

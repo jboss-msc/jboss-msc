@@ -24,14 +24,27 @@ package org.jboss.msc.value;
 
 import org.jboss.msc.ref.Reference;
 
+/**
+ * A value which reads a reference.
+ *
+ * @param <T> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class ReferenceValue<T> implements Value<T> {
 
     private final Reference<? extends T, ?> reference;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param reference the reference to refer to
+     */
     public ReferenceValue(final Reference<? extends T, ?> reference) {
         this.reference = reference;
     }
 
+    /** {@inheritDoc} */
     public T getValue() {
         return reference.get();
     }

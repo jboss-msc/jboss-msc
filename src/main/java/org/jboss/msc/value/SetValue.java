@@ -26,13 +26,26 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * A set value.
+ *
+ * @param <T> the set member type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class SetValue<T> implements Value<Set<T>> {
     private final List<? extends Value<? extends T>> values;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param values the values to add to the set
+     */
     public SetValue(final List<? extends Value<? extends T>> values) {
         this.values = values;
     }
 
+    /** {@inheritDoc} */
     public Set<T> getValue() throws IllegalStateException {
         final LinkedHashSet<T> set = new LinkedHashSet<T>();
         for (Value<? extends T> value : values) {

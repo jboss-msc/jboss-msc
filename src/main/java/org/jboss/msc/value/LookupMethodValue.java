@@ -25,17 +25,30 @@ package org.jboss.msc.value;
 import java.lang.reflect.Method;
 import java.util.List;
 
+/**
+ * A value which looks up a public method by name and parameters from a class.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class LookupMethodValue implements Value<Method> {
     private final Value<Class<?>> target;
     private final String methodName;
     private final List<? extends Value<Class<?>>> parameterTypes;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param target the class in which to look for the method
+     * @param methodName the name of the method
+     * @param parameterTypes the method parameter types
+     */
     public LookupMethodValue(final Value<Class<?>> target, final String methodName, final List<? extends Value<Class<?>>> parameterTypes) {
         this.target = target;
         this.methodName = methodName;
         this.parameterTypes = parameterTypes;
     }
 
+    /** {@inheritDoc} */
     public Method getValue() throws IllegalStateException {
         Class[] types = new Class[parameterTypes.size()];
         int i = 0;

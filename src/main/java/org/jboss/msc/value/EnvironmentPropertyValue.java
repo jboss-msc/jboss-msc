@@ -26,23 +26,53 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+/**
+ * A value which comes from an environment property.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @see System#getenv(String)
+ */
 public final class EnvironmentPropertyValue implements Value<String>, PrivilegedAction<String> {
     private final String propertyName;
     private final AccessControlContext accessControlContext;
     private final Value<?> defaultValue;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param propertyName the property name to read
+     */
     public EnvironmentPropertyValue(final String propertyName) {
         this(propertyName, Values.nullValue());
     }
 
+    /**
+     * Construct a new instance.
+     *
+     * @param propertyName the property name to read
+     * @param accessControlContext the access control context in which to fetch the property value
+     */
     public EnvironmentPropertyValue(final String propertyName, final AccessControlContext accessControlContext) {
         this(propertyName, accessControlContext, Values.nullValue());
     }
 
+    /**
+     * Construct a new instance.
+     *
+     * @param propertyName the property name to read
+     * @param defaultValue the value to use if the property is unset
+     */
     public EnvironmentPropertyValue(final String propertyName, final Value<?> defaultValue) {
         this(propertyName, AccessController.getContext(), defaultValue);
     }
 
+    /**
+     * Construct a new instance.
+     *
+     * @param propertyName the property name to read
+     * @param accessControlContext the access control context in which to fetch the property value
+     * @param defaultValue the value to use if the property is unset
+     */
     public EnvironmentPropertyValue(final String propertyName, final AccessControlContext accessControlContext, final Value<?> defaultValue) {
         if (propertyName == null) {
             throw new IllegalArgumentException("propertyName is null");
@@ -58,6 +88,7 @@ public final class EnvironmentPropertyValue implements Value<String>, Privileged
         this.defaultValue = defaultValue;
     }
 
+    /** {@inheritDoc} */
     public String getValue() throws IllegalStateException {
         final SecurityManager sm = System.getSecurityManager();
         final String result;
@@ -71,6 +102,11 @@ public final class EnvironmentPropertyValue implements Value<String>, Privileged
         return value != null ? value.toString() : null;
     }
 
+    /**
+     * Fetch the property in an unprivileged context.
+     *
+     * @return the property value
+     */
     public String run() {
         return System.getenv(propertyName);
     }

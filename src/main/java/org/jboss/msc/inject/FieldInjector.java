@@ -26,17 +26,31 @@ import java.lang.reflect.Field;
 import org.jboss.logging.Logger;
 import org.jboss.msc.value.Value;
 
+/**
+ * An injector which updates the value of a field.
+ *
+ * @param <T> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class FieldInjector<T> implements Injector<T> {
     private static final Logger log = Logger.getI18nLogger("org.jboss.msc.inject.field", null, "MSC");
 
     private final Value<?> target;
     private final Value<Field> fieldValue;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param target the object whose field is to be updated
+     * @param fieldValue the field to update
+     */
     public FieldInjector(final Value<?> target, final Value<Field> fieldValue) {
         this.target = target;
         this.fieldValue = fieldValue;
     }
 
+    /** {@inheritDoc} */
     public void inject(final T value) {
         try {
             fieldValue.getValue().set(target, value);
@@ -45,6 +59,7 @@ public final class FieldInjector<T> implements Injector<T> {
         }
     }
 
+    /** {@inheritDoc} */
     public void uninject() {
         final Field field = fieldValue.getValue();
         if (field == null) {

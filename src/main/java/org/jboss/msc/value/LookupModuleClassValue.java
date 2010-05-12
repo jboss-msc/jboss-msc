@@ -26,16 +26,28 @@ import org.jboss.modules.ModuleClassLoader;
 import org.jboss.modules.ModuleIdentifier;
 import org.jboss.modules.ModuleLoadException;
 
+/**
+ * A value which looks up a class by name from a module.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class LookupModuleClassValue implements Value<Class<?>> {
     private final String className;
     private final ModuleIdentifier moduleIdentifier;
     private volatile Class<?> result;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param className the name of the class
+     * @param moduleIdentifier the module identifier
+     */
     public LookupModuleClassValue(final String className, final ModuleIdentifier moduleIdentifier) {
         this.className = className;
         this.moduleIdentifier = moduleIdentifier;
     }
 
+    /** {@inheritDoc} */
     public Class<?> getValue() throws IllegalStateException {
         Class<?> result = this.result;
         if (result != null) {

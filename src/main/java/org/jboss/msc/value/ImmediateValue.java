@@ -22,13 +22,26 @@
 
 package org.jboss.msc.value;
 
+/**
+ * A simple immediately-available value.
+ *
+ * @param <T> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class ImmediateValue<T> implements Value<T> {
     private final T value;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param value the value to return
+     */
     public ImmediateValue(final T value) {
         this.value = value;
     }
 
+    /** {@inheritDoc} */
     public T getValue() {
         return value;
     }

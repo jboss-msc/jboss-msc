@@ -46,6 +46,9 @@ public final class References {
         }
     };
 
+    private References() {
+    }
+
     static final class ReaperThread extends Thread {
         static final ReferenceQueue<Object> REAPER_QUEUE = new ReferenceQueue<Object>();
 

@@ -22,13 +22,26 @@
 
 package org.jboss.msc.value;
 
+/**
+ * A value which is calculated once only.  After the initial calculation, the result is cached and returned.
+ *
+ * @param <T> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class CachedValue<T> implements Value<T> {
     private volatile Value<? extends T> value;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param value the value from which this value is calculated
+     */
     public CachedValue(final Value<? extends T> value) {
         this.value = value;
     }
 
+    /** {@inheritDoc} */
     public T getValue() throws IllegalStateException {
         Value<? extends T> value;
         if ((value = this.value) instanceof ImmediateValue) {
