@@ -21,8 +21,8 @@
  */
 package org.jboss.msc.registry;
 
-import java.util.*;
-
+import java.util.ArrayList;
+import java.util.List;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
 import org.junit.Test;
