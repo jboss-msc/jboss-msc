@@ -41,7 +41,7 @@ public final class ServiceDefinition {
     public static final class Builder {
         private final String name;
         private final Value<Service> service;
-        private List<String> dependencies = new ArrayList<String>();
+        private List<String> dependencies = new ArrayList<String>(0);
         private ServiceController.Mode initialMode = ServiceController.Mode.AUTOMATIC;
         private Location location;
 
