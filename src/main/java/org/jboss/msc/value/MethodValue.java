@@ -26,17 +26,32 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 
+/**
+ * A value which is produced by invoking a method.
+ *
+ * @param <T> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class MethodValue<T> implements Value<T> {
     private final Value<Method> methodValue;
     private final Value<?> targetValue;
     private final List<? extends Value<?>> parameters;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param methodValue the method to invoke
+     * @param targetValue the target object on which to invoke this method
+     * @param parameters the parameters to pass to the method
+     */
     public MethodValue(final Value<Method> methodValue, final Value<?> targetValue, final List<? extends Value<?>> parameters) {
         this.methodValue = methodValue;
         this.targetValue = targetValue;
         this.parameters = parameters;
     }
 
+    /** {@inheritDoc} */
     @SuppressWarnings({ "unchecked" })
     public T getValue() throws IllegalStateException {
         try {

@@ -24,15 +24,27 @@ package org.jboss.msc.value;
 
 import java.lang.reflect.Field;
 
+/**
+ * A value which looks up a public field by name from a class.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class LookupFieldValue implements Value<Field> {
     private final Value<Class<?>> target;
     private final String fieldName;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param target the class in which to look for the field
+     * @param fieldName the name of the field to look up
+     */
     public LookupFieldValue(final Value<Class<?>> target, final String fieldName) {
         this.target = target;
         this.fieldName = fieldName;
     }
 
+    /** {@inheritDoc} */
     public Field getValue() throws IllegalStateException {
         final Class<?> targetClass = target.getValue();
         try {

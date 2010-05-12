@@ -22,19 +22,42 @@
 
 package org.jboss.msc.value;
 
-public final class MapEntryValue<A, B> implements Value<MapEntry<A, B>> {
-    private final MapEntry<Value<A>, Value<B>> entry;
+/**
+ * A value which yields a map entry.
+ *
+ * @param <K> the key type
+ * @param <V> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
+public final class MapEntryValue<K, V> implements Value<MapEntry<K, V>> {
+    private final MapEntry<Value<K>, Value<V>> entry;
 
-    public MapEntryValue(final MapEntry<Value<A>, Value<B>> entry) {
+    /**
+     * Construct a new instance.
+     *
+     * @param entry the key and value to use
+     */
+    public MapEntryValue(final MapEntry<Value<K>, Value<V>> entry) {
         this.entry = entry;
     }
 
-    public MapEntry<A, B> getValue() throws IllegalStateException {
-        final MapEntry<Value<A>, Value<B>> entry = this.entry;
+    /** {@inheritDoc} */
+    public MapEntry<K, V> getValue() throws IllegalStateException {
+        final MapEntry<Value<K>, Value<V>> entry = this.entry;
         return MapEntry.entry(entry.getKey().getValue(), entry.getValue().getValue());
     }
 
-    public static <A, B> Value<MapEntry<A, B>> of(Value<A> a, Value<B> b) {
-        return new MapEntryValue<A, B>(MapEntry.entry(a, b));
+    /**
+     * Construct a new instance.
+     *
+     * @param key the key
+     * @param value the value
+     * @param <K> the key type
+     * @param <V> the value type
+     * @return the new entry value
+     */
+    public static <K, V> Value<MapEntry<K, V>> of(Value<K> key, Value<V> value) {
+        return new MapEntryValue<K, V>(MapEntry.entry(key, value));
     }
 }

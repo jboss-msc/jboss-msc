@@ -27,6 +27,11 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Value utility methods.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class Values {
 
     private static final ThreadLocalValue<Object> THIS = new ThreadLocalValue<Object>();
@@ -66,14 +71,34 @@ public final class Values {
         }
     }
 
+    /**
+     * Get an object array from the result of an iterable series of values.
+     *
+     * @param i the iterable series
+     * @return the values array
+     */
     public static Object[] getValues(Iterable<? extends Value<?>> i) {
         return getValues(i.iterator(), 0);
     }
 
+    /**
+     * Get a typed object array from the result of an iterable series of values.
+     *
+     * @param i the iterable series
+     * @param clazz the resultant array type
+     * @return the values array
+     */
     public static <T> T[] getValues(Iterable<? extends Value<? extends T>> i, Class<T> clazz) {
         return getValues(i.iterator(), clazz, 0);
     }
 
+    /**
+     * Get a typed object array from the result of an iterable series of values.
+     *
+     * @param i the iterable series
+     * @param array the array to populate
+     * @return the values array
+     */
     public static <T> T[] getValues(Iterable<? extends Value<? extends T>> i, T[] array) {
         int idx = 0;
         for (final Value<? extends T> value : i) {
@@ -82,11 +107,24 @@ public final class Values {
         return array;
     }
 
+    /**
+     * Get the null value.
+     *
+     * @param <T> the value type
+     * @return a value which always yields {@code null}
+     */
     @SuppressWarnings({ "unchecked" })
     public static <T> Value<T> nullValue() {
         return NULL;
     }
 
+    /**
+     * Get a cached value for some opaque value.  If the value is already cached, it is returned as-is.
+     *
+     * @param value the value to wrap
+     * @param <T> the value type
+     * @return a cached value
+     */
     public static <T> CachedValue<T> cached(Value<T> value) {
         if (value instanceof CachedValue) {
             return (CachedValue<T>) value;
@@ -95,32 +133,71 @@ public final class Values {
         }
     }
 
+    /**
+     * The empty value list.
+     */
     public static final List<Value<?>> EMPTY_LIST = emptyList();
 
+    /**
+     * The empty value list.
+     *
+     * @param <T> the value type
+     * @return the empty value list
+     */
     public static <T> List<Value<? extends T>> emptyList() {
         return Collections.emptyList();
     }
 
+    /**
+     * Get an immediate value.
+     *
+     * @param value the value to return
+     * @param <T> the value type
+     * @return the immediate value
+     */
     public static <T> Value<T> immediateValue(T value) {
         return new ImmediateValue<T>(value);
     }
 
-    public static final Value EMPTY_LIST_VALUE = new ImmediateValue<List>(Collections.emptyList());
+    private static final Value EMPTY_LIST_VALUE = new ImmediateValue<List>(Collections.emptyList());
 
+    /**
+     * A value which yields the empty list.
+     *
+     * @param <T> the list member type
+     * @return the empty list value
+     */
     @SuppressWarnings({ "unchecked" })
     public static <T> Value<List<T>> emptyListValue() {
         return EMPTY_LIST_VALUE;
     }
 
+    /**
+     * Safely re-cast a value as its superclass.
+     *
+     * @param value the value to re-cast
+     * @param <T> the value type
+     * @return the value
+     */
     @SuppressWarnings({ "unchecked" })
     public static <T> Value<T> asSuperclass(Value<? extends T> value) {
         return (Value<T>) value;
     }
 
+    /**
+     * The special value representing {@code this}.
+     *
+     * @return the value for {@code this}
+     */
     public static ThreadLocalValue<Object> thisValue() {
         return THIS;
     }
 
+    /**
+     * The special value representing the target of an operation.
+     *
+     * @return the target value
+     */
     public static ThreadLocalValue<Object> targetValue() {
         return TARGET;
     }

@@ -24,16 +24,30 @@ package org.jboss.msc.value;
 
 import java.util.List;
 
-public final class LookupListValue<V> implements Value<V> {
-    private final Value<? extends List<? extends V>> listValue;
+/**
+ * A value which is acquired from a list by numerical index.
+ *
+ * @param <T> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
+public final class LookupListValue<T> implements Value<T> {
+    private final Value<? extends List<? extends T>> listValue;
     private final Value<? extends Number> indexValue;
 
-    public LookupListValue(final Value<List<? extends V>> listValue, final Value<? extends Number> indexValue) {
+    /**
+     * Construct a new instance.
+     *
+     * @param listValue the list in which to look
+     * @param indexValue the index at which to look
+     */
+    public LookupListValue(final Value<List<? extends T>> listValue, final Value<? extends Number> indexValue) {
         this.listValue = listValue;
         this.indexValue = indexValue;
     }
 
-    public V getValue() throws IllegalStateException {
+    /** {@inheritDoc} */
+    public T getValue() throws IllegalStateException {
         return listValue.getValue().get(indexValue.getValue().intValue());
     }
 }

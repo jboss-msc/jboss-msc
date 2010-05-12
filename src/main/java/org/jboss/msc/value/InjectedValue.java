@@ -25,10 +25,24 @@ package org.jboss.msc.value;
 import org.jboss.msc.inject.InjectionException;
 import org.jboss.msc.inject.Injector;
 
+/**
+ * A value which is injected from another source.  The value may only be read if the injector has populated it.
+ *
+ * @param <T> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class InjectedValue<T> implements Injector<T>, Value<T> {
 
     private volatile Value<T> value;
 
+    /**
+     * Construct a new instance.
+     */
+    public InjectedValue() {
+    }
+
+    /** {@inheritDoc} */
     public T getValue() throws IllegalStateException {
         final Value<T> value = this.value;
         if (value == null) {
@@ -37,10 +51,12 @@ public final class InjectedValue<T> implements Injector<T>, Value<T> {
         return value.getValue();
     }
 
+    /** {@inheritDoc} */
     public void inject(final T value) throws InjectionException {
         this.value = new ImmediateValue<T>(value);
     }
 
+    /** {@inheritDoc} */
     public void uninject() {
         value = null;
     }
