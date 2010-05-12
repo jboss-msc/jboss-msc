@@ -158,6 +158,9 @@ public class ServiceRegistry {
                 throw new DuplicateServiceException("Duplicate service name provided: " + entry.getServiceDefinition().getName());
             }
             
+            // Cleanup
+            entry.builder = null;
+            
             // Unroll!
             entry.setProcessed(true);
             entry.setVisited(true);
