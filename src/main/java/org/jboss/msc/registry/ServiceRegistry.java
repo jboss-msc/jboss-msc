@@ -27,9 +27,7 @@ import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceController;
 
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -55,12 +53,12 @@ public class ServiceRegistry {
      * Install a collection of service definitions into the registry.  Will install the services
      * in dependency order.
      *
-     * @param services The service definitions to install
+     * @param serviceBatch The service batch to install
      * @throws ServiceRegistryException If any problems occur resolving the dependencies or adding to the registry.
      */
-    void install(Map<ServiceName, ServiceDefinition> services) throws ServiceRegistryException {
+    void install(final ServiceBatch serviceBatch) throws ServiceRegistryException {
         try {
-            resolve(services);
+            resolve(serviceBatch.getBatchEntries());
         } catch (ResolutionException e) {
             throw new ServiceRegistryException("Failed to resolve dependencies", e);
         }
@@ -69,61 +67,62 @@ public class ServiceRegistry {
     /**
      * Recursive depth-first resolution
      *
-     * @param serviceDefinitions The list of items to be resolved
+     * @param services The list of items to be resolved
      * @throws ResolutionException if any problem occur during resolution
      */
-    private void resolve(final Map<ServiceName, ServiceDefinition> serviceDefinitions) throws ServiceRegistryException {
-        final Set<ServiceName> visited = new HashSet<ServiceName>();
-        for (ServiceDefinition serviceDefinition : serviceDefinitions.values()) {
-            resolve(serviceDefinition, serviceDefinitions, visited);
+    private void resolve(final Map<ServiceName, ServiceBatch.BatchEntry> services) throws ServiceRegistryException {
+        for (ServiceBatch.BatchEntry batchEntry : services.values()) {
+            if(!batchEntry.isProcessed())
+                resolve(batchEntry, services);
         }
     }
 
-    private ServiceController<?> resolve(final ServiceDefinition serviceDefinition, final Map<ServiceName, ServiceDefinition> serviceDefinitions, final Set<ServiceName> visited) throws ServiceRegistryException {
-        ServiceController<?> serviceController = registry.get(serviceDefinition.getName());
-        if(serviceController != null)
-            return serviceController;
+    private ServiceController<?> resolve(final ServiceBatch.BatchEntry entry, final Map<ServiceName, ServiceBatch.BatchEntry> services) throws ServiceRegistryException {
+        final ServiceDefinition serviceDefinition = entry.getServiceDefinition();
+        entry.setProcessed(true);
+        final ServiceName name = serviceDefinition.getName();
+        if (entry.isVisited())
+            throw new CircularDependencyException("Circular dependency discovered: " + serviceDefinition);
 
-        if (!visited.add(serviceDefinition.getName()))
-            throw new CircularDependencyException("Circular dependency discovered: " + visited);
-            
+        entry.setVisited(true);
+
         try {
+            final ConcurrentMap<ServiceName, ServiceController<?>> registry = this.registry;
+            final ServiceContainer serviceContainer = this.serviceContainer;
+            
             final ServiceBuilder<Service> builder = serviceContainer.buildService(serviceDefinition.getService());
 
             for (String dependency : serviceDefinition.getDependencies()) {
                 final ServiceName dependencyName = ServiceName.create(dependency);
 
                 ServiceController<?> dependencyController = registry.get(dependencyName);
-                if(dependencyController != null) {
-                    builder.addDependency(dependencyController);
-                    continue;
+                if (dependencyController == null) {
+                    final ServiceBatch.BatchEntry dependencyEntry = services.get(dependencyName);
+                    if (dependencyEntry == null)
+                        throw new MissingDependencyException("Missing dependency: " + name + " depends on " + dependencyName + " which can not be found");
+                    dependencyController = resolve(dependencyEntry, services);
                 }
-
-                final ServiceDefinition dependencyDefinition = serviceDefinitions.get(dependencyName);
-                if (dependencyDefinition == null)
-                    throw new MissingDependencyException("Missing dependency: " + serviceDefinition.getName() + " depends on " + dependencyName + " which can not be found");
-
-                dependencyController = resolve(dependencyDefinition, serviceDefinitions, visited);
                 builder.addDependency(dependencyController);
             }
 
             // We are resolved.  Lets install
-            builder.addListener(new ServiceUnregisterListner(serviceDefinition.getName()));
-            serviceController = builder.create();
-            if (registry.putIfAbsent(serviceDefinition.getName(), serviceController) != null) {
-                throw new ServiceRegistryException("Duplicate service name provided: " + serviceDefinition.getName());
+            builder.addListener(new ServiceUnregisterListener(name));
+
+            final ServiceController<?> serviceController = builder.create();
+            if (registry.putIfAbsent(name, serviceController) != null) {
+                throw new ServiceRegistryException("Duplicate service name provided: " + name);
             }
             return serviceController;
         } finally {
-            visited.remove(serviceDefinition.getName());
+            entry.setVisited(false);
         }
 
     }
 
-    private class ServiceUnregisterListner extends AbstractServiceListener<Service> {
+    private class ServiceUnregisterListener extends AbstractServiceListener<Service> {
         private final ServiceName serviceName;
 
-        private ServiceUnregisterListner(ServiceName serviceName) {
+        private ServiceUnregisterListener(ServiceName serviceName) {
             this.serviceName = serviceName;
         }
 

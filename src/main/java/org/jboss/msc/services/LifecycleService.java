@@ -29,9 +29,17 @@ import java.lang.reflect.Method;
 import java.util.List;
 import org.jboss.msc.service.StopContext;
 import org.jboss.msc.value.ImmediateValue;
+import org.jboss.msc.value.ThreadLocalValue;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
 
+/**
+ * A service which calls lifecycle methods on a POJO-style object.
+ *
+ * @param <T> the target type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class LifecycleService<T> implements Service {
     private final Value<T> target;
     private final Value<Method> startMethod;
@@ -39,6 +47,15 @@ public final class LifecycleService<T> implements Service {
     private final Value<Method> stopMethod;
     private final List<Value<?>> stopParams;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param target the target object value
+     * @param startMethod the start method to call, if any
+     * @param startParams the start method parameters to pass
+     * @param stopMethod the stop method to call, if any
+     * @param stopParams the stop method parameters to pass
+     */
     public LifecycleService(final Value<T> target, final Method startMethod, final List<Value<?>> startParams, final Method stopMethod, final List<Value<?>> stopParams) {
         this.target = target;
         this.startMethod = startMethod == null ? Values.<Method>nullValue() : new ImmediateValue<Method>(startMethod);
@@ -47,6 +64,15 @@ public final class LifecycleService<T> implements Service {
         this.stopParams = stopParams;
     }
 
+    /**
+     * Construct a new instance.
+     *
+     * @param target the target object value
+     * @param startMethod the start method to call, if any
+     * @param startParams the start method parameters to pass
+     * @param stopMethod the stop method to call, if any
+     * @param stopParams the stop method parameters to pass
+     */
     public LifecycleService(final Value<T> target, final Value<Method> startMethod, final List<Value<?>> startParams, final Value<Method> stopMethod, final List<Value<?>> stopParams) {
         this.target = target;
         this.startMethod = startMethod;
@@ -55,22 +81,38 @@ public final class LifecycleService<T> implements Service {
         this.stopParams = stopParams;
     }
 
+    /** {@inheritDoc} */
     public void start(final StartContext context) throws StartException {
         final Method startMethod = this.startMethod.getValue();
         if (startMethod != null) {
+            final ThreadLocalValue<Object> thisValue = Values.thisValue();
             try {
-                startMethod.invoke(target.getValue(), Values.getValues(startParams));
+                final Object target = this.target.getValue();
+                final Object old = thisValue.getAndSetValue(target);
+                try {
+                    startMethod.invoke(target, Values.getValues(startParams));
+                } finally {
+                    thisValue.setValue(old);
+                }
             } catch (Exception e) {
                 throw new StartException("Cannot start bean", e);
             }
         }
     }
 
+    /** {@inheritDoc} */
     public void stop(final StopContext context) {
         try {
             final Method stopMethod = this.stopMethod.getValue();
             if (stopMethod != null) {
-                stopMethod.invoke(target.getValue(), Values.getValues(stopParams));
+                final ThreadLocalValue<Object> thisValue = Values.thisValue();
+                final Object target = this.target.getValue();
+                final Object old = thisValue.getAndSetValue(target);
+                try {
+                    stopMethod.invoke(target, Values.getValues(stopParams));
+                } finally {
+                    thisValue.setValue(old);
+                }
             }
         } catch (Exception e) {
             // todo log it

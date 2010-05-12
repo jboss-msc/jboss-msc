@@ -69,7 +69,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     /**
      * The set of registered service listeners.
      */
-    private final Set<ServiceListener<? super S>> listeners = new HashSet<ServiceListener<? super S>>();
+    private final Set<ServiceListener<? super S>> listeners = new HashSet<ServiceListener<? super S>>(0);
     /**
      * The start exception.
      */

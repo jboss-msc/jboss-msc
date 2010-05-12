@@ -34,39 +34,34 @@ import org.jboss.vfs.VFS;
 import org.jboss.vfs.VFSUtils;
 import org.jboss.vfs.VirtualFile;
 
+/**
+ * A service which mounts an archive on the VFS.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class VFSMountService implements Service {
 
     // Configuration properties
-    private String path;
-    private TempFileProvider tempFileProvider;
-    private boolean exploded;
+    private final String path;
+    private final TempFileProvider tempFileProvider;
+    private final boolean exploded;
     // Service state
-    private Closeable handle;
+    private volatile Closeable handle;
 
-    public String getPath() {
-        return path;
-    }
-
-    public void setPath(final String path) {
+    /**
+     * Construct a new instance.
+     *
+     * @param path the path to mount at
+     * @param tempFileProvider the temp file provider to use
+     * @param exploded {@code true} if the mount should be fully exploded
+     */
+    public VFSMountService(final String path, final TempFileProvider tempFileProvider, final boolean exploded) {
         this.path = path;
-    }
-
-    public TempFileProvider getTempFileProvider() {
-        return tempFileProvider;
-    }
-
-    public void setTempFileProvider(final TempFileProvider tempFileProvider) {
         this.tempFileProvider = tempFileProvider;
-    }
-
-    public boolean isExploded() {
-        return exploded;
-    }
-
-    public void setExploded(final boolean exploded) {
         this.exploded = exploded;
     }
 
+    /** {@inheritDoc} */
     public void start(final StartContext context) throws StartException {
         try {
             final VirtualFile virtualFile = VFS.getChild(path);
@@ -85,6 +80,7 @@ public final class VFSMountService implements Service {
         }
     }
 
+    /** {@inheritDoc} */
     public void stop(final StopContext context) {
         VFSUtils.safeClose(handle);
         handle = null;
