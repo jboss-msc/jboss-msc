@@ -43,12 +43,14 @@ import org.jboss.threads.JBossExecutors;
  */
 public final class ThreadPoolExecutorService implements Service<ExecutorService> {
 
+    private static final int DEFAULT_QUEUE_LENGTH = 100;
+
     private boolean allowCoreTimeout = false;
     private int corePoolSize = 10;
     private int maximumPoolSize = 40;
     private long keepAliveTime = 30L;
     private TimeUnit unit = TimeUnit.SECONDS;
-    private BlockingQueue<Runnable> workQueue = new ArrayBlockingQueue<Runnable>(100);
+    private BlockingQueue<Runnable> workQueue = new ArrayBlockingQueue<Runnable>(DEFAULT_QUEUE_LENGTH);
     private ThreadFactory threadFactory = Executors.defaultThreadFactory();
     private RejectedExecutionHandler handler = new ThreadPoolExecutor.AbortPolicy();
 
@@ -160,7 +162,7 @@ public final class ThreadPoolExecutorService implements Service<ExecutorService>
      */
     public synchronized void setWorkQueue(final BlockingQueue<Runnable> workQueue) {
         if (workQueue == null) {
-            throw new IllegalArgumentException("workQueue is null");
+            setWorkQueue(new ArrayBlockingQueue<Runnable>(DEFAULT_QUEUE_LENGTH));
         }
         this.workQueue = workQueue;
     }
@@ -181,7 +183,8 @@ public final class ThreadPoolExecutorService implements Service<ExecutorService>
      */
     public synchronized void setThreadFactory(final ThreadFactory threadFactory) {
         if (threadFactory == null) {
-            throw new IllegalArgumentException("threadFactory is null");
+            setThreadFactory(Executors.defaultThreadFactory());
+            return;
         }
         this.threadFactory = threadFactory;
         final ThreadPoolExecutor realExecutor = this.realExecutor;
