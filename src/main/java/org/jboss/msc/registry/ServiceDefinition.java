@@ -105,6 +105,10 @@ public final class ServiceDefinition {
         return location;
     }
 
+    public Value<Service> getService() {
+        return service;
+    }
+
     @Override
     public String toString() {
         return "ServiceDefinition{" +
