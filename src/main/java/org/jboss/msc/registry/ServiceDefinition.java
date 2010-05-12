@@ -1,5 +1,7 @@
 package org.jboss.msc.registry;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.jboss.msc.service.Location;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceController;
@@ -18,17 +20,17 @@ import java.util.Set;
  */
 public final class ServiceDefinition {
     private final ServiceName name;
-    private final Set<String> dependencies;
+    private final List<String> dependencies;
     private final ServiceController.Mode initialMode;
     private final Location location;
     private final Value<Service> service;
 
-    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<Service> service, Set<String> dependencies) {
+    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<Service> service, List<String> dependencies) {
         if (name == null) {
             throw new IllegalArgumentException("Name can not be null");
         }
         this.name = name;
-        this.dependencies = new HashSet<String>(dependencies);
+        this.dependencies = dependencies;
         this.initialMode = initialMode;
         this.location = location;
         this.service = service;
@@ -41,7 +43,7 @@ public final class ServiceDefinition {
     public static final class Builder {
         private final String name;
         private final Value<Service> service;
-        private Set<String> dependencies = new HashSet<String>();
+        private List<String> dependencies = new ArrayList<String>();
         private ServiceController.Mode initialMode = ServiceController.Mode.AUTOMATIC;
         private Location location;
 
@@ -101,7 +103,7 @@ public final class ServiceDefinition {
         return name;
     }
 
-    public Set<String> getDependencies() {
+    public List<String> getDependencies() {
         return dependencies;
     }
 
