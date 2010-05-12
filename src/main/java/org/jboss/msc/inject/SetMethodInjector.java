@@ -26,17 +26,31 @@ import java.lang.reflect.Method;
 import org.jboss.logging.Logger;
 import org.jboss.msc.value.Value;
 
+/**
+ * An injector which calls a setter method.
+ *
+ * @param <T> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class SetMethodInjector<T> implements Injector<T> {
     private static final Logger log = Logger.getI18nLogger("org.jboss.msc.inject.method", null, "MSC");
 
     private final Value<?> target;
     private final Value<Method> methodValue;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param target the object upon which the method is to be called
+     * @param methodValue the method to invoke
+     */
     public SetMethodInjector(final Value<?> target, final Value<Method> methodValue) {
         this.target = target;
         this.methodValue = methodValue;
     }
 
+    /** {@inheritDoc} */
     public void inject(final T value) {
         try {
             methodValue.getValue().invoke(target.getValue(), value);
@@ -45,6 +59,7 @@ public final class SetMethodInjector<T> implements Injector<T> {
         }
     }
 
+    /** {@inheritDoc} */
     public void uninject() {
         try {
             methodValue.getValue().invoke(target.getValue());

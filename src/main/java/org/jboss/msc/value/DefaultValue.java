@@ -22,15 +22,27 @@
 
 package org.jboss.msc.value;
 
+/**
+ * A defaulted value.  If the delegate value returns {@code null}, a default value will be returned in its place.
+ *
+ * @param <T> the value type
+ */
 public final class DefaultValue<T> implements Value<T> {
     private final Value<T> value;
     private final Value<? extends T> defaultValue;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param value the delegate value
+     * @param defaultValue the value to use if the delegate value returns {@code null}
+     */
     public DefaultValue(final Value<T> value, final Value<? extends T> defaultValue) {
         this.value = value;
         this.defaultValue = defaultValue;
     }
 
+    /** {@inheritDoc} */
     public T getValue() throws IllegalStateException {
         final T result = value.getValue();
         return result != null ? result : defaultValue.getValue();

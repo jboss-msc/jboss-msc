@@ -25,13 +25,26 @@ package org.jboss.msc.value;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * A list value.
+ *
+ * @param <T> the list entry type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class ListValue<T> implements Value<List<T>> {
     private final List<? extends Value<? extends T>> values;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param values the list of values with which to populate the list
+     */
     public ListValue(final List<? extends Value<? extends T>> values) {
         this.values = values;
     }
 
+    /** {@inheritDoc} */
     public List<T> getValue() throws IllegalStateException {
         final List<? extends Value<? extends T>> values = this.values;
         final ArrayList<T> list = new ArrayList<T>(values.size());

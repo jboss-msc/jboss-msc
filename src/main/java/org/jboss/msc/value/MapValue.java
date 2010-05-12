@@ -26,19 +26,40 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * A map value.
+ *
+ * @param <K> the key type
+ * @param <V> the value type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class MapValue<K, V> implements Value<Map<K, V>> {
     private final List<MapEntry<? extends Value<? extends K>, ? extends Value<? extends V>>> values;
     private final Value<? extends Map<K, V>> mapValue;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param mapValue the map value to add values to
+     * @param values the values to add
+     */
     public MapValue(final Value<? extends Map<K, V>> mapValue, final List<MapEntry<? extends Value<? extends K>, ? extends Value<? extends V>>> values) {
         this.values = values;
         this.mapValue = mapValue;
     }
 
+    /**
+     * Construct a new instance.
+     *
+     * @param mapValue the map value to add values to
+     * @param values the values to add
+     */
     public MapValue(final Value<? extends Map<K, V>> mapValue, MapEntry<? extends Value<? extends K>, ? extends Value<? extends V>>... values) {
         this(mapValue, Arrays.asList(values));
     }
 
+    /** {@inheritDoc} */
     public Map<K, V> getValue() throws IllegalStateException {
         final List<MapEntry<? extends Value<? extends K>, ? extends Value<? extends V>>> values = this.values;
         final Map<K, V> map = mapValue.getValue();

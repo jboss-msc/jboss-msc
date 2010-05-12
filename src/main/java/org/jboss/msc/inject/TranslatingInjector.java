@@ -24,19 +24,35 @@ package org.jboss.msc.inject;
 
 import org.jboss.msc.translate.Translator;
 
+/**
+ * An injector which passes a value through a translator to another injector.
+ *
+ * @param <I> the input type
+ * @param <O> the output type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class TranslatingInjector<I, O> implements Injector<I> {
     private final Translator<I, O> translator;
     private final Injector<O> injector;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param translator the translator to use
+     * @param injector the injector to pass the result to
+     */
     public TranslatingInjector(final Translator<I, O> translator, final Injector<O> injector) {
         this.translator = translator;
         this.injector = injector;
     }
 
+    /** {@inheritDoc} */
     public void inject(final I input) {
         injector.inject(translator.translate(input));
     }
 
+    /** {@inheritDoc} */
     public void uninject() {
         injector.uninject();
     }

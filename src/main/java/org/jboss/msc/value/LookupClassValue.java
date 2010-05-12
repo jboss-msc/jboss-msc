@@ -22,16 +22,28 @@
 
 package org.jboss.msc.value;
 
+/**
+ * A value which looks up a class by name from a classloader.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class LookupClassValue implements Value<Class<?>> {
     private final String className;
     private final Value<? extends ClassLoader> classLoaderValue;
     private volatile Class<?> result;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param className the class name
+     * @param classLoaderValue the class loader to use
+     */
     public LookupClassValue(final String className, final Value<? extends ClassLoader> classLoaderValue) {
         this.className = className;
         this.classLoaderValue = classLoaderValue;
     }
 
+    /** {@inheritDoc} */
     public Class<?> getValue() throws IllegalStateException {
         Class<?> result = this.result;
         if (result != null) {
