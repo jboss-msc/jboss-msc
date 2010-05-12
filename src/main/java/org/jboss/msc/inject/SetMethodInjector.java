@@ -24,6 +24,7 @@ package org.jboss.msc.inject;
 
 import java.lang.reflect.Method;
 import org.jboss.logging.Logger;
+import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 
 /**
@@ -48,6 +49,52 @@ public final class SetMethodInjector<T> implements Injector<T> {
     public SetMethodInjector(final Value<?> target, final Value<Method> methodValue) {
         this.target = target;
         this.methodValue = methodValue;
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param target the object upon which the method is to be called
+     * @param method the method to invoke
+     */
+    public SetMethodInjector(final Value<?> target, final Method method) {
+        this(target, new ImmediateValue<Method>(method));
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param target the object upon which the method is to be called
+     * @param clazz the class upon which the method may be found
+     * @param methodName the setter method name
+     * @param paramType the parameter type
+     * @param <C> the type of the class upon which the method may be found
+     */
+    public <C> SetMethodInjector(final Value<? extends C> target, final Class<C> clazz, final String methodName, final Class<T> paramType) {
+        this(target, lookupMethod(clazz, methodName, paramType));
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param target the object upon which the method is to be called
+     * @param clazz the class upon which the method may be found
+     * @param methodName the setter method name
+     * @param paramType the parameter type
+     * @param <C> the type of the class upon which the method may be found
+     */
+    public <C> SetMethodInjector(final C target, final Class<C> clazz, final String methodName, final Class<T> paramType) {
+        this(new ImmediateValue<C>(target), clazz, methodName, paramType);
+    }
+
+    private static <C, T> Method lookupMethod(final Class<C> clazz, final String methodName, final Class<T> paramType) {
+        final Method method;
+        try {
+            method = clazz.getMethod(methodName, paramType);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException("No such method found", e);
+        }
+        return method;
     }
 
     /** {@inheritDoc} */
