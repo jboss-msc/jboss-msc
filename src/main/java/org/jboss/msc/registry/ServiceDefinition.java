@@ -8,8 +8,6 @@ import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.value.Value;
 
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Class representing the definition of a services prior to the service being installed.
