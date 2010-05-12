@@ -73,7 +73,7 @@ public class ServiceRegistry {
     private void resolve(final Map<ServiceName, ServiceBatch.BatchEntry> services) throws ServiceRegistryException {
         for (ServiceBatch.BatchEntry batchEntry : services.values()) {
             if(!batchEntry.isProcessed())
-                resolve(batchEntry, services);
+                iterResolve(batchEntry, services);
         }
     }
 
@@ -114,7 +114,55 @@ public class ServiceRegistry {
         } finally {
             entry.setVisited(false);
         }
+    }
+    
+    public void iterResolve(ServiceBatch.BatchEntry entry, final Map<ServiceName, ServiceBatch.BatchEntry> services)  throws ServiceRegistryException
+    {
+        outer:
+        while (entry != null) {
+            if (entry.isVisited())
+                throw new CircularDependencyException("Circular dependency discovered: " + entry.getServiceDefinition());
+            
+            if (entry.builder == null)
+                entry.builder = serviceContainer.buildService(entry.getServiceDefinition().getService());
+            
+            final String[] deps = entry.getServiceDefinition().getDependenciesDirect();
+            while (entry.i < deps.length)
+            {
+                final ServiceName dependencyName = ServiceName.create(deps[entry.i]);
+        
+                ServiceController<?> dependencyController = registry.get(dependencyName);     
+                if (dependencyController == null){
+                    final ServiceBatch.BatchEntry dependencyEntry = services.get(dependencyName);
+                    if (dependencyEntry == null)
+                        throw new MissingDependencyException("Missing dependency: " + entry.getServiceDefinition().getName() + " depends on " + dependencyName + " which can not be found");
+                 
+                    // Backup the last position, so that we can unroll
+                    assert dependencyEntry.prev == null;
+                    dependencyEntry.prev = entry;
+                    entry = dependencyEntry;
+                    
+                    continue outer;
+                }
+                
+                // Either the dep already exists, or we are unrolling and just created it
+                entry.builder.addDependency(dependencyController);
+                entry.i++;
+            }
+            
+            // We are resolved.  Lets install
+            entry.builder.addListener(new ServiceUnregisterListener(entry.getServiceDefinition().getName()));
 
+            final ServiceController<?> serviceController = entry.builder.create();
+            if (registry.putIfAbsent(entry.getServiceDefinition().getName(), serviceController) != null) {
+                throw new DuplicateServiceException("Duplicate service name provided: " + entry.getServiceDefinition().getName());
+            }
+            
+            // Unroll!
+            entry.setProcessed(true);
+            entry.setVisited(true);
+            entry = entry.prev;
+        }
     }
 
     private class ServiceUnregisterListener extends AbstractServiceListener<Service> {
