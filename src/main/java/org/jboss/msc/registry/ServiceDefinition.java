@@ -40,7 +40,7 @@ public final class ServiceDefinition {
     public static final class Builder {
         private final String name;
         private final Value<Service> service;
-        private Set<String> dependencies = new HashSet<String>();
+        private Set<String> dependencies = new HashSet<String>(0);
         private ServiceController.Mode initialMode = ServiceController.Mode.AUTOMATIC;
         private Location location;
 
