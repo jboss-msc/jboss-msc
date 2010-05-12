@@ -23,8 +23,21 @@
 package org.jboss.msc.translate;
 
 /**
+ * A mechanism for converting one value to another through various means.
  *
+ * @param <I> the input type
+ * @param <O> the output type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface Translator<I, O> {
+
+    /**
+     * Translate an input value.
+     *
+     * @param input the input value
+     * @return the output value
+     * @throws TranslationException if the value could not be translated for some reason
+     */
     O translate(I input) throws TranslationException;
 }

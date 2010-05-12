@@ -25,13 +25,27 @@ package org.jboss.msc.translate;
 import java.lang.reflect.Field;
 import org.jboss.msc.value.Value;
 
+/**
+ * A translator which translates by fetching the value of a field on the target object.
+ *
+ * @param <I> the input type
+ * @param <O> the output type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class FieldTraversingTranslator<I, O> implements Translator<I, O> {
     private final Value<Field> field;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param field the field to traverse
+     */
     public FieldTraversingTranslator(final Value<Field> field) {
         this.field = field;
     }
 
+    /** {@inheritDoc} */
     @SuppressWarnings({ "unchecked" })
     public O translate(final I input) {
         try {

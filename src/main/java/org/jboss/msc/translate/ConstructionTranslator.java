@@ -28,15 +28,31 @@ import org.jboss.msc.value.ThreadLocalValue;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
 
+/**
+ * A translator which translates by constructing a new value and returning it.  The input value may be passed in to
+ * the constructor using {@link Values#targetValue()}.
+ *
+ * @param <I> the input type
+ * @param <O> the output type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class ConstructionTranslator<I, O> implements Translator<I, O> {
     private final Value<Constructor<? extends O>> constructor;
     private final List<? extends Value<?>> parameters;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param constructor the constructor value to use
+     * @param parameters the parameters, possibly including {@link Values#targetValue()}
+     */
     public ConstructionTranslator(final Value<Constructor<? extends O>> constructor, final List<? extends Value<?>> parameters) {
         this.constructor = constructor;
         this.parameters = parameters;
     }
 
+    /** {@inheritDoc} */
     @SuppressWarnings({ "unchecked" })
     public O translate(final I input) {
         final ThreadLocalValue<Object> targetValue = Values.targetValue();

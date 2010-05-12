@@ -28,17 +28,34 @@ import org.jboss.msc.value.ThreadLocalValue;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
 
+/**
+ * A translator which translates by calling a method and returning its return value.  The input value may be passed in to
+ * the constructor using {@link Values#targetValue()}.
+ *
+ * @param <I> the input type
+ * @param <O> the output type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public final class MethodTraversingTranslator<I, O> implements Translator<I, O> {
     private final Value<Method> method;
     private final Value<?> target;
     private final List<? extends Value<?>> parameters;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param method the method to invoke (possibly {@link Values#targetValue()})
+     * @param target the target (possibly {@link Values#targetValue()})
+     * @param parameters the parameters (one or more of which may be {@link Values#targetValue()})
+     */
     public MethodTraversingTranslator(final Value<Method> method, final Value<?> target, final List<? extends Value<?>> parameters) {
         this.method = method;
         this.target = target;
         this.parameters = parameters;
     }
 
+    /** {@inheritDoc} */
     @SuppressWarnings({ "unchecked" })
     public O translate(final I input) {
         final ThreadLocalValue<Object> targetValue = Values.targetValue();
