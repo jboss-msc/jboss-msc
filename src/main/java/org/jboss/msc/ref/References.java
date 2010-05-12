@@ -54,6 +54,7 @@ public final class References {
 
         static {
             final ReaperThread thr = new ReaperThread();
+            thr.setName("Reference Reaper");
             thr.setDaemon(true);
             thr.start();
         }
