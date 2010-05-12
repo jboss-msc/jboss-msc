@@ -27,18 +27,44 @@ package org.jboss.msc.registry;
  * @author John Bailey
  */
 public class MissingDependencyException extends ResolutionException {
-   public MissingDependencyException() {
-   }
 
-   public MissingDependencyException(final Throwable cause) {
-      super(cause);
-   }
+    private static final long serialVersionUID = -5525793612334529463L;
 
-   public MissingDependencyException(final String message) {
-      super(message);
-   }
+    /**
+     * Constructs a {@code MissingDependencyException} with no detail message. The cause is not initialized, and may
+     * subsequently be initialized by a call to {@link #initCause(Throwable) initCause}.
+     */
+    public MissingDependencyException() {
+    }
 
-   public MissingDependencyException(final String message, final Throwable cause) {
-      super(message, cause);
-   }
+    /**
+     * Constructs a {@code MissingDependencyException} with the specified detail message. The cause is not initialized, and
+     * may subsequently be initialized by a call to {@link #initCause(Throwable) initCause}.
+     *
+     * @param msg the detail message
+     */
+    public MissingDependencyException(final String msg) {
+        super(msg);
+    }
+
+    /**
+     * Constructs a {@code MissingDependencyException} with the specified cause. The detail message is set to:
+     * <pre>(cause == null ? null : cause.toString())</pre>
+     * (which typically contains the class and detail message of {@code cause}).
+     *
+     * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method)
+     */
+    public MissingDependencyException(final Throwable cause) {
+        super(cause);
+    }
+
+    /**
+     * Constructs a {@code MissingDependencyException} with the specified detail message and cause.
+     *
+     * @param msg the detail message
+     * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method)
+     */
+    public MissingDependencyException(final String msg, final Throwable cause) {
+        super(msg, cause);
+    }
 }
