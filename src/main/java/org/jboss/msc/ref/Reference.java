@@ -27,6 +27,8 @@ package org.jboss.msc.ref;
  *
  * @param <T> the reference value type
  * @param <A> the attachment type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface Reference<T, A> {
 
@@ -49,13 +51,37 @@ public interface Reference<T, A> {
      */
     void clear();
 
+    /**
+     * Get the type of the reference.
+     *
+     * @return the type
+     */
     Type getType();
 
+    /**
+     * A reference type.
+     */
     enum Type {
+
+        /**
+         * A strong reference.
+         */
         STRONG,
+        /**
+         * A weak reference.
+         */
         WEAK,
+        /**
+         * A phantom reference.
+         */
         PHANTOM,
+        /**
+         * A soft reference.
+         */
         SOFT,
+        /**
+         * A {@code null} reference.
+         */
         NULL,
     }
 }
