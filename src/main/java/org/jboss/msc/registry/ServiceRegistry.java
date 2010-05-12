@@ -71,19 +71,19 @@ public class ServiceRegistry {
      */
     private void resolve(final Map<ServiceName, ServiceBatch.BatchEntry> services) throws ServiceRegistryException {
         for (ServiceBatch.BatchEntry batchEntry : services.values()) {
-            if(!batchEntry.isProcessed())
+            if(!batchEntry.processed)
                 iterResolve(batchEntry, services);
         }
     }
 
     private ServiceController<?> resolve(final ServiceBatch.BatchEntry entry, final Map<ServiceName, ServiceBatch.BatchEntry> services) throws ServiceRegistryException {
-        final ServiceDefinition<?> serviceDefinition = entry.getServiceDefinition();
-        entry.setProcessed(true);
+        final ServiceDefinition<?> serviceDefinition = entry.serviceDefinition;
+        entry.processed = true;
         final ServiceName name = serviceDefinition.getName();
-        if (entry.isVisited())
+        if (entry.visited)
             throw new CircularDependencyException("Circular dependency discovered: " + serviceDefinition);
 
-        entry.setVisited(true);
+        entry.visited = true;
 
         try {
             final ConcurrentMap<ServiceName, ServiceController<?>> registry = this.registry;
@@ -111,7 +111,7 @@ public class ServiceRegistry {
             }
             return serviceController;
         } finally {
-            entry.setVisited(false);
+            entry.visited = false;
         }
     }
     
@@ -119,13 +119,15 @@ public class ServiceRegistry {
     {
         outer:
         while (entry != null) {
-            if (entry.isVisited())
-                throw new CircularDependencyException("Circular dependency discovered: " + entry.getServiceDefinition());
+            final ServiceDefinition<?> serviceDefinition = entry.serviceDefinition;
             
             if (entry.builder == null)
-                entry.builder = serviceContainer.buildService(entry.getServiceDefinition().getService());
+                entry.builder = serviceContainer.buildService(serviceDefinition.getService());
             
-            final String[] deps = entry.getServiceDefinition().getDependenciesDirect();
+            final ServiceBuilder<?> builder = entry.builder;
+            final String[] deps = serviceDefinition.getDependenciesDirect();
+            final ServiceName name = serviceDefinition.getName();
+            
             while (entry.i < deps.length)
             {
                 final ServiceName dependencyName = ServiceName.create(deps[entry.i]);
@@ -134,36 +136,43 @@ public class ServiceRegistry {
                 if (dependencyController == null){
                     final ServiceBatch.BatchEntry dependencyEntry = services.get(dependencyName);
                     if (dependencyEntry == null)
-                        throw new MissingDependencyException("Missing dependency: " + entry.getServiceDefinition().getName() + " depends on " + dependencyName + " which can not be found");
+                        throw new MissingDependencyException("Missing dependency: " + name + " depends on " + dependencyName + " which can not be found");
                  
                     // Backup the last position, so that we can unroll
                     assert dependencyEntry.prev == null;
                     dependencyEntry.prev = entry;
+
+                    entry.visited = true;
                     entry = dependencyEntry;
-                    
+
+                    if (entry.visited)
+                        throw new CircularDependencyException("Circular dependency discovered: " + serviceDefinition);
+
                     continue outer;
                 }
                 
                 // Either the dep already exists, or we are unrolling and just created it
-                entry.builder.addDependency(dependencyController);
+                builder.addDependency(dependencyController);
                 entry.i++;
             }
             
             // We are resolved.  Lets install
-            entry.builder.addListener(new ServiceUnregisterListener(entry.getServiceDefinition().getName()));
+            builder.addListener(new ServiceUnregisterListener(name));
 
-            final ServiceController<?> serviceController = entry.builder.create();
-            if (registry.putIfAbsent(entry.getServiceDefinition().getName(), serviceController) != null) {
-                throw new DuplicateServiceException("Duplicate service name provided: " + entry.getServiceDefinition().getName());
+            final ServiceController<?> serviceController = builder.create();
+            if (registry.putIfAbsent(name, serviceController) != null) {
+                throw new DuplicateServiceException("Duplicate service name provided: " + name);
             }
             
             // Cleanup
             entry.builder = null;
+            ServiceBatch.BatchEntry prev = entry.prev;
+            entry.prev = null;
             
             // Unroll!
-            entry.setProcessed(true);
-            entry.setVisited(true);
-            entry = entry.prev;
+            entry.processed = true;
+            entry.visited = false;
+            entry = prev;
         }
     }
 
