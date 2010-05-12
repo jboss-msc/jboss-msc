@@ -70,10 +70,8 @@ public final class ServiceBatch {
     }
 
     /**
-     * This class represents an entry in a ServiceBatch.  Basically a wrapper around a ServiceDefinition that alos
+     * This class represents an entry in a ServiceBatch.  Basically a wrapper around a ServiceDefinition that also
      * maintain some state information for resolution.
-     *
-     * @author John Bailey
      */
     public class BatchEntry {
         private final ServiceDefinition serviceDefinition;
