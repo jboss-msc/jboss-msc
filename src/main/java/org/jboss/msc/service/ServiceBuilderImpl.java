@@ -138,9 +138,20 @@ final class ServiceBuilderImpl<S> implements ServiceBuilder<S> {
         }
     }
 
+    private static final ServiceControllerImpl<?>[] NO_DEPS = new ServiceControllerImpl<?>[0];
+    private static final ValueInjection<?>[] NO_INJECTIONS = new ValueInjection<?>[0];
+
     private ServiceControllerImpl<S> doCreate() {
-        final ServiceControllerImpl<S> controller = this.controller = new ServiceControllerImpl<S>(container, service, value, location, deps.toArray(new ServiceControllerImpl<?>[deps.size()]), injections.toArray(new ValueInjection<?>[injections.size()]));
-        controller.setMode(mode);
-        return controller;
+        synchronized (this) {
+            final List<ServiceControllerImpl<?>> deps = this.deps;
+            final List<ValueInjection<?>> injections = this.injections;
+            final int depsSize = deps.size();
+            final int injectionsSize = injections.size();
+            final ServiceControllerImpl<?>[] depArray = depsSize == 0 ? NO_DEPS : deps.toArray(new ServiceControllerImpl<?>[depsSize]);
+            final ValueInjection<?>[] injectionArray = injectionsSize == 0 ? NO_INJECTIONS : injections.toArray(new ValueInjection<?>[injectionsSize]);
+            final ServiceControllerImpl<S> controller = this.controller = new ServiceControllerImpl<S>(container, service, value, location, depArray, injectionArray);
+            controller.setMode(mode);
+            return controller;
+        }
     }
 }
