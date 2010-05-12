@@ -33,6 +33,8 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
 /**
+ * A service which registers the target object as an MBean.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class MBeanService implements Service {
@@ -40,12 +42,20 @@ public final class MBeanService implements Service {
     private final Value<?> value;
     private final ObjectName objectName;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param mbeanServer the mbean server
+     * @param value the value to install
+     * @param objectName the object name to use
+     */
     public MBeanService(final Value<? extends MBeanServer> mbeanServer, final Value<?> value, final ObjectName objectName) {
         this.mbeanServer = mbeanServer;
         this.value = value;
         this.objectName = objectName;
     }
 
+    /** {@inheritDoc} */
     public void start(final StartContext context) throws StartException {
         try {
             mbeanServer.getValue().registerMBean(value.getValue(), objectName);
@@ -54,6 +64,7 @@ public final class MBeanService implements Service {
         }
     }
 
+    /** {@inheritDoc} */
     public void stop(final StopContext context) {
         try {
             mbeanServer.getValue().unregisterMBean(objectName);
