@@ -99,6 +99,7 @@ public class ServiceRegistryTestCase {
                     .install();
             fail("SHould have thrown circular dependency exception");
         } catch (ServiceRegistryException expected) {
+            expected.printStackTrace();
         }
     }
 

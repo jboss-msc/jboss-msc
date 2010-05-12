@@ -120,9 +120,6 @@ public class ServiceRegistry {
     {
         outer:
         while (entry != null) {
-            if (entry.isVisited())
-                throw new CircularDependencyException("Circular dependency discovered: " + entry.getServiceDefinition());
-            
             if (entry.builder == null)
                 entry.builder = serviceContainer.buildService(entry.getServiceDefinition().getService());
             
@@ -140,8 +137,13 @@ public class ServiceRegistry {
                     // Backup the last position, so that we can unroll
                     assert dependencyEntry.prev == null;
                     dependencyEntry.prev = entry;
+
+                    entry.setVisited(true);
                     entry = dependencyEntry;
-                    
+
+                    if (entry.isVisited())
+                        throw new CircularDependencyException("Circular dependency discovered: " + entry.getServiceDefinition());
+
                     continue outer;
                 }
                 
@@ -163,7 +165,7 @@ public class ServiceRegistry {
             
             // Unroll!
             entry.setProcessed(true);
-            entry.setVisited(true);
+            entry.setVisited(false);
             entry = entry.prev;
         }
     }
