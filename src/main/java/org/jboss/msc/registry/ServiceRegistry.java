@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentMap;
 public class ServiceRegistry {
     private final ConcurrentMap<ServiceName, ServiceDefinition> registry = new ConcurrentHashMap<ServiceName, ServiceDefinition>();
 
-    public ServiceBatch createServiceBatch() {
+    public ServiceBatch create() {
         return new ServiceBatch(this);
     }
 

@@ -36,7 +36,7 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testResolvable() throws Exception {
-         new ServiceRegistry().createServiceBatch()
+         new ServiceRegistry().create()
             .add(ServiceDefinition.build().setName("7").addDependencies("11", "8").create())
             .add(ServiceDefinition.build().setName("5").addDependencies("11").create())
             .add(ServiceDefinition.build().setName("3").addDependencies("11", "9").create())
@@ -52,13 +52,13 @@ public class ServiceRegistryTestCase {
     @Test
     public void testResolvableWithPreexistingDeps() throws Exception {
         final ServiceRegistry registry = new ServiceRegistry();
-        registry.createServiceBatch()
+        registry.create()
                 .add(ServiceDefinition.build().setName("2").create())
                 .add(ServiceDefinition.build().setName("9").create())
                 .add(ServiceDefinition.build().setName("10").create())
                 .install();
 
-        registry.createServiceBatch()
+        registry.create()
                 .add(ServiceDefinition.build().setName("7").addDependencies("11", "8").create())
                 .add(ServiceDefinition.build().setName("5").addDependencies("11").create())
                 .add(ServiceDefinition.build().setName("3").addDependencies("11", "9").create())
@@ -71,7 +71,7 @@ public class ServiceRegistryTestCase {
     @Test
     public void testMissingDependency() throws Exception {
         try {
-             new ServiceRegistry().createServiceBatch()
+             new ServiceRegistry().create()
                 .add(ServiceDefinition.build().setName("7").addDependencies("11", "8").create())
                 .add(ServiceDefinition.build().setName("5").addDependencies("11").create())
                 .add(ServiceDefinition.build().setName("3").addDependencies("11", "9").create())
@@ -91,7 +91,7 @@ public class ServiceRegistryTestCase {
     public void testCircular() throws Exception {
 
         try {
-             new ServiceRegistry().createServiceBatch()
+             new ServiceRegistry().create()
                     .add(ServiceDefinition.build().setName("7").addDependencies("5").create())
                     .add(ServiceDefinition.build().setName("5").addDependencies("11").create())
                     .add(ServiceDefinition.build().setName("11").addDependencies("7").create())
