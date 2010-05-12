@@ -24,6 +24,7 @@ package org.jboss.msc.registry;
 import java.util.*;
 
 import org.jboss.msc.service.Service;
+import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.value.Value;
 import org.junit.Test;
 
@@ -38,7 +39,7 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testResolvable() throws Exception {
-         new ServiceRegistry().create()
+         new ServiceRegistry(ServiceContainer.Factory.create()).create()
             .add(ServiceDefinition.build("7", Service.NULL_VALUE).addDependencies("11", "8").create())
             .add(ServiceDefinition.build("5", Service.NULL_VALUE).addDependencies("11").create())
             .add(ServiceDefinition.build("3", Service.NULL_VALUE).addDependencies("11", "9").create())
@@ -53,7 +54,7 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testResolvableWithPreexistingDeps() throws Exception {
-        final ServiceRegistry registry = new ServiceRegistry();
+        final ServiceRegistry registry = new ServiceRegistry(ServiceContainer.Factory.create());
         registry.create()
                 .add(ServiceDefinition.build("2", Service.NULL_VALUE).create())
                 .add(ServiceDefinition.build("9", Service.NULL_VALUE).create())
@@ -73,7 +74,7 @@ public class ServiceRegistryTestCase {
     @Test
     public void testMissingDependency() throws Exception {
         try {
-             new ServiceRegistry().create()
+             new ServiceRegistry(ServiceContainer.Factory.create()).create()
                 .add(ServiceDefinition.build("7", Service.NULL_VALUE).addDependencies("11", "8").create())
                 .add(ServiceDefinition.build("5", Service.NULL_VALUE).addDependencies("11").create())
                 .add(ServiceDefinition.build("3", Service.NULL_VALUE).addDependencies("11", "9").create())
@@ -93,7 +94,7 @@ public class ServiceRegistryTestCase {
     public void testCircular() throws Exception {
 
         try {
-             new ServiceRegistry().create()
+             new ServiceRegistry(ServiceContainer.Factory.create()).create()
                     .add(ServiceDefinition.build("7", Service.NULL_VALUE).addDependencies("5").create())
                     .add(ServiceDefinition.build("5", Service.NULL_VALUE).addDependencies("11").create())
                     .add(ServiceDefinition.build("11", Service.NULL_VALUE).addDependencies("7").create())
@@ -120,7 +121,25 @@ public class ServiceRegistryTestCase {
         }
 
         long start = System.currentTimeMillis();
-        new ServiceRegistry().install(toMap(serviceDefinitions));
+        new ServiceRegistry(ServiceContainer.Factory.create()).install(toMap(serviceDefinitions));
+        long end = System.currentTimeMillis();
+        System.out.println("Time: " + (end - start));
+        //assertInDependencyOrder(collectingHandler.getResolved());
+    }
+
+
+    @Test
+    public void testLargeNoDeps() throws Exception {
+
+        final int totalServiceDefinitions = 10000;
+
+        final List<ServiceDefinition> serviceDefinitions = new ArrayList<ServiceDefinition>(totalServiceDefinitions);
+        for (int i = 0; i < totalServiceDefinitions; i++) {
+            serviceDefinitions.add(ServiceDefinition.build("test" + i, Service.NULL_VALUE).create());
+        }
+
+        long start = System.currentTimeMillis();
+        new ServiceRegistry(ServiceContainer.Factory.create()).install(toMap(serviceDefinitions));
         long end = System.currentTimeMillis();
         System.out.println("Time: " + (end - start));
         //assertInDependencyOrder(collectingHandler.getResolved());

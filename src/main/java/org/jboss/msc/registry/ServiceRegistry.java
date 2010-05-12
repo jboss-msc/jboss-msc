@@ -21,7 +21,15 @@
  */
 package org.jboss.msc.registry;
 
-import java.util.*;
+import org.jboss.msc.service.AbstractServiceListener;
+import org.jboss.msc.service.Service;
+import org.jboss.msc.service.ServiceBuilder;
+import org.jboss.msc.service.ServiceContainer;
+import org.jboss.msc.service.ServiceController;
+
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -31,7 +39,13 @@ import java.util.concurrent.ConcurrentMap;
  * @author John Bailey
  */
 public class ServiceRegistry {
-    private final ConcurrentMap<ServiceName, ServiceDefinition> registry = new ConcurrentHashMap<ServiceName, ServiceDefinition>();
+    private final ConcurrentMap<ServiceName, ServiceController> registry = new ConcurrentHashMap<ServiceName, ServiceController>();
+
+    private final ServiceContainer serviceContainer;
+
+    public ServiceRegistry(ServiceContainer serviceContainer) {
+        this.serviceContainer = serviceContainer;
+    }
 
     public ServiceBatch create() {
         return new ServiceBatch(this);
@@ -53,7 +67,16 @@ public class ServiceRegistry {
     }
 
     private void addToRegistry(final ServiceDefinition serviceDefinition) throws ServiceRegistryException {
-        if (registry.putIfAbsent(serviceDefinition.getName(), serviceDefinition) != null) {
+        final ServiceBuilder<Service> builder = serviceContainer.buildService(serviceDefinition.getService());
+        for(String dependency : serviceDefinition.getDependencies()) {
+            final ServiceController dependencyController = registry.get(ServiceName.create(dependency));
+            if(dependencyController == null)
+                throw new IllegalStateException("Dependency [" + dependency + "] ServiceController is no longer in the registry");
+            builder.addDependency(dependencyController);
+        }
+        builder.addListener(new ServiceUnregisterListner(serviceDefinition.getName()));
+
+        if (registry.putIfAbsent(serviceDefinition.getName(), builder.create()) != null) {
             throw new ServiceRegistryException("Duplicate service name provided: " + serviceDefinition.getName());
         }
     }
@@ -94,6 +117,20 @@ public class ServiceRegistry {
             }
         } finally {
             visited.remove(serviceDefinition.getName());
+        }
+    }
+
+    private class ServiceUnregisterListner extends AbstractServiceListener<Service> {
+        private final ServiceName serviceName;
+
+        private ServiceUnregisterListner(ServiceName serviceName) {
+            this.serviceName = serviceName;
+        }
+
+        @Override
+        public void serviceRemoved(ServiceController serviceController) {
+            if(!registry.remove(serviceName, serviceController))
+                throw new RuntimeException("Removed service [" + serviceName + "] was not unregistered");
         }
     }
 }
