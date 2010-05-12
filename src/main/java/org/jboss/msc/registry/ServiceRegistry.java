@@ -39,7 +39,7 @@ import java.util.concurrent.ConcurrentMap;
  * @author John Bailey
  */
 public class ServiceRegistry {
-    private final ConcurrentMap<ServiceName, ServiceController> registry = new ConcurrentHashMap<ServiceName, ServiceController>();
+    private final ConcurrentMap<ServiceName, ServiceController<?>> registry = new ConcurrentHashMap<ServiceName, ServiceController<?>>();
 
     private final ServiceContainer serviceContainer;
 
@@ -66,21 +66,6 @@ public class ServiceRegistry {
         }
     }
 
-    private void addToRegistry(final ServiceDefinition serviceDefinition) throws ServiceRegistryException {
-        final ServiceBuilder<Service> builder = serviceContainer.buildService(serviceDefinition.getService());
-        for(String dependency : serviceDefinition.getDependencies()) {
-            final ServiceController dependencyController = registry.get(ServiceName.create(dependency));
-            if(dependencyController == null)
-                throw new IllegalStateException("Dependency [" + dependency + "] ServiceController is no longer in the registry");
-            builder.addDependency(dependencyController);
-        }
-        builder.addListener(new ServiceUnregisterListner(serviceDefinition.getName()));
-
-        if (registry.putIfAbsent(serviceDefinition.getName(), builder.create()) != null) {
-            throw new ServiceRegistryException("Duplicate service name provided: " + serviceDefinition.getName());
-        }
-    }
-
     /**
      * Recursive depth-first resolution
      *
@@ -88,36 +73,51 @@ public class ServiceRegistry {
      * @throws ResolutionException if any problem occur during resolution
      */
     private void resolve(final Map<ServiceName, ServiceDefinition> serviceDefinitions) throws ServiceRegistryException {
-        final Set<ServiceName> processed = new HashSet<ServiceName>(serviceDefinitions.size());
         final Set<ServiceName> visited = new HashSet<ServiceName>();
         for (ServiceDefinition serviceDefinition : serviceDefinitions.values()) {
-            resolve(serviceDefinition, serviceDefinitions, processed, visited);
+            resolve(serviceDefinition, serviceDefinitions, visited);
         }
     }
 
-    private void resolve(final ServiceDefinition serviceDefinition, final Map<ServiceName, ServiceDefinition> serviceDefinitions, final Set<ServiceName> processed, final Set<ServiceName> visited) throws ServiceRegistryException {
-        if (visited.contains(serviceDefinition.getName()))
-            throw new CircularDependencyException("Circular dependency discovered: " + visited);
-        visited.add(serviceDefinition.getName());
-        try {
-            if (!processed.contains(serviceDefinition.getName())) {
-                processed.add(serviceDefinition.getName());
-                for (String dependency : serviceDefinition.getDependencies()) {
-                    final ServiceName dependencyName = ServiceName.create(dependency);
-                    if(registry.containsKey(dependencyName))
-                        continue;
-                    
-                    final ServiceDefinition dependencyDefinition = serviceDefinitions.get(dependencyName);
-                    if (dependencyDefinition == null)
-                        throw new MissingDependencyException("Missing dependency: " + serviceDefinition.getName() + " depends on " + dependencyName + " which can not be found");
+    private ServiceController<?> resolve(final ServiceDefinition serviceDefinition, final Map<ServiceName, ServiceDefinition> serviceDefinitions, final Set<ServiceName> visited) throws ServiceRegistryException {
+        ServiceController<?> serviceController = registry.get(serviceDefinition.getName());
+        if(serviceController != null)
+            return serviceController;
 
-                    resolve(dependencyDefinition, serviceDefinitions, processed, visited);
+        if (!visited.add(serviceDefinition.getName()))
+            throw new CircularDependencyException("Circular dependency discovered: " + visited);
+            
+        try {
+            final ServiceBuilder<Service> builder = serviceContainer.buildService(serviceDefinition.getService());
+
+            for (String dependency : serviceDefinition.getDependencies()) {
+                final ServiceName dependencyName = ServiceName.create(dependency);
+
+                ServiceController<?> dependencyController = registry.get(dependencyName);
+                if(dependencyController != null) {
+                    builder.addDependency(dependencyController);
+                    continue;
                 }
-                addToRegistry(serviceDefinition);
+
+                final ServiceDefinition dependencyDefinition = serviceDefinitions.get(dependencyName);
+                if (dependencyDefinition == null)
+                    throw new MissingDependencyException("Missing dependency: " + serviceDefinition.getName() + " depends on " + dependencyName + " which can not be found");
+
+                dependencyController = resolve(dependencyDefinition, serviceDefinitions, visited);
+                builder.addDependency(dependencyController);
             }
+
+            // We are resolved.  Lets install
+            builder.addListener(new ServiceUnregisterListner(serviceDefinition.getName()));
+            serviceController = builder.create();
+            if (registry.putIfAbsent(serviceDefinition.getName(), serviceController) != null) {
+                throw new ServiceRegistryException("Duplicate service name provided: " + serviceDefinition.getName());
+            }
+            return serviceController;
         } finally {
             visited.remove(serviceDefinition.getName());
         }
+
     }
 
     private class ServiceUnregisterListner extends AbstractServiceListener<Service> {
