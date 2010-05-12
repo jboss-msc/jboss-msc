@@ -18,12 +18,14 @@ import java.util.Collection;
  */
 public final class ServiceDefinition {
     private final ServiceName name;
-    private final List<String> dependencies;
+    private final String[] dependencies;
     private final ServiceController.Mode initialMode;
     private final Location location;
     private final Value<Service> service;
 
-    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<Service> service, List<String> dependencies) {
+    private static final String[] NO_DEPS = new String[0];
+
+    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<Service> service, String[] dependencies) {
         if (name == null) {
             throw new IllegalArgumentException("Name can not be null");
         }
@@ -93,7 +95,12 @@ public final class ServiceDefinition {
         }
 
         public ServiceDefinition create() {
-            return new ServiceDefinition(ServiceName.create(name), initialMode, location, service, dependencies);
+            final int size = dependencies.size();
+            if (size == 0) {
+                return new ServiceDefinition(ServiceName.create(name), initialMode, location, service, NO_DEPS);
+            } else {
+                return new ServiceDefinition(ServiceName.create(name), initialMode, location, service, dependencies.toArray(new String[size]));
+            }
         }
     }
 
@@ -101,7 +108,11 @@ public final class ServiceDefinition {
         return name;
     }
 
-    public List<String> getDependencies() {
+    public String[] getDependencies() {
+        return dependencies.clone();
+    }
+
+    String[] getDependenciesDirect() {
         return dependencies;
     }
 

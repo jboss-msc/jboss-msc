@@ -92,7 +92,7 @@ public class ServiceRegistry {
             
             final ServiceBuilder<Service> builder = serviceContainer.buildService(serviceDefinition.getService());
 
-            for (String dependency : serviceDefinition.getDependencies()) {
+            for (String dependency : serviceDefinition.getDependenciesDirect()) {
                 final ServiceName dependencyName = ServiceName.create(dependency);
 
                 ServiceController<?> dependencyController = registry.get(dependencyName);
