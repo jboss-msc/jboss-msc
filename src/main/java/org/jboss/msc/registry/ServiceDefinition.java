@@ -1,7 +1,9 @@
 package org.jboss.msc.registry;
 
 import org.jboss.msc.service.Location;
+import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceController;
+import org.jboss.msc.value.Value;
 
 import java.util.*;
 
@@ -16,8 +18,9 @@ public final class ServiceDefinition {
     private final Set<String> dependencies;
     private final ServiceController.Mode initialMode;
     private final Location location;
+    private final Value<Service> service;
     
-    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Set<String> dependencies) {
+    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<Service> service, Set<String> dependencies) {
     	if (name == null)
     		throw new IllegalArgumentException("Name can not be null");
     	
@@ -25,22 +28,27 @@ public final class ServiceDefinition {
         this.dependencies = new HashSet<String>(dependencies);
         this.initialMode = ServiceController.Mode.AUTOMATIC;
         this.location = location;
+        this.service = service;
     }
     
-    public static Builder build() {
-        return new Builder();
+    public static Builder build(final String name, final Value<Service> service) {
+        return new Builder(name, service);
     }
     
     public static final class Builder {
-        private String name;
+        private final String name;
+        private final Value<Service> service;
         private Set<String> dependencies = new HashSet<String>();
         private ServiceController.Mode initialMode = ServiceController.Mode.AUTOMATIC;
         private Location location;
-        
-        public Builder setName(String name) {
+
+
+        private Builder(final String name, final Value<Service> service) {
+            if(name == null) throw new IllegalArgumentException("Name is required");
+            if(service == null) throw new IllegalArgumentException("Service is required");
             this.name = name;
-            
-            return this;
+            this.service = service;
+
         }
         
         public Builder addDependency(String dependency) {
@@ -75,9 +83,9 @@ public final class ServiceDefinition {
             
             return this;
         }
-        
+
         public ServiceDefinition create() {
-            return new ServiceDefinition(ServiceName.create(name), initialMode, location, dependencies);
+            return new ServiceDefinition(ServiceName.create(name), initialMode, location, service, dependencies);
         }
     }
 

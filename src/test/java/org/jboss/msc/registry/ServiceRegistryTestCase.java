@@ -23,6 +23,8 @@ package org.jboss.msc.registry;
 
 import java.util.*;
 
+import org.jboss.msc.service.Service;
+import org.jboss.msc.value.Value;
 import org.junit.Test;
 
 import static org.junit.Assert.fail;
@@ -37,14 +39,14 @@ public class ServiceRegistryTestCase {
     @Test
     public void testResolvable() throws Exception {
          new ServiceRegistry().create()
-            .add(ServiceDefinition.build().setName("7").addDependencies("11", "8").create())
-            .add(ServiceDefinition.build().setName("5").addDependencies("11").create())
-            .add(ServiceDefinition.build().setName("3").addDependencies("11", "9").create())
-            .add(ServiceDefinition.build().setName("11").addDependencies("2", "9", "10").create())
-            .add(ServiceDefinition.build().setName("8").addDependencies("9").create())
-            .add(ServiceDefinition.build().setName("2").create())
-            .add(ServiceDefinition.build().setName("9").create())
-            .add(ServiceDefinition.build().setName("10").create())
+            .add(ServiceDefinition.build("7", Service.NULL_VALUE).addDependencies("11", "8").create())
+            .add(ServiceDefinition.build("5", Service.NULL_VALUE).addDependencies("11").create())
+            .add(ServiceDefinition.build("3", Service.NULL_VALUE).addDependencies("11", "9").create())
+            .add(ServiceDefinition.build("11", Service.NULL_VALUE).addDependencies("2", "9", "10").create())
+            .add(ServiceDefinition.build("8", Service.NULL_VALUE).addDependencies("9").create())
+            .add(ServiceDefinition.build("2", Service.NULL_VALUE).create())
+            .add(ServiceDefinition.build("9", Service.NULL_VALUE).create())
+            .add(ServiceDefinition.build("10", Service.NULL_VALUE).create())
             .install();
         //assertInDependencyOrder(handler.getResolved());
     }
@@ -53,17 +55,17 @@ public class ServiceRegistryTestCase {
     public void testResolvableWithPreexistingDeps() throws Exception {
         final ServiceRegistry registry = new ServiceRegistry();
         registry.create()
-                .add(ServiceDefinition.build().setName("2").create())
-                .add(ServiceDefinition.build().setName("9").create())
-                .add(ServiceDefinition.build().setName("10").create())
+                .add(ServiceDefinition.build("2", Service.NULL_VALUE).create())
+                .add(ServiceDefinition.build("9", Service.NULL_VALUE).create())
+                .add(ServiceDefinition.build("10", Service.NULL_VALUE).create())
                 .install();
 
         registry.create()
-                .add(ServiceDefinition.build().setName("7").addDependencies("11", "8").create())
-                .add(ServiceDefinition.build().setName("5").addDependencies("11").create())
-                .add(ServiceDefinition.build().setName("3").addDependencies("11", "9").create())
-                .add(ServiceDefinition.build().setName("11").addDependencies("2", "9", "10").create())
-                .add(ServiceDefinition.build().setName("8").addDependencies("9").create())
+                .add(ServiceDefinition.build("7", Service.NULL_VALUE).addDependencies("11", "8").create())
+                .add(ServiceDefinition.build("5", Service.NULL_VALUE).addDependencies("11").create())
+                .add(ServiceDefinition.build("3", Service.NULL_VALUE).addDependencies("11", "9").create())
+                .add(ServiceDefinition.build("11", Service.NULL_VALUE).addDependencies("2", "9", "10").create())
+                .add(ServiceDefinition.build("8", Service.NULL_VALUE).addDependencies("9").create())
                 .install();
     }
 
@@ -72,14 +74,14 @@ public class ServiceRegistryTestCase {
     public void testMissingDependency() throws Exception {
         try {
              new ServiceRegistry().create()
-                .add(ServiceDefinition.build().setName("7").addDependencies("11", "8").create())
-                .add(ServiceDefinition.build().setName("5").addDependencies("11").create())
-                .add(ServiceDefinition.build().setName("3").addDependencies("11", "9").create())
-                .add(ServiceDefinition.build().setName("11").addDependencies("2", "9", "10").create())
-                .add(ServiceDefinition.build().setName("8").addDependencies("9").create())
-                .add(ServiceDefinition.build().setName("2").addDependencies("1").create())
-                .add(ServiceDefinition.build().setName("9").create())
-                .add(ServiceDefinition.build().setName("10").create())
+                .add(ServiceDefinition.build("7", Service.NULL_VALUE).addDependencies("11", "8").create())
+                .add(ServiceDefinition.build("5", Service.NULL_VALUE).addDependencies("11").create())
+                .add(ServiceDefinition.build("3", Service.NULL_VALUE).addDependencies("11", "9").create())
+                .add(ServiceDefinition.build("11", Service.NULL_VALUE).addDependencies("2", "9", "10").create())
+                .add(ServiceDefinition.build("8", Service.NULL_VALUE).addDependencies("9").create())
+                .add(ServiceDefinition.build("2", Service.NULL_VALUE).addDependencies("1").create())
+                .add(ServiceDefinition.build("9", Service.NULL_VALUE).create())
+                .add(ServiceDefinition.build("10", Service.NULL_VALUE).create())
                 .install();
             fail("Should have thrown missing dependency exception");
         } catch (ServiceRegistryException expected) {
@@ -92,9 +94,9 @@ public class ServiceRegistryTestCase {
 
         try {
              new ServiceRegistry().create()
-                    .add(ServiceDefinition.build().setName("7").addDependencies("5").create())
-                    .add(ServiceDefinition.build().setName("5").addDependencies("11").create())
-                    .add(ServiceDefinition.build().setName("11").addDependencies("7").create())
+                    .add(ServiceDefinition.build("7", Service.NULL_VALUE).addDependencies("5").create())
+                    .add(ServiceDefinition.build("5", Service.NULL_VALUE).addDependencies("11").create())
+                    .add(ServiceDefinition.build("11", Service.NULL_VALUE).addDependencies("7").create())
                     .install();
             fail("SHould have thrown circular dependency exception");
         } catch (ServiceRegistryException expected) {
@@ -114,11 +116,11 @@ public class ServiceRegistryTestCase {
             for (int j = 1; j < numDeps + 1; j++) {
                 deps.add("test" + (i + j));
             }
-            serviceDefinitions.add(ServiceDefinition.build().setName("test" + i).addDependencies(deps.toArray(new String[deps.size()])).create());
+            serviceDefinitions.add(ServiceDefinition.build("test" + i, Service.NULL_VALUE).addDependencies(deps.toArray(new String[deps.size()])).create());
         }
 
         long start = System.currentTimeMillis();
-         new ServiceRegistry().install(toMap(serviceDefinitions));
+        new ServiceRegistry().install(toMap(serviceDefinitions));
         long end = System.currentTimeMillis();
         System.out.println("Time: " + (end - start));
         //assertInDependencyOrder(collectingHandler.getResolved());
