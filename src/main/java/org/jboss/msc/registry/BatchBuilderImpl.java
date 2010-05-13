@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.jboss.msc.service.ServiceBuilder;
+import org.jboss.msc.service.ServiceName;
 
 /**
  * An ordered set of service batchEntries that should be processed as one.

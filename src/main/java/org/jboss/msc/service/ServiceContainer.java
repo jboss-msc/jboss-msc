@@ -23,6 +23,7 @@
 package org.jboss.msc.service;
 
 import java.util.concurrent.Executor;
+import org.jboss.msc.registry.ServiceName;
 import org.jboss.msc.value.Value;
 
 /**
@@ -47,13 +48,23 @@ public interface ServiceContainer {
     void setExecutor(Executor executor);
 
     /**
-     * Build a service.
+     * Build an anonymous service.
      *
      * @param service the service
      * @param <T> the service value type
      * @return a service builder
      */
     <T> ServiceBuilder<T> buildService(Value<? extends Service<? extends T>> service);
+
+    /**
+     * Build a named service.
+     *
+     * @param serviceName the service name
+     * @param service the service
+     * @param <T> the service value type
+     * @return a service builder
+     */
+    <T> ServiceBuilder<T> buildService(ServiceName serviceName, Value<? extends Service<? extends T>> service);
 
     /**
      * Stop all services within this container.

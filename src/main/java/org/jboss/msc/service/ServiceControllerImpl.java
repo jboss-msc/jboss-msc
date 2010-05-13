@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import org.jboss.msc.registry.ServiceName;
 import org.jboss.msc.value.Value;
 
 /**
@@ -63,6 +64,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
      * The set of registered service listeners.
      */
     private final Set<ServiceListener<? super S>> listeners = Collections.newSetFromMap(new IdentityHashMap<ServiceListener<? super S>, Boolean>(0));
+    /**
+     * The service name, if any.
+     */
+    private final ServiceName serviceName;
     /**
      * The start exception.
      */
@@ -101,12 +106,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
      */
     private final ServiceListener<Object> dependencyListener = new DependencyListener();
 
-    ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service<? extends S>> serviceValue, final Location location, final ServiceControllerImpl<?>[] dependencies, final ValueInjection<?>[] injections) {
+    ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service<? extends S>> serviceValue, final Location location, final ServiceControllerImpl<?>[] dependencies, final ValueInjection<?>[] injections, final ServiceName serviceName) {
         this.container = container;
         this.serviceValue = serviceValue;
         this.location = location;
         this.dependencies = dependencies;
         this.injections = injections;
+        this.serviceName = serviceName;
         upperCount = - dependencies.length;
         for (ServiceControllerImpl<?> controller : dependencies) {
             controller.addListener(dependencyListener);
@@ -123,6 +129,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     public S getValue() throws IllegalStateException {
         return serviceValue.getValue().getValue();
+    }
+
+    public ServiceName getName() {
+        return serviceName;
     }
 
     public void addListener(final ServiceListener<? super S> listener) {
@@ -447,7 +457,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             final Executor executor = container.getExecutor();
             executor.execute(new StartTask(service));
         } catch (Throwable t) {
-            doFail(new StartException(START_FAIL_EXCEPTION, t));
+            doFail(new StartException(START_FAIL_EXCEPTION, t, location, serviceName));
         }
     }
 
@@ -554,7 +564,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             final Executor executor = container.getExecutor();
             executor.execute(new StopTask(service));
         } catch (RuntimeException e) {
-            doFail(new StartException(START_FAIL_EXCEPTION, e));
+            doFail(new StartException(START_FAIL_EXCEPTION, e, location, serviceName));
         }
     }
 
@@ -763,6 +773,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     }
                 }
             } catch (StartException e) {
+                e.setServiceName(serviceName);
                 synchronized (ServiceControllerImpl.this) {
                     final ContextState oldState = context.state;
                     if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
@@ -777,7 +788,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     final ContextState oldState = context.state;
                     if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
                         context.state = ContextState.FAILED;
-                        startException = new StartException("Failed to start service", t, location);
+                        startException = new StartException("Failed to start service", t, location, serviceName);
                         doFinishListener(null);
                     } else {
                         // todo log warning

@@ -6,6 +6,7 @@ import java.util.List;
 import org.jboss.msc.service.Location;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceController;
+import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.value.Value;
 
 import java.util.Collection;
@@ -37,19 +38,19 @@ public final class ServiceDefinition<T> {
         this.service = service;
     }
     
-    public static <T> Builder<T> build(final String name, final Value<? extends Service<T>> service) {
+    public static <T> Builder<T> build(final ServiceName name, final Value<? extends Service<T>> service) {
         return new Builder<T>(name, service);
     }
     
     public static final class Builder<T> {
-        private final String name;
+        private final ServiceName name;
         private final Value<? extends Service<T>> service;
         private List<String> dependencies = new ArrayList<String>(0);
         private ServiceController.Mode initialMode = ServiceController.Mode.AUTOMATIC;
         private Location location;
 
 
-        private Builder(final String name, final Value<? extends Service<T>> service) {
+        private Builder(final ServiceName name, final Value<? extends Service<T>> service) {
             if(name == null) throw new IllegalArgumentException("Name is required");
             if(service == null) throw new IllegalArgumentException("Service is required");
             this.name = name;
@@ -98,9 +99,9 @@ public final class ServiceDefinition<T> {
         public ServiceDefinition<T> create() {
             final int size = dependencies.size();
             if (size == 0) {
-                return new ServiceDefinition<T>(ServiceName.create(name), initialMode, location, service, NO_DEPS);
+                return new ServiceDefinition<T>(name, initialMode, location, service, NO_DEPS);
             } else {
-                return new ServiceDefinition<T>(ServiceName.create(name), initialMode, location, service, dependencies.toArray(new String[size]));
+                return new ServiceDefinition<T>(name, initialMode, location, service, dependencies.toArray(new String[size]));
             }
         }
     }

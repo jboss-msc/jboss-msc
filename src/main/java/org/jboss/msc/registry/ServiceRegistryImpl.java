@@ -25,6 +25,7 @@ import org.jboss.msc.service.AbstractServiceListener;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceController;
+import org.jboss.msc.service.ServiceName;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -91,7 +92,7 @@ class ServiceRegistryImpl implements ServiceRegistry {
             final ServiceBuilder<?> builder = serviceContainer.buildService(serviceDefinition.getService());
 
             for (String dependency : serviceDefinition.getDependenciesDirect()) {
-                final ServiceName dependencyName = ServiceName.create(dependency);
+                final ServiceName dependencyName = ServiceName.of(dependency);
 
                 ServiceController<?> dependencyController = registry.get(dependencyName);
                 if (dependencyController == null) {
@@ -131,7 +132,7 @@ class ServiceRegistryImpl implements ServiceRegistry {
             
             while (entry.i < deps.length)
             {
-                final ServiceName dependencyName = ServiceName.create(deps[entry.i]);
+                final ServiceName dependencyName = ServiceName.of(deps[entry.i]);
         
                 ServiceController<?> dependencyController = registry.get(dependencyName);     
                 if (dependencyController == null){

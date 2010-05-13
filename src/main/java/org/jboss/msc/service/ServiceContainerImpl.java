@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import org.jboss.msc.ref.Reaper;
 import org.jboss.msc.ref.Reference;
 import org.jboss.msc.ref.WeakReference;
+import org.jboss.msc.registry.ServiceName;
 import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 
@@ -136,7 +137,7 @@ final class ServiceContainerImpl implements ServiceContainer {
                 public ServiceContainer getValue() throws IllegalStateException {
                     return ServiceContainerImpl.this;
                 }
-            }));
+            }), null);
             root = builder.setInitialMode(down ? ServiceController.Mode.NEVER : ServiceController.Mode.AUTOMATIC).create();
             if (! down) {
                 set.add(new WeakReference<ServiceContainerImpl, Void>(this, null, new Reaper<ServiceContainerImpl, Void>() {
@@ -149,7 +150,11 @@ final class ServiceContainerImpl implements ServiceContainer {
     }
 
     public <T> ServiceBuilderImpl<T> buildService(final Value<? extends Service<? extends T>> service) {
-        final ServiceBuilderImpl<T> builder = new ServiceBuilderImpl<T>(this, service);
+        return buildService(null, service);
+    }
+
+    public <T> ServiceBuilderImpl<T> buildService(final ServiceName serviceName, final Value<? extends Service<? extends T>> service) {
+        final ServiceBuilderImpl<T> builder = new ServiceBuilderImpl<T>(this, service, serviceName);
         builder.addDependency(root);
         return builder;
     }
