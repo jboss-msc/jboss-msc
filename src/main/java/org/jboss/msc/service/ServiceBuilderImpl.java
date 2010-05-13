@@ -24,8 +24,8 @@ package org.jboss.msc.service;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import org.jboss.msc.inject.Injector;
-import org.jboss.msc.registry.ServiceName;
 import org.jboss.msc.value.Value;
 
 /**

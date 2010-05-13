@@ -23,7 +23,7 @@
 package org.jboss.msc.service;
 
 import java.util.concurrent.Executor;
-import org.jboss.msc.registry.ServiceName;
+
 import org.jboss.msc.value.Value;
 
 /**
