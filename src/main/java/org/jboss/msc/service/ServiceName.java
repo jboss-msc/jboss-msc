@@ -19,7 +19,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.msc.registry;
+package org.jboss.msc.service;
 
 /**
  * Service name class.
@@ -28,24 +28,46 @@ package org.jboss.msc.registry;
  */
 public final class ServiceName {
     private final String name;
+    private final ServiceName parent;
     private final int hashCode;
 
     /**
-     * Create a ServiceName from a String name.
+     * Create a ServiceName from a series of String parts.
      *
-     * @param name The string representation of the service name
+     * @param parts The string representations of the service name segments
      * @return A ServiceName instance 
      */
-    public static ServiceName create(String name) {
-        return new ServiceName(name);
+    public static ServiceName of(final String... parts) {
+        return of(null, parts);
     }
 
-    private ServiceName(String name) {
+    /**
+     * Create a ServiceName from a series of String parts and a parent service name.
+     *
+     * @param parent The parent ServiceName for this name
+     * @param parts The string representations of the service name segments
+     * @return A ServiceName instance
+     */
+    public static ServiceName of(final ServiceName parent, String... parts) {
+        if(parts.length < 1)
+            throw new IllegalArgumentException("Must provide at least one name segment");
+        
+        ServiceName current = parent;
+        for(String part : parts)
+            current = new ServiceName(current, part);
+        return current;
+    }
+
+    private ServiceName(final ServiceName parent, final String name) {
         if (name == null) {
             throw new IllegalArgumentException("name is null");
         }
         this.name = name;
-        hashCode = name.hashCode();
+        this.parent = parent;
+
+        int result = parent == null ? 1 : parent.hashCode();
+        result = 31 * result + name.hashCode();
+        hashCode = result;
     }
 
     @Override
@@ -54,7 +76,16 @@ public final class ServiceName {
     }
 
     public boolean equals(ServiceName o) {
-        return this == o || o != null && name.equals(o.name);
+        if (o == this) {
+            return true;
+        }
+        if (o == null || hashCode != o.hashCode || ! name.equals(o.name)) {
+            return false;
+        }
+
+        final ServiceName parent = this.parent;
+        final ServiceName oparent = o.parent;
+        return parent != null && parent.equals(oparent) || oparent == null;
     }
 
     @Override
@@ -64,6 +95,6 @@ public final class ServiceName {
 
     @Override
     public String toString() {
-        return name;
+        return parent != null ? parent.toString() + "." + name : name;
     }
 }
