@@ -116,7 +116,7 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testMonster() throws Exception {
-        ServiceBatchBuilder batch =ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
+        ServiceRegistrationBatchBuilder batch =ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
 
         final int totalServiceDefinitions = 1000000;
 
@@ -144,7 +144,7 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testLargeNoDeps() throws Exception {
-        ServiceBatchBuilder batch = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
+        ServiceRegistrationBatchBuilder batch = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
 
         final int totalServiceDefinitions = 10000;
 
@@ -172,7 +172,7 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testBasicInjection() throws Exception {
-        ServiceBatchBuilder batch = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
+        ServiceRegistrationBatchBuilder batch = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
 
         final TestObject testObject = new TestObject();
         final TestObjectService service = new TestObjectService(testObject);

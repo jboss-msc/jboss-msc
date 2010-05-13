@@ -38,7 +38,7 @@ public interface ServiceRegistry {
      *
      * @return the new batch builder
      */
-    ServiceBatchBuilder batchBuilder();
+    ServiceRegistrationBatchBuilder batchBuilder();
 
     /**
      * The factory used to create instances.

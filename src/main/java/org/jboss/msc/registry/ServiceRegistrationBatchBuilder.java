@@ -27,7 +27,7 @@ import java.util.Collection;
 /**
  * A batch builder for installing service definitions in a single action.
  */
-public interface ServiceBatchBuilder {
+public interface ServiceRegistrationBatchBuilder {
 
     /**
      * Install all the defined services into the container.

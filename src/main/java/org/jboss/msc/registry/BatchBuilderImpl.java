@@ -12,7 +12,7 @@ import org.jboss.msc.service.ServiceName;
  * 
  * @author Jason T. Greene
  */
-final class BatchBuilderImpl implements ServiceBatchBuilder {
+final class BatchBuilderImpl implements ServiceRegistrationBatchBuilder {
 
     private final LinkedHashMap<ServiceName, BatchEntry> batchEntries = new LinkedHashMap<ServiceName, BatchEntry>();
     private final ServiceRegistryImpl serviceRegistry;
