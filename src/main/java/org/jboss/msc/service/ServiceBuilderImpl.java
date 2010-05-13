@@ -25,6 +25,7 @@ package org.jboss.msc.service;
 import java.util.ArrayList;
 import java.util.List;
 import org.jboss.msc.inject.Injector;
+import org.jboss.msc.registry.ServiceName;
 import org.jboss.msc.value.Value;
 
 /**
@@ -37,14 +38,16 @@ final class ServiceBuilderImpl<S> implements ServiceBuilder<S> {
     private final List<ValueInjection<?>> injections = new ArrayList<ValueInjection<?>>(0);
     private final List<ServiceListener<? super S>> listeners = new ArrayList<ServiceListener<? super S>>(0);
     private final Value<? extends Service<? extends S>> service;
+    private final ServiceName serviceName;
 
     private ServiceController.Mode mode = ServiceController.Mode.AUTOMATIC;
     private ServiceControllerImpl<S> controller;
     private Location location;
 
-    ServiceBuilderImpl(final ServiceContainerImpl container, final Value<? extends Service<? extends S>> service) {
+    ServiceBuilderImpl(final ServiceContainerImpl container, final Value<? extends Service<? extends S>> service, final ServiceName serviceName) {
         this.container = container;
         this.service = service;
+        this.serviceName = serviceName;
     }
 
     public void addDependency(final ServiceController<?> dependency) {
@@ -147,7 +150,7 @@ final class ServiceBuilderImpl<S> implements ServiceBuilder<S> {
             final int injectionsSize = injections.size();
             final ServiceControllerImpl<?>[] depArray = depsSize == 0 ? NO_DEPS : deps.toArray(new ServiceControllerImpl<?>[depsSize]);
             final ValueInjection<?>[] injectionArray = injectionsSize == 0 ? NO_INJECTIONS : injections.toArray(new ValueInjection<?>[injectionsSize]);
-            final ServiceControllerImpl<S> controller = this.controller = new ServiceControllerImpl<S>(container, service, location, depArray, injectionArray);
+            final ServiceControllerImpl<S> controller = this.controller = new ServiceControllerImpl<S>(container, service, location, depArray, injectionArray, serviceName);
             for (ServiceListener<? super S> listener : listeners) {
                 controller.addListener(listener);
             }

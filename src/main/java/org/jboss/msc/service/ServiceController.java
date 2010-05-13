@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.registry.ServiceName;
 import org.jboss.msc.value.Value;
 
 /**
@@ -66,6 +67,13 @@ public interface ServiceController<S> extends Value<S> {
      * @throws IllegalStateException if the service is not available
      */
     S getValue() throws IllegalStateException;
+
+    /**
+     * Get the name of this service, if any.
+     *
+     * @return the name, or {@code null} if none was specified.
+     */
+    ServiceName getName();
 
     /**
      * Add a service listener.  The method corresponding to the current service state is called.

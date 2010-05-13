@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import org.jboss.msc.registry.ServiceName;
 import org.jboss.msc.value.Value;
 
 /**
@@ -63,6 +64,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
      * The set of registered service listeners.
      */
     private final Set<ServiceListener<? super S>> listeners = Collections.newSetFromMap(new IdentityHashMap<ServiceListener<? super S>, Boolean>(0));
+    /**
+     * The service name, if any.
+     */
+    private final ServiceName serviceName;
     /**
      * The start exception.
      */
@@ -101,12 +106,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
      */
     private final ServiceListener<Object> dependencyListener = new DependencyListener();
 
-    ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service<? extends S>> serviceValue, final Location location, final ServiceControllerImpl<?>[] dependencies, final ValueInjection<?>[] injections) {
+    ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service<? extends S>> serviceValue, final Location location, final ServiceControllerImpl<?>[] dependencies, final ValueInjection<?>[] injections, final ServiceName serviceName) {
         this.container = container;
         this.serviceValue = serviceValue;
         this.location = location;
         this.dependencies = dependencies;
         this.injections = injections;
+        this.serviceName = serviceName;
         upperCount = - dependencies.length;
         for (ServiceControllerImpl<?> controller : dependencies) {
             controller.addListener(dependencyListener);
@@ -123,6 +129,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     public S getValue() throws IllegalStateException {
         return serviceValue.getValue().getValue();
+    }
+
+    public ServiceName getName() {
+        return serviceName;
     }
 
     public void addListener(final ServiceListener<? super S> listener) {
