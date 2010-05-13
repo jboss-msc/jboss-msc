@@ -22,7 +22,6 @@
 
 package org.jboss.msc.registry;
 
-import java.util.Collection;
 import org.jboss.msc.service.ServiceContainer;
 
 /**
@@ -39,47 +38,7 @@ public interface ServiceRegistry {
      *
      * @return the new batch builder
      */
-    BatchBuilder batchBuilder();
-
-    /**
-     * A batch builder for installing service definitions in a single action.
-     */
-    interface BatchBuilder {
-
-        /**
-         * Install all the defined services into the container.
-         *
-         * @throws ServiceRegistryException
-         */
-        void install() throws ServiceRegistryException;
-
-        /**
-         * Add a service definition to the batch.
-         *
-         * @param definition
-         * @return this batch
-         */
-        BatchBuilderImpl add(ServiceDefinition definition);
-
-        /**
-         * Add a list of service batchEntries to the batch, in the order of the list.
-         *
-         * @param definitions add a list of service batchEntries to the batch, in the
-         *        order of the list
-         * @return this batch
-         */
-        BatchBuilderImpl add(ServiceDefinition<?>... definitions);
-
-        /**
-         * Add a collection of service batchEntries to the batch, in the order of the
-         * collection (if ordered).
-         *
-         * @param definitions add a list of service batchEntries to the batch, in the
-         *        order of the list
-         * @return this batch
-         */
-        BatchBuilderImpl add(Collection<ServiceDefinition<?>> definitions);
-    }
+    ServiceBatchBuilder batchBuilder();
 
     /**
      * The factory used to create instances.
