@@ -99,43 +99,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     /**
      * Listener which is added to dependencies of this service.
      */
-    private final ServiceListener<Object> dependencyListener = new ServiceListener<Object>() {
-        public void serviceStarting(final ServiceController<? extends Object> serviceController) {
-        }
-
-        public void serviceStarted(final ServiceController<? extends Object> serviceController) {
-            ServiceListener<? super S>[] listeners = null;
-            synchronized (ServiceControllerImpl.this) {
-                if (++upperCount == 1 && mode != Mode.NEVER) {
-                    if (runningListeners == 0 && state == Substate.DOWN) {
-                        listeners = getListeners(1, Substate.STARTING);
-                    }
-                }
-            }
-            if (listeners != null) doStart(listeners);
-        }
-
-        public void serviceFailed(final ServiceController<? extends Object> serviceController, final StartException reason) {
-        }
-
-        public void serviceStopping(final ServiceController<? extends Object> serviceController) {
-            ServiceListener<? super S>[] listeners = null;
-            synchronized (ServiceControllerImpl.this) {
-                if (--upperCount == 0 || mode == Mode.NEVER) {
-                    if (runningListeners == 0 && state == Substate.UP) {
-                        listeners = getListeners(1, Substate.STOPPING);
-                    }
-                }
-            }
-            if (listeners != null) doStop(listeners);
-        }
-
-        public void serviceStopped(final ServiceController<? extends Object> serviceController) {
-        }
-
-        public void serviceRemoved(final ServiceController<? extends Object> serviceController) {
-        }
-    };
+    private final ServiceListener<Object> dependencyListener = new DependencyListener();
 
     ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service<? extends S>> serviceValue, final Location location, final ServiceControllerImpl<?>[] dependencies, final ValueInjection<?>[] injections) {
         this.container = container;
@@ -465,12 +429,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         final Executor executor = container.getExecutor();
         for (final ServiceListener<? super S> listener : listeners) {
             try {
-                executor.execute(new Runnable() {
-                    public void run() {
-                        assert ! Thread.holdsLock(ServiceControllerImpl.this);
-                        invokeListener(listener, state);
-                    }
-                });
+                executor.execute(new ListenerTask(listener, state));
             } catch (RuntimeException e) {
                 // todo log it and continue
             }
@@ -486,59 +445,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             }
             runListeners(listeners, State.STARTING);
             final Executor executor = container.getExecutor();
-            executor.execute(new Runnable() {
-                public void run() {
-                    assert ! Thread.holdsLock(ServiceControllerImpl.this);
-                    final StartContextImpl context = new StartContextImpl();
-                    try {
-                        final ValueInjection<?>[] injections = ServiceControllerImpl.this.injections;
-                        final int injectionsLength = injections.length;
-                        boolean ok = false;
-                        int i = 0;
-                        try {
-                            for (; i < injectionsLength; i++) {
-                                final ValueInjection<?> injection = injections[i];
-                                doInject(injection);
-                            }
-                            ok = true;
-                        } finally {
-                            if (! ok) {
-                                for (; i >= 0; i--) {
-                                    injections[i].getTarget().uninject();
-                                }
-                            }
-                        }
-                        service.start(context);
-                        synchronized (ServiceControllerImpl.this) {
-                            if (context.state == ContextState.SYNC) {
-                                context.state = ContextState.COMPLETE;
-                                doFinishListener(null);
-                            }
-                        }
-                    } catch (StartException e) {
-                        synchronized (ServiceControllerImpl.this) {
-                            final ContextState oldState = context.state;
-                            if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
-                                context.state = ContextState.FAILED;
-                                doFinishListener(e);
-                            } else {
-                                // todo log warning
-                            }
-                        }
-                    } catch (Throwable t) {
-                        synchronized (ServiceControllerImpl.this) {
-                            final ContextState oldState = context.state;
-                            if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
-                                context.state = ContextState.FAILED;
-                                startException = new StartException("Failed to start service", t, location);
-                                doFinishListener(null);
-                            } else {
-                                // todo log warning
-                            }
-                        }
-                    }
-                }
-            });
+            executor.execute(new StartTask(service));
         } catch (Throwable t) {
             doFail(new StartException(START_FAIL_EXCEPTION, t));
         }
@@ -645,37 +552,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             }
             runListeners(listeners, State.STOPPING);
             final Executor executor = container.getExecutor();
-            executor.execute(new Runnable() {
-                public void run() {
-                    assert ! Thread.holdsLock(ServiceControllerImpl.this);
-                    final StopContextImpl context = new StopContextImpl();
-                    try {
-                        service.stop(context);
-                        synchronized (ServiceControllerImpl.this) {
-                            if (context.state == ContextState.SYNC) {
-                                context.state = ContextState.COMPLETE;
-                                for (ValueInjection<?> injection : injections) {
-                                    injection.getTarget().uninject();
-                                }
-                                doFinishListener(null);
-                            }
-                        }
-                    } catch (Throwable t) {
-                        synchronized (ServiceControllerImpl.this) {
-                            final ContextState oldState = context.state;
-                            if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
-                                context.state = ContextState.FAILED;
-                                for (ValueInjection<?> injection : injections) {
-                                    injection.getTarget().uninject();
-                                }
-                                doFinishListener(null);
-                            } else {
-                            }
-                        }
-                        // todo log warning
-                    }
-                }
-            });
+            executor.execute(new StopTask(service));
         } catch (RuntimeException e) {
             doFail(new StartException(START_FAIL_EXCEPTION, e));
         }
@@ -846,6 +723,161 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
         public State getState() {
             return state;
+        }
+    }
+
+    private class StartTask implements Runnable {
+
+        private final Service service;
+
+        public StartTask(final Service service) {
+            this.service = service;
+        }
+
+        public void run() {
+            assert ! Thread.holdsLock(ServiceControllerImpl.this);
+            final StartContextImpl context = new StartContextImpl();
+            try {
+                final ValueInjection<?>[] injections = ServiceControllerImpl.this.injections;
+                final int injectionsLength = injections.length;
+                boolean ok = false;
+                int i = 0;
+                try {
+                    for (; i < injectionsLength; i++) {
+                        final ValueInjection<?> injection = injections[i];
+                        doInject(injection);
+                    }
+                    ok = true;
+                } finally {
+                    if (! ok) {
+                        for (; i >= 0; i--) {
+                            injections[i].getTarget().uninject();
+                        }
+                    }
+                }
+                service.start(context);
+                synchronized (ServiceControllerImpl.this) {
+                    if (context.state == ContextState.SYNC) {
+                        context.state = ContextState.COMPLETE;
+                        doFinishListener(null);
+                    }
+                }
+            } catch (StartException e) {
+                synchronized (ServiceControllerImpl.this) {
+                    final ContextState oldState = context.state;
+                    if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
+                        context.state = ContextState.FAILED;
+                        doFinishListener(e);
+                    } else {
+                        // todo log warning
+                    }
+                }
+            } catch (Throwable t) {
+                synchronized (ServiceControllerImpl.this) {
+                    final ContextState oldState = context.state;
+                    if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
+                        context.state = ContextState.FAILED;
+                        startException = new StartException("Failed to start service", t, location);
+                        doFinishListener(null);
+                    } else {
+                        // todo log warning
+                    }
+                }
+            }
+        }
+    }
+
+    private class StopTask implements Runnable {
+
+        private final Service service;
+
+        public StopTask(final Service service) {
+            this.service = service;
+        }
+
+        public void run() {
+            assert ! Thread.holdsLock(ServiceControllerImpl.this);
+            final StopContextImpl context = new StopContextImpl();
+            try {
+                service.stop(context);
+                synchronized (ServiceControllerImpl.this) {
+                    if (context.state == ContextState.SYNC) {
+                        context.state = ContextState.COMPLETE;
+                        for (ValueInjection<?> injection : injections) {
+                            injection.getTarget().uninject();
+                        }
+                        doFinishListener(null);
+                    }
+                }
+            } catch (Throwable t) {
+                synchronized (ServiceControllerImpl.this) {
+                    final ContextState oldState = context.state;
+                    if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
+                        context.state = ContextState.FAILED;
+                        for (ValueInjection<?> injection : injections) {
+                            injection.getTarget().uninject();
+                        }
+                        doFinishListener(null);
+                    } else {
+                    }
+                }
+                // todo log warning
+            }
+        }
+    }
+
+    private class ListenerTask implements Runnable {
+
+        private final ServiceListener<? super S> listener;
+        private final State state;
+
+        public ListenerTask(final ServiceListener<? super S> listener, final State state) {
+            this.listener = listener;
+            this.state = state;
+        }
+
+        public void run() {
+            assert ! Thread.holdsLock(ServiceControllerImpl.this);
+            invokeListener(listener, state);
+        }
+    }
+
+    private class DependencyListener implements ServiceListener<Object> {
+
+        public void serviceStarting(final ServiceController<? extends Object> serviceController) {
+        }
+
+        public void serviceStarted(final ServiceController<? extends Object> serviceController) {
+            ServiceListener<? super S>[] listeners = null;
+            synchronized (ServiceControllerImpl.this) {
+                if (++upperCount == 1 && mode != Mode.NEVER) {
+                    if (runningListeners == 0 && state == Substate.DOWN) {
+                        listeners = getListeners(1, Substate.STARTING);
+                    }
+                }
+            }
+            if (listeners != null) doStart(listeners);
+        }
+
+        public void serviceFailed(final ServiceController<? extends Object> serviceController, final StartException reason) {
+        }
+
+        public void serviceStopping(final ServiceController<? extends Object> serviceController) {
+            ServiceListener<? super S>[] listeners = null;
+            synchronized (ServiceControllerImpl.this) {
+                if (--upperCount == 0 || mode == Mode.NEVER) {
+                    if (runningListeners == 0 && state == Substate.UP) {
+                        listeners = getListeners(1, Substate.STOPPING);
+                    }
+                }
+            }
+            if (listeners != null) doStop(listeners);
+        }
+
+        public void serviceStopped(final ServiceController<? extends Object> serviceController) {
+        }
+
+        public void serviceRemoved(final ServiceController<? extends Object> serviceController) {
         }
     }
 }
