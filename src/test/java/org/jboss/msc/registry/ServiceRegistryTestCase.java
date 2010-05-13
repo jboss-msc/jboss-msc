@@ -23,6 +23,8 @@ package org.jboss.msc.registry;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import junit.framework.Assert;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
@@ -100,7 +102,6 @@ public class ServiceRegistryTestCase {
                     .install();
             fail("SHould have thrown circular dependency exception");
         } catch (ServiceRegistryException expected) {
-            expected.printStackTrace();
         }
     }
 
@@ -146,5 +147,17 @@ public class ServiceRegistryTestCase {
         batch.install();
         long end = System.currentTimeMillis();
         System.out.println("Time: " + (end - start));
+    }
+
+    @Test
+    public void testServiceName() {
+        ServiceName serviceName = ServiceName.of("test", "service");
+        Assert.assertEquals("test.service", serviceName.toString());
+
+        ServiceName serviceName2 = serviceName.append("2");
+        Assert.assertEquals("test.service.2", serviceName2.toString());
+
+        serviceName = serviceName.append(ServiceName.of("other", "service"));
+        Assert.assertEquals("test.service.other.service", serviceName.toString());
     }
 }

@@ -75,6 +75,37 @@ public final class ServiceName {
         hashCode = result;
     }
 
+    /**
+     * Create a service name by appending name parts using this as a parent to the new ServiceName.
+     *
+     * @param parts The parts to append
+     * @return A new ServiceName
+     */
+    public ServiceName append(final String... parts) {
+        return of(this, parts);
+    }
+
+    /**
+     * Create a service name by appending name parts of the provided ServiceName using this as a parent.
+     *
+     * @param serviceName The service name to use as the parts to append
+     * @return A new ServiceName
+     */
+    public ServiceName append(final ServiceName serviceName) {
+        return of(this, getNameParts(serviceName, 0));
+    }
+
+    private String[] getNameParts(final ServiceName serviceName, final int idx) {
+        final String[] array;
+        if (serviceName.parent == null) {
+            array = new String[idx + 1];
+        } else {
+            array = getNameParts(serviceName.parent, idx + 1);
+        }
+        array[array.length - 1 - idx] = serviceName.name;
+        return array;
+    }
+
     @Override
     public boolean equals(Object o) {
         return this == o || o instanceof ServiceName && equals((ServiceName)o);
