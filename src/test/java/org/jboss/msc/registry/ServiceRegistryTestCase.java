@@ -22,11 +22,13 @@
 package org.jboss.msc.registry;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
 import junit.framework.Assert;
 import org.jboss.msc.inject.FieldInjector;
+import org.jboss.msc.inject.SetMethodInjector;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
@@ -175,25 +177,32 @@ public class ServiceRegistryTestCase {
         final TestObject testObject = new TestObject();
         final TestObjectService service = new TestObjectService(testObject);
         final Object injectedValue = new Object();
+        final Object otherInjectedValue = new Object();
 
         final Value<TestObject> targetValue = new ImmediateValue<TestObject>(testObject);
 
-        final Field field = TestObject.class.getDeclaredField("other");
+        final Field field = TestObject.class.getDeclaredField("test");
         field.setAccessible(true);
+
+        final Method method = TestObject.class.getDeclaredMethod("setOther", Object.class);
 
         batch.add(
                 ServiceDefinition.build(ServiceName.of("testService"), new ImmediateValue<TestObjectService>(service))
                 .addInjection(
                         new ImmediateValue<Object>(injectedValue),
                         new FieldInjector<Object>(targetValue, new ImmediateValue<Field>(field))
+                ).addInjection(
+                        new ImmediateValue<Object>(otherInjectedValue),
+                        new SetMethodInjector<Object>(targetValue, new ImmediateValue<Method>(method))
                 ).create()
         );
 
         batch.install();
     }
 
-    private static class TestObject {
-        public Object other;
+    public static class TestObject {
+        private Object test;
+        private Object other;
 
         public Object getOther() {
             return other;
@@ -206,7 +215,8 @@ public class ServiceRegistryTestCase {
         @Override
         public String toString() {
             return "TestObject{" +
-                    "other=" + other +
+                    "test=" + test +
+                    ", other=" + other +
                     '}';
         }
     }

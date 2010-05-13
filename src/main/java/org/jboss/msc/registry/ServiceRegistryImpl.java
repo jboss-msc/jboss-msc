@@ -160,8 +160,7 @@ class ServiceRegistryImpl implements ServiceRegistry {
             // We are resolved.  Lets install
             builder.addListener(new ServiceUnregisterListener(name));
 
-            for(ServiceDefinition.ValueInjectionBuilder injectionBuilder : serviceDefinition.getInjections()) {
-                final ValueInjection<?> injection = injectionBuilder.create();
+            for(ValueInjection<?> injection : serviceDefinition.getInjections()) {
                 builder.addValueInjection(injection);
             }
 

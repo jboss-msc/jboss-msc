@@ -27,12 +27,12 @@ public final class ServiceDefinition<T> {
     private final ServiceController.Mode initialMode;
     private final Location location;
     private final Value<? extends Service<T>> service;
-    private final ValueInjectionBuilder[] injectionBuilders;
+    private final ValueInjection[] injections;
 
     private static final String[] NO_DEPS = new String[0];
-    private static final ValueInjectionBuilder[] NO_INJECTIONS = new ValueInjectionBuilder[0];
+    private static final ValueInjection[] NO_INJECTIONS = new ValueInjection[0];
 
-    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<? extends Service<T>> service, String[] dependencies, ValueInjectionBuilder[] injectionBuilders) {
+    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<? extends Service<T>> service, String[] dependencies, ValueInjection[] injections) {
         if(name == null) {
             throw new IllegalArgumentException("Name can not be null");
         }
@@ -41,7 +41,7 @@ public final class ServiceDefinition<T> {
         this.initialMode = initialMode;
         this.location = location;
         this.service = service;
-        this.injectionBuilders = injectionBuilders;
+        this.injections = injections;
     }
 
     public static <T> Builder<T> build(final ServiceName name, final Value<? extends Service<T>> service) {
@@ -52,7 +52,7 @@ public final class ServiceDefinition<T> {
         private final ServiceName name;
         private final Value<? extends Service<T>> service;
         private List<String> dependencies = new ArrayList<String>(0);
-        private List<ValueInjectionBuilder> injections = new ArrayList<ValueInjectionBuilder>(0);
+        private List<ValueInjection> injections = new ArrayList<ValueInjection>(0);
         private ServiceController.Mode initialMode = ServiceController.Mode.AUTOMATIC;
         private Location location;
 
@@ -62,7 +62,6 @@ public final class ServiceDefinition<T> {
             if(service == null) throw new IllegalArgumentException("Service is required");
             this.name = name;
             this.service = service;
-
         }
 
         public Builder<T> addDependency(String dependency) {
@@ -91,7 +90,7 @@ public final class ServiceDefinition<T> {
         }
 
         public <I> Builder<T> addInjection(final Value<I> value, final Injector<I> injector) {
-            injections.add(new ValueInjectionBuilder<I>(value, injector));
+            injections.add(new ValueInjection<I>(value, injector));
 
             return this;
         }
@@ -123,11 +122,11 @@ public final class ServiceDefinition<T> {
                 dependencies = this.dependencies.toArray(new String[dependenciesSize]);
             }
             final int injectionsSize = injections.size();
-            final ValueInjectionBuilder[] injections;
+            final ValueInjection<?>[] injections;
             if(injectionsSize == 0) {
                 injections = NO_INJECTIONS;
             } else {
-                injections = this.injections.toArray(new ValueInjectionBuilder[injectionsSize]);
+                injections = this.injections.toArray(new ValueInjection<?>[injectionsSize]);
             }
             return new ServiceDefinition<T>(name, initialMode, location, service, dependencies, injections);
         }
@@ -145,8 +144,8 @@ public final class ServiceDefinition<T> {
         return dependencies;
     }
 
-    public ValueInjectionBuilder[] getInjections() {
-        return injectionBuilders;
+    public ValueInjection<?>[] getInjections() {
+        return injections;
     }
 
     public ServiceController.Mode getInitialMode() {
@@ -168,19 +167,5 @@ public final class ServiceDefinition<T> {
                 name,
                 initialMode,
                 location);
-    }
-
-    public static class ValueInjectionBuilder<T> {
-        private Injector<T> injector;
-        private Value<T> value;
-
-        ValueInjectionBuilder(Value<T> value, Injector<T> injector) {
-            this.injector = injector;
-            this.value = value;
-        }
-
-        public ValueInjection<T> create() {
-            return new ValueInjection<T>(value, injector);
-        }
     }
 }
