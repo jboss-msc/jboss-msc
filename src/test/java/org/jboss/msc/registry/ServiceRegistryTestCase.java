@@ -108,7 +108,7 @@ public class ServiceRegistryTestCase {
     public void testMonster() throws Exception {
         ServiceRegistry.BatchBuilder batch =ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
 
-        final int totalServiceDefinitions = 10000;
+        final int totalServiceDefinitions = 1000000;
 
         for (int i = 0; i < totalServiceDefinitions; i++) {
             List<String> deps = new ArrayList<String>();
@@ -117,7 +117,7 @@ public class ServiceRegistryTestCase {
             for (int j = 1; j < numDeps + 1; j++) {
                 deps.add(("test" + (i + j)).intern());
             }
-            batch.add(ServiceDefinition.build(ServiceName.of("test" + i), Service.NULL_VALUE).addDependencies(deps.toArray(new String[deps.size()])).create());
+            batch.add(ServiceDefinition.build(ServiceName.of(("test" + i).intern()), Service.NULL_VALUE).addDependencies(deps.toArray(new String[deps.size()])).create());
         }
 
         long start = System.currentTimeMillis();

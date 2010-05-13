@@ -27,6 +27,8 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.concurrent.Executor;
+
+import org.jboss.msc.util.IdentityHashSet;
 import org.jboss.msc.value.Value;
 
 /**
@@ -62,7 +64,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     /**
      * The set of registered service listeners.
      */
-    private final Set<ServiceListener<? super S>> listeners = Collections.newSetFromMap(new IdentityHashMap<ServiceListener<? super S>, Boolean>(0));
+    private final Set<ServiceListener<? super S>> listeners = new IdentityHashSet<ServiceListener<? super S>>(0);
     /**
      * The service name, if any.
      */
