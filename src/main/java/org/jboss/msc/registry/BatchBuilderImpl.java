@@ -11,12 +11,12 @@ import org.jboss.msc.service.ServiceBuilder;
  * 
  * @author Jason T. Greene
  */
-public final class ServiceBatch {
+final class BatchBuilderImpl implements ServiceRegistry.BatchBuilder {
 
     private final LinkedHashMap<ServiceName, BatchEntry> batchEntries = new LinkedHashMap<ServiceName, BatchEntry>();
-    private final ServiceRegistry serviceRegistry;
+    private final ServiceRegistryImpl serviceRegistry;
 
-    ServiceBatch(final ServiceRegistry serviceRegistry) {
+    BatchBuilderImpl(final ServiceRegistryImpl serviceRegistry) {
         this.serviceRegistry = serviceRegistry;
     }
 
@@ -24,26 +24,13 @@ public final class ServiceBatch {
         serviceRegistry.install(this);
     }
 
-    /**
-     * Add a service definition to the batch.
-     * 
-     * @param definition
-     * @return this batch
-     */
-    public ServiceBatch add(ServiceDefinition definition) {
+    public BatchBuilderImpl add(ServiceDefinition definition) {
         batchEntries.put(definition.getName(), new BatchEntry(definition));
 
         return this;
     }
 
-    /**
-     * Add a list of service batchEntries to the batch, in the order of the list.
-     * 
-     * @param definitions add a list of service batchEntries to the batch, in the
-     *        order of the list
-     * @return this batch
-     */
-    public ServiceBatch add(ServiceDefinition<?>... definitions) {
+    public BatchBuilderImpl add(ServiceDefinition<?>... definitions) {
         final Map<ServiceName, BatchEntry> batchEntries = this.batchEntries;
 
         for (ServiceDefinition definition : definitions) {
@@ -53,15 +40,7 @@ public final class ServiceBatch {
         return this;
     }
 
-    /**
-     * Add a collection of service batchEntries to the batch, in the order of the
-     * collection (if ordered).
-     * 
-     * @param definitions add a list of service batchEntries to the batch, in the
-     *        order of the list
-     * @return this batch
-     */
-    public ServiceBatch add(Collection<ServiceDefinition<?>> definitions) {
+    public BatchBuilderImpl add(Collection<ServiceDefinition<?>> definitions) {
         if (definitions == null)
             throw new IllegalArgumentException("Definitions can not be null");
 

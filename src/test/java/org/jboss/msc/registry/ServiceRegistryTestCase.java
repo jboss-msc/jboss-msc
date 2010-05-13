@@ -38,7 +38,7 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testResolvable() throws Exception {
-         new ServiceRegistry(ServiceContainer.Factory.create()).create()
+        ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder()
             .add(ServiceDefinition.build("7", Service.NULL_VALUE).addDependencies("11", "8").create())
             .add(ServiceDefinition.build("5", Service.NULL_VALUE).addDependencies("11").create())
             .add(ServiceDefinition.build("3", Service.NULL_VALUE).addDependencies("11", "9").create())
@@ -52,14 +52,14 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testResolvableWithPreexistingDeps() throws Exception {
-        final ServiceRegistry registry = new ServiceRegistry(ServiceContainer.Factory.create());
-        registry.create()
+        final ServiceRegistry registry = ServiceRegistry.Factory.create(ServiceContainer.Factory.create());
+        registry.batchBuilder()
                 .add(ServiceDefinition.build("2", Service.NULL_VALUE).create())
                 .add(ServiceDefinition.build("9", Service.NULL_VALUE).create())
                 .add(ServiceDefinition.build("10", Service.NULL_VALUE).create())
                 .install();
 
-        registry.create()
+        registry.batchBuilder()
                 .add(ServiceDefinition.build("7", Service.NULL_VALUE).addDependencies("11", "8").create())
                 .add(ServiceDefinition.build("5", Service.NULL_VALUE).addDependencies("11").create())
                 .add(ServiceDefinition.build("3", Service.NULL_VALUE).addDependencies("11", "9").create())
@@ -72,7 +72,7 @@ public class ServiceRegistryTestCase {
     @Test
     public void testMissingDependency() throws Exception {
         try {
-             new ServiceRegistry(ServiceContainer.Factory.create()).create()
+             ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder()
                 .add(ServiceDefinition.build("7", Service.NULL_VALUE).addDependencies("11", "8").create())
                 .add(ServiceDefinition.build("5", Service.NULL_VALUE).addDependencies("11").create())
                 .add(ServiceDefinition.build("3", Service.NULL_VALUE).addDependencies("11", "9").create())
@@ -92,7 +92,7 @@ public class ServiceRegistryTestCase {
     public void testCircular() throws Exception {
 
         try {
-             new ServiceRegistry(ServiceContainer.Factory.create()).create()
+             ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder()
                     .add(ServiceDefinition.build("7", Service.NULL_VALUE).addDependencies("5").create())
                     .add(ServiceDefinition.build("5", Service.NULL_VALUE).addDependencies("11").create())
                     .add(ServiceDefinition.build("11", Service.NULL_VALUE).addDependencies("7").create())
@@ -105,7 +105,7 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testMonster() throws Exception {
-        ServiceBatch batch = new ServiceRegistry(ServiceContainer.Factory.create()).create();
+        ServiceRegistry.BatchBuilder batch =ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
 
         final int totalServiceDefinitions = 1000000;
 
@@ -133,7 +133,7 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testLargeNoDeps() throws Exception {
-        ServiceBatch batch = new ServiceRegistry(ServiceContainer.Factory.create()).create();
+        ServiceRegistry.BatchBuilder batch = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
 
         final int totalServiceDefinitions = 100000;
 
