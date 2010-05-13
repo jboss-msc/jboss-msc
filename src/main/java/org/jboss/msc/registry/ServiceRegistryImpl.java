@@ -26,13 +26,14 @@ import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.service.ValueInjection;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * Service registry capable of installing batches of services and enforcing dependency order. 
+ * Service registry capable of installing batches of services and enforcing dependency order.
  *
  * @author John Bailey
  * @author Jason T. Greene
@@ -108,7 +109,7 @@ class ServiceRegistryImpl implements ServiceRegistry {
             builder.addListener(new ServiceUnregisterListener(name));
 
             final ServiceController<?> serviceController = builder.create();
-            if (registry.putIfAbsent(name, serviceController) != null) {
+            if(registry.putIfAbsent(name, serviceController) != null) {
                 throw new DuplicateServiceException("Duplicate service name provided: " + name);
             }
             return serviceController;
@@ -116,30 +117,28 @@ class ServiceRegistryImpl implements ServiceRegistry {
             entry.visited = false;
         }
     }
-    
-    public void iterResolve(BatchBuilderImpl.BatchEntry entry, final Map<ServiceName, BatchBuilderImpl.BatchEntry> services)  throws ServiceRegistryException
-    {
+
+    public void iterResolve(BatchBuilderImpl.BatchEntry entry, final Map<ServiceName, BatchBuilderImpl.BatchEntry> services) throws ServiceRegistryException {
         outer:
         while (entry != null) {
             final ServiceDefinition<?> serviceDefinition = entry.serviceDefinition;
-            
+
             if (entry.builder == null)
                 entry.builder = serviceContainer.buildService(serviceDefinition.getService());
-            
+
             final ServiceBuilder<?> builder = entry.builder;
             final String[] deps = serviceDefinition.getDependenciesDirect();
             final ServiceName name = serviceDefinition.getName();
-            
-            while (entry.i < deps.length)
-            {
+
+            while (entry.i < deps.length) {
                 final ServiceName dependencyName = ServiceName.of(deps[entry.i]);
-        
-                ServiceController<?> dependencyController = registry.get(dependencyName);     
-                if (dependencyController == null){
+
+                ServiceController<?> dependencyController = registry.get(dependencyName);
+                if (dependencyController == null) {
                     final BatchBuilderImpl.BatchEntry dependencyEntry = services.get(dependencyName);
                     if (dependencyEntry == null)
                         throw new MissingDependencyException("Missing dependency: " + name + " depends on " + dependencyName + " which can not be found");
-                 
+
                     // Backup the last position, so that we can unroll
                     assert dependencyEntry.prev == null;
                     dependencyEntry.prev = entry;
@@ -152,25 +151,29 @@ class ServiceRegistryImpl implements ServiceRegistry {
 
                     continue outer;
                 }
-                
+
                 // Either the dep already exists, or we are unrolling and just created it
                 builder.addDependency(dependencyController);
                 entry.i++;
             }
-            
+
             // We are resolved.  Lets install
             builder.addListener(new ServiceUnregisterListener(name));
+
+            for(ValueInjection<?> injection : serviceDefinition.getInjections()) {
+                builder.addValueInjection(injection);
+            }
 
             final ServiceController<?> serviceController = builder.create();
             if (registry.putIfAbsent(name, serviceController) != null) {
                 throw new DuplicateServiceException("Duplicate service name provided: " + name);
             }
-            
+
             // Cleanup
             entry.builder = null;
             BatchBuilderImpl.BatchEntry prev = entry.prev;
             entry.prev = null;
-            
+
             // Unroll!
             entry.processed = true;
             entry.visited = false;
