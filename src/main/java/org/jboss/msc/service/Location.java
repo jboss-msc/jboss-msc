@@ -75,6 +75,44 @@ public final class Location {
         return columnNumber;
     }
 
+    /**
+     * Get the hash code.  This method exists for internal consistency with {@code equals()}; location objects
+     * are not generally optimized to be usable as hash keys.
+     *
+     * @return the hash code
+     */
+    public int hashCode() {
+        int result = fileName != null ? fileName.hashCode() : 0;
+        result = 31 * result + lineNumber;
+        result = 31 * result + columnNumber;
+        result = 31 * result + (parentLocation != null ? parentLocation.hashCode() : 0);
+        return result;
+    }
+
+    /**
+     * Compare this location with another.
+     *
+     * @param obj the other location
+     * @return {@code true} if they are equal, {@code false} if they are not equal or the argument is not a location
+     */
+    public boolean equals(final Object obj) {
+        return obj instanceof Location && equals((Location)obj);
+    }
+
+    /**
+     * Compare this location with another.
+     *
+     * @param obj the other location
+     * @return {@code true} if they are equal, {@code false} if they are not equal or the argument is {@code null}
+     */
+    public boolean equals(final Location obj) {
+        return this == obj || obj != null 
+                && lineNumber == obj.lineNumber
+                && columnNumber == obj.columnNumber
+                && (fileName != null && fileName.equals(obj.fileName) || obj.fileName == null)
+                && (parentLocation != null && parentLocation.equals(obj.parentLocation) || obj.parentLocation == null);
+    }
+
     private void toString(StringBuilder b) {
         if (fileName == null) {
             b.append("<Unknown File>");
