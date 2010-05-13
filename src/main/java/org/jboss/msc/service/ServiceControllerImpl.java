@@ -23,7 +23,6 @@
 package org.jboss.msc.service;
 
 import java.util.Arrays;
-import java.util.Set;
 import java.util.concurrent.Executor;
 import org.jboss.msc.util.IdentityHashSet;
 import org.jboss.msc.value.Value;
@@ -61,7 +60,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     /**
      * The set of registered service listeners.
      */
-    private final Set<ServiceListener<? super S>> listeners = new IdentityHashSet<ServiceListener<? super S>>(0);
+    private final IdentityHashSet<ServiceListener<? super S>> listeners = new IdentityHashSet<ServiceListener<? super S>>(0);
     /**
      * The service name, if any.
      */
@@ -103,6 +102,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
      * Listener which is added to dependencies of this service.
      */
     private final ServiceListener<Object> dependencyListener = new DependencyListener();
+    private static final ServiceListener<?>[] NO_LISTENERS = new ServiceListener<?>[0];
 
     ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service<? extends S>> serviceValue, final Location location, final ServiceControllerImpl<?>[] dependencies, final ValueInjection<?>[] injections, final ServiceName serviceName) {
         this.container = container;
@@ -402,10 +402,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     @SuppressWarnings({ "unchecked" })
     ServiceListener<? super S>[] getListeners(int plusCount, Substate newState) {
         assert Thread.holdsLock(this);
-        final Set<ServiceListener<? super S>> listeners = this.listeners;
+        final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
         final int size = listeners.size();
         runningListeners = size + plusCount;
-        final ServiceListener[] listenersArray = listeners.toArray(new ServiceListener[size]);
+        final ServiceListener[] listenersArray = listeners.toScatteredArray((ServiceListener<? super S>[]) NO_LISTENERS);
         state = newState;
         switch (newState) {
             case STARTING:
@@ -436,7 +436,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         assert ! Thread.holdsLock(this);
         final Executor executor = container.getExecutor();
         for (final ServiceListener<? super S> listener : listeners) {
-            try {
+            if (listener != null) try {
                 executor.execute(new ListenerTask(listener, state));
             } catch (RuntimeException e) {
                 // todo log it and continue
@@ -562,7 +562,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             final Executor executor = container.getExecutor();
             executor.execute(new StopTask(service));
         } catch (RuntimeException e) {
-            doFail(new StartException(START_FAIL_EXCEPTION, e, location, serviceName));
+            // todo log it
         }
     }
 

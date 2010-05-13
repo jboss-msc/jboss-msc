@@ -23,6 +23,7 @@ package org.jboss.msc.util;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.reflect.Array;
 import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
@@ -338,7 +339,7 @@ public class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Clonea
     }
 
     @SuppressWarnings("unchecked")
-    public Object clone() {
+    public IdentityHashSet clone() {
         try {
             IdentityHashSet<E> clone = (IdentityHashSet<E>) super.clone();
             clone.table = table.clone();
@@ -348,7 +349,23 @@ public class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Clonea
             throw new IllegalStateException(e);
         }
     }
-
+    
+    /**
+     * Advanced method that returns a copy of the internal table. The resuling
+     * array will contain nulls at random places that must be skipped. In
+     * addition, it will not operate correctly if a null was inserted into the
+     * set. Use at your own risk....
+     * 
+     * @return an array containing elements in this set along with randomly
+     *         placed nulls,
+     */
+    public E[] toScatteredArray(E[] dummy) {
+        final E[] ret = (E[]) Array.newInstance(dummy.getClass().getComponentType(), table.length);
+        System.arraycopy((E[])table, 0, ret, 0, ret.length);
+        
+        return ret;
+    }
+    
     public void printDebugStats() {
         int optimal = 0;
         int total = 0;
