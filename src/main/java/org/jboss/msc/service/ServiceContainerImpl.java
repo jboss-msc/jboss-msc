@@ -35,7 +35,6 @@ import java.util.concurrent.TimeUnit;
 import org.jboss.msc.ref.Reaper;
 import org.jboss.msc.ref.Reference;
 import org.jboss.msc.ref.WeakReference;
-import org.jboss.msc.registry.ServiceName;
 import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 

@@ -22,7 +22,6 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.registry.ServiceName;
 import org.jboss.msc.value.Value;
 
 /**

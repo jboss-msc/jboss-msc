@@ -70,6 +70,25 @@ public final class ServiceName {
         hashCode = result;
     }
 
+    public ServiceName append(final String... parts) {
+        return of(this, parts);
+    }
+
+    public ServiceName append(final ServiceName serviceName) {
+        return of(this, getNameParts(serviceName, 0));
+    }
+
+    private String[] getNameParts(final ServiceName serviceName, final int idx) {
+        final String[] array;
+        if (serviceName.parent == null) {
+            array = new String[idx + 1];
+        } else {
+            array = getNameParts(serviceName.parent, idx + 1);
+        }
+        array[array.length - 1 - idx] = serviceName.name;
+        return array;
+    }
+
     @Override
     public boolean equals(Object o) {
         return this == o || o instanceof ServiceName && equals((ServiceName)o);
