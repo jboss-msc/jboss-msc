@@ -23,6 +23,7 @@ package org.jboss.msc.util;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.reflect.Array;
 import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
@@ -358,10 +359,13 @@ public class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Clonea
      * @return an array containing elements in this set along with randomly
      *         placed nulls,
      */
-    public E[] toScatteredArray() {
-        return (E[]) table.clone();
+    public E[] toScatteredArray(E[] dummy) {
+        final E[] ret = (E[]) Array.newInstance(dummy.getClass().getComponentType(), table.length);
+        System.arraycopy((E[])table, 0, ret, 0, ret.length);
+        
+        return ret;
     }
-
+    
     public void printDebugStats() {
         int optimal = 0;
         int total = 0;
