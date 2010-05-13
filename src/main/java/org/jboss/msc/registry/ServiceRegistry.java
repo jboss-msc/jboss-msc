@@ -26,6 +26,10 @@ import java.util.Collection;
 import org.jboss.msc.service.ServiceContainer;
 
 /**
+ * Service registry capable of installing batches of services and enforcing dependency order. 
+ *
+ * @author John Bailey
+ * @author Jason T. Greene
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface ServiceRegistry {
