@@ -457,7 +457,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             final Executor executor = container.getExecutor();
             executor.execute(new StartTask(service));
         } catch (Throwable t) {
-            doFail(new StartException(START_FAIL_EXCEPTION, t));
+            doFail(new StartException(START_FAIL_EXCEPTION, t, location, serviceName));
         }
     }
 
@@ -564,7 +564,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             final Executor executor = container.getExecutor();
             executor.execute(new StopTask(service));
         } catch (RuntimeException e) {
-            doFail(new StartException(START_FAIL_EXCEPTION, e));
+            doFail(new StartException(START_FAIL_EXCEPTION, e, location, serviceName));
         }
     }
 
@@ -773,6 +773,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     }
                 }
             } catch (StartException e) {
+                e.setServiceName(serviceName);
                 synchronized (ServiceControllerImpl.this) {
                     final ContextState oldState = context.state;
                     if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
@@ -787,7 +788,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     final ContextState oldState = context.state;
                     if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
                         context.state = ContextState.FAILED;
-                        startException = new StartException("Failed to start service", t, location);
+                        startException = new StartException("Failed to start service", t, location, serviceName);
                         doFinishListener(null);
                     } else {
                         // todo log warning

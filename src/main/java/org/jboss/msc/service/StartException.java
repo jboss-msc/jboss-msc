@@ -22,6 +22,8 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.registry.ServiceName;
+
 /**
  * A start exception, thrown when a service fails to start.
  *
@@ -31,13 +33,16 @@ public class StartException extends Exception {
 
     private static final long serialVersionUID = 239274385917008839L;
 
-    private Location location;
+    private final Location location;
+    private volatile ServiceName serviceName;
 
     /**
      * Constructs a {@code StartException} with no detail message. The cause is not initialized, and may subsequently be
      * initialized by a call to {@link #initCause(Throwable) initCause}.
      */
     public StartException() {
+        location = null;
+        serviceName = null;
     }
 
     /**
@@ -48,6 +53,8 @@ public class StartException extends Exception {
      */
     public StartException(final String msg) {
         super(msg);
+        location = null;
+        serviceName = null;
     }
 
     /**
@@ -59,6 +66,8 @@ public class StartException extends Exception {
      */
     public StartException(final Throwable cause) {
         super(cause);
+        location = null;
+        serviceName = null;
     }
 
     /**
@@ -69,33 +78,62 @@ public class StartException extends Exception {
      */
     public StartException(final String msg, final Throwable cause) {
         super(msg, cause);
+        location = null;
+        serviceName = null;
     }
 
     public StartException(final Location location) {
         this.location = location;
+        serviceName = null;
     }
 
     public StartException(final String message, final Location location) {
         super(message);
         this.location = location;
+        serviceName = null;
     }
 
     public StartException(final String message, final Throwable cause, final Location location) {
         super(message, cause);
         this.location = location;
+        serviceName = null;
     }
 
     public StartException(final Throwable cause, final Location location) {
         super(cause);
         this.location = location;
+        serviceName = null;
+    }
+
+    public StartException(final String message, final Throwable cause, final Location location, final ServiceName serviceName) {
+        super(message, cause);
+        this.location = location;
+        this.serviceName = serviceName;
+    }
+
+    public ServiceName getServiceName() {
+        return serviceName;
+    }
+
+    public void setServiceName(final ServiceName serviceName) {
+        this.serviceName = serviceName;
     }
 
     public String toString() {
+        final StringBuilder b = new StringBuilder(getClass().getName());
+        if (serviceName != null) {
+            b.append(" in service ").append(serviceName);
+        } else {
+            b.append(" in anonymous service");
+        }
+        final String m = getLocalizedMessage();
+        if (m != null) {
+            b.append(": ").append(m);
+        }
         final Location location = this.location;
         if (location != null) {
-            return super.toString() + "\n\tAt file " + location.toString();
-        } else {
-            return super.toString();
+            b.append("\n\tAt file ").append(location);
         }
+        return b.toString();
     }
 }
