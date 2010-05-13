@@ -338,7 +338,7 @@ public class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Clonea
     }
 
     @SuppressWarnings("unchecked")
-    public Object clone() {
+    public IdentityHashSet clone() {
         try {
             IdentityHashSet<E> clone = (IdentityHashSet<E>) super.clone();
             clone.table = table.clone();
@@ -347,6 +347,19 @@ public class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Clonea
             // should never happen
             throw new IllegalStateException(e);
         }
+    }
+    
+    /**
+     * Advanced method that returns a copy of the internal table. The resuling
+     * array will contain nulls at random places that must be skipped. In
+     * addition, it will not operate correctly if a null was inserted into the
+     * set. Use at your own risk....
+     * 
+     * @return an array containing elements in this set along with randomly
+     *         placed nulls,
+     */
+    public E[] toScatteredArray() {
+        return (E[]) table.clone();
     }
 
     public void printDebugStats() {
