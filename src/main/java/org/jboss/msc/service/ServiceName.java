@@ -32,6 +32,11 @@ public final class ServiceName {
     private final int hashCode;
 
     /**
+     * The root name "jboss".
+     */
+    public static final ServiceName JBOSS = new ServiceName(null, "jboss");
+
+    /**
      * Create a ServiceName from a series of String parts.
      *
      * @param parts The string representations of the service name segments
