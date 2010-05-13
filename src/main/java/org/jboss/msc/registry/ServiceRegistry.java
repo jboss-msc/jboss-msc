@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentMap;
  * Service registry capable of installing batches of services and enforcing dependency order. 
  *
  * @author John Bailey
+ * @author Jason T. Greene
  */
 public class ServiceRegistry {
     private final ConcurrentMap<ServiceName, ServiceController<?>> registry = new ConcurrentHashMap<ServiceName, ServiceController<?>>();
