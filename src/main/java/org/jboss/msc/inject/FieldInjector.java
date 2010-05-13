@@ -53,7 +53,7 @@ public final class FieldInjector<T> implements Injector<T> {
     /** {@inheritDoc} */
     public void inject(final T value) {
         try {
-            fieldValue.getValue().set(target, value);
+            fieldValue.getValue().set(target.getValue(), value);
         } catch (Exception e) {
             throw new InjectionException("Failed to inject value into field", e);
         }
@@ -67,7 +67,7 @@ public final class FieldInjector<T> implements Injector<T> {
             return;
         }
         try {
-            field.set(target, null);
+            field.set(target.getValue(), null);
         } catch (Throwable throwable) {
             log.warnf(throwable, "Unexpected failure to uninject into field");
         }

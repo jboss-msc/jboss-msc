@@ -3,10 +3,13 @@ package org.jboss.msc.registry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.Location;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.service.ValueInjection;
 import org.jboss.msc.value.Value;
 
 import java.util.Collection;
@@ -24,11 +27,13 @@ public final class ServiceDefinition<T> {
     private final ServiceController.Mode initialMode;
     private final Location location;
     private final Value<? extends Service<T>> service;
+    private final ValueInjectionBuilder[] injectionBuilders;
 
     private static final String[] NO_DEPS = new String[0];
+    private static final ValueInjectionBuilder[] NO_INJECTIONS = new ValueInjectionBuilder[0];
 
-    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<? extends Service<T>> service, String[] dependencies) {
-        if (name == null) {
+    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<? extends Service<T>> service, String[] dependencies, ValueInjectionBuilder[] injectionBuilders) {
+        if(name == null) {
             throw new IllegalArgumentException("Name can not be null");
         }
         this.name = name;
@@ -36,16 +41,18 @@ public final class ServiceDefinition<T> {
         this.initialMode = initialMode;
         this.location = location;
         this.service = service;
+        this.injectionBuilders = injectionBuilders;
     }
-    
+
     public static <T> Builder<T> build(final ServiceName name, final Value<? extends Service<T>> service) {
         return new Builder<T>(name, service);
     }
-    
+
     public static final class Builder<T> {
         private final ServiceName name;
         private final Value<? extends Service<T>> service;
         private List<String> dependencies = new ArrayList<String>(0);
+        private List<ValueInjectionBuilder> injections = new ArrayList<ValueInjectionBuilder>(0);
         private ServiceController.Mode initialMode = ServiceController.Mode.AUTOMATIC;
         private Location location;
 
@@ -57,37 +64,48 @@ public final class ServiceDefinition<T> {
             this.service = service;
 
         }
-        
+
         public Builder<T> addDependency(String dependency) {
-            if (dependency == null)
+            if(dependency == null)
                 throw new IllegalArgumentException("Dependency can not be null");
-            
+
             dependencies.add(dependency);
-            
+
             return this;
         }
-        
-        public Builder<T> addDependencies(Collection<String> dependencies)
-        {
-            if (dependencies == null)
+
+        public Builder<T> addDependencies(Collection<String> dependencies) {
+            if(dependencies == null)
                 throw new IllegalArgumentException("Dependencies can not be null");
-            
+
             this.dependencies.addAll(dependencies);
-            
+
             return this;
         }
-        
-        public Builder<T> addDependencies(String... dependencies)
-        {
-            for (String d : dependencies)
+
+        public Builder<T> addDependencies(String... dependencies) {
+            for(String d : dependencies)
                 this.dependencies.add(d);
-            
+
             return this;
         }
-        
+
+        public <I> Builder<T> addInjection(final Value<I> value, final Injector<I> injector) {
+            injections.add(new ValueInjectionBuilder<I>(value, injector));
+
+            return this;
+        }
+
+        public <I> Builder<T> addInjection(final Value<I> value, final Injector<I> injector, final String dependency) {
+            if(!dependencies.contains(dependency))
+                dependencies.add(dependency); // HMMM, what if the deps are added after the injections
+
+            return addInjection(value, injector);
+        }
+
         public Builder<T> setLocation(Location location) {
             this.location = location;
-            
+
             return this;
         }
 
@@ -97,12 +115,21 @@ public final class ServiceDefinition<T> {
         }
 
         public ServiceDefinition<T> create() {
-            final int size = dependencies.size();
-            if (size == 0) {
-                return new ServiceDefinition<T>(name, initialMode, location, service, NO_DEPS);
+            final int dependenciesSize = dependencies.size();
+            final String[] dependencies;
+            if(dependenciesSize == 0) {
+                dependencies = NO_DEPS;
             } else {
-                return new ServiceDefinition<T>(name, initialMode, location, service, dependencies.toArray(new String[size]));
+                dependencies = this.dependencies.toArray(new String[dependenciesSize]);
             }
+            final int injectionsSize = injections.size();
+            final ValueInjectionBuilder[] injections;
+            if(injectionsSize == 0) {
+                injections = NO_INJECTIONS;
+            } else {
+                injections = this.injections.toArray(new ValueInjectionBuilder[injectionsSize]);
+            }
+            return new ServiceDefinition<T>(name, initialMode, location, service, dependencies, injections);
         }
     }
 
@@ -116,6 +143,10 @@ public final class ServiceDefinition<T> {
 
     String[] getDependenciesDirect() {
         return dependencies;
+    }
+
+    public ValueInjectionBuilder[] getInjections() {
+        return injectionBuilders;
     }
 
     public ServiceController.Mode getInitialMode() {
@@ -137,5 +168,19 @@ public final class ServiceDefinition<T> {
                 name,
                 initialMode,
                 location);
+    }
+
+    public static class ValueInjectionBuilder<T> {
+        private Injector<T> injector;
+        private Value<T> value;
+
+        ValueInjectionBuilder(Value<T> value, Injector<T> injector) {
+            this.injector = injector;
+            this.value = value;
+        }
+
+        public ValueInjection<T> create() {
+            return new ValueInjection<T>(value, injector);
+        }
     }
 }
