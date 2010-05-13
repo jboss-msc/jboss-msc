@@ -23,8 +23,6 @@
 package org.jboss.msc.service;
 
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import org.jboss.msc.util.IdentityHashSet;
