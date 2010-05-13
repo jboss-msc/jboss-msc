@@ -147,8 +147,8 @@ public class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Clonea
     }
 
     // The normal bit spreader...
-    private static final int hash(Object key) {
-        int h = key.hashCode();
+    private static final int hash(Object o) {
+        int h = System.identityHashCode(o);
         h ^= (h >>> 20) ^ (h >>> 12);
         return h ^ (h >>> 7) ^ (h >>> 4);
     }
