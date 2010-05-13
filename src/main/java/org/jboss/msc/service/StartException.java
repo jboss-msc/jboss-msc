@@ -22,7 +22,6 @@
 
 package org.jboss.msc.service;
 
-
 /**
  * A start exception, thrown when a service fails to start.
  *

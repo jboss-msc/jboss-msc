@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
 import java.util.concurrent.Executor;
-
 import org.jboss.msc.util.IdentityHashSet;
 import org.jboss.msc.value.Value;
 

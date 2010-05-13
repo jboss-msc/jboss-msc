@@ -23,7 +23,6 @@
 package org.jboss.msc.service;
 
 import java.util.concurrent.Executor;
-
 import org.jboss.msc.value.Value;
 
 /**
