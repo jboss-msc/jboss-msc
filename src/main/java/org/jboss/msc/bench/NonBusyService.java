@@ -28,33 +28,19 @@ import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
 
 /**
- * A test service which performs a long-ish calculation with embedded sleeps.
+ * A test service which sleeps.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class NonBusyService implements Service<NonBusyService> {
-    private static final int N = 1000000;
-    double sum = 0;
 
     public void start(final StartContext context) throws StartException {
-        // calculate pi, slowly (and inaccurately).  Takes around 232 ms on my 1.86GHz system (with embedded sleeps).
-        double sum = 0.0;
-        double term;
-        double sign = 1.0;
-        for (int k = 0; k < N; k++) {
-           term = 1.0/(2.0*k + 1.0);
-           sum = sum + sign*term;
-           sign = -sign;
-            if (k % (N/5) == 0) {
-                try {
-                    Thread.sleep(40L);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new StartException("Interrupted", e);
-                }
-            }
+        try {
+            Thread.sleep(230L);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new StartException("interrupted", e);
         }
-        this.sum = sum;
     }
 
     public void stop(final StopContext context) {
