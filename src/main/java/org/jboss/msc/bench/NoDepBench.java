@@ -28,6 +28,6 @@ public class NoDepBench {
         batch.install();
         listener.finishBatch();
         latch.await();
-        System.out.println(totalServiceDefinitions + " : "  + listener.getElapsedTime() + "ms");
+        System.out.println(totalServiceDefinitions + " : "  + listener.getElapsedTime() / 1000.0);
     }
 }
