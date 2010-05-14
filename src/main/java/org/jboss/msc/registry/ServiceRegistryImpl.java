@@ -121,7 +121,7 @@ class ServiceRegistryImpl implements ServiceRegistry {
                 builder.addValueInjection(injection);
             }
             for (NamedServiceInjection<?> injection : serviceDefinition.getNamedInjectionsDirect()) {
-                builder.addValueInjection(registry.get(injection.getDependencyName()), (Injector) injection.getInjector());
+                builder.addValueInjection(new ValueInjection(registry.get(injection.getDependencyName()), (Injector) injection.getInjector()));
             }
 
             final ServiceController<?> serviceController = builder.create();
