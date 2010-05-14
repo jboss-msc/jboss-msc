@@ -21,15 +21,27 @@
  */
 package org.jboss.msc.service;
 
+import java.io.IOException;
+import java.io.InvalidObjectException;
+import java.io.ObjectInputStream;
+import java.io.Serializable;
+import java.lang.reflect.Field;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+
 /**
  * Service name class.
  *
  * @author John Bailey
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class ServiceName {
+public final class ServiceName implements Comparable<ServiceName>, Serializable {
+
+    private static final long serialVersionUID = 2336190201880964151L;
+
     private final String name;
     private final ServiceName parent;
-    private final int hashCode;
+    private transient final int hashCode;
 
     /**
      * The root name "jboss".
@@ -70,9 +82,13 @@ public final class ServiceName {
         this.name = name;
         this.parent = parent;
 
+        hashCode = calculateHashCode(parent, name);
+    }
+
+    private static int calculateHashCode(final ServiceName parent, final String name) {
         int result = parent == null ? 1 : parent.hashCode();
         result = 31 * result + name.hashCode();
-        hashCode = result;
+        return result;
     }
 
     /**
@@ -92,25 +108,60 @@ public final class ServiceName {
      * @return A new ServiceName
      */
     public ServiceName append(final ServiceName serviceName) {
-        return of(this, getNameParts(serviceName, 0));
-    }
-
-    private String[] getNameParts(final ServiceName serviceName, final int idx) {
-        final String[] array;
         if (serviceName.parent == null) {
-            array = new String[idx + 1];
+            return append(serviceName.name);
         } else {
-            array = getNameParts(serviceName.parent, idx + 1);
+            return append(serviceName.parent).append(serviceName.name);
         }
-        array[array.length - 1 - idx] = serviceName.name;
-        return array;
     }
 
+    /**
+     * Get the length (in segments) of this service name.
+     *
+     * @return the length
+     */
+    public int length() {
+        final ServiceName parent = this.parent;
+        return parent == null ? 1 : 1 + parent.length();
+    }
+
+    /**
+     * Get the parent (enclosing) service name.
+     *
+     * @return the parent name
+     */
+    public ServiceName getParent() {
+        return parent;
+    }
+
+    /**
+     * Get the simple (unqualified) name of this service.
+     *
+     * @return the simple name
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * Compare this service name to another service name.  This is done by comparing the parents and leaf name of
+     * each service name.
+     *
+     * @param o the other service name
+     * @return {@code true} if they are equal, {@code false} if they are not equal or the argument is not a service name or is {@code null}
+     */
     @Override
     public boolean equals(Object o) {
         return this == o || o instanceof ServiceName && equals((ServiceName)o);
     }
 
+    /**
+     * Compare this service name to another service name.  This is done by comparing the parents and leaf name of
+     * each service name.
+     *
+     * @param o the other service name
+     * @return {@code true} if they are equal, {@code false} if they are not equal or the argument is {@code null}
+     */
     public boolean equals(ServiceName o) {
         if (o == this) {
             return true;
@@ -124,13 +175,94 @@ public final class ServiceName {
         return parent != null && parent.equals(oparent) || oparent == null;
     }
 
+    /**
+     * Return the hash code of this service name.
+     *
+     * @return the hash code
+     */
     @Override
     public int hashCode() {
         return hashCode;
     }
 
+    /**
+     * Get a string representation of this service name.
+     *
+     * @return the string representation
+     */
     @Override
     public String toString() {
         return parent != null ? parent.toString() + "." + name : name;
+    }
+
+    /**
+     * Compare two service names lexicographically.
+     *
+     * @param o the other name
+     * @return -1 if this name collates before the argument, 1 if it collates after, or 0 if they are equal
+     */
+    public int compareTo(final ServiceName o) {
+        if (o == null) {
+            throw new IllegalArgumentException("o is null");
+        }
+        if (this == o) return 0;
+        final int length1 = length();
+        final int length2 = o.length();
+        int res;
+        if (length1 == length2) {
+            return compareTo(o, length1 - 1);
+        }
+        int diff = length1 - length2;
+        if (diff > 0) {
+            ServiceName x;
+            for (x = this; diff > 0; diff--) {
+                x = x.parent;
+            }
+            res = x.compareTo(o, length2 - 1);
+            return res == 0 ? 1 : res;
+        } else {
+            return - o.compareTo(this);
+        }
+    }
+
+    private int compareTo(final ServiceName o, final int remainingLength) {
+        if (this == o) {
+            return 0;
+        } else if (remainingLength == 0) {
+            return name.compareTo(o.name);
+        } else {
+            int res = parent.compareTo(o.parent, remainingLength - 1);
+            return res == 0 ? name.compareTo(o.name) : res;
+        }
+    }
+
+    // Serialization stuff
+
+    private static final Field hashCodeField;
+
+    static {
+        hashCodeField = AccessController.doPrivileged(new PrivilegedAction<Field>() {
+            public Field run() {
+                final Field field;
+                try {
+                    field = ServiceName.class.getDeclaredField("hashCode");
+                } catch (Exception e) {
+                    throw new IllegalStateException(e);
+                }
+                field.setAccessible(true);
+                return field;
+            }
+        });
+    }
+
+    private void readObject(ObjectInputStream ois) throws ClassNotFoundException, IOException {
+        ois.defaultReadObject();
+        try {
+            hashCodeField.setInt(this, calculateHashCode(parent, name));
+        } catch (IllegalAccessException e) {
+            final InvalidObjectException e2 = new InvalidObjectException("Cannot set hash code field");
+            e2.initCause(e);
+            throw e2;
+        }
     }
 }
