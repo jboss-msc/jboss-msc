@@ -43,6 +43,15 @@ public final class LookupMethodValue implements Value<Method> {
      * @param parameterTypes the method parameter types
      */
     public LookupMethodValue(final Value<Class<?>> target, final String methodName, final List<? extends Value<Class<?>>> parameterTypes) {
+        if (target == null) {
+            throw new IllegalArgumentException("target is null");
+        }
+        if (methodName == null) {
+            throw new IllegalArgumentException("methodName is null");
+        }
+        if (parameterTypes == null) {
+            throw new IllegalArgumentException("parameterTypes is null");
+        }
         this.target = target;
         this.methodName = methodName;
         this.parameterTypes = parameterTypes;

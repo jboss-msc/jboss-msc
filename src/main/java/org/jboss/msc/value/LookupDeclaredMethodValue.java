@@ -51,6 +51,18 @@ public final class LookupDeclaredMethodValue implements Value<Method> {
      * @param makeAccessible {@code true} to make the method accessible under the provided access control context
      */
     public LookupDeclaredMethodValue(final Value<Class<?>> target, final String methodName, final List<? extends Value<Class<?>>> parameterTypes, final AccessControlContext context, final boolean makeAccessible) {
+        if (target == null) {
+            throw new IllegalArgumentException("target is null");
+        }
+        if (methodName == null) {
+            throw new IllegalArgumentException("methodName is null");
+        }
+        if (parameterTypes == null) {
+            throw new IllegalArgumentException("parameterTypes is null");
+        }
+        if (context == null) {
+            throw new IllegalArgumentException("context is null");
+        }
         this.target = target;
         this.methodName = methodName;
         this.parameterTypes = parameterTypes;

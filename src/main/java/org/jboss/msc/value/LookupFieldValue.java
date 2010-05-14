@@ -40,6 +40,12 @@ public final class LookupFieldValue implements Value<Field> {
      * @param fieldName the name of the field to look up
      */
     public LookupFieldValue(final Value<Class<?>> target, final String fieldName) {
+        if (target == null) {
+            throw new IllegalArgumentException("target is null");
+        }
+        if (fieldName == null) {
+            throw new IllegalArgumentException("fieldName is null");
+        }
         this.target = target;
         this.fieldName = fieldName;
     }
