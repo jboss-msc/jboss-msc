@@ -23,6 +23,7 @@
 package org.jboss.msc.services;
 
 import org.jboss.msc.service.Service;
+import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
@@ -41,6 +42,20 @@ public final class MBeanService implements Service<Void> {
     private final Value<? extends MBeanServer> mbeanServer;
     private final Value<?> value;
     private final ObjectName objectName;
+
+    /**
+     * The service name under which JMX-related entities are registered.
+     */
+    public static ServiceName JBOSS_JMX = ServiceName.JBOSS.append("jmx");
+    /**
+     * The service name under which mbeans for services are registered.  The service name that was registered as an
+     * mbean will follow this part.
+     */
+    public static ServiceName JBOSS_JMX_MBEAN = JBOSS_JMX.append("mbean");
+    /**
+     * The service name under which mbean servers are registered.
+     */
+    public static ServiceName JBOSS_JMX_MBEANSERVER = JBOSS_JMX.append("mbeanServer");
 
     /**
      * Construct a new instance.
