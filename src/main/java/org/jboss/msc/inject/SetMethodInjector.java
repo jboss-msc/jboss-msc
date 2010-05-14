@@ -37,6 +37,8 @@ import org.jboss.msc.value.Value;
 public final class SetMethodInjector<T> implements Injector<T> {
     private static final Logger log = Logger.getI18nLogger("org.jboss.msc.inject.method", null, "MSC");
 
+    private final static Object[] NULL_PARAM = new Object[] {null};
+
     private final Value<?> target;
     private final Value<Method> methodValue;
 
@@ -109,7 +111,7 @@ public final class SetMethodInjector<T> implements Injector<T> {
     /** {@inheritDoc} */
     public void uninject() {
         try {
-            methodValue.getValue().invoke(target.getValue());
+            methodValue.getValue().invoke(target.getValue(), NULL_PARAM);
         } catch (Exception e) {
             log.warnf(e, "Unexpected failure to uninject method");
         }
