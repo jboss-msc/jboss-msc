@@ -139,7 +139,7 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
      *
      * @return the simple name
      */
-    public String getName() {
+    public String getSimpleName() {
         return name;
     }
 
