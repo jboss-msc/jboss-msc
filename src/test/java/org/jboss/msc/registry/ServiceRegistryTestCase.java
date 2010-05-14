@@ -158,19 +158,6 @@ public class ServiceRegistryTestCase {
         System.out.println("Time: " + (end - start));
     }
 
-    @Test
-    public void testServiceName() {
-        ServiceName serviceName = ServiceName.of("test", "service");
-        Assert.assertEquals("test.service", serviceName.toString());
-
-        ServiceName serviceName2 = serviceName.append("2");
-        Assert.assertEquals("test.service.2", serviceName2.toString());
-
-        serviceName = serviceName.append(ServiceName.of("other", "service"));
-        Assert.assertEquals("test.service.other.service", serviceName.toString());
-    }
-
-    @Test
     public void testBasicInjection() throws Exception {
         ServiceRegistrationBatchBuilder batch = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
 
