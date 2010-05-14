@@ -1,5 +1,7 @@
 package org.jboss.msc.bench;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import org.jboss.msc.registry.ServiceDefinition;
@@ -10,7 +12,7 @@ import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.TimingServiceListener;
 
-public class NoDepBench {
+public class TenForwardBench {
 
     public static void main(String[] args) throws Exception {
         final int totalServiceDefinitions = Integer.parseInt(args[0]);
@@ -25,8 +27,15 @@ public class NoDepBench {
             }
         });
         for (int i = 0; i < totalServiceDefinitions; i++) {
-            batch.add(ServiceDefinition.build(ServiceName.of("test" + i), Service.NULL_VALUE).addListener(listener).create());
+            List<ServiceName> deps = new ArrayList<ServiceName>();
+            int numDeps = Math.min(10, totalServiceDefinitions - i - 1);
+
+            for (int j = 1; j < numDeps + 1; j++) {
+                deps.add(ServiceName.of(("test" + (i + j)).intern()));
+            }
+            batch.add(ServiceDefinition.build(ServiceName.of(("test" + i).intern()), Service.NULL_VALUE).addListener(listener).addDependencies(deps.toArray(new ServiceName[deps.size()])).create());
         }
+        
         batch.install();
         listener.finishBatch();
         latch.await();
