@@ -37,6 +37,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     private static final String SERVICE_REMOVED = "Service has been removed";
     private static final String SERVICE_NOT_AVAILABLE = "Service is not available";
 
+    private static final ServiceListener<?>[] NO_LISTENERS = new ServiceListener<?>[0];
+
     /**
      * The service container which contains this instance.
      */
@@ -89,8 +91,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
      */
     private int upperCount;
     /**
-     * The number of dependents that are currently running.  The deployment will not leave the {@link State#STOPPING} state
-     * until all running dependents are stopped.
+     * The number of dependents that are currently running.  The deployment will not execute the {@code stop()} method
+     * (and subsequently leave the {@link State#STOPPING} state) until all running dependents are stopped.
      */
     private int runningDependents;
     /**
@@ -102,7 +104,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
      * Listener which is added to dependencies of this service.
      */
     private final ServiceListener<Object> dependencyListener = new DependencyListener();
-    private static final ServiceListener<?>[] NO_LISTENERS = new ServiceListener<?>[0];
 
     ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service<? extends S>> serviceValue, final Location location, final ServiceControllerImpl<?>[] dependencies, final ValueInjection<?>[] injections, final ServiceName serviceName) {
         this.container = container;

@@ -178,6 +178,11 @@ final class ServiceContainerImpl implements ServiceContainer {
         }
 
         public void listenerAdded(final ServiceController<? extends Object> serviceController) {
+            final ServiceController.State state = serviceController.getState();
+            if (state == ServiceController.State.DOWN || state == ServiceController.State.REMOVED) {
+                countDown();
+                serviceController.removeListener(this);
+            }
         }
 
         public void serviceStarting(final ServiceController<? extends Object> serviceController) {
