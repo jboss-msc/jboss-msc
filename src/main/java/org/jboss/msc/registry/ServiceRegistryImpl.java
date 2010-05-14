@@ -21,6 +21,7 @@
  */
 package org.jboss.msc.registry;
 
+import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.AbstractServiceListener;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceContainer;
@@ -73,6 +74,7 @@ class ServiceRegistryImpl implements ServiceRegistry {
         }
     }
 
+    @SuppressWarnings({ "unchecked" })
     private void doResolve(BatchBuilderImpl.BatchEntry entry, final Map<ServiceName, BatchBuilderImpl.BatchEntry> services) throws ServiceRegistryException {
         outer:
         while (entry != null) {
@@ -115,8 +117,11 @@ class ServiceRegistryImpl implements ServiceRegistry {
             // We are resolved.  Lets install
             builder.addListener(new ServiceUnregisterListener(name));
 
-            for(ValueInjection<?> injection : serviceDefinition.getInjections()) {
+            for(ValueInjection<?> injection : serviceDefinition.getInjectionsDirect()) {
                 builder.addValueInjection(injection);
+            }
+            for (NamedServiceInjection<?> injection : serviceDefinition.getNamedInjectionsDirect()) {
+                builder.addValueInjection(registry.get(injection.getDependencyName()), (Injector) injection.getInjector());
             }
 
             final ServiceController<?> serviceController = builder.create();

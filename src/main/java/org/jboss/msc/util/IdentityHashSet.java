@@ -359,6 +359,7 @@ public class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Clonea
      * @return an array containing elements in this set along with randomly
      *         placed nulls,
      */
+    @SuppressWarnings({ "unchecked" })
     public E[] toScatteredArray(E[] dummy) {
         final E[] ret = (E[]) Array.newInstance(dummy.getClass().getComponentType(), table.length);
         System.arraycopy((E[])table, 0, ret, 0, ret.length);

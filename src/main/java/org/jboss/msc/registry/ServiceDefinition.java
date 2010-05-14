@@ -30,12 +30,15 @@ public final class ServiceDefinition<T> {
     private final ServiceController.Mode initialMode;
     private final Location location;
     private final Value<? extends Service<T>> service;
-    private final ValueInjection[] injections;
+    private final ValueInjection<?>[] injections;
+    private final NamedServiceInjection<?>[] namedInjections;
 
     private static final ServiceName[] NO_DEPS = new ServiceName[0];
     private static final ValueInjection[] NO_INJECTIONS = new ValueInjection[0];
+    private static final NamedServiceInjection<?>[] NO_NAMED_INJECTIONS = new NamedServiceInjection<?>[0];
 
-    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<? extends Service<T>> service, ServiceName[] dependencies, ValueInjection[] injections) {
+    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<? extends Service<T>> service, ServiceName[] dependencies, ValueInjection<?>[] injections, final NamedServiceInjection<?>[] namedInjections) {
+        this.namedInjections = namedInjections;
         if(name == null) {
             throw new IllegalArgumentException("Name can not be null");
         }
@@ -80,7 +83,8 @@ public final class ServiceDefinition<T> {
         private final ServiceName name;
         private final Value<? extends Service<T>> service;
         private Collection<ServiceName> dependencies = new HashSet<ServiceName>(0);
-        private List<ValueInjection> injections = new ArrayList<ValueInjection>(0);
+        private List<ValueInjection<?>> injections = new ArrayList<ValueInjection<?>>(0);
+        private List<NamedServiceInjection<?>> namedServiceInjections = new ArrayList<NamedServiceInjection<?>>(0);
         private List<ServiceListener<? super T>> listeners = new ArrayList<ServiceListener<? super T>>(0);
         private ServiceController.Mode initialMode = ServiceController.Mode.AUTOMATIC;
         private Location location;
@@ -127,11 +131,11 @@ public final class ServiceDefinition<T> {
             return this;
         }
 
-        public <I> Builder<T> addInjection(final Value<I> value, final Injector<I> injector, final ServiceName dependency) {
-            if(!dependencies.contains(dependency))
-                dependencies.add(dependency); // HMMM, what if the deps are added after the injections
+        public <I> Builder<T> addInjection(final ServiceName dependency, final Injector<I> injector) {
+            dependencies.add(dependency);
+            namedServiceInjections.add(new NamedServiceInjection<I>(dependency, injector));
 
-            return addInjection(value, injector);
+            return this;
         }
 
         public Builder<T> addListener(final ServiceListener<? super T> listener) {
@@ -165,7 +169,14 @@ public final class ServiceDefinition<T> {
             } else {
                 injections = this.injections.toArray(new ValueInjection<?>[injectionsSize]);
             }
-            return new ServiceDefinition<T>(name, initialMode, location, service, dependencies, injections);
+            final int namedServiceInjectionsSize = namedServiceInjections.size();
+            final NamedServiceInjection<?>[] namedInjections;
+            if (namedServiceInjectionsSize == 0) {
+                namedInjections = NO_NAMED_INJECTIONS;
+            } else {
+                namedInjections = namedServiceInjections.toArray(new NamedServiceInjection<?>[namedServiceInjectionsSize]);
+            }
+            return new ServiceDefinition<T>(name, initialMode, location, service, dependencies, injections, namedInjections);
         }
     }
 
@@ -182,7 +193,19 @@ public final class ServiceDefinition<T> {
     }
 
     public ValueInjection<?>[] getInjections() {
+        return injections.clone();
+    }
+
+    ValueInjection<?>[] getInjectionsDirect() {
         return injections;
+    }
+
+    public NamedServiceInjection<?>[] getNamedInjections() {
+        return namedInjections.clone();
+    }
+
+    NamedServiceInjection<?>[] getNamedInjectionsDirect() {
+        return namedInjections;
     }
 
     public ServiceController.Mode getInitialMode() {
