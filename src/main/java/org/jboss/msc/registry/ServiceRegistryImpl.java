@@ -66,59 +66,14 @@ class ServiceRegistryImpl implements ServiceRegistry {
         }
     }
 
-    /**
-     * Recursive depth-first resolution
-     *
-     * @param services The list of items to be resolved
-     * @throws ResolutionException if any problem occur during resolution
-     */
     private void resolve(final Map<ServiceName, BatchBuilderImpl.BatchEntry> services) throws ServiceRegistryException {
         for (BatchBuilderImpl.BatchEntry batchEntry : services.values()) {
             if(!batchEntry.processed)
-                iterResolve(batchEntry, services);
+                doResolve(batchEntry, services);
         }
     }
 
-    private ServiceController<?> resolve(final BatchBuilderImpl.BatchEntry entry, final Map<ServiceName, BatchBuilderImpl.BatchEntry> services) throws ServiceRegistryException {
-        final ServiceDefinition<?> serviceDefinition = entry.serviceDefinition;
-        entry.processed = true;
-        final ServiceName name = serviceDefinition.getName();
-        if (entry.visited)
-            throw new CircularDependencyException("Circular dependency discovered: " + serviceDefinition);
-
-        entry.visited = true;
-
-        try {
-            final ConcurrentMap<ServiceName, ServiceController<?>> registry = this.registry;
-            final ServiceBuilder<?> builder = serviceContainer.buildService(serviceDefinition.getService());
-
-            for (String dependency : serviceDefinition.getDependenciesDirect()) {
-                final ServiceName dependencyName = ServiceName.of(dependency);
-
-                ServiceController<?> dependencyController = registry.get(dependencyName);
-                if (dependencyController == null) {
-                    final BatchBuilderImpl.BatchEntry dependencyEntry = services.get(dependencyName);
-                    if (dependencyEntry == null)
-                        throw new MissingDependencyException("Missing dependency: " + name + " depends on " + dependencyName + " which can not be found");
-                    dependencyController = resolve(dependencyEntry, services);
-                }
-                builder.addDependency(dependencyController);
-            }
-
-            // We are resolved.  Lets install
-            builder.addListener(new ServiceUnregisterListener(name));
-
-            final ServiceController<?> serviceController = builder.create();
-            if(registry.putIfAbsent(name, serviceController) != null) {
-                throw new DuplicateServiceException("Duplicate service name provided: " + name);
-            }
-            return serviceController;
-        } finally {
-            entry.visited = false;
-        }
-    }
-
-    public void iterResolve(BatchBuilderImpl.BatchEntry entry, final Map<ServiceName, BatchBuilderImpl.BatchEntry> services) throws ServiceRegistryException {
+    private void doResolve(BatchBuilderImpl.BatchEntry entry, final Map<ServiceName, BatchBuilderImpl.BatchEntry> services) throws ServiceRegistryException {
         outer:
         while (entry != null) {
             final ServiceDefinition<?> serviceDefinition = entry.serviceDefinition;
