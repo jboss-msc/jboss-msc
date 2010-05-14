@@ -141,7 +141,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             state = this.state;
             if (state != Substate.REMOVED) listeners.add(listener);
         }
-        invokeListener(listener, state.getState());
+        listener.listenerAdded(this);
+        doFinishListener(null);
     }
 
     private void invokeListener(final ServiceListener<? super S> listener, final State state) {
@@ -851,9 +852,20 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         }
     }
 
-    private class DependencyListener implements ServiceListener<Object> {
+    private class DependencyListener extends AbstractServiceListener<Object> {
 
-        public void serviceStarting(final ServiceController<? extends Object> serviceController) {
+        public void listenerAdded(final ServiceController<? extends Object> serviceController) {
+            ServiceListener<? super S>[] listeners = null;
+            if (serviceController.getState() == State.UP) {
+                synchronized (ServiceControllerImpl.this) {
+                    if (++upperCount == 1 && mode != Mode.NEVER) {
+                        if (runningListeners == 0 && state == Substate.DOWN) {
+                            listeners = getListeners(1, Substate.STARTING);
+                        }
+                    }
+                }
+                if (listeners != null) doStart(listeners);
+            }
         }
 
         public void serviceStarted(final ServiceController<? extends Object> serviceController) {
@@ -868,9 +880,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             if (listeners != null) doStart(listeners);
         }
 
-        public void serviceFailed(final ServiceController<? extends Object> serviceController, final StartException reason) {
-        }
-
         public void serviceStopping(final ServiceController<? extends Object> serviceController) {
             ServiceListener<? super S>[] listeners = null;
             synchronized (ServiceControllerImpl.this) {
@@ -881,12 +890,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 }
             }
             if (listeners != null) doStop(listeners);
-        }
-
-        public void serviceStopped(final ServiceController<? extends Object> serviceController) {
-        }
-
-        public void serviceRemoved(final ServiceController<? extends Object> serviceController) {
         }
     }
 }

@@ -51,11 +51,11 @@ public class ServiceRegistryTestCase {
     @Test
     public void testResolvable() throws Exception {
         ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder()
-            .add(ServiceDefinition.build(ServiceName.of("7"), Service.NULL_VALUE).addDependencies("11", "8").create())
-            .add(ServiceDefinition.build(ServiceName.of("5"), Service.NULL_VALUE).addDependencies("11").create())
-            .add(ServiceDefinition.build(ServiceName.of("3"), Service.NULL_VALUE).addDependencies("11", "9").create())
-            .add(ServiceDefinition.build(ServiceName.of("11"), Service.NULL_VALUE).addDependencies("2", "9", "10").create())
-            .add(ServiceDefinition.build(ServiceName.of("8"), Service.NULL_VALUE).addDependencies("9").create())
+            .add(ServiceDefinition.build(ServiceName.of("7"), Service.NULL_VALUE).addDependencies(ServiceName.of("11"), ServiceName.of("8")).create())
+            .add(ServiceDefinition.build(ServiceName.of("5"), Service.NULL_VALUE).addDependencies(ServiceName.of("11")).create())
+            .add(ServiceDefinition.build(ServiceName.of("3"), Service.NULL_VALUE).addDependencies(ServiceName.of("11"), ServiceName.of("9")).create())
+            .add(ServiceDefinition.build(ServiceName.of("11"), Service.NULL_VALUE).addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10")).create())
+            .add(ServiceDefinition.build(ServiceName.of("8"), Service.NULL_VALUE).addDependencies(ServiceName.of("9")).create())
             .add(ServiceDefinition.build(ServiceName.of("2"), Service.NULL_VALUE).create())
             .add(ServiceDefinition.build(ServiceName.of("9"), Service.NULL_VALUE).create())
             .add(ServiceDefinition.build(ServiceName.of("10"), Service.NULL_VALUE).create())
@@ -72,11 +72,11 @@ public class ServiceRegistryTestCase {
                 .install();
 
         registry.batchBuilder()
-                .add(ServiceDefinition.build(ServiceName.of("7"), Service.NULL_VALUE).addDependencies("11", "8").create())
-                .add(ServiceDefinition.build(ServiceName.of("5"), Service.NULL_VALUE).addDependencies("11").create())
-                .add(ServiceDefinition.build(ServiceName.of("3"), Service.NULL_VALUE).addDependencies("11", "9").create())
-                .add(ServiceDefinition.build(ServiceName.of("11"), Service.NULL_VALUE).addDependencies("2", "9", "10").create())
-                .add(ServiceDefinition.build(ServiceName.of("8"), Service.NULL_VALUE).addDependencies("9").create())
+                .add(ServiceDefinition.build(ServiceName.of("7"), Service.NULL_VALUE).addDependencies(ServiceName.of("11"), ServiceName.of("8")).create())
+                .add(ServiceDefinition.build(ServiceName.of("5"), Service.NULL_VALUE).addDependencies(ServiceName.of("11")).create())
+                .add(ServiceDefinition.build(ServiceName.of("3"), Service.NULL_VALUE).addDependencies(ServiceName.of("11"), ServiceName.of("9")).create())
+                .add(ServiceDefinition.build(ServiceName.of("11"), Service.NULL_VALUE).addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10")).create())
+                .add(ServiceDefinition.build(ServiceName.of("8"), Service.NULL_VALUE).addDependencies(ServiceName.of("9")).create())
                 .install();
     }
 
@@ -85,12 +85,12 @@ public class ServiceRegistryTestCase {
     public void testMissingDependency() throws Exception {
         try {
              ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder()
-                .add(ServiceDefinition.build(ServiceName.of("7"), Service.NULL_VALUE).addDependencies("11", "8").create())
-                .add(ServiceDefinition.build(ServiceName.of("5"), Service.NULL_VALUE).addDependencies("11").create())
-                .add(ServiceDefinition.build(ServiceName.of("3"), Service.NULL_VALUE).addDependencies("11", "9").create())
-                .add(ServiceDefinition.build(ServiceName.of("11"), Service.NULL_VALUE).addDependencies("2", "9", "10").create())
-                .add(ServiceDefinition.build(ServiceName.of("8"), Service.NULL_VALUE).addDependencies("9").create())
-                .add(ServiceDefinition.build(ServiceName.of("2"), Service.NULL_VALUE).addDependencies("1").create())
+                .add(ServiceDefinition.build(ServiceName.of("7"), Service.NULL_VALUE).addDependencies(ServiceName.of("11"), ServiceName.of("8")).create())
+                .add(ServiceDefinition.build(ServiceName.of("5"), Service.NULL_VALUE).addDependencies(ServiceName.of("11")).create())
+                .add(ServiceDefinition.build(ServiceName.of("3"), Service.NULL_VALUE).addDependencies(ServiceName.of("11"), ServiceName.of("9")).create())
+                .add(ServiceDefinition.build(ServiceName.of("11"), Service.NULL_VALUE).addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10")).create())
+                .add(ServiceDefinition.build(ServiceName.of("8"), Service.NULL_VALUE).addDependencies(ServiceName.of("9")).create())
+                .add(ServiceDefinition.build(ServiceName.of("2"), Service.NULL_VALUE).addDependencies(ServiceName.of("1")).create())
                 .add(ServiceDefinition.build(ServiceName.of("9"), Service.NULL_VALUE).create())
                 .add(ServiceDefinition.build(ServiceName.of("10"), Service.NULL_VALUE).create())
                 .install();
@@ -105,9 +105,9 @@ public class ServiceRegistryTestCase {
 
         try {
              ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder()
-                    .add(ServiceDefinition.build(ServiceName.of("7"), Service.NULL_VALUE).addDependencies("5").create())
-                    .add(ServiceDefinition.build(ServiceName.of("5"), Service.NULL_VALUE).addDependencies("11").create())
-                    .add(ServiceDefinition.build(ServiceName.of("11"), Service.NULL_VALUE).addDependencies("7").create())
+                    .add(ServiceDefinition.build(ServiceName.of("7"), Service.NULL_VALUE).addDependencies(ServiceName.of("5")).create())
+                    .add(ServiceDefinition.build(ServiceName.of("5"), Service.NULL_VALUE).addDependencies(ServiceName.of("11")).create())
+                    .add(ServiceDefinition.build(ServiceName.of("11"), Service.NULL_VALUE).addDependencies(ServiceName.of("7")).create())
                     .install();
             fail("SHould have thrown circular dependency exception");
         } catch (ServiceRegistryException expected) {
@@ -121,13 +121,13 @@ public class ServiceRegistryTestCase {
         final int totalServiceDefinitions = 1000000;
 
         for (int i = 0; i < totalServiceDefinitions; i++) {
-            List<String> deps = new ArrayList<String>();
+            List<ServiceName> deps = new ArrayList<ServiceName>();
             int numDeps = Math.min(10, totalServiceDefinitions - i - 1);
 
             for (int j = 1; j < numDeps + 1; j++) {
-                deps.add(("test" + (i + j)).intern());
+                deps.add(ServiceName.of(("test" + (i + j)).intern()));
             }
-            batch.add(ServiceDefinition.build(ServiceName.of(("test" + i).intern()), Service.NULL_VALUE).addDependencies(deps.toArray(new String[deps.size()])).create());
+            batch.add(ServiceDefinition.build(ServiceName.of(("test" + i).intern()), Service.NULL_VALUE).addDependencies(deps.toArray(new ServiceName[deps.size()])).create());
         }
 
         long start = System.currentTimeMillis();

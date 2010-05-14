@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class TimingServiceListener implements ServiceListener<Object> {
+public final class TimingServiceListener extends AbstractServiceListener<Object> implements ServiceListener<Object> {
     private volatile int finished = 0;
     private volatile int count = 1;
     private final long start = System.currentTimeMillis();
@@ -57,18 +57,9 @@ public final class TimingServiceListener implements ServiceListener<Object> {
         this.finishedTask = finishedTask;
     }
 
-    /**
-     * Add this listener to the given controller.  To get an accurate count, this method must be used.
-     *
-     * @param serviceController the controller
-     */
-    public void addTo(final ServiceController<?> serviceController) {
-        countUpdater.incrementAndGet(this);
-        serviceController.addListener(this);
-    }
-
     /** {@inheritDoc} */
-    public void serviceStarting(final ServiceController<? extends Object> serviceController) {
+    public void listenerAdded(final ServiceController<? extends Object> serviceController) {
+        countUpdater.incrementAndGet(this);
     }
 
     /** {@inheritDoc} */
@@ -85,18 +76,6 @@ public final class TimingServiceListener implements ServiceListener<Object> {
             done();
         }
         serviceController.removeListener(this);
-    }
-
-    /** {@inheritDoc} */
-    public void serviceStopping(final ServiceController<? extends Object> serviceController) {
-    }
-
-    /** {@inheritDoc} */
-    public void serviceStopped(final ServiceController<? extends Object> serviceController) {
-    }
-
-    /** {@inheritDoc} */
-    public void serviceRemoved(final ServiceController<? extends Object> serviceController) {
     }
 
     private void done() {

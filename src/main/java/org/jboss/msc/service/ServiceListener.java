@@ -31,6 +31,13 @@ package org.jboss.msc.service;
 public interface ServiceListener<S> {
 
     /**
+     * The listener has been added to a controller.
+     *
+     * @param controller the controller that this listener was added to
+     */
+    void listenerAdded(ServiceController<? extends S> controller);
+
+    /**
      * The service is starting.  Called after the state transitions from {@code DOWN} to {@code STARTING}.
      *
      * @param controller the controller

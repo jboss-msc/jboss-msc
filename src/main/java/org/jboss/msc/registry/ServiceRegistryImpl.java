@@ -82,11 +82,11 @@ class ServiceRegistryImpl implements ServiceRegistry {
                 entry.builder = serviceContainer.buildService(serviceDefinition.getService());
 
             final ServiceBuilder<?> builder = entry.builder;
-            final String[] deps = serviceDefinition.getDependenciesDirect();
+            final ServiceName[] deps = serviceDefinition.getDependenciesDirect();
             final ServiceName name = serviceDefinition.getName();
 
             while (entry.i < deps.length) {
-                final ServiceName dependencyName = ServiceName.of(deps[entry.i]);
+                final ServiceName dependencyName = deps[entry.i];
 
                 ServiceController<?> dependencyController = registry.get(dependencyName);
                 if (dependencyController == null) {

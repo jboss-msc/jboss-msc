@@ -30,6 +30,10 @@ package org.jboss.msc.service;
 public abstract class AbstractServiceListener<S> implements ServiceListener<S> {
 
     /** {@inheritDoc} */
+    public void listenerAdded(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
     public void serviceStarting(final ServiceController<? extends S> controller) {
     }
 

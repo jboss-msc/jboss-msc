@@ -177,6 +177,9 @@ final class ServiceContainerImpl implements ServiceContainer {
             super(count);
         }
 
+        public void listenerAdded(final ServiceController<? extends Object> serviceController) {
+        }
+
         public void serviceStarting(final ServiceController<? extends Object> serviceController) {
         }
 

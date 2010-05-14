@@ -2,14 +2,17 @@ package org.jboss.msc.registry;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.Location;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceController;
+import org.jboss.msc.service.ServiceListener;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ValueInjection;
+import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 
 import java.util.Collection;
@@ -23,16 +26,16 @@ import java.util.Collection;
  */
 public final class ServiceDefinition<T> {
     private final ServiceName name;
-    private final String[] dependencies;
+    private final ServiceName[] dependencies;
     private final ServiceController.Mode initialMode;
     private final Location location;
     private final Value<? extends Service<T>> service;
     private final ValueInjection[] injections;
 
-    private static final String[] NO_DEPS = new String[0];
+    private static final ServiceName[] NO_DEPS = new ServiceName[0];
     private static final ValueInjection[] NO_INJECTIONS = new ValueInjection[0];
 
-    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<? extends Service<T>> service, String[] dependencies, ValueInjection[] injections) {
+    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<? extends Service<T>> service, ServiceName[] dependencies, ValueInjection[] injections) {
         if(name == null) {
             throw new IllegalArgumentException("Name can not be null");
         }
@@ -44,18 +47,43 @@ public final class ServiceDefinition<T> {
         this.injections = injections;
     }
 
+    /**
+     * Build a new service definition via a builder object.
+     *
+     * @param name the service name
+     * @param service a value which resolves to the service object
+     * @param <T> the service value type
+     * @return the builder
+     */
     public static <T> Builder<T> build(final ServiceName name, final Value<? extends Service<T>> service) {
         return new Builder<T>(name, service);
     }
 
+    /**
+     * Build a new service definition via a builder object.
+     *
+     * @param name the service name
+     * @param service the service object
+     * @param <T> the service value type
+     * @return the builder
+     */
+    public static <T> Builder<T> build(final ServiceName name, final Service<T> service) {
+        return new Builder<T>(name, new ImmediateValue<Service<T>>(service));
+    }
+
+    /**
+     * A service definition builder.
+     *
+     * @param <T> the service value type
+     */
     public static final class Builder<T> {
         private final ServiceName name;
         private final Value<? extends Service<T>> service;
-        private List<String> dependencies = new ArrayList<String>(0);
+        private Collection<ServiceName> dependencies = new HashSet<ServiceName>(0);
         private List<ValueInjection> injections = new ArrayList<ValueInjection>(0);
+        private List<ServiceListener<? super T>> listeners = new ArrayList<ServiceListener<? super T>>(0);
         private ServiceController.Mode initialMode = ServiceController.Mode.AUTOMATIC;
         private Location location;
-
 
         private Builder(final ServiceName name, final Value<? extends Service<T>> service) {
             if(name == null) throw new IllegalArgumentException("Name is required");
@@ -64,7 +92,12 @@ public final class ServiceDefinition<T> {
             this.service = service;
         }
 
-        public Builder<T> addDependency(String dependency) {
+        /**
+         *
+         * @param dependency
+         * @return
+         */
+        public Builder<T> addDependency(ServiceName dependency) {
             if(dependency == null)
                 throw new IllegalArgumentException("Dependency can not be null");
 
@@ -72,8 +105,7 @@ public final class ServiceDefinition<T> {
 
             return this;
         }
-
-        public Builder<T> addDependencies(Collection<String> dependencies) {
+        public Builder<T> addDependencies(Collection<ServiceName> dependencies) {
             if(dependencies == null)
                 throw new IllegalArgumentException("Dependencies can not be null");
 
@@ -82,8 +114,8 @@ public final class ServiceDefinition<T> {
             return this;
         }
 
-        public Builder<T> addDependencies(String... dependencies) {
-            for(String d : dependencies)
+        public Builder<T> addDependencies(ServiceName... dependencies) {
+            for(ServiceName d : dependencies)
                 this.dependencies.add(d);
 
             return this;
@@ -95,11 +127,16 @@ public final class ServiceDefinition<T> {
             return this;
         }
 
-        public <I> Builder<T> addInjection(final Value<I> value, final Injector<I> injector, final String dependency) {
+        public <I> Builder<T> addInjection(final Value<I> value, final Injector<I> injector, final ServiceName dependency) {
             if(!dependencies.contains(dependency))
                 dependencies.add(dependency); // HMMM, what if the deps are added after the injections
 
             return addInjection(value, injector);
+        }
+
+        public Builder<T> addListener(final ServiceListener<? super T> listener) {
+            listeners.add(listener);
+            return this;
         }
 
         public Builder<T> setLocation(Location location) {
@@ -115,11 +152,11 @@ public final class ServiceDefinition<T> {
 
         public ServiceDefinition<T> create() {
             final int dependenciesSize = dependencies.size();
-            final String[] dependencies;
+            final ServiceName[] dependencies;
             if(dependenciesSize == 0) {
                 dependencies = NO_DEPS;
             } else {
-                dependencies = this.dependencies.toArray(new String[dependenciesSize]);
+                dependencies = this.dependencies.toArray(new ServiceName[dependenciesSize]);
             }
             final int injectionsSize = injections.size();
             final ValueInjection<?>[] injections;
@@ -136,11 +173,11 @@ public final class ServiceDefinition<T> {
         return name;
     }
 
-    public String[] getDependencies() {
+    public ServiceName[] getDependencies() {
         return dependencies.clone();
     }
 
-    String[] getDependenciesDirect() {
+    ServiceName[] getDependenciesDirect() {
         return dependencies;
     }
 

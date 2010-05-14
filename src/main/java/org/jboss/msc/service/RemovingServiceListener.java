@@ -30,6 +30,11 @@ package org.jboss.msc.service;
 public final class RemovingServiceListener extends AbstractServiceListener<Object> {
 
     /** {@inheritDoc} */
+    public void listenerAdded(final ServiceController<? extends Object> serviceController) {
+        serviceController.setMode(ServiceController.Mode.NEVER);
+    }
+
+    /** {@inheritDoc} */
     public void serviceStarting(final ServiceController<? extends Object> serviceController) {
         serviceController.setMode(ServiceController.Mode.NEVER);
     }
