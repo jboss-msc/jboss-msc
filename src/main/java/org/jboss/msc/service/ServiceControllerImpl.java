@@ -24,7 +24,6 @@ package org.jboss.msc.service;
 
 import java.util.Arrays;
 import java.util.concurrent.Executor;
-import org.jboss.msc.util.IdentityHashSet;
 import org.jboss.msc.value.Value;
 
 /**

@@ -19,7 +19,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.msc.util;
+package org.jboss.msc.service;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -45,7 +45,7 @@ import java.util.Set;
  * 
  * @author Jason T. Greene
  */
-public class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Serializable {
+class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Serializable {
     /**
      * Marks null keys.
      */
