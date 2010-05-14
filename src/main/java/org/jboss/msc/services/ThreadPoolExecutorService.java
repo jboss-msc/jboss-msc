@@ -31,6 +31,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.jboss.msc.service.Service;
+import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
@@ -53,6 +54,15 @@ public final class ThreadPoolExecutorService implements Service<ExecutorService>
     private BlockingQueue<Runnable> workQueue = new ArrayBlockingQueue<Runnable>(DEFAULT_QUEUE_LENGTH);
     private ThreadFactory threadFactory = Executors.defaultThreadFactory();
     private RejectedExecutionHandler handler = new ThreadPoolExecutor.AbortPolicy();
+
+    /**
+     * The service name under which thread-related services are registered.
+     */
+    public static ServiceName JBOSS_THREADS = ServiceName.JBOSS.append("threads");
+    /**
+     * The service name under which executors (thread pools) are registered.
+     */
+    public static ServiceName JBOSS_THREADS_EXECUTOR = JBOSS_THREADS.append("executor");
 
     /**
      * Construct a new instance.
