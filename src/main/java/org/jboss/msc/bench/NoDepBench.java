@@ -19,7 +19,8 @@ public class NoDepBench {
         final int totalServiceDefinitions = Integer.parseInt(args[0]);
 
         final ServiceContainer container = ServiceContainer.Factory.create();
-        container.setExecutor(new ThreadPoolExecutor(8, 8, 1000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()));
+        final ThreadPoolExecutor executor = new ThreadPoolExecutor(8, 8, 1000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+        container.setExecutor(executor);
         ServiceRegistrationBatchBuilder batch = ServiceRegistry.Factory.create(container).batchBuilder();
 
         final CountDownLatch latch = new CountDownLatch(1);
@@ -35,5 +36,7 @@ public class NoDepBench {
         listener.finishBatch();
         latch.await();
         System.out.println(totalServiceDefinitions + " : "  + listener.getElapsedTime() / 1000.0);
+        container.shutdown();
+        executor.shutdown();
     }
 }
