@@ -92,7 +92,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     private int upperCount;
     /**
      * The number of dependents that are currently running.  The deployment will not execute the {@code stop()} method
-     * (and subsequently leave the {@link State#STOPPING} state) until all running dependents are stopped.
+     * (and subsequently leave the {@link State#STOPPING} state) until all running dependents (and listeners) are stopped.
      */
     private int runningDependents;
     /**
