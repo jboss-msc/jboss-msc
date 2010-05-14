@@ -46,7 +46,7 @@ public class FiveForwardInjectionsBench {
         final List<Value<Class<?>>> params = Collections.singletonList((Value<Class<?>>)new ImmediateValue<Class<?>>(TestObject.class));
         final List<Value<Method>> setterMethodValues = new ArrayList<Value<Method>>(5);
         for(int i = 0; i < 5; i++)
-            setterMethodValues.add(new CachedValue<Method>(new LookupMethodValue(new ImmediateValue<Class<?>>(TestObject.class), "setOther" + (i + 1), params)));
+            setterMethodValues.add(new CachedValue<Method>(new LookupMethodValue(new ImmediateValue<Class<?>>(TestObject.class), "setOther" + (i), params)));
 
         for (int i = 0; i < totalServiceDefinitions; i++) {
             final TestObject testObject = new TestObject("test" + i);
@@ -62,10 +62,10 @@ public class FiveForwardInjectionsBench {
             );
 
             int numDeps = Math.min(5, totalServiceDefinitions - i - 1);
-            for (int j = 1; j < numDeps + 1; j++) {
+            for (int j = 0; j < numDeps; j++) {
                 builder.addInjection(
-                        ServiceName.of(("test" + (i + j)).intern()),
-                        new SetMethodInjector<TestObject>(service,  setterMethodValues.get(j - 1))
+                        ServiceName.of(("test" + (i + j + 1)).intern()),
+                        new SetMethodInjector<TestObject>(service,  setterMethodValues.get(j))
                 );
             }
             batch.add(builder.create());
@@ -81,14 +81,18 @@ public class FiveForwardInjectionsBench {
     public static class TestObject {
         public String name;
         public Object test;
+        public TestObject other0;
         public TestObject other1;
         public TestObject other2;
         public TestObject other3;
         public TestObject other4;
-        public TestObject other5;
 
         public TestObject(String name) {
             this.name = name;
+        }
+
+        public void setOther0(TestObject other0) {
+            this.other0 = other0;
         }
 
         public void setOther1(TestObject other1) {
@@ -107,19 +111,15 @@ public class FiveForwardInjectionsBench {
             this.other4 = other4;
         }
 
-        public void setOther5(TestObject other5) {
-            this.other5 = other5;
-        }
-
         @Override
         public String toString() {
             return "TestObject{" +
                     "name=" + name +
+                    ", other0=" + other0 +
                     ", other1=" + other1 +
                     ", other2=" + other2 +
                     ", other3=" + other3 +
                     ", other4=" + other4 +
-                    ", other5=" + other5 +
                     '}';
         }
     }
