@@ -95,6 +95,7 @@ public class OneToFourForwardInjectionsBench {
                         new SetMethodInjector<TestObject>(service,  setterMethodValues.get(j))
                 );
             }
+
             batch.add(builder.create());
         }
 
