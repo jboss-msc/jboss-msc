@@ -47,7 +47,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-public class FiveForwardInjectionsBench {
+public class OneToFourForwardInjectionsBench {
 
     public static void main(String[] args) throws Exception {
         final int totalServiceDefinitions = Integer.parseInt(args[0]);
@@ -83,10 +83,15 @@ public class FiveForwardInjectionsBench {
                     new FieldInjector<Object>(service, testFieldValue)
             );
 
-            int numDeps = Math.min(5, totalServiceDefinitions - i - 1);
+            int nextDivByFive = (5 - (i % 5)) + i;
+            int numDeps = Math.min(nextDivByFive - i, totalServiceDefinitions - i - 1);
             for (int j = 0; j < numDeps; j++) {
+                int depId = i + j + 1;
+                if(depId % 5 ==0)
+                    continue;
+
                 builder.addInjection(
-                        ServiceName.of(("test" + (i + j + 1)).intern()),
+                        ServiceName.of(("test" + depId).intern()),
                         new SetMethodInjector<TestObject>(service,  setterMethodValues.get(j))
                 );
             }
