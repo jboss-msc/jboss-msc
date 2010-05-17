@@ -49,6 +49,15 @@ public final class LookupDeclaredConstructorValue implements Value<Constructor> 
      * @param makeAccessible {@code true} to make the constructor accessible under the provided access control context
      */
     public LookupDeclaredConstructorValue(final Value<Class<?>> target, final List<? extends Value<Class<?>>> parameterTypes, final AccessControlContext context, final boolean makeAccessible) {
+        if (target == null) {
+            throw new IllegalArgumentException("target is null");
+        }
+        if (parameterTypes == null) {
+            throw new IllegalArgumentException("parameterTypes is null");
+        }
+        if (context == null) {
+            throw new IllegalArgumentException("context is null");
+        }
         this.target = target;
         this.parameterTypes = parameterTypes;
         this.context = context;

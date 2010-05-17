@@ -41,6 +41,12 @@ public final class LookupConstructorValue implements Value<Constructor> {
      * @param parameterTypes the parameter types of the constructor
      */
     public LookupConstructorValue(final Value<Class<?>> target, final List<? extends Value<Class<?>>> parameterTypes) {
+        if (target == null) {
+            throw new IllegalArgumentException("target is null");
+        }
+        if (parameterTypes == null) {
+            throw new IllegalArgumentException("parameterTypes is null");
+        }
         this.target = target;
         this.parameterTypes = parameterTypes;
     }

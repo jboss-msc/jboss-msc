@@ -42,6 +42,12 @@ public final class LookupListValue<T> implements Value<T> {
      * @param indexValue the index at which to look
      */
     public LookupListValue(final Value<List<? extends T>> listValue, final Value<? extends Number> indexValue) {
+        if (listValue == null) {
+            throw new IllegalArgumentException("listValue is null");
+        }
+        if (indexValue == null) {
+            throw new IllegalArgumentException("indexValue is null");
+        }
         this.listValue = listValue;
         this.indexValue = indexValue;
     }

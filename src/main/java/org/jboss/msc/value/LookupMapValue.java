@@ -42,6 +42,12 @@ public final class LookupMapValue<T> implements Value<T> {
      * @param mapValue the map to look into
      */
     public LookupMapValue(final Value<?> keyValue, final Value<? extends Map<?, ? extends T>> mapValue) {
+        if (keyValue == null) {
+            throw new IllegalArgumentException("keyValue is null");
+        }
+        if (mapValue == null) {
+            throw new IllegalArgumentException("mapValue is null");
+        }
         this.keyValue = keyValue;
         this.mapValue = mapValue;
     }

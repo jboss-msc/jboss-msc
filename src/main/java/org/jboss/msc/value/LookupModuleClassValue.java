@@ -43,6 +43,12 @@ public final class LookupModuleClassValue implements Value<Class<?>> {
      * @param moduleIdentifier the module identifier
      */
     public LookupModuleClassValue(final String className, final ModuleIdentifier moduleIdentifier) {
+        if (className == null) {
+            throw new IllegalArgumentException("className is null");
+        }
+        if (moduleIdentifier == null) {
+            throw new IllegalArgumentException("moduleIdentifier is null");
+        }
         this.className = className;
         this.moduleIdentifier = moduleIdentifier;
     }

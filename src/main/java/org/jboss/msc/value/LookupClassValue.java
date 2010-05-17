@@ -39,6 +39,12 @@ public final class LookupClassValue implements Value<Class<?>> {
      * @param classLoaderValue the class loader to use
      */
     public LookupClassValue(final String className, final Value<? extends ClassLoader> classLoaderValue) {
+        if (className == null) {
+            throw new IllegalArgumentException("className is null");
+        }
+        if (classLoaderValue == null) {
+            throw new IllegalArgumentException("classLoaderValue is null");
+        }
         this.className = className;
         this.classLoaderValue = classLoaderValue;
     }

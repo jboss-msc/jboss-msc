@@ -48,6 +48,15 @@ public final class LookupDeclaredFieldValue implements Value<Field> {
      * @param makeAccessible {@code true} to make the field accessible under the provided access control context
      */
     public LookupDeclaredFieldValue(final Value<Class<?>> target, final String fieldName, final AccessControlContext context, final boolean makeAccessible) {
+        if (target == null) {
+            throw new IllegalArgumentException("target is null");
+        }
+        if (fieldName == null) {
+            throw new IllegalArgumentException("fieldName is null");
+        }
+        if (context == null) {
+            throw new IllegalArgumentException("context is null");
+        }
         this.target = target;
         this.fieldName = fieldName;
         this.context = context;
