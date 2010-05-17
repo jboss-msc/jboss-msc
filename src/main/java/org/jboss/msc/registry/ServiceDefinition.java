@@ -32,12 +32,14 @@ public final class ServiceDefinition<T> {
     private final Value<? extends Service<T>> service;
     private final ValueInjection<?>[] injections;
     private final NamedServiceInjection<?>[] namedInjections;
+    private final ServiceListener<?>[] listeners;
 
     private static final ServiceName[] NO_DEPS = new ServiceName[0];
     private static final ValueInjection[] NO_INJECTIONS = new ValueInjection[0];
     private static final NamedServiceInjection<?>[] NO_NAMED_INJECTIONS = new NamedServiceInjection<?>[0];
+    private static final ServiceListener<?>[] NO_LISTENERS = new ServiceListener<?>[0];
 
-    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<? extends Service<T>> service, ServiceName[] dependencies, ValueInjection<?>[] injections, final NamedServiceInjection<?>[] namedInjections) {
+    private ServiceDefinition(ServiceName name, ServiceController.Mode initialMode, Location location, Value<? extends Service<T>> service, ServiceName[] dependencies, ValueInjection<?>[] injections, final NamedServiceInjection<?>[] namedInjections, ServiceListener<?>[] listeners) {
         this.namedInjections = namedInjections;
         if(name == null) {
             throw new IllegalArgumentException("Name can not be null");
@@ -48,6 +50,7 @@ public final class ServiceDefinition<T> {
         this.location = location;
         this.service = service;
         this.injections = injections;
+        this.listeners = listeners;
     }
 
     /**
@@ -143,6 +146,10 @@ public final class ServiceDefinition<T> {
             return this;
         }
 
+        public List<ServiceListener<? super T>> getListeners() {
+            return listeners;
+        }
+
         public Builder<T> setLocation(Location location) {
             this.location = location;
 
@@ -176,7 +183,14 @@ public final class ServiceDefinition<T> {
             } else {
                 namedInjections = namedServiceInjections.toArray(new NamedServiceInjection<?>[namedServiceInjectionsSize]);
             }
-            return new ServiceDefinition<T>(name, initialMode, location, service, dependencies, injections, namedInjections);
+            int listenersSize = listeners.size();
+            final ServiceListener<?>[] listeners;
+            if(listenersSize == 0) {
+                listeners = NO_LISTENERS;
+            } else {
+                listeners = this.listeners.toArray(new ServiceListener<?>[listenersSize]);
+            }
+            return new ServiceDefinition<T>(name, initialMode, location, service, dependencies, injections, namedInjections, listeners);
         }
     }
 
@@ -206,6 +220,14 @@ public final class ServiceDefinition<T> {
 
     NamedServiceInjection<?>[] getNamedInjectionsDirect() {
         return namedInjections;
+    }
+
+    public ServiceListener<?>[] getListeners() {
+        return listeners.clone();
+    }
+
+    public ServiceListener<?>[] getListenersDirect() {
+        return listeners;
     }
 
     public ServiceController.Mode getInitialMode() {

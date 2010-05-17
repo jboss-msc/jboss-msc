@@ -26,6 +26,7 @@ import org.jboss.msc.service.AbstractServiceListener;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceController;
+import org.jboss.msc.service.ServiceListener;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ValueInjection;
 
@@ -117,6 +118,9 @@ class ServiceRegistryImpl implements ServiceRegistry {
             // We are resolved.  Lets install
             builder.addListener(new ServiceUnregisterListener(name));
 
+            for(ServiceListener listener : serviceDefinition.getListenersDirect()) {
+                builder.addListener(listener);
+            }
             for(ValueInjection<?> injection : serviceDefinition.getInjectionsDirect()) {
                 builder.addValueInjection(injection);
             }
