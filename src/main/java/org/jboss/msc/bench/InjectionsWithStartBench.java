@@ -172,7 +172,7 @@ public class InjectionsWithStartBench {
         @Override
         public void start(StartContext context) throws StartException {
             try {
-                Thread.sleep(20);
+                Thread.sleep(5);
             } catch(InterruptedException e) {
                 throw new StartException(e);
             }

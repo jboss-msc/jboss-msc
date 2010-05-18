@@ -45,7 +45,7 @@ public class NoDepsSleepyStartBench {
         final ServiceContainer container = ServiceContainer.Factory.create();
 
         final ThreadPoolExecutor executor = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 1000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
-       container.setExecutor(executor);
+        container.setExecutor(executor);
 
         final ServiceRegistry registry = ServiceRegistry.Factory.create(container);
         ServiceRegistrationBatchBuilder batch = registry.batchBuilder();
