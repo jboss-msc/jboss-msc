@@ -42,7 +42,7 @@ public interface ServiceRegistrationBatchBuilder {
      * @param definition
      * @return this batch
      */
-    BatchBuilderImpl add(ServiceDefinition definition);
+    ServiceRegistrationBatchBuilder add(ServiceDefinition definition);
 
     /**
      * Add a list of service batchEntries to the batch, in the order of the list.
@@ -51,7 +51,7 @@ public interface ServiceRegistrationBatchBuilder {
      *        order of the list
      * @return this batch
      */
-    BatchBuilderImpl add(ServiceDefinition<?>... definitions);
+    ServiceRegistrationBatchBuilder add(ServiceDefinition<?>... definitions);
 
     /**
      * Add a collection of service batchEntries to the batch, in the order of the
@@ -61,5 +61,5 @@ public interface ServiceRegistrationBatchBuilder {
      *        order of the list
      * @return this batch
      */
-    BatchBuilderImpl add(Collection<ServiceDefinition<?>> definitions);
+    ServiceRegistrationBatchBuilder add(Collection<ServiceDefinition<?>> definitions);
 }
