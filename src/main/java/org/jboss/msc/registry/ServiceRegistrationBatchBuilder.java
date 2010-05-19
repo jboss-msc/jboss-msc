@@ -22,7 +22,10 @@
 
 package org.jboss.msc.registry;
 
+import org.jboss.msc.service.ServiceListener;
+
 import java.util.Collection;
+import java.util.Set;
 
 /**
  * A batch builder for installing service definitions in a single action.
@@ -62,4 +65,29 @@ public interface ServiceRegistrationBatchBuilder {
      * @return this batch
      */
     ServiceRegistrationBatchBuilder add(Collection<ServiceDefinition<?>> definitions);
+
+    /**
+     * Add a service listener that will be added to the all the ServiceDefinitions in the batch.
+     *
+     * @param listener the listener to add to the batch
+     * @return this batch
+     */
+    ServiceRegistrationBatchBuilder addListener(ServiceListener<?> listener);
+
+    /**
+     * Add a list of service listener that will be added to the all the ServiceDefinitions in the batch.
+     *
+     * @param listeners a list of listeners to add to the batch
+     * @return this batch
+     */
+    ServiceRegistrationBatchBuilder addListener(ServiceListener<?>... listeners);
+
+    /**
+     * Add a collection of service listener that will be added to the all the ServiceDefinitions in the batch.
+     *
+     * @param listeners a collection of listeners to add to the batch
+     * @return this batch
+     */
+    ServiceRegistrationBatchBuilder addListener(Collection<ServiceListener<?>> listeners);
+    
 }

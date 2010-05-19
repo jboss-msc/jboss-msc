@@ -1,10 +1,13 @@
 package org.jboss.msc.registry;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.jboss.msc.service.ServiceBuilder;
+import org.jboss.msc.service.ServiceListener;
 import org.jboss.msc.service.ServiceName;
 
 /**
@@ -16,6 +19,7 @@ final class BatchBuilderImpl implements ServiceRegistrationBatchBuilder {
 
     private final LinkedHashMap<ServiceName, BatchEntry> batchEntries = new LinkedHashMap<ServiceName, BatchEntry>();
     private final ServiceRegistryImpl serviceRegistry;
+    private final Set<ServiceListener<?>> listeners = new HashSet<ServiceListener<?>>();
 
     BatchBuilderImpl(final ServiceRegistryImpl serviceRegistry) {
         this.serviceRegistry = serviceRegistry;
@@ -52,6 +56,42 @@ final class BatchBuilderImpl implements ServiceRegistrationBatchBuilder {
         }
 
         return this;
+    }
+
+    @Override
+    public ServiceRegistrationBatchBuilder addListener(ServiceListener<?> listener) {
+        listeners.add(listener);
+
+        return this; 
+    }
+
+
+    @Override
+    public ServiceRegistrationBatchBuilder addListener(ServiceListener<?>... listeners) {
+        final Set<ServiceListener<?>> batchListeners = this.listeners;
+
+        for(ServiceListener<?> listener : listeners) {
+            batchListeners.add(listener);
+        }
+
+        return this;
+    }
+
+    @Override
+    public ServiceRegistrationBatchBuilder addListener(Collection<ServiceListener<?>> listeners) {
+        if(listeners == null)
+            throw new IllegalArgumentException("Listeners can not be null");
+
+        final Set<ServiceListener<?>> batchListeners = this.listeners;
+
+        for(ServiceListener<?> listener : listeners) {
+            batchListeners.add(listener);
+        }
+        return this;
+    }
+
+    Set<ServiceListener<?>> getListeners() {
+        return listeners;
     }
 
     LinkedHashMap<ServiceName, BatchEntry> getBatchEntries() {
