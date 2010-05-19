@@ -31,7 +31,7 @@ import java.util.Map;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class LookupMapValue<T> implements Value<T> {
+public final class MapItemValue<T> implements Value<T> {
     private final Value<?> keyValue;
     private final Value<? extends Map<?, ? extends T>> mapValue;
 
@@ -41,7 +41,7 @@ public final class LookupMapValue<T> implements Value<T> {
      * @param keyValue the map key
      * @param mapValue the map to look into
      */
-    public LookupMapValue(final Value<?> keyValue, final Value<? extends Map<?, ? extends T>> mapValue) {
+    public MapItemValue(final Value<?> keyValue, final Value<? extends Map<?, ? extends T>> mapValue) {
         if (keyValue == null) {
             throw new IllegalArgumentException("keyValue is null");
         }

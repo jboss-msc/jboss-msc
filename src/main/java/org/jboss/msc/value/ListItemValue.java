@@ -31,7 +31,7 @@ import java.util.List;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class LookupListValue<T> implements Value<T> {
+public final class ListItemValue<T> implements Value<T> {
     private final Value<? extends List<? extends T>> listValue;
     private final Value<? extends Number> indexValue;
 
@@ -41,7 +41,7 @@ public final class LookupListValue<T> implements Value<T> {
      * @param listValue the list in which to look
      * @param indexValue the index at which to look
      */
-    public LookupListValue(final Value<List<? extends T>> listValue, final Value<? extends Number> indexValue) {
+    public ListItemValue(final Value<List<? extends T>> listValue, final Value<? extends Number> indexValue) {
         if (listValue == null) {
             throw new IllegalArgumentException("listValue is null");
         }
