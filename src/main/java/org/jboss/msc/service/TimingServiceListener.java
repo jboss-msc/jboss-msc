@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 public final class TimingServiceListener extends AbstractServiceListener<Object> implements ServiceListener<Object> {
     private volatile int finished = 0;
     private volatile int count = 1;
+    private volatile int totalServices = 0;
     private final long start = System.currentTimeMillis();
     private volatile long end;
     private final FinishListener finishedTask;
@@ -41,6 +42,7 @@ public final class TimingServiceListener extends AbstractServiceListener<Object>
 
     private static final AtomicIntegerFieldUpdater<TimingServiceListener> countUpdater = AtomicIntegerFieldUpdater.newUpdater(TimingServiceListener.class, "count");
 
+    private static final AtomicIntegerFieldUpdater<TimingServiceListener> totalServicesUpdater = AtomicIntegerFieldUpdater.newUpdater(TimingServiceListener.class, "totalServices");
     /**
      * Construct a new instance.
      */
@@ -60,6 +62,7 @@ public final class TimingServiceListener extends AbstractServiceListener<Object>
     /** {@inheritDoc} */
     public void listenerAdded(final ServiceController<? extends Object> serviceController) {
         countUpdater.incrementAndGet(this);
+        totalServicesUpdater.incrementAndGet(this);
     }
 
     /** {@inheritDoc} */
@@ -112,6 +115,15 @@ public final class TimingServiceListener extends AbstractServiceListener<Object>
      */
     public int getRemainingCount() {
         return count;
+    }
+
+    /**
+     * Get the total number of services being tracked.
+     *
+     * @return the total count
+     */
+    public int getTotalCount() {
+        return totalServices;
     }
 
     /**
