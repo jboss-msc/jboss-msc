@@ -67,6 +67,26 @@ public final class SetMethodInjector<T> implements Injector<T> {
      * Construct a new instance.
      *
      * @param target the object upon which the method is to be called
+     * @param methodValue the method to invoke
+     */
+    public static <T> Injector<T> create(final Value<?> target, Value<Method> methodValue) {
+        return new SetMethodInjector<T>(target, methodValue);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param target the object upon which the method is to be called
+     * @param method the method to invoke
+     */
+    public static <T> Injector<T> create(final Value<?> target, final Method method) {
+        return new SetMethodInjector<T>(target, method);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param target the object upon which the method is to be called
      * @param clazz the class upon which the method may be found
      * @param methodName the setter method name
      * @param paramType the parameter type
