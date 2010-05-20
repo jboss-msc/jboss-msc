@@ -196,7 +196,7 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
         return toString(new StringBuilder()).toString();
     }
 
-    private static final Pattern SIMPLE_NAME = Pattern.compile("^[-_a-z@-Z0-9!#$%^&*()+=\\[\\]{}|/?<>,;:~]$");
+    private static final Pattern SIMPLE_NAME = Pattern.compile("^[-_a-z@-Z0-9!#$%^&*()+=\\[\\]{}|/?<>,;:~]+$");
 
     private StringBuilder toString(StringBuilder target) {
         final ServiceName parent = this.parent;
