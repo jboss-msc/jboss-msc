@@ -28,6 +28,7 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.regex.Pattern;
 
 /**
  * Service name class.
@@ -192,7 +193,42 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
      */
     @Override
     public String toString() {
-        return parent != null ? parent.toString() + "." + name : name;
+        return toString(new StringBuilder()).toString();
+    }
+
+    private static final Pattern SIMPLE_NAME = Pattern.compile("^[-_a-z@-Z0-9!#$%^&*()+=\\[\\]{}|/?<>,;:~]$");
+
+    private StringBuilder toString(StringBuilder target) {
+        final ServiceName parent = this.parent;
+        if (parent != null) {
+            parent.toString(target);
+            target.append('.');
+        }
+        final String name = this.name;
+        if (SIMPLE_NAME.matcher(name).matches()) {
+            target.append(name);
+        } else {
+            target.append('"');
+            final int len = name.length();
+            for (int i = 0; i < len; i++) {
+                final char c = name.charAt(i);
+                if (Character.isISOControl(c)) {
+                    final String hs = Integer.toHexString(c);
+                    target.append("\\u");
+                    for (int j = hs.length(); j < 4; j ++) {
+                        target.append('0');
+                    }
+                    target.append(hs);
+                } else if (c == '\\' || c == '"') {
+                    target.append('\\');
+                    target.append(c);
+                } else {
+                    target.append(c);
+                }
+            }
+            target.append('"');
+        }
+        return target;
     }
 
     /**
