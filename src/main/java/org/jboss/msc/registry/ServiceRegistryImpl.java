@@ -31,6 +31,7 @@ import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ValueInjection;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -62,21 +63,21 @@ class ServiceRegistryImpl implements ServiceRegistry {
      */
     void install(final BatchBuilderImpl serviceBatch) throws ServiceRegistryException {
         try {
-            resolve(serviceBatch.getBatchEntries());
+            resolve(serviceBatch.getBatchEntries(), serviceBatch.getListeners());
         } catch (ResolutionException e) {
             throw new ServiceRegistryException("Failed to resolve dependencies", e);
         }
     }
 
-    private void resolve(final Map<ServiceName, BatchBuilderImpl.BatchEntry> services) throws ServiceRegistryException {
+    private void resolve(final Map<ServiceName, BatchBuilderImpl.BatchEntry> services, final Set<ServiceListener<?>> batchListeners) throws ServiceRegistryException {
         for (BatchBuilderImpl.BatchEntry batchEntry : services.values()) {
             if(!batchEntry.processed)
-                doResolve(batchEntry, services);
+                doResolve(batchEntry, services, batchListeners);
         }
     }
 
     @SuppressWarnings({ "unchecked" })
-    private void doResolve(BatchBuilderImpl.BatchEntry entry, final Map<ServiceName, BatchBuilderImpl.BatchEntry> services) throws ServiceRegistryException {
+    private void doResolve(BatchBuilderImpl.BatchEntry entry, final Map<ServiceName, BatchBuilderImpl.BatchEntry> services, final Set<ServiceListener<?>> batchListeners) throws ServiceRegistryException {
         outer:
         while (entry != null) {
             final ServiceDefinition<?> serviceDefinition = entry.serviceDefinition;
@@ -117,6 +118,10 @@ class ServiceRegistryImpl implements ServiceRegistry {
 
             // We are resolved.  Lets install
             builder.addListener(new ServiceUnregisterListener(name));
+
+            for(ServiceListener listener : batchListeners) {
+                builder.addListener(listener);
+            }
 
             for(ServiceListener listener : serviceDefinition.getListenersDirect()) {
                 builder.addListener(listener);
