@@ -245,7 +245,7 @@ public final class Values {
         }
 
         protected Class<?> getCaller() {
-            return getClassContext()[2];
+            return getClassContext()[3];
         }
     }
 }
