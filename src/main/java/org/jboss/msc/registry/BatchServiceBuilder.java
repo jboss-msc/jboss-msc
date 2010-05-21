@@ -63,6 +63,10 @@ public interface BatchServiceBuilder<T> {
      */
     BatchServiceBuilder<T> setInitialMode(ServiceController.Mode mode);
 
+    BatchServiceBuilder<T> addDependencies(ServiceName... dependencies);
+
+    BatchServiceBuilder<T> addDependencies(Iterable<ServiceName> dependencies);
+
     /**
      * Add a dependency.  Calling this method multiple times for the same service name will only add it as a
      * dependency one time; however this may be useful to specify multiple injections for one dependency.

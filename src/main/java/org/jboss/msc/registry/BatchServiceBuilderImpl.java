@@ -90,6 +90,28 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         return this;
     }
 
+    public BatchServiceBuilder<T> addDependencies(final ServiceName... newDependencies) {
+        if (batchBuilder.isDone()) {
+            throw alreadyInstalled();
+        }
+        final Set<ServiceName> dependencies = this.dependencies;
+        for (ServiceName dependency : newDependencies) {
+            dependencies.add(dependency);
+        }
+        return this;
+    }
+
+    public BatchServiceBuilder<T> addDependencies(final Iterable<ServiceName> newDependencies) {
+        if (batchBuilder.isDone()) {
+            throw alreadyInstalled();
+        }
+        final Set<ServiceName> dependencies = this.dependencies;
+        for (ServiceName dependency : newDependencies) {
+            dependencies.add(dependency);
+        }
+        return this;
+    }
+
     public BatchInjectionBuilderImpl addDependency(final ServiceName dependency) {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
