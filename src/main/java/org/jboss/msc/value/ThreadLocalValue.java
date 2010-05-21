@@ -30,7 +30,7 @@ package org.jboss.msc.value;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class ThreadLocalValue<T> implements Value<T> {
-    private final ThreadLocal<T> threadLocal = new ThreadLocal<T>();
+    private final ThreadLocal<Value<? extends T>> threadLocal = new ThreadLocal<Value<? extends T>>();
 
     /**
      * Construct a new instance.
@@ -40,7 +40,11 @@ public final class ThreadLocalValue<T> implements Value<T> {
 
     /** {@inheritDoc} */
     public T getValue() {
-        return threadLocal.get();
+        final Value<? extends T> value = threadLocal.get();
+        if (value == null) {
+            throw new IllegalStateException("No value set");
+        }
+        return value.getValue();
     }
 
     /**
@@ -48,7 +52,7 @@ public final class ThreadLocalValue<T> implements Value<T> {
      *
      * @param newValue the new value to set
      */
-    public void setValue(T newValue) {
+    public void setValue(Value<? extends T> newValue) {
         threadLocal.set(newValue);
     }
 
@@ -58,7 +62,7 @@ public final class ThreadLocalValue<T> implements Value<T> {
      * @param newValue the new value
      * @return the old value
      */
-    public T getAndSetValue(T newValue) {
+    public Value<? extends T> getAndSetValue(Value<? extends T> newValue) {
         try {
             return threadLocal.get();
         } finally {

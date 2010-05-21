@@ -24,8 +24,7 @@ package org.jboss.msc.bench;
 
 import java.util.concurrent.CountDownLatch;
 
-import org.jboss.msc.registry.ServiceDefinition;
-import org.jboss.msc.registry.ServiceRegistrationBatchBuilder;
+import org.jboss.msc.registry.BatchBuilder;
 import org.jboss.msc.registry.ServiceRegistry;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
@@ -38,7 +37,7 @@ public class NoDepBench {
         final int totalServiceDefinitions = Integer.parseInt(args[0]);
 
         final ServiceContainer container = ServiceContainer.Factory.create();
-        ServiceRegistrationBatchBuilder batch = ServiceRegistry.Factory.create(container).batchBuilder();
+        BatchBuilder batch = ServiceRegistry.Factory.create(container).batchBuilder();
 
         final CountDownLatch latch = new CountDownLatch(1);
         final TimingServiceListener listener = new TimingServiceListener(new TimingServiceListener.FinishListener() {

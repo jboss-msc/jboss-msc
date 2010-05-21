@@ -22,15 +22,18 @@
 
 package org.jboss.msc.registry;
 
+import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceListener;
 
 import java.util.Collection;
-import java.util.Set;
+import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.value.Value;
 
 /**
- * A batch builder for installing service definitions in a single action.
+ * A batch builder for installing service definitions in a single action.  Create an instance via the
+ * {@link ServiceRegistry#batchBuilder()} method.
  */
-public interface ServiceRegistrationBatchBuilder {
+public interface BatchBuilder {
 
     /**
      * Install all the defined services into the container.
@@ -40,31 +43,22 @@ public interface ServiceRegistrationBatchBuilder {
     void install() throws ServiceRegistryException;
 
     /**
-     * Add a service definition to the batch.
+     * Get a builder which can be used to add a service to this batch.
      *
-     * @param definition
-     * @return this batch
+     * @param name the service name
+     * @param value the service value
+     * @return the builder for the service
      */
-    ServiceRegistrationBatchBuilder add(ServiceDefinition definition);
+    <T> BatchServiceBuilder<T> addServiceValue(ServiceName name, Value<? extends Service<T>> value) throws DuplicateServiceException;
 
     /**
-     * Add a list of service batchEntries to the batch, in the order of the list.
+     * Get a builder which can be used to add a service to this batch.
      *
-     * @param definitions add a list of service batchEntries to the batch, in the
-     *        order of the list
-     * @return this batch
+     * @param name the service name
+     * @param service the service
+     * @return the builder for the service
      */
-    ServiceRegistrationBatchBuilder add(ServiceDefinition<?>... definitions);
-
-    /**
-     * Add a collection of service batchEntries to the batch, in the order of the
-     * collection (if ordered).
-     *
-     * @param definitions add a list of service batchEntries to the batch, in the
-     *        order of the list
-     * @return this batch
-     */
-    ServiceRegistrationBatchBuilder add(Collection<ServiceDefinition<?>> definitions);
+    <T> BatchServiceBuilder<T> addService(ServiceName name, Service<T> service) throws DuplicateServiceException;
 
     /**
      * Add a service listener that will be added to the all the ServiceDefinitions in the batch.
@@ -72,7 +66,7 @@ public interface ServiceRegistrationBatchBuilder {
      * @param listener the listener to add to the batch
      * @return this batch
      */
-    ServiceRegistrationBatchBuilder addListener(ServiceListener<?> listener);
+    BatchBuilder addListener(ServiceListener<Object> listener);
 
     /**
      * Add a list of service listener that will be added to the all the ServiceDefinitions in the batch.
@@ -80,7 +74,7 @@ public interface ServiceRegistrationBatchBuilder {
      * @param listeners a list of listeners to add to the batch
      * @return this batch
      */
-    ServiceRegistrationBatchBuilder addListener(ServiceListener<?>... listeners);
+    BatchBuilder addListener(ServiceListener<Object>... listeners);
 
     /**
      * Add a collection of service listener that will be added to the all the ServiceDefinitions in the batch.
@@ -88,6 +82,6 @@ public interface ServiceRegistrationBatchBuilder {
      * @param listeners a collection of listeners to add to the batch
      * @return this batch
      */
-    ServiceRegistrationBatchBuilder addListener(Collection<ServiceListener<?>> listeners);
+    BatchBuilder addListener(Collection<ServiceListener<Object>> listeners);
     
 }

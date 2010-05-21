@@ -34,6 +34,7 @@ public final class LookupMethodValue implements Value<Method> {
     private final Value<Class<?>> target;
     private final String methodName;
     private final List<? extends Value<Class<?>>> parameterTypes;
+    private final int paramCount;
 
     /**
      * Construct a new instance.
@@ -55,20 +56,45 @@ public final class LookupMethodValue implements Value<Method> {
         this.target = target;
         this.methodName = methodName;
         this.parameterTypes = parameterTypes;
+        paramCount = parameterTypes.size();
+    }
+
+    public LookupMethodValue(final Value<Class<?>> target, final String methodName, final int paramCount) {
+        if (target == null) {
+            throw new IllegalArgumentException("target is null");
+        }
+        if (methodName == null) {
+            throw new IllegalArgumentException("methodName is null");
+        }
+        this.target = target;
+        this.methodName = methodName;
+        parameterTypes = null;
+        this.paramCount = paramCount;
     }
 
     /** {@inheritDoc} */
     public Method getValue() throws IllegalStateException {
-        Class[] types = new Class[parameterTypes.size()];
-        int i = 0;
-        for (Value<Class<?>> type : parameterTypes) {
-            types[i++] = type.getValue();
-        }
         final Class<?> targetClass = target.getValue();
-        try {
-            return targetClass.getMethod(methodName, types);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("No such method '" + methodName + "' found on " + targetClass);
+        final List<? extends Value<Class<?>>> parameterTypes = this.parameterTypes;
+        final String methodName = this.methodName;
+        if (parameterTypes != null) {
+            Class[] types = new Class[parameterTypes.size()];
+            int i = 0;
+            for (Value<Class<?>> type : parameterTypes) {
+                types[i++] = type.getValue();
+            }
+            try {
+                return targetClass.getMethod(methodName, types);
+            } catch (NoSuchMethodException e) {
+            }
+        } else {
+            final int paramCount = this.paramCount;
+            for (Method method : targetClass.getMethods()) {
+                if (method.getName().equals(methodName) && method.getParameterTypes().length == paramCount) {
+                    return method;
+                }
+            }
         }
+        throw new IllegalStateException("No such method '" + methodName + "' found on " + targetClass);
     }
 }

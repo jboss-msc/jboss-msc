@@ -26,7 +26,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
-import junit.framework.Assert;
 import org.jboss.msc.inject.FieldInjector;
 import org.jboss.msc.inject.SetMethodInjector;
 import org.jboss.msc.service.Service;
@@ -116,7 +115,7 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testMonster() throws Exception {
-        ServiceRegistrationBatchBuilder batch = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
+        BatchBuilder batch = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
 
         final int totalServiceDefinitions = 100000;
 
@@ -144,7 +143,7 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testLargeNoDeps() throws Exception {
-        ServiceRegistrationBatchBuilder batch = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
+        BatchBuilder batch = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
 
         final int totalServiceDefinitions = 10000;
 
@@ -159,7 +158,7 @@ public class ServiceRegistryTestCase {
     }
 
     public void testBasicInjection() throws Exception {
-        ServiceRegistrationBatchBuilder batch = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
+        BatchBuilder batch = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
 
         final TestObject testObject = new TestObject();
         final TestObjectService service = new TestObjectService(testObject);

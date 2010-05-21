@@ -24,13 +24,14 @@ package org.jboss.msc.translate;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.ThreadLocalValue;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
 
 /**
  * A translator which translates by calling a method and returning its return value.  The input value may be passed in to
- * the constructor using {@link Values#targetValue()}.
+ * the constructor using {@link Values#injectedValue()}.
  *
  * @param <I> the input type
  * @param <O> the output type
@@ -45,9 +46,9 @@ public final class MethodTraversingTranslator<I, O> implements Translator<I, O> 
     /**
      * Construct a new instance.
      *
-     * @param method the method to invoke (possibly {@link Values#targetValue()})
-     * @param target the target (possibly {@link Values#targetValue()})
-     * @param parameters the parameters (one or more of which may be {@link Values#targetValue()})
+     * @param method the method to invoke (possibly {@link Values#injectedValue()})
+     * @param target the target (possibly {@link Values#injectedValue()})
+     * @param parameters the parameters (one or more of which may be {@link Values#injectedValue()})
      */
     public MethodTraversingTranslator(final Value<Method> method, final Value<?> target, final List<? extends Value<?>> parameters) {
         this.method = method;
@@ -58,8 +59,8 @@ public final class MethodTraversingTranslator<I, O> implements Translator<I, O> 
     /** {@inheritDoc} */
     @SuppressWarnings({ "unchecked" })
     public O translate(final I input) {
-        final ThreadLocalValue<Object> targetValue = Values.targetValue();
-        final Object oldThis = targetValue.getAndSetValue(input);
+        final ThreadLocalValue<Object> targetValue = Values.injectedValue();
+        final Value<?> oldThis = targetValue.getAndSetValue(new ImmediateValue<I>(input));
         try {
             return (O) method.getValue().invoke(target.getValue(), Values.getValues(parameters));
         } catch (Exception e) {

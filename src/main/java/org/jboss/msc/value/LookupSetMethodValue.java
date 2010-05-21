@@ -56,16 +56,44 @@ public final class LookupSetMethodValue implements Value<Method> {
         this.propertyType = propertyType;
     }
 
+    /**
+     * Construct a new instance which searches for the first name-only match.
+     *
+     * @param target the class in which to look for the method
+     * @param propertyName the name of the property (e.g. "executor" will yield a method "setExecutor")
+     */
+    public LookupSetMethodValue(final Value<Class<?>> target, final String propertyName) {
+        if (target == null) {
+            throw new IllegalArgumentException("target is null");
+        }
+        if (propertyName == null) {
+            throw new IllegalArgumentException("propertyName is null");
+        }
+        this.target = target;
+        this.propertyName = propertyName;
+        propertyType = null;
+    }
+
     /** {@inheritDoc} */
     public Method getValue() throws IllegalStateException {
-        Class[] types = new Class[] { propertyType.getValue() };
         final Class<?> targetClass = target.getValue();
         final String propertyName = this.propertyName;
         final String setterName = "set" + Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
         try {
-            return targetClass.getMethod(setterName, types);
+            final Value<Class<?>> propertyType = this.propertyType;
+            if (propertyType != null) {
+                Class[] types = new Class[] { propertyType.getValue() };
+                return targetClass.getMethod(setterName, types);
+            } else {
+                for (Method method : targetClass.getMethods()) {
+                    if (method.getName().equals(setterName) && method.getParameterTypes().length == 1) {
+                        return method;
+                    }
+                }
+            }
         } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("No such set method for property '" + propertyName + "' found on " + targetClass);
+            // fall thru
         }
+        throw new IllegalStateException("No such set method for property '" + propertyName + "' found on " + targetClass);
     }
 }

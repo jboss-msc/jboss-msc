@@ -26,8 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-import org.jboss.msc.registry.ServiceDefinition;
-import org.jboss.msc.registry.ServiceRegistrationBatchBuilder;
+import org.jboss.msc.registry.BatchBuilder;
+import org.jboss.msc.registry.BatchServiceBuilder;
 import org.jboss.msc.registry.ServiceRegistry;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
@@ -40,7 +40,7 @@ public class TenForwardBench {
         final int totalServiceDefinitions = Integer.parseInt(args[0]);
 
         final ServiceContainer container = ServiceContainer.Factory.create();
-        ServiceRegistrationBatchBuilder batch = ServiceRegistry.Factory.create(container).batchBuilder();
+        BatchBuilder batch = ServiceRegistry.Factory.create(container).batchBuilder();
 
         final CountDownLatch latch = new CountDownLatch(1);
         final TimingServiceListener listener = new TimingServiceListener(new TimingServiceListener.FinishListener() {
@@ -55,7 +55,10 @@ public class TenForwardBench {
             for (int j = 1; j < numDeps + 1; j++) {
                 deps.add(ServiceName.of(("test" + (i + j)).intern()));
             }
-            batch.add(ServiceDefinition.build(ServiceName.of(("test" + i).intern()), Service.NULL_VALUE).addListener(listener).addDependencies(deps.toArray(new ServiceName[deps.size()])).create());
+            final BatchServiceBuilder<Void> builder = batch.addService(ServiceName.of(("test" + i).intern()), Service.NULL).addListener(listener);
+            for (ServiceName dep : deps) {
+                builder.addDependency(dep);
+            }
         }
         
         batch.install();

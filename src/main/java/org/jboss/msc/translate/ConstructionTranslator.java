@@ -24,13 +24,14 @@ package org.jboss.msc.translate;
 
 import java.lang.reflect.Constructor;
 import java.util.List;
+import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.ThreadLocalValue;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
 
 /**
  * A translator which translates by constructing a new value and returning it.  The input value may be passed in to
- * the constructor using {@link Values#targetValue()}.
+ * the constructor using {@link Values#injectedValue()}.
  *
  * @param <I> the input type
  * @param <O> the output type
@@ -45,7 +46,7 @@ public final class ConstructionTranslator<I, O> implements Translator<I, O> {
      * Construct a new instance.
      *
      * @param constructor the constructor value to use
-     * @param parameters the parameters, possibly including {@link Values#targetValue()}
+     * @param parameters the parameters, possibly including {@link Values#injectedValue()}
      */
     public ConstructionTranslator(final Value<Constructor<? extends O>> constructor, final List<? extends Value<?>> parameters) {
         this.constructor = constructor;
@@ -55,8 +56,8 @@ public final class ConstructionTranslator<I, O> implements Translator<I, O> {
     /** {@inheritDoc} */
     @SuppressWarnings({ "unchecked" })
     public O translate(final I input) {
-        final ThreadLocalValue<Object> targetValue = Values.targetValue();
-        final Object oldThis = targetValue.getAndSetValue(input);
+        final ThreadLocalValue<Object> targetValue = Values.injectedValue();
+        final Value<?> oldThis = targetValue.getAndSetValue(new ImmediateValue<I>(input));
         try {
             return (O) constructor.getValue().newInstance(Values.getValues(parameters));
         } catch (Exception e) {

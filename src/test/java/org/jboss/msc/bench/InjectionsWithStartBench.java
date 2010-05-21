@@ -24,8 +24,8 @@ package org.jboss.msc.bench;
 
 import org.jboss.msc.inject.FieldInjector;
 import org.jboss.msc.inject.SetMethodInjector;
-import org.jboss.msc.registry.ServiceDefinition;
-import org.jboss.msc.registry.ServiceRegistrationBatchBuilder;
+import org.jboss.msc.registry.BatchBuilder;
+import org.jboss.msc.registry.BatchServiceBuilder;
 import org.jboss.msc.registry.ServiceRegistry;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
@@ -45,11 +45,11 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import org.jboss.msc.value.Values;
 
 public class InjectionsWithStartBench {
 
@@ -62,7 +62,7 @@ public class InjectionsWithStartBench {
         container.setExecutor(executor);
 
         final ServiceRegistry registry = ServiceRegistry.Factory.create(container);
-        ServiceRegistrationBatchBuilder batch = registry.batchBuilder();
+        BatchBuilder batch = registry.batchBuilder();
 
         final CountDownLatch latch = new CountDownLatch(1);
         final TimingServiceListener listener = new TimingServiceListener(new TimingServiceListener.FinishListener() {
@@ -81,15 +81,10 @@ public class InjectionsWithStartBench {
         for (int i = 0; i < totalServiceDefinitions; i++) {
             final TestObject testObject = new TestObject("test" + i);
             final TestObjectService service = new TestObjectService(testObject);
-
-            final ServiceDefinition.Builder<TestObject> builder = ServiceDefinition.build(ServiceName.of(("test" + i).intern()), service)
-                    .addListener(listener);
+            final BatchServiceBuilder<TestObject> builder = batch.addService(ServiceName.of(("test" + i).intern()), service).addListener(listener);
 
             final Object injectedValue = new Object();
-            builder.addInjection(
-                    new ImmediateValue<Object>(injectedValue),
-                    new FieldInjector<Object>(service, testFieldValue)
-            );
+            builder.addInjection(injectedValue).toField(testFieldValue);
 
             int nextDivByFive = (5 - (i % 5)) + i;
             int numDeps = Math.min(nextDivByFive - i, totalServiceDefinitions - i - 1);
@@ -98,13 +93,8 @@ public class InjectionsWithStartBench {
                 if(depId % 5 ==0)
                     continue;
 
-                builder.addInjection(
-                        ServiceName.of(("test" + depId).intern()),
-                        new SetMethodInjector<TestObject>(service,  setterMethodValues.get(j))
-                );
+                builder.addDependency(ServiceName.of(("test" + depId).intern())).toMethod(setterMethodValues.get(j), Collections.singletonList(Values.injectedValue()));
             }
-
-            batch.add(builder.create());
         }
 
         batch.install();

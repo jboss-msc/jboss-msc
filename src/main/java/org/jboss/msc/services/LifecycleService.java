@@ -88,7 +88,7 @@ public final class LifecycleService<T> implements Service<T> {
             final ThreadLocalValue<Object> thisValue = Values.thisValue();
             try {
                 final Object target = this.target.getValue();
-                final Object old = thisValue.getAndSetValue(target);
+                final Value<?> old = thisValue.getAndSetValue(new ImmediateValue<Object>(target));
                 try {
                     startMethod.invoke(target, Values.getValues(startParams));
                 } finally {
@@ -107,7 +107,7 @@ public final class LifecycleService<T> implements Service<T> {
             if (stopMethod != null) {
                 final ThreadLocalValue<Object> thisValue = Values.thisValue();
                 final Object target = this.target.getValue();
-                final Object old = thisValue.getAndSetValue(target);
+                final Value<?> old = thisValue.getAndSetValue(new ImmediateValue<Object>(target));
                 try {
                     stopMethod.invoke(target, Values.getValues(stopParams));
                 } finally {

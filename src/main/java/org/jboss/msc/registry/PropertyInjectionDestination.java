@@ -23,25 +23,26 @@
 package org.jboss.msc.registry;
 
 import org.jboss.msc.inject.Injector;
-import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.inject.SetMethodInjector;
+import org.jboss.msc.service.ServiceBuilder;
+import org.jboss.msc.value.ClassOfValue;
+import org.jboss.msc.value.LookupSetMethodValue;
+import org.jboss.msc.value.Value;
+import org.jboss.msc.value.Values;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class NamedServiceInjection<T> {
-    private final ServiceName dependencyName;
-    private final Injector<T> injector;
+final class PropertyInjectionDestination extends InjectionDestination {
+    private final String propertyName;
 
-    public NamedServiceInjection(final ServiceName dependencyName, final Injector<T> injector) {
-        this.dependencyName = dependencyName;
-        this.injector = injector;
+    PropertyInjectionDestination(final String propertyName) {
+        this.propertyName = propertyName;
     }
 
-    public ServiceName getDependencyName() {
-        return dependencyName;
-    }
-
-    public Injector<T> getInjector() {
-        return injector;
+    protected <T> Injector<?> getInjector(final Value<T> injectionValue, final ServiceBuilder<T> serviceBuilder, final ServiceRegistryImpl registry) {
+        final String propertyName = this.propertyName;
+        Value<?> prevValue = injectionValue;
+        return new SetMethodInjector<Object>(prevValue, Values.cached(new LookupSetMethodValue(Values.cached(new ClassOfValue<Object>(prevValue)), propertyName)));
     }
 }

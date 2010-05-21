@@ -26,6 +26,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -39,7 +40,7 @@ public final class Values {
 
     private static final ThreadLocalValue<Object> THIS = new ThreadLocalValue<Object>();
 
-    private static final ThreadLocalValue<Object> TARGET = new ThreadLocalValue<Object>();
+    private static final ThreadLocalValue<Object> INJECTED = new ThreadLocalValue<Object>();
 
     private static final Value NULL = new ImmediateValue<Object>(null);
 
@@ -128,9 +129,9 @@ public final class Values {
      * @param <T> the value type
      * @return a cached value
      */
-    public static <T> CachedValue<T> cached(Value<T> value) {
-        if (value instanceof CachedValue) {
-            return (CachedValue<T>) value;
+    public static <T> Value<T> cached(Value<T> value) {
+        if (value instanceof CachedValue || value instanceof ImmediateValue) {
+            return value;
         } else {
             return new CachedValue<T>(value);
         }
@@ -175,6 +176,22 @@ public final class Values {
         return EMPTY_LIST_VALUE;
     }
 
+    public static <T> List<Value<? extends T>> immediateValues(List<T> values) {
+        final List<Value<? extends T>> newList = new ArrayList<Value<? extends T>>(values.size());
+        for (T value : values) {
+            newList.add(new ImmediateValue<T>(value));
+        }
+        return newList;
+    }
+
+    public static <T> List<Value<? extends T>> immediateValues(T... values) {
+        final List<Value<? extends T>> newList = new ArrayList<Value<? extends T>>(values.length);
+        for (T value : values) {
+            newList.add(new ImmediateValue<T>(value));
+        }
+        return newList;
+    }
+
     /**
      * Safely re-cast a value as its superclass.
      *
@@ -188,7 +205,7 @@ public final class Values {
     }
 
     /**
-     * The special value representing {@code this}.
+     * The special value representing {@code this} (the object being invoked upon).
      *
      * @return the value for {@code this}
      */
@@ -197,12 +214,12 @@ public final class Values {
     }
 
     /**
-     * The special value representing the target of an operation.
+     * The special value representing the value of an injection operation.
      *
      * @return the target value
      */
-    public static ThreadLocalValue<Object> targetValue() {
-        return TARGET;
+    public static ThreadLocalValue<Object> injectedValue() {
+        return INJECTED;
     }
 
     public static Value<Method> getSetterMethod(final Value<Class<?>> target, final String propertyName, final Value<Class<?>> type) {

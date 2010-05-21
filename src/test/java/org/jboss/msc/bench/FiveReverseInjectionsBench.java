@@ -1,9 +1,29 @@
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2010, Red Hat Middleware LLC, and individual contributors
+ * as indicated by the @author tags. See the copyright.txt file in the
+ * distribution for a full listing of individual contributors.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+
 package org.jboss.msc.bench;
 
-import org.jboss.msc.inject.FieldInjector;
-import org.jboss.msc.inject.SetMethodInjector;
-import org.jboss.msc.registry.ServiceDefinition;
-import org.jboss.msc.registry.ServiceRegistrationBatchBuilder;
+import org.jboss.msc.registry.BatchBuilder;
+import org.jboss.msc.registry.BatchServiceBuilder;
 import org.jboss.msc.registry.ServiceRegistry;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
@@ -24,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import org.jboss.msc.value.Values;
 
 public class FiveReverseInjectionsBench {
 
@@ -32,7 +53,7 @@ public class FiveReverseInjectionsBench {
 
         final ServiceContainer container = ServiceContainer.Factory.create();
         final ServiceRegistry registry = ServiceRegistry.Factory.create(container);
-        ServiceRegistrationBatchBuilder batch = registry.batchBuilder();
+        BatchBuilder batch = registry.batchBuilder();
 
         final CountDownLatch latch = new CountDownLatch(1);
         final TimingServiceListener listener = new TimingServiceListener(new TimingServiceListener.FinishListener() {
@@ -51,24 +72,16 @@ public class FiveReverseInjectionsBench {
         for (int i = 0; i < totalServiceDefinitions; i++) {
             final TestObject testObject = new TestObject("test" + i);
             final TestObjectService service = new TestObjectService(testObject);
-
-            final ServiceDefinition.Builder<TestObject> builder = ServiceDefinition.build(ServiceName.of(("test" + i).intern()), service)
-                    .addListener(listener);
+            final BatchServiceBuilder<TestObject> builder = batch.addService(ServiceName.of(("test" + i).intern()), service);
+            builder.addListener(listener);
 
             final Object injectedValue = new Object();
-            builder.addInjection(
-                    new ImmediateValue<Object>(injectedValue),
-                    new FieldInjector<Object>(service, testFieldValue)
-            );
+            builder.addInjectionValue(new ImmediateValue<Object>(injectedValue)).toField(testFieldValue);
 
             int numDeps = Math.min(5, i);
             for (int j = 0; j < numDeps; j++) {
-                builder.addInjection(
-                        ServiceName.of(("test" + (i - j - 1)).intern()),
-                        new SetMethodInjector<TestObject>(service,  setterMethodValues.get(4 - j))
-                );
+                builder.addDependency(ServiceName.of(("test" + (i - j - 1)).intern())).toMethod(setterMethodValues.get(4 - j), Collections.singletonList(Values.injectedValue()));
             }
-            batch.add(builder.create());
         }
 
         batch.install();

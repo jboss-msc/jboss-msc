@@ -23,9 +23,12 @@
 package org.jboss.msc.registry;
 
 import org.jboss.msc.service.ServiceContainer;
+import org.jboss.msc.service.ServiceController;
+import org.jboss.msc.service.ServiceName;
 
 /**
- * Service registry capable of installing batches of services and enforcing dependency order. 
+ * Service registry capable of installing batches of services and enforcing dependency order.  Create an instance via the
+ * static {@link Factory#create(ServiceContainer)} method.
  *
  * @author John Bailey
  * @author Jason T. Greene
@@ -38,7 +41,11 @@ public interface ServiceRegistry {
      *
      * @return the new batch builder
      */
-    ServiceRegistrationBatchBuilder batchBuilder();
+    BatchBuilder batchBuilder();
+
+    ServiceController<?> getRequiredService(ServiceName serviceName) throws ServiceNotFoundException;
+
+    ServiceController<?> getService(ServiceName serviceName);
 
     /**
      * The factory used to create instances.

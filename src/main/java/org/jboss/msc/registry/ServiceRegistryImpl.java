@@ -21,8 +21,8 @@
  */
 package org.jboss.msc.registry;
 
-import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.AbstractServiceListener;
+import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceController;
@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import org.jboss.msc.value.Value;
 
 /**
  * Service registry capable of installing batches of services and enforcing dependency order.
@@ -63,38 +64,39 @@ class ServiceRegistryImpl implements ServiceRegistry {
      */
     void install(final BatchBuilderImpl serviceBatch) throws ServiceRegistryException {
         try {
-            resolve(serviceBatch.getBatchEntries(), serviceBatch.getListeners());
+            resolve(serviceBatch.getBatchServices(), serviceBatch.getListeners());
         } catch (ResolutionException e) {
             throw new ServiceRegistryException("Failed to resolve dependencies", e);
         }
     }
 
-    private void resolve(final Map<ServiceName, BatchBuilderImpl.BatchEntry> services, final Set<ServiceListener<?>> batchListeners) throws ServiceRegistryException {
-        for (BatchBuilderImpl.BatchEntry batchEntry : services.values()) {
+    private void resolve(final Map<ServiceName, BatchServiceBuilderImpl<?>> services, final Set<ServiceListener<Object>> batchListeners) throws ServiceRegistryException {
+        for (BatchServiceBuilderImpl<?> batchEntry : services.values()) {
             if(!batchEntry.processed)
                 doResolve(batchEntry, services, batchListeners);
         }
     }
 
     @SuppressWarnings({ "unchecked" })
-    private void doResolve(BatchBuilderImpl.BatchEntry entry, final Map<ServiceName, BatchBuilderImpl.BatchEntry> services, final Set<ServiceListener<?>> batchListeners) throws ServiceRegistryException {
+    private <T> void doResolve(BatchServiceBuilderImpl<T> entry, final Map<ServiceName, BatchServiceBuilderImpl<?>> services, final Set<ServiceListener<Object>> batchListeners) throws ServiceRegistryException {
         outer:
         while (entry != null) {
-            final ServiceDefinition<?> serviceDefinition = entry.serviceDefinition;
+            final Value<? extends Service<T>> serviceValue = entry.getServiceValue();
 
-            if (entry.builder == null)
-                entry.builder = serviceContainer.buildService(serviceDefinition.getService());
+            ServiceBuilder<T> builder;
+            if ((builder = entry.builder) == null) {
+                builder = entry.builder = serviceContainer.buildService(serviceValue);
+            }
 
-            final ServiceBuilder<?> builder = entry.builder;
-            final ServiceName[] deps = serviceDefinition.getDependenciesDirect();
-            final ServiceName name = serviceDefinition.getName();
+            final ServiceName[] deps = entry.getDependencies();
+            final ServiceName name = entry.getName();
 
             while (entry.i < deps.length) {
                 final ServiceName dependencyName = deps[entry.i];
 
                 ServiceController<?> dependencyController = registry.get(dependencyName);
                 if (dependencyController == null) {
-                    final BatchBuilderImpl.BatchEntry dependencyEntry = services.get(dependencyName);
+                    final BatchServiceBuilderImpl dependencyEntry = services.get(dependencyName);
                     if (dependencyEntry == null)
                         throw new MissingDependencyException("Missing dependency: " + name + " depends on " + dependencyName + " which can not be found");
 
@@ -106,7 +108,7 @@ class ServiceRegistryImpl implements ServiceRegistry {
                     entry = dependencyEntry;
 
                     if (entry.visited)
-                        throw new CircularDependencyException("Circular dependency discovered: " + serviceDefinition);
+                        throw new CircularDependencyException("Circular dependency discovered: " + name);
 
                     continue outer;
                 }
@@ -119,18 +121,19 @@ class ServiceRegistryImpl implements ServiceRegistry {
             // We are resolved.  Lets install
             builder.addListener(new ServiceUnregisterListener(name));
 
-            for(ServiceListener listener : batchListeners) {
+            for(ServiceListener<Object> listener : batchListeners) {
                 builder.addListener(listener);
             }
 
-            for(ServiceListener listener : serviceDefinition.getListenersDirect()) {
+            for(ServiceListener<? super T> listener : entry.getListeners()) {
                 builder.addListener(listener);
             }
-            for(ValueInjection<?> injection : serviceDefinition.getInjectionsDirect()) {
-                builder.addValueInjection(injection);
-            }
-            for (NamedServiceInjection<?> injection : serviceDefinition.getNamedInjectionsDirect()) {
-                builder.addValueInjection(new ValueInjection(registry.get(injection.getDependencyName()), (Injector) injection.getInjector()));
+
+
+            for(BatchInjectionBuilderImpl injection : entry.getInjections()) {
+                builder.addValueInjection(
+                        valueInjection(serviceValue, builder, injection)
+                );
             }
 
             final ServiceController<?> serviceController = builder.create();
@@ -140,7 +143,7 @@ class ServiceRegistryImpl implements ServiceRegistry {
 
             // Cleanup
             entry.builder = null;
-            BatchBuilderImpl.BatchEntry prev = entry.prev;
+            BatchServiceBuilderImpl prev = entry.prev;
             entry.prev = null;
 
             // Unroll!
@@ -148,6 +151,26 @@ class ServiceRegistryImpl implements ServiceRegistry {
             entry.visited = false;
             entry = prev;
         }
+    }
+
+    @SuppressWarnings({ "unchecked" })
+    private <T> ValueInjection<T> valueInjection(final Value<? extends Service<T>> serviceValue, final ServiceBuilder<T> builder, final BatchInjectionBuilderImpl injection) {
+        return new ValueInjection(
+                injection.getSource().getValue((Value)serviceValue, builder, this),
+                injection.getDestination().getInjector((Value)serviceValue, builder, this)
+        );
+    }
+
+    public ServiceController<?> getRequiredService(final ServiceName serviceName) throws ServiceNotFoundException {
+        final ServiceController<?> controller = getService(serviceName);
+        if (controller == null) {
+            throw new ServiceNotFoundException("Service " + serviceName + " not found");
+        }
+        return controller;
+    }
+
+    public ServiceController<?> getService(final ServiceName serviceName) {
+        return registry.get(serviceName);
     }
 
     private class ServiceUnregisterListener extends AbstractServiceListener<Object> {

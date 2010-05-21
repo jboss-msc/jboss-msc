@@ -1,76 +1,84 @@
 package org.jboss.msc.registry;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.jboss.msc.service.ServiceBuilder;
+import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceListener;
 import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.value.ImmediateValue;
+import org.jboss.msc.value.Value;
 
 /**
  * An ordered set of service batchEntries that should be processed as one.
  * 
  * @author Jason T. Greene
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class BatchBuilderImpl implements ServiceRegistrationBatchBuilder {
+final class BatchBuilderImpl implements BatchBuilder {
 
-    private final LinkedHashMap<ServiceName, BatchEntry> batchEntries = new LinkedHashMap<ServiceName, BatchEntry>();
+    private final Map<ServiceName, BatchServiceBuilderImpl<?>> batchServices = new HashMap<ServiceName, BatchServiceBuilderImpl<?>>();
     private final ServiceRegistryImpl serviceRegistry;
-    private final Set<ServiceListener<?>> listeners = new HashSet<ServiceListener<?>>();
+    private final Set<ServiceListener<Object>> listeners = new HashSet<ServiceListener<Object>>();
+    private boolean done;
 
     BatchBuilderImpl(final ServiceRegistryImpl serviceRegistry) {
         this.serviceRegistry = serviceRegistry;
     }
 
     public void install() throws ServiceRegistryException {
+        if (done) {
+            throw alreadyInstalled();
+        }
+        done = true;
         serviceRegistry.install(this);
     }
 
-    public BatchBuilderImpl add(ServiceDefinition definition) {
-        batchEntries.put(definition.getName(), new BatchEntry(definition));
-
-        return this;
+    static IllegalStateException alreadyInstalled() {
+        return new IllegalStateException("Batch already installed");
     }
 
-    public BatchBuilderImpl add(ServiceDefinition<?>... definitions) {
-        final Map<ServiceName, BatchEntry> batchEntries = this.batchEntries;
-
-        for (ServiceDefinition definition : definitions) {
-            batchEntries.put(definition.getName(), new BatchEntry(definition));
+    public <T> BatchServiceBuilderImpl<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws DuplicateServiceException {
+        if (done) {
+            throw alreadyInstalled();
         }
-
-        return this;
+        final Map<ServiceName, BatchServiceBuilderImpl<?>> batchServices = this.batchServices;
+        final BatchServiceBuilderImpl<?> old = batchServices.get(name);
+        if (old != null) {
+            throw new DuplicateServiceException("Service named " + name + " is already defined in this batch");
+        }
+        final BatchServiceBuilderImpl<T> builder = new BatchServiceBuilderImpl<T>(this, value, name);
+        batchServices.put(name, builder);
+        return builder;
     }
 
-    public BatchBuilderImpl add(Collection<ServiceDefinition<?>> definitions) {
-        if (definitions == null)
-            throw new IllegalArgumentException("Definitions can not be null");
-
-        final Map<ServiceName, BatchEntry> batchEntries = this.batchEntries;
-
-        for (ServiceDefinition definition : definitions) {
-            batchEntries.put(definition.getName(), new BatchEntry(definition));
+    public <T> BatchServiceBuilderImpl<T> addService(final ServiceName name, final Service<T> service) throws DuplicateServiceException {
+        if (done) {
+            throw alreadyInstalled();
         }
-
-        return this;
+        return addServiceValue(name, new ImmediateValue<Service<T>>(service));
     }
 
     @Override
-    public ServiceRegistrationBatchBuilder addListener(ServiceListener<?> listener) {
+    public BatchBuilderImpl addListener(ServiceListener<Object> listener) {
+        if (done) {
+            throw alreadyInstalled();
+        }
         listeners.add(listener);
-
-        return this; 
+        return this;
     }
 
-
     @Override
-    public ServiceRegistrationBatchBuilder addListener(ServiceListener<?>... listeners) {
-        final Set<ServiceListener<?>> batchListeners = this.listeners;
+    public BatchBuilderImpl addListener(ServiceListener<Object>... listeners) {
+        if (done) {
+            throw alreadyInstalled();
+        }
+        final Set<ServiceListener<Object>> batchListeners = this.listeners;
 
-        for(ServiceListener<?> listener : listeners) {
+        for(ServiceListener<Object> listener : listeners) {
             batchListeners.add(listener);
         }
 
@@ -78,40 +86,30 @@ final class BatchBuilderImpl implements ServiceRegistrationBatchBuilder {
     }
 
     @Override
-    public ServiceRegistrationBatchBuilder addListener(Collection<ServiceListener<?>> listeners) {
+    public BatchBuilderImpl addListener(Collection<ServiceListener<Object>> listeners) {
+        if (done) {
+            throw alreadyInstalled();
+        }
         if(listeners == null)
             throw new IllegalArgumentException("Listeners can not be null");
 
-        final Set<ServiceListener<?>> batchListeners = this.listeners;
+        final Set<ServiceListener<Object>> batchListeners = this.listeners;
 
-        for(ServiceListener<?> listener : listeners) {
+        for(ServiceListener<Object> listener : listeners) {
             batchListeners.add(listener);
         }
         return this;
     }
 
-    Set<ServiceListener<?>> getListeners() {
+    Set<ServiceListener<Object>> getListeners() {
         return listeners;
     }
 
-    LinkedHashMap<ServiceName, BatchEntry> getBatchEntries() {
-        return batchEntries;
+    Map<ServiceName, BatchServiceBuilderImpl<?>> getBatchServices() {
+        return batchServices;
     }
 
-    /**
-     * This class represents an entry in a ServiceBatch.  Basically a wrapper around a ServiceDefinition that also
-     * maintain some state information for resolution.
-     */
-    public class BatchEntry {
-        final ServiceDefinition<?> serviceDefinition;
-        boolean processed;
-        boolean visited;
-        BatchEntry prev;
-        ServiceBuilder<?> builder;
-        int i;
-
-        public BatchEntry(ServiceDefinition<?> serviceDefinition) {
-            this.serviceDefinition = serviceDefinition;
-        }
+    boolean isDone() {
+        return done;
     }
 }
