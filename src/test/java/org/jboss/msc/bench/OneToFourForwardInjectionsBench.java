@@ -22,9 +22,8 @@
 
 package org.jboss.msc.bench;
 
-import org.jboss.msc.inject.FieldInjector;
-import org.jboss.msc.inject.SetMethodInjector;
 import org.jboss.msc.registry.BatchBuilder;
+import org.jboss.msc.registry.BatchServiceBuilder;
 import org.jboss.msc.registry.ServiceRegistry;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
@@ -33,17 +32,7 @@ import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
 import org.jboss.msc.service.TimingServiceListener;
-import org.jboss.msc.value.CachedValue;
-import org.jboss.msc.value.ImmediateValue;
-import org.jboss.msc.value.LookupFieldValue;
-import org.jboss.msc.value.LookupMethodValue;
-import org.jboss.msc.value.Value;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 public class OneToFourForwardInjectionsBench {
@@ -62,25 +51,14 @@ public class OneToFourForwardInjectionsBench {
             }
         });
 
-        final Value<Field> testFieldValue = new CachedValue<Field>(new LookupFieldValue(new ImmediateValue<Class<?>>(TestObject.class), "test"));
-
-        final List<Value<Class<?>>> params = Collections.singletonList((Value<Class<?>>)new ImmediateValue<Class<?>>(TestObject.class));
-        final List<Value<Method>> setterMethodValues = new ArrayList<Value<Method>>(5);
-        for(int i = 0; i < 5; i++)
-            setterMethodValues.add(new CachedValue<Method>(new LookupMethodValue(new ImmediateValue<Class<?>>(TestObject.class), "setOther" + (i), params)));
-
         for (int i = 0; i < totalServiceDefinitions; i++) {
             final TestObject testObject = new TestObject("test" + i);
             final TestObjectService service = new TestObjectService(testObject);
             
-            final ServiceDefinition.Builder<TestObject> builder = ServiceDefinition.build(ServiceName.of(("test" + i).intern()), service)
-                    .addListener(listener);
+            final BatchServiceBuilder<TestObject> builder = batch.addService(ServiceName.of(("test" + i).intern()), service);
 
             final Object injectedValue = new Object();
-            builder.addInjection(
-                    new ImmediateValue<Object>(injectedValue),
-                    new FieldInjector<Object>(service, testFieldValue)
-            );
+            builder.addInjection(injectedValue).toField("test");
 
             int nextDivByFive = (5 - (i % 5)) + i;
             int numDeps = Math.min(nextDivByFive - i, totalServiceDefinitions - i - 1);
@@ -89,13 +67,9 @@ public class OneToFourForwardInjectionsBench {
                 if(depId % 5 ==0)
                     continue;
 
-                builder.addInjection(
-                        ServiceName.of(("test" + depId).intern()),
-                        new SetMethodInjector<TestObject>(service,  setterMethodValues.get(j))
-                );
+                builder.addDependency(ServiceName.of(("test" + depId).intern()))
+                    .toMethod("setOther" + (i));
             }
-
-            batch.add(builder.create());
         }
 
         batch.install();

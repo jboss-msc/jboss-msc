@@ -48,6 +48,7 @@ public class TenForwardBench {
                 latch.countDown();
             }
         });
+
         for (int i = 0; i < totalServiceDefinitions; i++) {
             List<ServiceName> deps = new ArrayList<ServiceName>();
             int numDeps = Math.min(10, totalServiceDefinitions - i - 1);
@@ -55,12 +56,13 @@ public class TenForwardBench {
             for (int j = 1; j < numDeps + 1; j++) {
                 deps.add(ServiceName.of(("test" + (i + j)).intern()));
             }
-            final BatchServiceBuilder<Void> builder = batch.addService(ServiceName.of(("test" + i).intern()), Service.NULL).addListener(listener);
+            final BatchServiceBuilder<Void> builder = batch.addService(ServiceName.of(("test" + i).intern()), Service.NULL);
             for (ServiceName dep : deps) {
                 builder.addDependency(dep);
             }
         }
-        
+
+        batch.addListener(listener);
         batch.install();
         listener.finishBatch();
         latch.await();

@@ -24,11 +24,9 @@ package org.jboss.msc.bench;
 
 import org.jboss.msc.registry.BatchBuilder;
 import org.jboss.msc.registry.ServiceRegistry;
-import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.TimingServiceListener;
-import org.jboss.msc.value.Value;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -58,12 +56,10 @@ public class NoDepsSleepyStartBench {
 
         for (int i = 0; i < totalServiceDefinitions; i++) {
             final SleepService service = new SleepService();
-            final ServiceDefinition.Builder<SleepService> builder = ServiceDefinition.build(ServiceName.of(("test" + i).intern()), (Value<? extends Service<SleepService>>)service)
-                    .addListener(listener);
-
-            batch.add(builder.create());
+            batch.addService(ServiceName.of(("test" + i).intern()), service);
         }
-
+        
+        batch.addListener(listener);
         batch.install();
         listener.finishBatch();
         latch.await();

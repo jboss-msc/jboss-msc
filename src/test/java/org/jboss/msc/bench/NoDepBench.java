@@ -46,7 +46,7 @@ public class NoDepBench {
             }
         });
         for (int i = 0; i < totalServiceDefinitions; i++) {
-            batch.add(ServiceDefinition.build(ServiceName.of("test" + i), Service.NULL_VALUE).create());
+            batch.addService(ServiceName.of("test" + i), Service.NULL);
         }
         batch.addListener(listener);
         batch.install();
