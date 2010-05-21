@@ -65,7 +65,7 @@ public interface BatchInjectionBuilder {
      */
     BatchInjectionBuilder toMethod(String name, List<? extends Value<Class<?>>> parameterTypes, List<? extends Value<?>> parameterValues);
 
-    BatchInjectionBuilder toMethod(Value<Method> methodValue, List<? extends Value<?>> parameterValues);
+    BatchInjectionBuilder toMethodValue(Value<Method> methodValue, List<? extends Value<?>> parameterValues);
 
     BatchInjectionBuilder toMethod(String name);
 
@@ -79,7 +79,9 @@ public interface BatchInjectionBuilder {
 
     BatchInjectionBuilder toField(String fieldName);
 
-    BatchInjectionBuilder toField(Value<Field> fieldValue);
+    BatchInjectionBuilder toField(Field field);
+
+    BatchInjectionBuilder toFieldValue(Value<Field> fieldValue);
 
     BatchInjectionBuilder fromProperty(String property);
 
@@ -87,25 +89,35 @@ public interface BatchInjectionBuilder {
 
     BatchInjectionBuilder fromMethod(String name);
 
-    BatchInjectionBuilder fromMethod(Value<Method> methodValue, List<? extends Value<?>> parameterValues);
+    BatchInjectionBuilder fromMethod(Method method, List<? extends Value<?>> parameterValues);
+
+    BatchInjectionBuilder fromMethodValue(Value<Method> methodValue, List<? extends Value<?>> parameterValues);
 
     BatchInjectionBuilder fromField(String fieldName);
 
-    BatchInjectionBuilder fromField(Value<Field> fieldValue);
+    BatchInjectionBuilder fromField(Field field);
 
-    BatchInjectionBuilder from(Value<?> value);
+    BatchInjectionBuilder fromFieldValue(Value<Field> fieldValue);
+
+    BatchInjectionBuilder fromValue(Value<?> value);
+
+    BatchInjectionBuilder from(Object object);
 
     BatchInjectionBuilder viaProperty(String property);
 
     BatchInjectionBuilder viaMethod(String name, List<? extends Value<Class<?>>> parameterTypes, List<? extends Value<?>> parameterValues);
 
-    BatchInjectionBuilder viaMethod(Value<Method> methodValue, List<? extends Value<?>> parameterValues);
+    BatchInjectionBuilder viaMethod(Method method, List<? extends Value<?>> parameterValues);
+
+    BatchInjectionBuilder viaMethodValue(Value<Method> methodValue, List<? extends Value<?>> parameterValues);
 
     BatchInjectionBuilder viaMethod(String name);
 
     BatchInjectionBuilder viaField(String fieldName);
 
     BatchInjectionBuilder viaField(Field field);
+
+    BatchInjectionBuilder viaFieldValue(Value<Field> fieldValue);
 
     /**
      * Add a translator which will translate the injection target.

@@ -76,11 +76,11 @@ public class FiveReverseInjectionsBench {
             builder.addListener(listener);
 
             final Object injectedValue = new Object();
-            builder.addInjectionValue(new ImmediateValue<Object>(injectedValue)).toField(testFieldValue);
+            builder.addInjectionValue(new ImmediateValue<Object>(injectedValue)).toFieldValue(testFieldValue);
 
             int numDeps = Math.min(5, i);
             for (int j = 0; j < numDeps; j++) {
-                builder.addDependency(ServiceName.of(("test" + (i - j - 1)).intern())).toMethod(setterMethodValues.get(4 - j), Collections.singletonList(Values.injectedValue()));
+                builder.addDependency(ServiceName.of(("test" + (i - j - 1)).intern())).toMethodValue(setterMethodValues.get(4 - j), Collections.singletonList(Values.injectedValue()));
             }
         }
 

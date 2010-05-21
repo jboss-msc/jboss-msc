@@ -22,12 +22,9 @@
 package org.jboss.msc.registry;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.jboss.msc.inject.FieldInjector;
-import org.jboss.msc.inject.SetMethodInjector;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
@@ -35,7 +32,6 @@ import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
 import org.jboss.msc.value.ImmediateValue;
-import org.jboss.msc.value.Value;
 import org.junit.Test;
 
 import static org.junit.Assert.fail;
@@ -171,7 +167,7 @@ public class ServiceRegistryTestCase {
         field.setAccessible(true);
 
         final BatchServiceBuilder<TestObject> serviceBuilder = batch.addService(ServiceName.of("testService"), service);
-        serviceBuilder.addInjection(injectedValue).toField(new ImmediateValue<Field>(field));
+        serviceBuilder.addInjection(injectedValue).toFieldValue(new ImmediateValue<Field>(field));
         serviceBuilder.addInjection(otherInjectedValue).toProperty("other");
         batch.install();
     }

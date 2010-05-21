@@ -22,8 +22,6 @@
 
 package org.jboss.msc.bench;
 
-import org.jboss.msc.inject.FieldInjector;
-import org.jboss.msc.inject.SetMethodInjector;
 import org.jboss.msc.registry.BatchBuilder;
 import org.jboss.msc.registry.BatchServiceBuilder;
 import org.jboss.msc.registry.ServiceRegistry;
@@ -84,7 +82,7 @@ public class InjectionsWithStartBench {
             final BatchServiceBuilder<TestObject> builder = batch.addService(ServiceName.of(("test" + i).intern()), service).addListener(listener);
 
             final Object injectedValue = new Object();
-            builder.addInjection(injectedValue).toField(testFieldValue);
+            builder.addInjection(injectedValue).toFieldValue(testFieldValue);
 
             int nextDivByFive = (5 - (i % 5)) + i;
             int numDeps = Math.min(nextDivByFive - i, totalServiceDefinitions - i - 1);
@@ -93,7 +91,7 @@ public class InjectionsWithStartBench {
                 if(depId % 5 ==0)
                     continue;
 
-                builder.addDependency(ServiceName.of(("test" + depId).intern())).toMethod(setterMethodValues.get(j), Collections.singletonList(Values.injectedValue()));
+                builder.addDependency(ServiceName.of(("test" + depId).intern())).toMethodValue(setterMethodValues.get(j), Collections.singletonList(Values.injectedValue()));
             }
         }
 
