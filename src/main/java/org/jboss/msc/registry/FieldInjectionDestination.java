@@ -22,23 +22,24 @@
 
 package org.jboss.msc.registry;
 
+import java.lang.reflect.Field;
+import org.jboss.msc.inject.FieldInjector;
 import org.jboss.msc.inject.Injector;
-import org.jboss.msc.inject.PropertyInjector;
-import org.jboss.msc.reflect.Property;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.value.Value;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class PropertyInjectionDestination extends InjectionDestination {
-    private final Value<Property> propertyValue;
+final class FieldInjectionDestination extends InjectionDestination {
 
-    PropertyInjectionDestination(final Value<Property> propertyValue) {
-        this.propertyValue = propertyValue;
+    private final Value<Field> fieldValue;
+
+    FieldInjectionDestination(final Value<Field> fieldValue) {
+        this.fieldValue = fieldValue;
     }
 
     protected <T> Injector<?> getInjector(final Value<T> injectionValue, final ServiceBuilder<T> serviceBuilder, final ServiceRegistryImpl registry) {
-        return new PropertyInjector<T>(propertyValue, injectionValue);
+        return new FieldInjector<Object>(injectionValue, fieldValue);
     }
 }

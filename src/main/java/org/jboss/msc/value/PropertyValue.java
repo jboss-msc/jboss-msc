@@ -20,25 +20,28 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.registry;
+package org.jboss.msc.value;
 
-import org.jboss.msc.inject.Injector;
-import org.jboss.msc.inject.PropertyInjector;
 import org.jboss.msc.reflect.Property;
-import org.jboss.msc.service.ServiceBuilder;
-import org.jboss.msc.value.Value;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class PropertyInjectionDestination extends InjectionDestination {
+public final class PropertyValue<T> implements Value<T> {
     private final Value<Property> propertyValue;
+    private final Value<?> target;
 
-    PropertyInjectionDestination(final Value<Property> propertyValue) {
+    public PropertyValue(final Value<Property> propertyValue, final Value<?> target) {
         this.propertyValue = propertyValue;
+        this.target = target;
     }
 
-    protected <T> Injector<?> getInjector(final Value<T> injectionValue, final ServiceBuilder<T> serviceBuilder, final ServiceRegistryImpl registry) {
-        return new PropertyInjector<T>(propertyValue, injectionValue);
+    @SuppressWarnings({ "unchecked" })
+    public T getValue() throws IllegalStateException {
+        try {
+            return (T) propertyValue.getValue().get(target);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to get value", e);
+        }
     }
 }

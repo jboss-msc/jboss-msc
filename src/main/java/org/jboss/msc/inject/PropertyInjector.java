@@ -20,25 +20,43 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.registry;
+package org.jboss.msc.inject;
 
-import org.jboss.msc.inject.Injector;
-import org.jboss.msc.inject.PropertyInjector;
 import org.jboss.msc.reflect.Property;
-import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.value.Value;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class PropertyInjectionDestination extends InjectionDestination {
-    private final Value<Property> propertyValue;
+public final class PropertyInjector<T> implements Injector<T> {
 
-    PropertyInjectionDestination(final Value<Property> propertyValue) {
+    private final Value<Property> propertyValue;
+    private final Value<? super T> injectionValue;
+
+    public PropertyInjector(final Value<Property> propertyValue, final Value<? super T> injectionValue) {
+        if (propertyValue == null) {
+            throw new IllegalArgumentException("propertyValue is null");
+        }
+        if (injectionValue == null) {
+            throw new IllegalArgumentException("injectionValue is null");
+        }
         this.propertyValue = propertyValue;
+        this.injectionValue = injectionValue;
     }
 
-    protected <T> Injector<?> getInjector(final Value<T> injectionValue, final ServiceBuilder<T> serviceBuilder, final ServiceRegistryImpl registry) {
-        return new PropertyInjector<T>(propertyValue, injectionValue);
+    public void inject(final T value) throws InjectionException {
+        try {
+            propertyValue.getValue().set(injectionValue.getValue(), value);
+        } catch (Exception e) {
+            throw new InjectionException("Injection failed", e);
+        }
+    }
+
+    public void uninject() {
+        try {
+            propertyValue.getValue().set(injectionValue.getValue(), null);
+        } catch (Exception e) {
+            // todo log
+        }
     }
 }

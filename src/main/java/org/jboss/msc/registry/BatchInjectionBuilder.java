@@ -26,6 +26,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 import org.jboss.msc.inject.Injector;
+import org.jboss.msc.reflect.Property;
 import org.jboss.msc.translate.Translator;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.value.Value;
@@ -37,8 +38,6 @@ import org.jboss.msc.value.Values;
  * <li>{@link BatchServiceBuilder#addInjection(Object)}</li>
  * <li>{@link BatchServiceBuilder#addInjectionValue(org.jboss.msc.value.Value)}</li>
  * <li>{@link BatchServiceBuilder#addDependency(ServiceName)}</li>
- * <li>{@link BatchServiceBuilder#addDependency(ServiceName, String)}</li>
- * <li>{@link BatchServiceBuilder#addDependency(ServiceName, Value)}</li>
  * </ul>
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -52,6 +51,10 @@ public interface BatchInjectionBuilder {
      * @return this builder
      */
     BatchInjectionBuilder toProperty(String property);
+
+    BatchInjectionBuilder toProperty(Property property);
+
+    BatchInjectionBuilder toPropertyValue(Value<Property> property);
 
     /**
      * Specify that the target of injection be a method on the destination object.  The object being injected can be
@@ -75,7 +78,7 @@ public interface BatchInjectionBuilder {
      * @param injector the target
      * @return this builder
      */
-    BatchInjectionBuilder to(Injector<?> injector);
+    BatchInjectionBuilder toInjector(Injector<?> injector);
 
     BatchInjectionBuilder toField(String fieldName);
 
@@ -84,6 +87,10 @@ public interface BatchInjectionBuilder {
     BatchInjectionBuilder toFieldValue(Value<Field> fieldValue);
 
     BatchInjectionBuilder fromProperty(String property);
+
+    BatchInjectionBuilder fromProperty(Property property);
+
+    BatchInjectionBuilder fromPropertyValue(Value<Property> propertyValue);
 
     BatchInjectionBuilder fromMethod(String name, List<? extends Value<Class<?>>> parameterTypes, List<? extends Value<?>> parameterValues);
 
@@ -99,11 +106,11 @@ public interface BatchInjectionBuilder {
 
     BatchInjectionBuilder fromFieldValue(Value<Field> fieldValue);
 
-    BatchInjectionBuilder fromValue(Value<?> value);
-
-    BatchInjectionBuilder from(Object object);
-
     BatchInjectionBuilder viaProperty(String property);
+
+    BatchInjectionBuilder viaProperty(Property property);
+
+    BatchInjectionBuilder viaPropertyValue(Value<Property> property);
 
     BatchInjectionBuilder viaMethod(String name, List<? extends Value<Class<?>>> parameterTypes, List<? extends Value<?>> parameterValues);
 
