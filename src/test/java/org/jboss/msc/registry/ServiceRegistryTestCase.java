@@ -47,7 +47,6 @@ public class ServiceRegistryTestCase {
     public void testResolvable() throws Exception {
         final BatchBuilder builder = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
         builder.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"));
-        builder.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"));
         builder.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
         builder.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"));
         builder.addService(ServiceName.of("11"), Service.NULL).addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"));
