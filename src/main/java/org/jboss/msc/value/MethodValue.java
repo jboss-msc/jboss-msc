@@ -54,8 +54,15 @@ public final class MethodValue<T> implements Value<T> {
     /** {@inheritDoc} */
     @SuppressWarnings({ "unchecked" })
     public T getValue() throws IllegalStateException {
+        final ThreadLocalValue<Object> thisValue = Values.thisValue();
+        final Value<?> targetValue = this.targetValue;
         try {
-            return (T) methodValue.getValue().invoke(targetValue.getValue(), Values.getValues(parameters));
+            final Value<?> old = thisValue.getAndSetValue(targetValue);
+            try {
+                return (T) methodValue.getValue().invoke(targetValue.getValue(), Values.getValues(parameters));
+            } finally {
+                thisValue.setValue(old);
+            }
         } catch (IllegalAccessException e) {
             throw new IllegalStateException("Field is not accessible", e);
         } catch (InvocationTargetException e) {

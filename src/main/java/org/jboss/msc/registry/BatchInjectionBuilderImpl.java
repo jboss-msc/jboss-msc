@@ -128,6 +128,28 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         return this;
     }
 
+    public BatchInjectionBuilder toMethod(final String name, final Value<?> targetValue, final List<? extends Value<Class<?>>> parameterTypes, final List<? extends Value<?>> parameterValues) {
+        if (batchBuilder.isDone()) {
+            throw alreadyInstalled();
+        }
+        if (injectionDestination != null) {
+            throw alreadySpecified();
+        }
+        injectionDestination = new MethodInjectionDestination(new LookupMethodValue(new ClassOfValue<Object>(targetValue), name, parameterTypes), parameterValues);
+        return this;
+    }
+
+    public BatchInjectionBuilder toMethodValue(final Value<Method> methodValue, final Value<?> targetValue, final List<? extends Value<?>> parameterValues) {
+        if (batchBuilder.isDone()) {
+            throw alreadyInstalled();
+        }
+        if (injectionDestination != null) {
+            throw alreadySpecified();
+        }
+        injectionDestination = new MethodInjectionDestination(methodValue, targetValue, parameterValues);
+        return this;
+    }
+
     public BatchInjectionBuilderImpl toMethod(final String name) {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
@@ -210,6 +232,14 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         return this;
     }
 
+    public BatchInjectionBuilderImpl fromMethod(final String name, final Value<?> target, final List<? extends Value<Class<?>>> parameterTypes, final List<? extends Value<?>> parameterValues) {
+        if (batchBuilder.isDone()) {
+            throw alreadyInstalled();
+        }
+        this.target = new MethodValue<Object>(new LookupMethodValue(new ClassOfValue<Object>(target), name, parameterTypes), target, parameterValues);
+        return this;
+    }
+
     public BatchInjectionBuilderImpl fromMethod(final String name) {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
@@ -222,11 +252,23 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         return fromMethodValue(new ImmediateValue<Method>(method), parameterValues);
     }
 
+    public BatchInjectionBuilderImpl fromMethod(final Method method, final Value<?> target, final List<? extends Value<?>> parameterValues) {
+        return fromMethodValue(new ImmediateValue<Method>(method), target, parameterValues);
+    }
+
     public BatchInjectionBuilderImpl fromMethodValue(final Value<Method> methodValue, final List<? extends Value<?>> parameterValues) {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
         target = new MethodValue<Object>(methodValue, target, parameterValues);
+        return this;
+    }
+
+    public BatchInjectionBuilderImpl fromMethodValue(final Value<Method> methodValue, final Value<?> target, final List<? extends Value<?>> parameterValues) {
+        if (batchBuilder.isDone()) {
+            throw alreadyInstalled();
+        }
+        this.target = new MethodValue<Object>(methodValue, target, parameterValues);
         return this;
     }
 
@@ -287,6 +329,18 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
             throw alreadyInstalled();
         }
         return this;
+    }
+
+    public BatchInjectionBuilder viaMethod(final String name, final Value<?> targetValue, final List<? extends Value<Class<?>>> parameterTypes, final List<? extends Value<?>> parameterValues) {
+        return null;
+    }
+
+    public BatchInjectionBuilder viaMethod(final Method method, final Value<?> targetValue, final List<? extends Value<?>> parameterValues) {
+        return null;
+    }
+
+    public BatchInjectionBuilder viaMethodValue(final Value<Method> methodValue, final Value<?> targetValue, final List<? extends Value<?>> parameterValues) {
+        return null;
     }
 
     public BatchInjectionBuilderImpl viaMethod(final String name) {

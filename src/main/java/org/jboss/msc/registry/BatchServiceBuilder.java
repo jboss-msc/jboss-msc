@@ -63,8 +63,20 @@ public interface BatchServiceBuilder<T> {
      */
     BatchServiceBuilder<T> setInitialMode(ServiceController.Mode mode);
 
+    /**
+     * Add multiple, non-injected dependencies.
+     *
+     * @param dependencies the service names to depend on
+     * @return this builder
+     */
     BatchServiceBuilder<T> addDependencies(ServiceName... dependencies);
 
+    /**
+     * Add multiple, non-injected dependencies.
+     *
+     * @param dependencies the service names to depend on
+     * @return this builder
+     */
     BatchServiceBuilder<T> addDependencies(Iterable<ServiceName> dependencies);
 
     /**

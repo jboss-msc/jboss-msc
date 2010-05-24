@@ -28,6 +28,7 @@ import org.jboss.msc.inject.Injector;
 import org.jboss.msc.inject.MethodInjector;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.value.Value;
+import org.jboss.msc.value.Values;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -36,13 +37,21 @@ final class MethodInjectionDestination extends InjectionDestination {
 
     private final Value<Method> methodValue;
     private final List<? extends Value<?>> parameterValues;
+    private final Value<?> targetValue;
 
     MethodInjectionDestination(final Value<Method> methodValue, final List<? extends Value<?>> parameterValues) {
         this.methodValue = methodValue;
         this.parameterValues = parameterValues;
+        targetValue = Values.injectedValue();
+    }
+
+    public MethodInjectionDestination(final Value<Method> methodValue, final Value<?> targetValue, final List<? extends Value<?>> parameterValues) {
+        this.methodValue = methodValue;
+        this.parameterValues = parameterValues;
+        this.targetValue = targetValue;
     }
 
     protected <T> Injector<?> getInjector(final Value<T> injectionValue, final ServiceBuilder<T> serviceBuilder, final ServiceRegistryImpl registry) {
-        return new MethodInjector<Object>(methodValue, injectionValue, parameterValues);
+        return new MethodInjector<Object>(methodValue, targetValue, injectedValue, parameterValues);
     }
 }

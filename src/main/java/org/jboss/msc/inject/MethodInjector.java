@@ -40,19 +40,21 @@ import org.jboss.msc.value.Values;
  */
 public final class MethodInjector<T> implements Injector<T> {
     private final Value<Method> methodValue;
-    private final Value<?> thisValue;
+    private final Value<?> injectedValue;
+    private final Value<?> targetValue;
     private final List<? extends Value<?>> parameterList;
 
-    public MethodInjector(final Value<Method> methodValue, final Value<?> thisValue, final List<? extends Value<?>> parameterList) {
+    public MethodInjector(final Value<Method> methodValue, final Value<?> targetValue, final Value<?> injectedValue, final List<? extends Value<?>> parameterList) {
         this.methodValue = methodValue;
-        this.thisValue = thisValue;
+        this.targetValue = targetValue;
+        this.injectedValue = injectedValue;
         this.parameterList = parameterList;
     }
 
     public void inject(final T value) throws InjectionException {
         final ThreadLocalValue<Object> tlsTargetValue = Values.injectedValue();
         final ThreadLocalValue<Object> tlsThisValue = Values.thisValue();
-        final Value<?> thisValue = this.thisValue;
+        final Value<?> thisValue = targetValue;
         final Value<?> oldTarget = tlsTargetValue.getAndSetValue((Value<?>) new ImmediateValue<T>(value));
         try {
             final Value<?> oldThis = tlsThisValue.getAndSetValue(thisValue);
@@ -69,22 +71,22 @@ public final class MethodInjector<T> implements Injector<T> {
     }
 
     public void uninject() {
-        final ThreadLocalValue<Object> tlsTargetValue = Values.injectedValue();
-        final ThreadLocalValue<Object> tlsThisValue = Values.thisValue();
-        final Value<?> oldTarget = tlsTargetValue.getAndSetValue(Values.nullValue());
+        final ThreadLocalValue<Object> injectedValue = Values.injectedValue();
+        final ThreadLocalValue<Object> thisValue = Values.thisValue();
+        final Value<?> oldTarget = injectedValue.getAndSetValue(this.injectedValue);
         try {
-            final Value<?> oldThis = tlsThisValue.getAndSetValue(thisValue);
+            final Value<?> oldThis = thisValue.getAndSetValue(targetValue);
             try {
-                methodValue.getValue().invoke(thisValue.getValue(), Values.getValues(parameterList));
+                methodValue.getValue().invoke(targetValue.getValue(), Values.getValues(parameterList));
             } catch (InvocationTargetException e) {
                 // todo log it
             } catch (IllegalAccessException e) {
                 // todo log it
             } finally {
-                tlsThisValue.setValue(oldThis);
+                thisValue.setValue(oldThis);
             }
         } finally {
-            tlsTargetValue.setValue(oldTarget);
+            injectedValue.setValue(oldTarget);
         }
     }
 }

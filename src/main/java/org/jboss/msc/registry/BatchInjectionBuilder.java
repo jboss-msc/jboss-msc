@@ -52,9 +52,21 @@ public interface BatchInjectionBuilder {
      */
     BatchInjectionBuilder toProperty(String property);
 
+    /**
+     * Specify that the target of injection be a property on the destination object.
+     *
+     * @param property the destination property
+     * @return this builder
+     */
     BatchInjectionBuilder toProperty(Property property);
 
-    BatchInjectionBuilder toPropertyValue(Value<Property> property);
+    /**
+     * Specify that the target of injection be a property on the destination object.
+     *
+     * @param propertyValue the value of the destination property
+     * @return this builder
+     */
+    BatchInjectionBuilder toPropertyValue(Value<Property> propertyValue);
 
     /**
      * Specify that the target of injection be a method on the destination object.  The object being injected can be
@@ -68,8 +80,48 @@ public interface BatchInjectionBuilder {
      */
     BatchInjectionBuilder toMethod(String name, List<? extends Value<Class<?>>> parameterTypes, List<? extends Value<?>> parameterValues);
 
+    /**
+     * Specify that the target of injection be a method on the destination object.  The object being injected can be
+     * referenced in the parameter list with the {@link Values#injectedValue()} value; the
+     * destination object can be referenced with the {@link Values#thisValue()} value.
+     *
+     * @param methodValue the method value
+     * @param parameterValues the parameter values
+     * @return this builder
+     */
     BatchInjectionBuilder toMethodValue(Value<Method> methodValue, List<? extends Value<?>> parameterValues);
 
+    /**
+     * Specify that the target of injection be a method on the destination object.  The object being injected can be
+     * referenced in the parameter list with the {@link Values#injectedValue()} value; the
+     * destination object can be referenced with the {@link Values#thisValue()} value.
+     *
+     * @param name the method name
+     * @param targetValue the value upon which the method should be invoked (use {@link Values#nullValue()} for static methods)
+     * @param parameterTypes the parameter type values
+     * @param parameterValues the parameter values
+     * @return this builder
+     */
+    BatchInjectionBuilder toMethod(String name, Value<?> targetValue, List<? extends Value<Class<?>>> parameterTypes, List<? extends Value<?>> parameterValues);
+
+    /**
+     * Specify that the target of injection be a method on the destination object.  The object being injected can be
+     * referenced in the parameter list with the {@link Values#injectedValue()} value; the
+     * destination object can be referenced with the {@link Values#thisValue()} value.
+     *
+     * @param methodValue the method value
+     * @param targetValue the value upon which the method should be invoked (use {@link Values#nullValue()} for static methods)
+     * @param parameterValues the parameter values
+     * @return this builder
+     */
+    BatchInjectionBuilder toMethodValue(Value<Method> methodValue, Value<?> targetValue, List<? extends Value<?>> parameterValues);
+
+    /**
+     * Specify that the target of injection be a one-argument method on the destination object.
+     *
+     * @param name the method name
+     * @return this builder
+     */
     BatchInjectionBuilder toMethod(String name);
 
     /**
@@ -80,25 +132,126 @@ public interface BatchInjectionBuilder {
      */
     BatchInjectionBuilder toInjector(Injector<?> injector);
 
+    /**
+     * Specify that the target of injection be a field on the target object.
+     *
+     * @param fieldName the name of the field
+     * @return this builder
+     */
     BatchInjectionBuilder toField(String fieldName);
 
+    /**
+     * Specify that the target of injection be a field on the target object.
+     *
+     * @param field the field
+     * @return this builder
+     */
     BatchInjectionBuilder toField(Field field);
 
+    /**
+     * Specify that the target of injection be a field on the target object.
+     *
+     * @param fieldValue the field value
+     * @return this builder
+     */
     BatchInjectionBuilder toFieldValue(Value<Field> fieldValue);
 
-    BatchInjectionBuilder fromProperty(String property);
+    /**
+     * Specify that the injected value should come from a property on the source object.
+     *
+     * @param propertyName the property name
+     * @return this builder
+     */
+    BatchInjectionBuilder fromProperty(String propertyName);
 
+    /**
+     * Specify that the injected value should come from a property on the source object.
+     *
+     * @param property the property
+     * @return this builder
+     */
     BatchInjectionBuilder fromProperty(Property property);
 
+    /**
+     * Specify that the injected value should come from a property on the source object.
+     *
+     * @param propertyValue the property value
+     * @return this builder
+     */
     BatchInjectionBuilder fromPropertyValue(Value<Property> propertyValue);
 
+    /**
+     * Specify that the injected value should come from the result of a method call.  The
+     * source object can be referenced with the {@link Values#thisValue()} value.
+     *
+     * @param name the name of the method to invoke
+     * @param parameterTypes the parameter types of the method
+     * @param parameterValues the parameter values
+     * @return this builder
+     */
     BatchInjectionBuilder fromMethod(String name, List<? extends Value<Class<?>>> parameterTypes, List<? extends Value<?>> parameterValues);
 
+    /**
+     * Specify that the injected value should come from the result of a method call.  The
+     * source object can be referenced with the {@link Values#thisValue()} value.
+     *
+     * @param name the name of the method to invoke
+     * @param target the object upon which to invoke the method (use {@link Values#nullValue()} for static methods)
+     * @param parameterTypes the parameter types of the method
+     * @param parameterValues the parameter values
+     * @return this builder
+     */
+    BatchInjectionBuilder fromMethod(String name, Value<?> target, List<? extends Value<Class<?>>> parameterTypes, List<? extends Value<?>> parameterValues);
+
+    /**
+     * Specify that the injected value should come from the result of a no-args method call.
+     *
+     * @param name the name of the method to invoke
+     * @return this builder
+     */
     BatchInjectionBuilder fromMethod(String name);
 
+    /**
+     * Specify that the injected value should come from the result of a method call.  The
+     * source object can be referenced with the {@link Values#thisValue()} value.
+     *
+     * @param method the method to invoke
+     * @param parameterValues the parameter values
+     * @return this builder
+     */
     BatchInjectionBuilder fromMethod(Method method, List<? extends Value<?>> parameterValues);
 
+    /**
+     * Specify that the injected value should come from the result of a method call.  The
+     * source object can be referenced with the {@link Values#thisValue()} value.
+     *
+     * @param method the method to invoke
+     * @param target the object upon which to invoke the method (use {@link Values#nullValue()} for static methods)
+     * @param parameterValues the parameter values
+     * @return this builder
+     */
+    BatchInjectionBuilder fromMethod(Method method, Value<?> target, List<? extends Value<?>> parameterValues);
+
+    /**
+     * Specify that the injected value should come from the result of a method call.  The
+     * source object can be referenced with the {@link Values#thisValue()} value.
+     *
+     * @param methodValue the method value to invoke
+     * @param parameterValues the parameter values
+     * @return this builder
+     */
     BatchInjectionBuilder fromMethodValue(Value<Method> methodValue, List<? extends Value<?>> parameterValues);
+
+    /**
+     * Specify that the injected value should come from the result of a method call.  The
+     * source object can be referenced with the {@link Values#thisValue()} value.
+     *
+     * @param methodValue the method value to invoke
+     * @param target the object upon which to invoke the method (use {@link Values#nullValue()} for static methods)
+     * @param parameterValues the parameter values
+     * @return this builder
+     */
+    BatchInjectionBuilder fromMethodValue(Value<Method> methodValue, Value<?> target, List<? extends Value<?>> parameterValues);
 
     BatchInjectionBuilder fromField(String fieldName);
 
@@ -117,6 +270,12 @@ public interface BatchInjectionBuilder {
     BatchInjectionBuilder viaMethod(Method method, List<? extends Value<?>> parameterValues);
 
     BatchInjectionBuilder viaMethodValue(Value<Method> methodValue, List<? extends Value<?>> parameterValues);
+
+    BatchInjectionBuilder viaMethod(String name, Value<?> targetValue, List<? extends Value<Class<?>>> parameterTypes, List<? extends Value<?>> parameterValues);
+
+    BatchInjectionBuilder viaMethod(Method method, Value<?> targetValue, List<? extends Value<?>> parameterValues);
+
+    BatchInjectionBuilder viaMethodValue(Value<Method> methodValue, Value<?> targetValue, List<? extends Value<?>> parameterValues);
 
     BatchInjectionBuilder viaMethod(String name);
 
