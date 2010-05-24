@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.registry;
+package org.jboss.msc.service;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -28,7 +28,6 @@ import java.util.List;
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.reflect.Property;
 import org.jboss.msc.translate.Translator;
-import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
 

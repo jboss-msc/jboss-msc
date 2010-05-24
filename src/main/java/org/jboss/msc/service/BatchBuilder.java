@@ -20,25 +20,21 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.registry;
-
-import org.jboss.msc.service.Service;
-import org.jboss.msc.service.ServiceListener;
+package org.jboss.msc.service;
 
 import java.util.Collection;
-import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.value.Value;
 
 /**
  * A batch builder for installing service definitions in a single action.  Create an instance via the
- * {@link ServiceRegistry#batchBuilder()} method.
+ * {@link ServiceContainer#batchBuilder()} method.
  */
 public interface BatchBuilder {
 
     /**
      * Install all the defined services into the container.
      *
-     * @throws org.jboss.msc.registry.ServiceRegistryException
+     * @throws ServiceRegistryException
      */
     void install() throws ServiceRegistryException;
 

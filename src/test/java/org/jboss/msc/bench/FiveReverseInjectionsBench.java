@@ -22,9 +22,8 @@
 
 package org.jboss.msc.bench;
 
-import org.jboss.msc.registry.BatchBuilder;
-import org.jboss.msc.registry.BatchServiceBuilder;
-import org.jboss.msc.registry.ServiceRegistry;
+import org.jboss.msc.service.BatchBuilder;
+import org.jboss.msc.service.BatchServiceBuilder;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
@@ -52,8 +51,7 @@ public class FiveReverseInjectionsBench {
         final int totalServiceDefinitions = Integer.parseInt(args[0]);
 
         final ServiceContainer container = ServiceContainer.Factory.create();
-        final ServiceRegistry registry = ServiceRegistry.Factory.create(container);
-        BatchBuilder batch = registry.batchBuilder();
+        BatchBuilder batch = container.batchBuilder();
 
         final CountDownLatch latch = new CountDownLatch(1);
         final TimingServiceListener listener = new TimingServiceListener(new TimingServiceListener.FinishListener() {

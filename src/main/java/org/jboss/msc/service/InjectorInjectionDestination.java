@@ -20,26 +20,23 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.registry;
+package org.jboss.msc.service;
 
-import java.lang.reflect.Field;
-import org.jboss.msc.inject.FieldInjector;
 import org.jboss.msc.inject.Injector;
-import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.value.Value;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class FieldInjectionDestination extends InjectionDestination {
+final class InjectorInjectionDestination extends InjectionDestination {
 
-    private final Value<Field> fieldValue;
+    private final Injector<?> injector;
 
-    FieldInjectionDestination(final Value<Field> fieldValue) {
-        this.fieldValue = fieldValue;
+    InjectorInjectionDestination(final Injector<?> injector) {
+        this.injector = injector;
     }
 
-    protected <T> Injector<?> getInjector(final Value<T> injectionValue, final ServiceBuilder<T> serviceBuilder, final ServiceRegistryImpl registry) {
-        return new FieldInjector<Object>(injectionValue, fieldValue);
+    protected <T> Injector<?> getInjector(final Value<T> injectionValue, final ServiceBuilder<T> serviceBuilder, final ServiceContainerImpl registry) {
+        return injector;
     }
 }

@@ -20,12 +20,11 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.registry;
+package org.jboss.msc.service;
 
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.inject.PropertyInjector;
 import org.jboss.msc.reflect.Property;
-import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.value.Value;
 
 /**
@@ -38,7 +37,7 @@ final class PropertyInjectionDestination extends InjectionDestination {
         this.propertyValue = propertyValue;
     }
 
-    protected <T> Injector<?> getInjector(final Value<T> injectionValue, final ServiceBuilder<T> serviceBuilder, final ServiceRegistryImpl registry) {
+    protected <T> Injector<?> getInjector(final Value<T> injectionValue, final ServiceBuilder<T> serviceBuilder, final ServiceContainerImpl registry) {
         return new PropertyInjector<T>(propertyValue, injectionValue);
     }
 }

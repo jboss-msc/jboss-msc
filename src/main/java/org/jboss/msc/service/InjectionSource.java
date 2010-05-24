@@ -20,15 +20,14 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.registry;
+package org.jboss.msc.service;
 
-import org.jboss.msc.inject.Injector;
-import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.value.Value;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-abstract class InjectionDestination {
-    protected abstract <T> Injector<?> getInjector(final Value<T> injectionValue, ServiceBuilder<T> serviceBuilder, ServiceRegistryImpl registry);
+abstract class InjectionSource {
+    protected abstract <T> Value<?> getValue(final Value<T> serviceValue, ServiceBuilder<T> serviceBuilder, ServiceContainerImpl container);
+
 }

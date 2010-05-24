@@ -19,52 +19,53 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.msc.registry;
+
+package org.jboss.msc.service;
 
 /**
- * Base Exception class used for ServiceRegistry issues.
- * 
- * @author John Bailey
+ * Exception which is thrown when a required service is not found in the registry.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public class ServiceRegistryException extends Exception {
+public final class ServiceNotFoundException extends ServiceRegistryException {
 
-    private static final long serialVersionUID = -8431095020967798064L;
+    private static final long serialVersionUID = -3145569397301460220L;
 
     /**
-     * Constructs a {@code ServiceRegistryException} with no detail message. The cause is not initialized, and may
+     * Constructs a {@code ServiceNotFoundException} with no detail message. The cause is not initialized, and may
      * subsequently be initialized by a call to {@link #initCause(Throwable) initCause}.
      */
-    public ServiceRegistryException() {
+    public ServiceNotFoundException() {
     }
 
     /**
-     * Constructs a {@code ServiceRegistryException} with the specified detail message. The cause is not initialized, and
+     * Constructs a {@code ServiceNotFoundException} with the specified detail message. The cause is not initialized, and
      * may subsequently be initialized by a call to {@link #initCause(Throwable) initCause}.
      *
      * @param msg the detail message
      */
-    public ServiceRegistryException(final String msg) {
+    public ServiceNotFoundException(final String msg) {
         super(msg);
     }
 
     /**
-     * Constructs a {@code ServiceRegistryException} with the specified cause. The detail message is set to:
+     * Constructs a {@code ServiceNotFoundException} with the specified cause. The detail message is set to:
      * <pre>(cause == null ? null : cause.toString())</pre>
      * (which typically contains the class and detail message of {@code cause}).
      *
      * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method)
      */
-    public ServiceRegistryException(final Throwable cause) {
+    public ServiceNotFoundException(final Throwable cause) {
         super(cause);
     }
 
     /**
-     * Constructs a {@code ServiceRegistryException} with the specified detail message and cause.
+     * Constructs a {@code ServiceNotFoundException} with the specified detail message and cause.
      *
      * @param msg the detail message
      * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method)
      */
-    public ServiceRegistryException(final String msg, final Throwable cause) {
+    public ServiceNotFoundException(final String msg, final Throwable cause) {
         super(msg, cause);
     }
 }

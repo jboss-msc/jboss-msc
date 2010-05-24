@@ -19,18 +19,12 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.jboss.msc.registry;
+package org.jboss.msc.service;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.jboss.msc.service.Service;
-import org.jboss.msc.service.ServiceContainer;
-import org.jboss.msc.service.ServiceName;
-import org.jboss.msc.service.StartContext;
-import org.jboss.msc.service.StartException;
-import org.jboss.msc.service.StopContext;
 import org.jboss.msc.value.ImmediateValue;
 import org.junit.Test;
 
@@ -45,7 +39,7 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testResolvable() throws Exception {
-        final BatchBuilder builder = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
+        final BatchBuilder builder = ServiceContainer.Factory.create().batchBuilder();
         builder.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"));
         builder.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
         builder.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"));
@@ -59,14 +53,14 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testResolvableWithPreexistingDeps() throws Exception {
-        final ServiceRegistry registry = ServiceRegistry.Factory.create(ServiceContainer.Factory.create());
-        final BatchBuilder builder1 = registry.batchBuilder();
+        final ServiceContainer container = ServiceContainer.Factory.create();
+        final BatchBuilder builder1 = container.batchBuilder();
         builder1.addService(ServiceName.of("2"), Service.NULL);
         builder1.addService(ServiceName.of("9"), Service.NULL);
         builder1.addService(ServiceName.of("10"), Service.NULL);
         builder1.install();
 
-        final BatchBuilder builder2 = registry.batchBuilder();
+        final BatchBuilder builder2 = container.batchBuilder();
 
         builder2.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"));
         builder2.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
@@ -80,7 +74,7 @@ public class ServiceRegistryTestCase {
     @Test
     public void testMissingDependency() throws Exception {
         try {
-            final BatchBuilder builder = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
+            final BatchBuilder builder = ServiceContainer.Factory.create().batchBuilder();
             builder.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"));
             builder.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
             builder.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"));
@@ -100,7 +94,7 @@ public class ServiceRegistryTestCase {
     public void testCircular() throws Exception {
 
         try {
-            final BatchBuilder builder = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
+            final BatchBuilder builder = ServiceContainer.Factory.create().batchBuilder();
             builder.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("5"));
             builder.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
             builder.addService(ServiceName.of("11"), Service.NULL).addDependencies(ServiceName.of("7"));
@@ -112,7 +106,7 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testMonster() throws Exception {
-        BatchBuilder batch = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
+        BatchBuilder batch = ServiceContainer.Factory.create().batchBuilder();
 
         final int totalServiceDefinitions = 100000;
 
@@ -140,7 +134,7 @@ public class ServiceRegistryTestCase {
 
     @Test
     public void testLargeNoDeps() throws Exception {
-        BatchBuilder batch = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
+        final BatchBuilder batch = ServiceContainer.Factory.create().batchBuilder();
 
         final int totalServiceDefinitions = 10000;
 
@@ -155,7 +149,7 @@ public class ServiceRegistryTestCase {
     }
 
     public void testBasicInjection() throws Exception {
-        BatchBuilder batch = ServiceRegistry.Factory.create(ServiceContainer.Factory.create()).batchBuilder();
+        final BatchBuilder batch = ServiceContainer.Factory.create().batchBuilder();
 
         final TestObject testObject = new TestObject();
         final TestObjectService service = new TestObjectService(testObject);

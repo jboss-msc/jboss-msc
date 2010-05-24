@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.registry;
+package org.jboss.msc.service;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -41,7 +41,7 @@ import org.jboss.msc.value.PropertyValue;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
 
-import static org.jboss.msc.registry.BatchBuilderImpl.alreadyInstalled;
+import static org.jboss.msc.service.BatchBuilderImpl.alreadyInstalled;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>

@@ -19,53 +19,52 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-
-package org.jboss.msc.registry;
+package org.jboss.msc.service;
 
 /**
- * An exception which is thrown when the given service is already registered.
+ * Exception used to indicate there was a missing dependency discovered during resolution.
  *
- * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author John Bailey
  */
-public class DuplicateServiceException extends ServiceRegistryException {
+public class MissingDependencyException extends ResolutionException {
 
-    private static final long serialVersionUID = 6000994512503219841L;
+    private static final long serialVersionUID = -5525793612334529463L;
 
     /**
-     * Constructs a {@code DuplicateServiceException} with no detail message. The cause is not initialized, and may
+     * Constructs a {@code MissingDependencyException} with no detail message. The cause is not initialized, and may
      * subsequently be initialized by a call to {@link #initCause(Throwable) initCause}.
      */
-    public DuplicateServiceException() {
+    public MissingDependencyException() {
     }
 
     /**
-     * Constructs a {@code DuplicateServiceException} with the specified detail message. The cause is not initialized, and
+     * Constructs a {@code MissingDependencyException} with the specified detail message. The cause is not initialized, and
      * may subsequently be initialized by a call to {@link #initCause(Throwable) initCause}.
      *
      * @param msg the detail message
      */
-    public DuplicateServiceException(final String msg) {
+    public MissingDependencyException(final String msg) {
         super(msg);
     }
 
     /**
-     * Constructs a {@code DuplicateServiceException} with the specified cause. The detail message is set to:
+     * Constructs a {@code MissingDependencyException} with the specified cause. The detail message is set to:
      * <pre>(cause == null ? null : cause.toString())</pre>
      * (which typically contains the class and detail message of {@code cause}).
      *
      * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method)
      */
-    public DuplicateServiceException(final Throwable cause) {
+    public MissingDependencyException(final Throwable cause) {
         super(cause);
     }
 
     /**
-     * Constructs a {@code DuplicateServiceException} with the specified detail message and cause.
+     * Constructs a {@code MissingDependencyException} with the specified detail message and cause.
      *
      * @param msg the detail message
      * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method)
      */
-    public DuplicateServiceException(final String msg, final Throwable cause) {
+    public MissingDependencyException(final String msg, final Throwable cause) {
         super(msg, cause);
     }
 }

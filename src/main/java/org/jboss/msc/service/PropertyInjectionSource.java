@@ -20,11 +20,9 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.registry;
+package org.jboss.msc.service;
 
 import java.util.Collections;
-import org.jboss.msc.service.ServiceBuilder;
-import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.value.ClassOfValue;
 import org.jboss.msc.value.LookupGetMethodValue;
 import org.jboss.msc.value.MethodValue;
@@ -44,7 +42,7 @@ final class PropertyInjectionSource extends InjectionSource {
         this.propertySpec = propertySpec;
     }
 
-    protected <T> Value<?> getValue(final Value<T> serviceValue, final ServiceBuilder<T> serviceBuilder, final ServiceRegistryImpl registry) {
+    protected <T> Value<?> getValue(final Value<T> serviceValue, final ServiceBuilder<T> serviceBuilder, final ServiceContainerImpl registry) {
         final String propertySpec = this.propertySpec;
         Value<?> prevValue = registry.getService(dependency);
         for (int current = 0, next = propertySpec.indexOf('.'); current != -1; current = next, next = propertySpec.indexOf('.', current + 1)) {

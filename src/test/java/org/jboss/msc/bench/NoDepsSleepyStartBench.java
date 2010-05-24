@@ -22,8 +22,7 @@
 
 package org.jboss.msc.bench;
 
-import org.jboss.msc.registry.BatchBuilder;
-import org.jboss.msc.registry.ServiceRegistry;
+import org.jboss.msc.service.BatchBuilder;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.TimingServiceListener;
@@ -44,8 +43,7 @@ public class NoDepsSleepyStartBench {
         final ThreadPoolExecutor executor = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 1000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
         container.setExecutor(executor);
 
-        final ServiceRegistry registry = ServiceRegistry.Factory.create(container);
-        BatchBuilder batch = registry.batchBuilder();
+        BatchBuilder batch = container.batchBuilder();
 
         final CountDownLatch latch = new CountDownLatch(1);
         final TimingServiceListener listener = new TimingServiceListener(new TimingServiceListener.FinishListener() {

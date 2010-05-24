@@ -1,4 +1,4 @@
-package org.jboss.msc.registry;
+package org.jboss.msc.service;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -6,9 +6,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.jboss.msc.service.Service;
-import org.jboss.msc.service.ServiceListener;
-import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 
@@ -21,12 +18,12 @@ import org.jboss.msc.value.Value;
 final class BatchBuilderImpl implements BatchBuilder {
 
     private final Map<ServiceName, BatchServiceBuilderImpl<?>> batchServices = new HashMap<ServiceName, BatchServiceBuilderImpl<?>>();
-    private final ServiceRegistryImpl serviceRegistry;
+    private final ServiceContainerImpl container;
     private final Set<ServiceListener<Object>> listeners = new HashSet<ServiceListener<Object>>();
     private boolean done;
 
-    BatchBuilderImpl(final ServiceRegistryImpl serviceRegistry) {
-        this.serviceRegistry = serviceRegistry;
+    BatchBuilderImpl(final ServiceContainerImpl container) {
+        this.container = container;
     }
 
     public void install() throws ServiceRegistryException {
@@ -34,7 +31,7 @@ final class BatchBuilderImpl implements BatchBuilder {
             throw alreadyInstalled();
         }
         done = true;
-        serviceRegistry.install(this);
+        container.install(this);
     }
 
     static IllegalStateException alreadyInstalled() {

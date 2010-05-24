@@ -20,27 +20,25 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.registry;
+package org.jboss.msc.service;
 
-import org.jboss.msc.service.ServiceBuilder;
-import org.jboss.msc.service.ServiceName;
+import java.lang.reflect.Field;
+import org.jboss.msc.inject.FieldInjector;
+import org.jboss.msc.inject.Injector;
 import org.jboss.msc.value.Value;
 
 /**
-* @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
-*/
-final class ServiceInjectionSource extends InjectionSource {
-    private final ServiceName serviceName;
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
+final class FieldInjectionDestination extends InjectionDestination {
 
-    ServiceInjectionSource(final ServiceName serviceName) {
-        this.serviceName = serviceName;
+    private final Value<Field> fieldValue;
+
+    FieldInjectionDestination(final Value<Field> fieldValue) {
+        this.fieldValue = fieldValue;
     }
 
-    protected <T> Value<?> getValue(final Value<T> serviceValue, final ServiceBuilder<T> serviceBuilder, final ServiceRegistryImpl registry) {
-        try {
-            return registry.getRequiredService(serviceName);
-        } catch (ServiceNotFoundException e) {
-            throw new IllegalStateException("Value not available", e);
-        }
+    protected <T> Injector<?> getInjector(final Value<T> injectionValue, final ServiceBuilder<T> serviceBuilder, final ServiceContainerImpl registry) {
+        return new FieldInjector<Object>(injectionValue, fieldValue);
     }
 }

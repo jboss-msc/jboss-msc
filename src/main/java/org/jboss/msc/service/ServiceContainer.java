@@ -71,6 +71,17 @@ public interface ServiceContainer {
     void shutdown();
 
     /**
+     * Get a new batch builder, which is used to resolve and install described services.
+     *
+     * @return the new batch builder
+     */
+    BatchBuilder batchBuilder();
+
+    ServiceController<?> getRequiredService(ServiceName serviceName) throws ServiceNotFoundException;
+
+    ServiceController<?> getService(ServiceName serviceName);
+
+    /**
      * The factory class for service containers.
      */
     class Factory {

@@ -20,15 +20,10 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.registry;
+package org.jboss.msc.service;
 
 import java.util.Collection;
-import org.jboss.msc.service.Location;
-import org.jboss.msc.service.ServiceController;
-import org.jboss.msc.service.ServiceListener;
-import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.value.Value;
-import org.jboss.msc.service.Service;
 
 /**
  * A builder for an individual service in a batch.  Create an instance via the
