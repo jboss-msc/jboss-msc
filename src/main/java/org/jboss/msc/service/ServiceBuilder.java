@@ -29,7 +29,7 @@ import org.jboss.msc.inject.Injector;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface ServiceBuilder<S> {
+interface ServiceBuilder<S> {
 
     /**
      * Add a dependency.
