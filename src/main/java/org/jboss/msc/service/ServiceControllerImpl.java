@@ -683,6 +683,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 }
             }
         }
+
+        public ServiceController<?> getController() {
+            return ServiceControllerImpl.this;
+        }
     }
 
     private class StopContextImpl implements StopContext {
@@ -711,6 +715,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
             }
+        }
+
+        public ServiceController<?> getController() {
+            return ServiceControllerImpl.this;
         }
     }
 

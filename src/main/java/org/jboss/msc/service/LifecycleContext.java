@@ -44,4 +44,11 @@ public interface LifecycleContext {
      * completed
      */
     void complete() throws IllegalStateException;
+
+    /**
+     * Get the associated service controller.
+     *
+     * @return the service controller
+     */
+    ServiceController<?> getController();
 }
