@@ -28,6 +28,8 @@ import java.util.List;
 import org.jboss.msc.value.ImmediateValue;
 import org.junit.Test;
 
+import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 /**
@@ -163,6 +165,29 @@ public class ServiceRegistryTestCase {
         serviceBuilder.addInjection(injectedValue).toFieldValue(new ImmediateValue<Field>(field));
         serviceBuilder.addInjection(otherInjectedValue).toProperty("other");
         batch.install();
+    }
+
+    @Test
+    public void testAliases() throws Exception {
+        final ServiceContainer serviceContainer = ServiceContainer.Factory.create();
+        final BatchBuilder builder = serviceContainer.batchBuilder();
+        builder.addService(ServiceName.of("service1"), Service.NULL)
+            .addAliases(ServiceName.of("alias1"))
+            .addAliases(ServiceName.of("alias2"));
+
+        builder.install();
+
+        assertEquals(serviceContainer.getService(ServiceName.of("service1")), serviceContainer.getService(ServiceName.of("alias1")));
+        assertEquals(serviceContainer.getService(ServiceName.of("service1")), serviceContainer.getService(ServiceName.of("alias2")));
+
+        ServiceController controller = serviceContainer.getService(ServiceName.of("service1"));
+        controller.setMode(ServiceController.Mode.NEVER);
+        Thread.sleep(100);
+        controller.remove();
+        Thread.sleep(100);
+        assertNull(serviceContainer.getService(ServiceName.of("service1")));
+        assertNull(serviceContainer.getService(ServiceName.of("alias1")));
+        assertNull(serviceContainer.getService(ServiceName.of("alias2")));
     }
 
     public static class TestObject {

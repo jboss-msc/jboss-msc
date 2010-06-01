@@ -255,6 +255,7 @@ final class ServiceContainerImpl implements ServiceContainer {
 
             final ServiceName[] deps = entry.getDependencies();
             final ServiceName name = entry.getName();
+            final ServiceName[] aliases = entry.getAliases();
 
             while (entry.i < deps.length) {
                 final ServiceName dependencyName = deps[entry.i];
@@ -284,7 +285,7 @@ final class ServiceContainerImpl implements ServiceContainer {
             }
 
             // We are resolved.  Lets install
-            builder.addListener(new ServiceUnregisterListener(name));
+            builder.addListener(new ServiceUnregisterListener(name, aliases));
 
             for(ServiceListener<Object> listener : batchListeners) {
                 builder.addListener(listener);
@@ -304,6 +305,11 @@ final class ServiceContainerImpl implements ServiceContainer {
             final ServiceController<?> serviceController = builder.create();
             if (registry.putIfAbsent(name, serviceController) != null) {
                 throw new DuplicateServiceException("Duplicate service name provided: " + name);
+            }
+            for(ServiceName alias : aliases) {
+                if (registry.putIfAbsent(alias, serviceController) != null) {
+                    throw new DuplicateServiceException("Duplicate service name provided: " + alias);
+                }
             }
 
             // Cleanup
@@ -340,15 +346,22 @@ final class ServiceContainerImpl implements ServiceContainer {
 
     private class ServiceUnregisterListener extends AbstractServiceListener<Object> {
         private final ServiceName serviceName;
+        private final ServiceName[] aliases;
 
-        private ServiceUnregisterListener(ServiceName serviceName) {
+        private ServiceUnregisterListener(ServiceName serviceName, ServiceName[] aliases) {
             this.serviceName = serviceName;
+            this.aliases = aliases;
         }
 
         @Override
         public void serviceRemoved(ServiceController serviceController) {
             if(!registry.remove(serviceName, serviceController))
                 throw new RuntimeException("Removed service [" + serviceName + "] was not unregistered");
+            
+            for(ServiceName alias : aliases) {
+                if(!registry.remove(alias, serviceController))
+                    throw new RuntimeException("Removed service alias [" + alias + "] was not unregistered");
+            }
         }
     }
 }

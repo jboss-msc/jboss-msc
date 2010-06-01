@@ -41,6 +41,7 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
     private final ServiceName serviceName;
     private Location location;
     private ServiceController.Mode initialMode;
+    private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
     private final Set<ServiceName> dependencies = new HashSet<ServiceName>(0);
     private final List<ServiceListener<? super T>> listeners = new ArrayList<ServiceListener<? super T>>(0);
     private final List<BatchInjectionBuilderImpl> injectionItems = new ArrayList<BatchInjectionBuilderImpl>(0);
@@ -56,6 +57,16 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         this.batchBuilder = batchBuilder;
         this.serviceValue = serviceValue;
         this.serviceName = serviceName;
+    }
+
+    @Override
+    public BatchServiceBuilder<T> addAliases(ServiceName... aliases) {
+        for(ServiceName alias : aliases) {
+            if(!alias.equals(serviceName)) {
+                this.aliases.add(alias);
+            }
+        }
+        return this;
     }
 
     public BatchServiceBuilderImpl<T> setLocation() {
@@ -161,6 +172,10 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
 
     ServiceName getName() {
         return serviceName;
+    }
+
+    ServiceName[] getAliases() {
+        return aliases.toArray(new ServiceName[aliases.size()]);
     }
 
     ServiceName[] getDependencies() {
