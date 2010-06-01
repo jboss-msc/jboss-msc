@@ -35,6 +35,15 @@ import org.jboss.msc.value.Value;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface BatchServiceBuilder<T> {
+
+    /**
+     * Add aliases for this service.
+     *
+     * @param aliases the service names to use as aliases
+     * @return the builder
+     */
+    BatchServiceBuilder<T> addAliases(ServiceName... aliases);
+
     /**
      * Set the service definition location to be the caller's location.
      *
