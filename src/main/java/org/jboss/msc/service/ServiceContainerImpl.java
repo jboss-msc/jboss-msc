@@ -304,11 +304,14 @@ final class ServiceContainerImpl implements ServiceContainer {
 
             final ServiceController<?> serviceController = builder.create();
             if (registry.putIfAbsent(name, serviceController) != null) {
-                throw new DuplicateServiceException("Duplicate service name provided: " + name);
-            }
-            for(ServiceName alias : aliases) {
-                if (registry.putIfAbsent(alias, serviceController) != null) {
-                    throw new DuplicateServiceException("Duplicate service name provided: " + alias);
+                if (! entry.isIfNotExist()) {
+                    throw new DuplicateServiceException("Duplicate service name provided: " + name);
+                }
+            } else {
+                for(ServiceName alias : aliases) {
+                    if (registry.putIfAbsent(alias, serviceController) != null) {
+                        throw new DuplicateServiceException("Duplicate service name provided: " + alias);
+                    }
                 }
             }
 

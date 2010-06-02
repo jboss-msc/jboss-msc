@@ -50,6 +50,18 @@ public interface BatchBuilder {
     <T> BatchServiceBuilder<T> addServiceValue(ServiceName name, Value<? extends Service<T>> value) throws DuplicateServiceException;
 
     /**
+     * Get a builder which can be used to add a service to this batch which is installed only if another service
+     * with the same name does not already exist.  The provided value should return the same
+     * result every time (see {@link Values#cached(Value)} for more information).  Note that any provided aliases
+     * must not exist previously if the service is installed, or an error will occur.
+     *
+     * @param name the service name
+     * @param value the service value
+     * @return the builder for the service
+     */
+    <T> BatchServiceBuilder<T> addServiceValueIfNotExist(ServiceName name, Value<? extends Service<T>> value) throws DuplicateServiceException;
+
+    /**
      * Get a builder which can be used to add a service to this batch.
      *
      * @param name the service name

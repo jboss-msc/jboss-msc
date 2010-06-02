@@ -39,6 +39,7 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
     private final BatchBuilderImpl batchBuilder;
     private final Value<? extends Service<T>> serviceValue;
     private final ServiceName serviceName;
+    private final boolean ifNotExist;
     private Location location;
     private ServiceController.Mode initialMode;
     private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
@@ -53,10 +54,11 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
     int i;
     ServiceBuilder<T> builder;
 
-    BatchServiceBuilderImpl(final BatchBuilderImpl batchBuilder, final Value<? extends Service<T>> serviceValue, final ServiceName serviceName) {
+    BatchServiceBuilderImpl(final BatchBuilderImpl batchBuilder, final Value<? extends Service<T>> serviceValue, final ServiceName serviceName, final boolean ifNotExist) {
         this.batchBuilder = batchBuilder;
         this.serviceValue = serviceValue;
         this.serviceName = serviceName;
+        this.ifNotExist = ifNotExist;
     }
 
     @Override
@@ -196,5 +198,9 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
 
     Location getLocation() {
         return location;
+    }
+
+    boolean isIfNotExist() {
+        return ifNotExist;
     }
 }
