@@ -24,6 +24,7 @@ package org.jboss.msc.service;
 
 import java.util.Collection;
 import org.jboss.msc.value.Value;
+import org.jboss.msc.value.Values;
 
 /**
  * A batch builder for installing service definitions in a single action.  Create an instance via the
@@ -39,7 +40,8 @@ public interface BatchBuilder {
     void install() throws ServiceRegistryException;
 
     /**
-     * Get a builder which can be used to add a service to this batch.
+     * Get a builder which can be used to add a service to this batch.  The provided value should return the same
+     * result every time (see {@link Values#cached(Value)} for more information).
      *
      * @param name the service name
      * @param value the service value
