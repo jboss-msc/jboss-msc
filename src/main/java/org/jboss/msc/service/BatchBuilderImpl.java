@@ -48,7 +48,7 @@ final class BatchBuilderImpl implements BatchBuilder {
         }
         final Map<ServiceName, BatchServiceBuilderImpl<?>> batchServices = this.batchServices;
         final BatchServiceBuilderImpl<?> old = batchServices.get(name);
-        if (old != null) {
+        if (old != null && ! ifNotExist) {
             throw new DuplicateServiceException("Service named " + name + " is already defined in this batch");
         }
         final BatchServiceBuilderImpl<T> builder = new BatchServiceBuilderImpl<T>(this, value, name, ifNotExist);
