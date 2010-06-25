@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.service.util.LatchedFinishListener;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -48,12 +49,7 @@ public class BatchLevelDependenciesTestCase {
 
     @Test
     public void testBatchLevel() throws Exception {
-        final CountDownLatch latch = new CountDownLatch(1);
-        final TimingServiceListener listener = new TimingServiceListener(new Runnable() {
-            public void run() {
-                latch.countDown();
-            }
-        });
+        final LatchedFinishListener listener = new LatchedFinishListener();
 
         final ServiceContainer serviceContainer = ServiceContainer.Factory.create();
 
@@ -66,8 +62,7 @@ public class BatchLevelDependenciesTestCase {
         builder.addDependency(ServiceName.of("fourthService"));
 
         builder.install();
-        listener.finishBatch();
-        latch.await();
+        listener.await();
 
         final ServiceController<?> fourthController = serviceContainer.getService(ServiceName.of("fourthService"));
 
@@ -87,12 +82,7 @@ public class BatchLevelDependenciesTestCase {
 
     @Test
     public void testSubBatchLevel() throws Exception {
-        final CountDownLatch latch = new CountDownLatch(1);
-        final TimingServiceListener listener = new TimingServiceListener(new Runnable() {
-            public void run() {
-                latch.countDown();
-            }
-        });
+        final LatchedFinishListener listener = new LatchedFinishListener();
 
         final ServiceContainer serviceContainer = ServiceContainer.Factory.create();
 
@@ -107,8 +97,7 @@ public class BatchLevelDependenciesTestCase {
         subBatchBuilder.addDependency(ServiceName.of("fourthService"));
 
         builder.install();
-        listener.finishBatch();
-        latch.await();
+        listener.await();
 
         final ServiceController<?> firstController = serviceContainer.getService(ServiceName.of("firstService"));
         final ServiceController<?> fourthController = serviceContainer.getService(ServiceName.of("fourthService"));

@@ -296,7 +296,7 @@ final class ServiceContainerImpl implements ServiceContainer {
                         valueInjection(serviceValue, builder, injection)
                 );
             }
-
+            builder.setInitialMode(entry.getInitialMode());
             final ServiceController<?> serviceController = builder.create();
             if (registry.putIfAbsent(name, serviceController) != null) {
                 if (! entry.isIfNotExist()) {

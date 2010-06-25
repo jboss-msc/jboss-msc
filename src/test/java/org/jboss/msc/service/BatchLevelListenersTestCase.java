@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.service.util.LatchedFinishListener;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -39,12 +40,7 @@ public class BatchLevelListenersTestCase {
 
     @Test
     public void testBatchLevel() throws Exception {
-        final CountDownLatch latch = new CountDownLatch(1);
-        final TimingServiceListener listener = new TimingServiceListener(new Runnable() {
-            public void run() {
-                latch.countDown();
-            }
-        });
+        final LatchedFinishListener listener = new LatchedFinishListener();
 
         final ServiceContainer serviceContainer = ServiceContainer.Factory.create();
 
@@ -58,8 +54,7 @@ public class BatchLevelListenersTestCase {
         final MockListener listenerThree = new MockListener();
         builder.addListener(listenerThree);
         builder.install();
-        listener.finishBatch();
-        latch.await();
+        listener.await();
         Assert.assertTrue(listenerOne.startedServices.contains(ServiceName.of("firstService")));
         Assert.assertTrue(listenerOne.startedServices.contains(ServiceName.of("secondService")));
         Assert.assertTrue(listenerTwo.startedServices.contains(ServiceName.of("firstService")));
@@ -71,13 +66,7 @@ public class BatchLevelListenersTestCase {
 
     @Test
     public void testSubBatchLevel() throws Exception {
-        System.out.println("Here1");
-        final CountDownLatch latch = new CountDownLatch(1);
-        final TimingServiceListener listener = new TimingServiceListener(new Runnable() {
-            public void run() {
-                latch.countDown();
-            }
-        });
+        final LatchedFinishListener listener = new LatchedFinishListener();
         final ServiceContainer serviceContainer = ServiceContainer.Factory.create();
         final BatchBuilder builder = serviceContainer.batchBuilder();
         final MockListener batchListener = new MockListener();
@@ -92,8 +81,7 @@ public class BatchLevelListenersTestCase {
 
         subBatchBuilder.addService(ServiceName.of("secondService"), Service.NULL).addListener(listener);
         builder.install();
-        listener.finishBatch();
-        latch.await();
+        listener.await();
         List<ServiceName> expectedStartedServices = Arrays.asList(ServiceName.of("firstService"), ServiceName.of("secondService"));
         Assert.assertEquals(expectedStartedServices, batchListener.startedServices);
         Assert.assertFalse(subBatchListener.startedServices.contains(ServiceName.of("firstService")));
