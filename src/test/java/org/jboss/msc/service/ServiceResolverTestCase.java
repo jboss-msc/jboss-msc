@@ -37,7 +37,7 @@ import static org.junit.Assert.fail;
  *
  * @author John Bailey
  */
-public class ServiceRegistryTestCase {
+public class ServiceResolverTestCase {
 
     @Test
     public void testResolvable() throws Exception {
@@ -103,134 +103,6 @@ public class ServiceRegistryTestCase {
             builder.install();
             fail("SHould have thrown circular dependency exception");
         } catch (ServiceRegistryException expected) {
-        }
-    }
-
-    @Test
-    public void testMonster() throws Exception {
-        BatchBuilder batch = ServiceContainer.Factory.create().batchBuilder();
-
-        final int totalServiceDefinitions = 100000;
-
-        for (int i = 0; i < totalServiceDefinitions; i++) {
-            List<ServiceName> deps = new ArrayList<ServiceName>();
-            int numDeps = Math.min(10, totalServiceDefinitions - i - 1);
-
-            for (int j = 1; j < numDeps + 1; j++) {
-                deps.add(ServiceName.of(("test" + (i + j)).intern()));
-            }
-            batch.addService(ServiceName.of(("test" + i).intern()), Service.NULL).addDependencies(deps.toArray(new ServiceName[deps.size()]));
-        }
-
-        long start = System.currentTimeMillis();
-        batch.install();
-        long end = System.currentTimeMillis();
-        System.out.println("Time: " + (end - start));
-        
-        batch = null;
-        System.gc();
-        Thread.sleep(10000);
-        System.out.println(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
-    }
-
-
-    @Test
-    public void testLargeNoDeps() throws Exception {
-        final BatchBuilder batch = ServiceContainer.Factory.create().batchBuilder();
-
-        final int totalServiceDefinitions = 10000;
-
-        for (int i = 0; i < totalServiceDefinitions; i++) {
-            batch.addService(ServiceName.of("test" + i), Service.NULL);
-        }
-
-        long start = System.currentTimeMillis();
-        batch.install();
-        long end = System.currentTimeMillis();
-        System.out.println("Time: " + (end - start));
-    }
-
-    public void testBasicInjection() throws Exception {
-        final BatchBuilder batch = ServiceContainer.Factory.create().batchBuilder();
-
-        final TestObject testObject = new TestObject();
-        final TestObjectService service = new TestObjectService(testObject);
-        final Object injectedValue = new Object();
-        final Object otherInjectedValue = new Object();
-
-        final Field field = TestObject.class.getDeclaredField("test");
-        field.setAccessible(true);
-
-        final BatchServiceBuilder<TestObject> serviceBuilder = batch.addService(ServiceName.of("testService"), service);
-        serviceBuilder.addInjection(injectedValue).toFieldValue(new ImmediateValue<Field>(field));
-        serviceBuilder.addInjection(otherInjectedValue).toProperty("other");
-        batch.install();
-    }
-
-    @Test
-    public void testAliases() throws Exception {
-        final ServiceContainer serviceContainer = ServiceContainer.Factory.create();
-        final BatchBuilder builder = serviceContainer.batchBuilder();
-        builder.addService(ServiceName.of("service1"), Service.NULL)
-            .addAliases(ServiceName.of("alias1"))
-            .addAliases(ServiceName.of("alias2"));
-
-        builder.install();
-
-        assertEquals(serviceContainer.getService(ServiceName.of("service1")), serviceContainer.getService(ServiceName.of("alias1")));
-        assertEquals(serviceContainer.getService(ServiceName.of("service1")), serviceContainer.getService(ServiceName.of("alias2")));
-
-        ServiceController controller = serviceContainer.getService(ServiceName.of("service1"));
-        controller.setMode(ServiceController.Mode.NEVER);
-        Thread.sleep(100);
-        controller.remove();
-        Thread.sleep(100);
-        assertNull(serviceContainer.getService(ServiceName.of("service1")));
-        assertNull(serviceContainer.getService(ServiceName.of("alias1")));
-        assertNull(serviceContainer.getService(ServiceName.of("alias2")));
-    }
-
-    public static class TestObject {
-        private Object test;
-        private Object other;
-
-        public Object getOther() {
-            return other;
-        }
-
-        public void setOther(Object other) {
-            this.other = other;
-        }
-
-        @Override
-        public String toString() {
-            return "TestObject{" +
-                    "test=" + test +
-                    ", other=" + other +
-                    '}';
-        }
-    }
-
-    private static class TestObjectService implements Service<TestObject> {
-
-        private final TestObject value;
-
-        private TestObjectService(TestObject value) {
-            this.value = value;
-        }
-
-        @Override
-        public void start(StartContext context) throws StartException {
-            System.out.println("Injected: " + value);
-        }
-
-        @Override
-        public void stop(StopContext context) {
-        }
-
-        @Override
-        public TestObject getValue() throws IllegalStateException {
-            return null;
         }
     }
 }

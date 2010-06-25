@@ -70,24 +70,29 @@ final class BatchBuilderImpl extends AbstractBatchBuilder<BatchBuilder> implemen
     }
 
     public <T> BatchServiceBuilderImpl<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws DuplicateServiceException {
+        return createServiceBuilder(name, value, false);
+    }
+
+    private <T> BatchServiceBuilderImpl<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value, final boolean ifNotExist) throws DuplicateServiceException {
         if (done) {
             throw alreadyInstalled();
         }
         final Map<ServiceName, BatchServiceBuilderImpl<?>> batchServices = this.batchServices;
         final BatchServiceBuilderImpl<?> old = batchServices.get(name);
-        if (old != null) {
+        if (old != null && ! ifNotExist) {
             throw new DuplicateServiceException("Service named " + name + " is already defined in this batch");
         }
-        final BatchServiceBuilderImpl<T> builder = new BatchServiceBuilderImpl<T>(this, value, name);
+        final BatchServiceBuilderImpl<T> builder = new BatchServiceBuilderImpl<T>(this, value, name, ifNotExist);
         batchServices.put(name, builder);
         return builder;
     }
 
+    public <T> BatchServiceBuilder<T> addServiceValueIfNotExist(final ServiceName name, final Value<? extends Service<T>> value) throws DuplicateServiceException {
+        return createServiceBuilder(name, value, true);
+    }
+
     public <T> BatchServiceBuilderImpl<T> addService(final ServiceName name, final Service<T> service) throws DuplicateServiceException {
-        if (done) {
-            throw alreadyInstalled();
-        }
-        return addServiceValue(name, new ImmediateValue<Service<T>>(service));
+        return createServiceBuilder(name, new ImmediateValue<Service<T>>(service), false);
     }
 
     Map<ServiceName, BatchServiceBuilderImpl<?>> getBatchServices() {

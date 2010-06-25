@@ -22,11 +22,14 @@
 
 package org.jboss.msc.service;
 
+import static org.jboss.msc.service.BatchBuilderImpl.alreadyInstalled;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.reflect.Property;
 import org.jboss.msc.translate.Translator;
@@ -40,8 +43,6 @@ import org.jboss.msc.value.MethodValue;
 import org.jboss.msc.value.PropertyValue;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
-
-import static org.jboss.msc.service.BatchBuilderImpl.alreadyInstalled;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -61,6 +62,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         this.batchServiceBuilder = batchServiceBuilder;
         this.injectionSource = injectionSource;
         this.batchBuilder = batchBuilder;
+        this.target = batchServiceBuilder.getServiceValue();
     }
 
     private static IllegalStateException alreadySpecified() {
@@ -75,6 +77,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
             throw alreadySpecified();
         }
         injectionDestination = new PropertyInjectionDestination(new LookupPropertyValue(new ClassOfValue<Object>(target), propertyName));
+        batchServiceBuilder.getInjections().add(this);
         return this;
     }
 
@@ -86,6 +89,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
             throw alreadySpecified();
         }
         injectionDestination = new PropertyInjectionDestination(new ImmediateValue<Property>(property));
+        batchServiceBuilder.getInjections().add(this);
         return this;
     }
 
@@ -103,6 +107,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
             throw new IllegalArgumentException("injectionDestination is null");
         }
         injectionDestination = new PropertyInjectionDestination(propertyValue);
+        batchServiceBuilder.getInjections().add(this);
         return this;
     }
 
@@ -114,6 +119,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
             throw alreadySpecified();
         }
         injectionDestination = new MethodInjectionDestination(new LookupMethodValue(new ClassOfValue<Object>(target), name, parameterTypes), parameterValues);
+        batchServiceBuilder.getInjections().add(this);
         return this;
     }
 
@@ -125,6 +131,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
             throw alreadySpecified();
         }
         injectionDestination = new MethodInjectionDestination(methodValue, parameterValues);
+        batchServiceBuilder.getInjections().add(this);
         return this;
     }
 
@@ -136,6 +143,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
             throw alreadySpecified();
         }
         injectionDestination = new MethodInjectionDestination(new LookupMethodValue(new ClassOfValue<Object>(targetValue), name, parameterTypes), parameterValues);
+        batchServiceBuilder.getInjections().add(this);
         return this;
     }
 
@@ -147,6 +155,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
             throw alreadySpecified();
         }
         injectionDestination = new MethodInjectionDestination(methodValue, targetValue, parameterValues);
+        batchServiceBuilder.getInjections().add(this);
         return this;
     }
 
@@ -158,6 +167,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
             throw alreadySpecified();
         }
         injectionDestination = new MethodInjectionDestination(new LookupMethodValue(new ClassOfValue<Object>(target), name, 1), Collections.singletonList(Values.injectedValue()));
+        batchServiceBuilder.getInjections().add(this);
         return this;
     }
 
@@ -169,6 +179,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
             throw alreadySpecified();
         }
         injectionDestination = new FieldInjectionDestination(new LookupFieldValue(new ClassOfValue<Object>(target), fieldName));
+        batchServiceBuilder.getInjections().add(this);
         return this;
     }
 
@@ -184,6 +195,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
             throw alreadySpecified();
         }
         injectionDestination = new FieldInjectionDestination(fieldValue);
+        batchServiceBuilder.getInjections().add(this);
         return this;
     }
 
@@ -195,6 +207,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
             throw alreadySpecified();
         }
         injectionDestination = new InjectorInjectionDestination(injector);
+        batchServiceBuilder.getInjections().add(this);
         return this;
     }
 

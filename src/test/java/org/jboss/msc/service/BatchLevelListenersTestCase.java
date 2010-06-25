@@ -35,18 +35,20 @@ import java.util.concurrent.CountDownLatch;
  * 
  * @author John Bailey
  */
-public class BatchLevelListenersTest {
+public class BatchLevelListenersTestCase {
 
     @Test
     public void testBatchLevel() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        final TimingServiceListener listener = new TimingServiceListener(new TimingServiceListener.FinishListener() {
-            public void done(final TimingServiceListener timingServiceListener) {
+        final TimingServiceListener listener = new TimingServiceListener(new Runnable() {
+            public void run() {
                 latch.countDown();
             }
         });
 
-        final BatchBuilder builder = ServiceContainer.Factory.create().batchBuilder();
+        final ServiceContainer serviceContainer = ServiceContainer.Factory.create();
+
+        final BatchBuilder builder = serviceContainer.batchBuilder();
         final MockListener listenerOne = new MockListener();
         builder.addListener(listenerOne);
         builder.addService(ServiceName.of("firstService"), Service.NULL).addListener(listener);
@@ -58,22 +60,26 @@ public class BatchLevelListenersTest {
         builder.install();
         listener.finishBatch();
         latch.await();
-        List<ServiceName> expectedStartedServices = Arrays.asList(ServiceName.of("firstService"), ServiceName.of("secondService"));
-        Assert.assertEquals(expectedStartedServices, listenerOne.startedServices);
-        Assert.assertEquals(expectedStartedServices, listenerTwo.startedServices);
-        Assert.assertEquals(expectedStartedServices, listenerThree.startedServices);
+        Assert.assertTrue(listenerOne.startedServices.contains(ServiceName.of("firstService")));
+        Assert.assertTrue(listenerOne.startedServices.contains(ServiceName.of("secondService")));
+        Assert.assertTrue(listenerTwo.startedServices.contains(ServiceName.of("firstService")));
+        Assert.assertTrue(listenerTwo.startedServices.contains(ServiceName.of("secondService")));
+        Assert.assertTrue(listenerThree.startedServices.contains(ServiceName.of("firstService")));
+        Assert.assertTrue(listenerThree.startedServices.contains(ServiceName.of("secondService")));
+        serviceContainer.shutdown();
     }
 
     @Test
     public void testSubBatchLevel() throws Exception {
+        System.out.println("Here1");
         final CountDownLatch latch = new CountDownLatch(1);
-        final TimingServiceListener listener = new TimingServiceListener(new TimingServiceListener.FinishListener() {
-            public void done(final TimingServiceListener timingServiceListener) {
+        final TimingServiceListener listener = new TimingServiceListener(new Runnable() {
+            public void run() {
                 latch.countDown();
             }
         });
-
-        final BatchBuilder builder = ServiceContainer.Factory.create().batchBuilder();
+        final ServiceContainer serviceContainer = ServiceContainer.Factory.create();
+        final BatchBuilder builder = serviceContainer.batchBuilder();
         final MockListener batchListener = new MockListener();
         builder.addListener(batchListener);
 
@@ -92,6 +98,7 @@ public class BatchLevelListenersTest {
         Assert.assertEquals(expectedStartedServices, batchListener.startedServices);
         Assert.assertFalse(subBatchListener.startedServices.contains(ServiceName.of("firstService")));
         Assert.assertTrue(subBatchListener.startedServices.contains(ServiceName.of("secondService")));
+        serviceContainer.shutdown();
     }
 
     private static class MockListener extends AbstractServiceListener<Object> {

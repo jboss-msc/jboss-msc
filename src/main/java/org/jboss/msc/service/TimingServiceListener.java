@@ -36,7 +36,7 @@ public final class TimingServiceListener extends AbstractServiceListener<Object>
     private volatile int totalServices = 0;
     private final long start = System.currentTimeMillis();
     private volatile long end;
-    private final FinishListener finishedTask;
+    private final Runnable finishedTask;
 
     private static final AtomicIntegerFieldUpdater<TimingServiceListener> finishedUpdater = AtomicIntegerFieldUpdater.newUpdater(TimingServiceListener.class, "finished");
 
@@ -55,7 +55,7 @@ public final class TimingServiceListener extends AbstractServiceListener<Object>
      *
      * @param finishedTask the finish task
      */
-    public TimingServiceListener(final FinishListener finishedTask) {
+    public TimingServiceListener(final Runnable finishedTask) {
         this.finishedTask = finishedTask;
     }
 
@@ -84,7 +84,7 @@ public final class TimingServiceListener extends AbstractServiceListener<Object>
     private void done() {
         end = System.currentTimeMillis();
         if (finishedTask != null) {
-            finishedTask.done(this);
+            finishedTask.run();
         }
     }
 
@@ -137,18 +137,5 @@ public final class TimingServiceListener extends AbstractServiceListener<Object>
             return -1;
         }
         return end - start;
-    }
-
-    /**
-     * A listener for when timing has finished.
-     */
-    public interface FinishListener {
-
-        /**
-         * Called when timing has completed.
-         *
-         * @param timingServiceListener the listener
-         */
-        void done(TimingServiceListener timingServiceListener);
     }
 }

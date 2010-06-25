@@ -46,8 +46,8 @@ public class NoDepsSleepyStartBench {
         BatchBuilder batch = container.batchBuilder();
 
         final CountDownLatch latch = new CountDownLatch(1);
-        final TimingServiceListener listener = new TimingServiceListener(new TimingServiceListener.FinishListener() {
-            public void done(final TimingServiceListener timingServiceListener) {
+        final TimingServiceListener listener = new TimingServiceListener(new Runnable() {
+            public void run() {
                 latch.countDown();
             }
         });

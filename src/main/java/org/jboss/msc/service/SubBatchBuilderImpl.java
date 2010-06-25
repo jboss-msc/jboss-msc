@@ -47,7 +47,7 @@ final class SubBatchBuilderImpl extends AbstractBatchBuilder<SubBatchBuilder> im
     @Override
     public <T> BatchServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws DuplicateServiceException {
         if (isDone()) {
-            throw BatchBuilderImpl.alreadyInstalled();
+            throw alreadyInstalled();
         }
         final BatchServiceBuilder<T> batchServiceBuilder = parentBatch.addServiceValue(name, value);
         subBatchServiceBuilders.add(batchServiceBuilder);
@@ -57,11 +57,21 @@ final class SubBatchBuilderImpl extends AbstractBatchBuilder<SubBatchBuilder> im
     @Override
     public <T> BatchServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws DuplicateServiceException {
         if (isDone()) {
-            throw BatchBuilderImpl.alreadyInstalled();
+            throw alreadyInstalled();
         }
         final BatchServiceBuilder<T> batchServiceBuilder = parentBatch.addService(name, service);
         subBatchServiceBuilders.add(batchServiceBuilder);
         return batchServiceBuilder;
+    }
+
+    @Override
+    public <T> BatchServiceBuilder<T> addServiceValueIfNotExist(ServiceName name, Value<? extends Service<T>> value) throws DuplicateServiceException {
+        if (isDone()) {
+            throw alreadyInstalled();
+        }
+        final BatchServiceBuilder<T> batchServiceBuilder = parentBatch.addServiceValueIfNotExist(name, value);
+        subBatchServiceBuilders.add(batchServiceBuilder);
+        return batchServiceBuilder;  
     }
 
     void reconcile() {

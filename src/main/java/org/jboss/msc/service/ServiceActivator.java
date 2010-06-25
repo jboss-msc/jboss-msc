@@ -23,32 +23,24 @@
 package org.jboss.msc.service;
 
 /**
- * A context object for lifecycle events.
+ * A service activator which contributes services to a batch.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface LifecycleContext {
+public interface ServiceActivator {
 
     /**
-     * Call within the service lifecycle method to trigger an <em>asynchronous</em> lifecycle action.  This action
-     * will not be considered complete until indicated so by calling a method on this interface.
+     * Activate.
      *
-     * @throws IllegalStateException if called outside of the main service lifecycle method
+     * @param container the container
+     * @param batchBuilder the current batch builder
      */
-    void asynchronous() throws IllegalStateException;
+    void start(ServiceContainer container, BatchBuilder batchBuilder);
 
     /**
-     * Call when an <em>asynchronous</em> lifecycle action is complete.
+     * Deactivate.
      *
-     * @throws IllegalStateException if called before {@link #asynchronous()} is called, or if the action was already
-     * completed
+     * @param container the container
      */
-    void complete() throws IllegalStateException;
-
-    /**
-     * Get the associated service controller.
-     *
-     * @return the service controller
-     */
-    ServiceController<?> getController();
+    void stop(ServiceContainer container);
 }

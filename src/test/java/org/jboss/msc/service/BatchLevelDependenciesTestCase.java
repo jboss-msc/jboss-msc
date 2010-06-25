@@ -27,7 +27,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -37,7 +36,7 @@ import java.util.concurrent.CountDownLatch;
  *
  * @author John Bailey
  */
-public class BatchLevelDependenciesTest {
+public class BatchLevelDependenciesTestCase {
 
     private static Field dependenciesField;
 
@@ -50,8 +49,8 @@ public class BatchLevelDependenciesTest {
     @Test
     public void testBatchLevel() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        final TimingServiceListener listener = new TimingServiceListener(new TimingServiceListener.FinishListener() {
-            public void done(final TimingServiceListener timingServiceListener) {
+        final TimingServiceListener listener = new TimingServiceListener(new Runnable() {
+            public void run() {
                 latch.countDown();
             }
         });
@@ -83,13 +82,14 @@ public class BatchLevelDependenciesTest {
 
         dependencies = getServiceDependencies(serviceContainer, ServiceName.of("fourthService"));
         Assert.assertFalse(dependencies.contains(fourthController));
+        serviceContainer.shutdown();
     }
 
     @Test
     public void testSubBatchLevel() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        final TimingServiceListener listener = new TimingServiceListener(new TimingServiceListener.FinishListener() {
-            public void done(final TimingServiceListener timingServiceListener) {
+        final TimingServiceListener listener = new TimingServiceListener(new Runnable() {
+            public void run() {
                 latch.countDown();
             }
         });
@@ -124,6 +124,7 @@ public class BatchLevelDependenciesTest {
         dependencies = getServiceDependencies(serviceContainer, ServiceName.of("fourthService"));
         Assert.assertTrue(dependencies.contains(firstController));
         Assert.assertFalse(dependencies.contains(fourthController));
+        serviceContainer.shutdown();
     }
 
 
