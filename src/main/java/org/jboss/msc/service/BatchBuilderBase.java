@@ -73,4 +73,28 @@ public interface BatchBuilderBase <B extends BatchBuilderBase<B>> {
      * @return this batch
      */
     B addListener(Collection<ServiceListener<Object>> listeners);
+
+    /**
+     * Add a dependency that will be added to the all the ServiceDefinitions in the batch.
+     *
+     * @param dependency the dependency to add to the batch
+     * @return this batch
+     */
+    B addDependency(ServiceName dependency);
+
+    /**
+     * Add a list of dependencies that will be added to the all the ServiceDefinitions in the batch.
+     *
+     * @param dependencies a list of dependencies to add to the batch
+     * @return this batch
+     */
+    B addDependency(ServiceName... dependencies);
+
+    /**
+     * Add a collection of dependencies that will be added to the all the ServiceDefinitions in the batch.
+     *
+     * @param dependencies a collection of dependencies to add to the batch
+     * @return this batch
+     */
+    B addDependency(Collection<ServiceName> dependencies);
 }

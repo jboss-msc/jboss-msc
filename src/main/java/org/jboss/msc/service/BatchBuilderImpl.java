@@ -51,15 +51,20 @@ final class BatchBuilderImpl extends AbstractBatchBuilder<BatchBuilder> implemen
         if (isDone()) {
             throw alreadyInstalled();
         }
-        // Reconcile batch level listeners
+        // Reconcile batch level listeners/dependencies
         final Set<ServiceListener<Object>> batchListeners = this.getListeners();
+        final Set<ServiceName> batchDependencies = this.getDependencies();
         for(BatchServiceBuilder<?> serviceBuilder : batchServices.values()) {
             serviceBuilder.addListener(batchListeners);
+            serviceBuilder.addDependencies(batchDependencies);
         }
+
+        // Reconcile sub-batch level listeners/dependencies
         final Set<SubBatchBuilderImpl> subBatchBuilders = this.subBatchBuilders;
         for(SubBatchBuilderImpl subBatchBuilder : subBatchBuilders) {
-            subBatchBuilder.reconcileListeners();
+            subBatchBuilder.reconcile();
         }
+
         done = true;
         container.install(this);
     }
