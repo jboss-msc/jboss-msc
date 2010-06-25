@@ -142,8 +142,76 @@ public class ServiceControllerTestCase {
 
         Thread.sleep(50);
 
-        assertState(serviceContainer, ServiceName.of("immediate"), ServiceController.State.DOWN);
-        assertState(serviceContainer, ServiceName.of("on_demand"), ServiceController.State.DOWN);
+        assertState(serviceContainer, ServiceName.of("serviceOne"), ServiceController.State.DOWN);
+        assertState(serviceContainer, ServiceName.of("serviceTwo"), ServiceController.State.DOWN);
+        serviceContainer.shutdown();
+    }
+
+    @Test
+    public void testRemove() throws Exception {
+        final LatchedFinishListener listener = new LatchedFinishListener();
+        final ServiceContainer serviceContainer = ServiceContainer.Factory.create();
+
+        final BatchBuilder batch = serviceContainer.batchBuilder();
+
+        batch.addService(ServiceName.of("serviceOne"), Service.NULL)
+            .addListener(listener)
+            .addDependencies(ServiceName.of("serviceTwo"));
+        batch.addService(ServiceName.of("serviceTwo"), Service.NULL).addListener(listener);
+
+        batch.install();
+        listener.await();
+
+        assertState(serviceContainer, ServiceName.of("serviceOne"), ServiceController.State.UP);
+        assertState(serviceContainer, ServiceName.of("serviceTwo"), ServiceController.State.UP);
+
+        //serviceContainer.getService(ServiceName.of("serviceTwo")).setMode(ServiceController.Mode.NEVER);
+
+        try {
+            serviceContainer.getService(ServiceName.of("serviceTwo")).remove();
+            Assert.fail("Should throw an IllegalStateException since the controller is not stopped");
+        } catch(IllegalStateException expected){}
+
+        serviceContainer.getService(ServiceName.of("serviceTwo")).setMode(ServiceController.Mode.NEVER);
+        Thread.sleep(50);
+        serviceContainer.getService(ServiceName.of("serviceTwo")).remove();
+        Thread.sleep(50);
+        Assert.assertNull(serviceContainer.getService(ServiceName.of("serviceTwo")));
+        assertState(serviceContainer, ServiceName.of("serviceOne"), ServiceController.State.DOWN);
+
+        serviceContainer.shutdown();
+    }
+
+    @Test
+    public void testFailedStart() throws Exception {
+        final ServiceContainer serviceContainer = ServiceContainer.Factory.create();
+
+        final BatchBuilder batch = serviceContainer.batchBuilder();
+
+        final StartException startException = new StartException("Blahhhh");
+        batch.addService(ServiceName.of("serviceOne"), new Service<Void>() {
+            @Override
+            public void start(StartContext context) throws StartException {
+                throw startException;
+            }
+
+            @Override
+            public void stop(StopContext context) {
+            }
+
+            @Override
+            public Void getValue() throws IllegalStateException {
+                return null;
+            }
+        });
+
+        batch.install();
+
+        Thread.sleep(50);
+
+        assertState(serviceContainer, ServiceName.of("serviceOne"), ServiceController.State.START_FAILED);
+        Assert.assertEquals(startException, serviceContainer.getService(ServiceName.of("serviceOne")).getStartException());
+
         serviceContainer.shutdown();
     }
 
