@@ -21,13 +21,17 @@
  */
 package org.jboss.msc.service;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import org.jboss.msc.service.util.LatchedFinishListener;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -37,8 +41,17 @@ import static org.junit.Assert.assertTrue;
  */
 public class ServiceResolverTestCase extends AbstractServiceTest {
 
+    private static Field dependenciesField;
+
+    @BeforeClass
+    public static void initDependenciesField() throws Exception {
+        dependenciesField = ServiceControllerImpl.class.getDeclaredField("dependencies");
+        dependenciesField.setAccessible(true);
+    }
+
     @Test
     public void testResolvable() throws Exception {
+        final OrderedStartListener startListener = new OrderedStartListener();
         perfromTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
@@ -52,27 +65,39 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
                 builder.addService(ServiceName.of("9"), Service.NULL);
                 builder.addService(ServiceName.of("10"), Service.NULL);
                 builder.addListener(finishListener);
+                builder.addListener(startListener);
                 return Collections.singletonList(builder);
             }
 
             @Override
             public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                // TODO:  Assert all services are started and ordered correctly
+                assertEquals(8, startListener.startedControllers.size());
+                final List<ServiceController<?>> processed = new ArrayList<ServiceController<?>>(startListener.startedControllers.size());
+                for(ServiceController serviceController : startListener.startedControllers) {
+                    assertEquals(ServiceController.State.UP, serviceController.getState());
+                    final List<ServiceController<?>> deps = getServiceDependencies(serviceContainer, serviceController);
+                    for(ServiceController<?> depController : deps) {
+                        if(depController.getValue() != serviceContainer)
+                            assertTrue(processed.contains(depController));
+                    }
+                    processed.add(serviceController);
+                }
             }
         });
     }
 
     @Test
     public void testResolvableWithPreexistingDeps() throws Exception {
+        final OrderedStartListener startListener = new OrderedStartListener();
         perfromTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
-                final BatchBuilder builder1 = serviceContainer.batchBuilder().addListener(finishListener);
+                final BatchBuilder builder1 = serviceContainer.batchBuilder().addListener(finishListener).addListener(startListener);
                 builder1.addService(ServiceName.of("2"), Service.NULL);
                 builder1.addService(ServiceName.of("9"), Service.NULL);
                 builder1.addService(ServiceName.of("10"), Service.NULL);
 
-                final BatchBuilder builder2 = serviceContainer.batchBuilder().addListener(finishListener);
+                final BatchBuilder builder2 = serviceContainer.batchBuilder().addListener(finishListener).addListener(startListener);
                 builder2.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"));
                 builder2.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
                 builder2.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"));
@@ -83,7 +108,17 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
 
             @Override
             public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                // TODO:  Assert all services are started and ordered correctly
+                assertEquals(8, startListener.startedControllers.size());
+                final List<ServiceController<?>> processed = new ArrayList<ServiceController<?>>(startListener.startedControllers.size());
+                for(ServiceController serviceController : startListener.startedControllers) {
+                    assertEquals(ServiceController.State.UP, serviceController.getState());
+                    final List<ServiceController<?>> deps = getServiceDependencies(serviceContainer, serviceController);
+                    for(ServiceController<?> depController : deps) {
+                        if(depController.getValue() != serviceContainer)
+                            assertTrue(processed.contains(depController));
+                    }
+                    processed.add(serviceController);
+                }
             }
         });
     }
@@ -147,5 +182,20 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
                 assertTrue("Should have thrown circular dependency exception", failed);
             }
         });
+    }
+
+    private List<ServiceController<?>> getServiceDependencies(ServiceContainer serviceContainer, final ServiceController<?> serviceController) throws IllegalAccessException {
+        ServiceController<?>[] deps = (ServiceControllerImpl<?>[]) dependenciesField.get(serviceController);
+        return Arrays.asList(deps);
+    }
+
+    private static class OrderedStartListener extends AbstractServiceListener<Object> {
+
+        private final List<ServiceController<? extends Object>> startedControllers = new ArrayList<ServiceController<? extends Object>>();
+
+        @Override
+        public void serviceStarted(ServiceController<? extends Object> serviceController) {
+            startedControllers.add(serviceController);
+        }
     }
 }
