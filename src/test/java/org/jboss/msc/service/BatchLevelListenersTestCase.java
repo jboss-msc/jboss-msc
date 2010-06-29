@@ -23,70 +23,82 @@
 package org.jboss.msc.service;
 
 import org.jboss.msc.service.util.LatchedFinishListener;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test to verify the functionality of batch level listeners.
- * 
+ *
  * @author John Bailey
  */
-public class BatchLevelListenersTestCase {
+public class BatchLevelListenersTestCase extends AbstractServiceTest {
 
     @Test
     public void testBatchLevel() throws Exception {
-        final LatchedFinishListener listener = new LatchedFinishListener();
-
-        final ServiceContainer serviceContainer = ServiceContainer.Factory.create();
-
-        final BatchBuilder builder = serviceContainer.batchBuilder();
         final MockListener listenerOne = new MockListener();
-        builder.addListener(listenerOne);
-        builder.addService(ServiceName.of("firstService"), Service.NULL).addListener(listener);
         final MockListener listenerTwo = new MockListener();
-        builder.addListener(listenerTwo);
-        builder.addService(ServiceName.of("secondService"), Service.NULL).addListener(listener);
         final MockListener listenerThree = new MockListener();
-        builder.addListener(listenerThree);
-        builder.install();
-        listener.await();
-        Assert.assertTrue(listenerOne.startedServices.contains(ServiceName.of("firstService")));
-        Assert.assertTrue(listenerOne.startedServices.contains(ServiceName.of("secondService")));
-        Assert.assertTrue(listenerTwo.startedServices.contains(ServiceName.of("firstService")));
-        Assert.assertTrue(listenerTwo.startedServices.contains(ServiceName.of("secondService")));
-        Assert.assertTrue(listenerThree.startedServices.contains(ServiceName.of("firstService")));
-        Assert.assertTrue(listenerThree.startedServices.contains(ServiceName.of("secondService")));
-        serviceContainer.shutdown();
+        perfromTest(new ServiceTestInstance() {
+            @Override
+            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
+                final BatchBuilder builder = serviceContainer.batchBuilder();
+
+                builder.addListener(listenerOne);
+                builder.addService(ServiceName.of("firstService"), Service.NULL).addListener(finishListener);
+
+                builder.addListener(listenerTwo);
+                builder.addService(ServiceName.of("secondService"), Service.NULL).addListener(finishListener);
+
+                builder.addListener(listenerThree);
+
+                return Collections.singletonList(builder);
+            }
+
+            @Override
+            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
+                assertTrue(listenerOne.startedServices.contains(ServiceName.of("firstService")));
+                assertTrue(listenerOne.startedServices.contains(ServiceName.of("secondService")));
+                assertTrue(listenerTwo.startedServices.contains(ServiceName.of("firstService")));
+                assertTrue(listenerTwo.startedServices.contains(ServiceName.of("secondService")));
+                assertTrue(listenerThree.startedServices.contains(ServiceName.of("firstService")));
+                assertTrue(listenerThree.startedServices.contains(ServiceName.of("secondService")));
+            }
+        });
     }
 
     @Test
     public void testSubBatchLevel() throws Exception {
-        final LatchedFinishListener listener = new LatchedFinishListener();
-        final ServiceContainer serviceContainer = ServiceContainer.Factory.create();
-        final BatchBuilder builder = serviceContainer.batchBuilder();
         final MockListener batchListener = new MockListener();
-        builder.addListener(batchListener);
-
-        builder.addService(ServiceName.of("firstService"), Service.NULL).addListener(listener);
-
-        final SubBatchBuilder subBatchBuilder = builder.subBatchBuilder();
-
         final MockListener subBatchListener = new MockListener();
-        subBatchBuilder.addListener(subBatchListener);
+        perfromTest(new ServiceTestInstance() {
+            @Override
+            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
+                final BatchBuilder builder = serviceContainer.batchBuilder();
+                builder.addListener(batchListener);
+                builder.addService(ServiceName.of("firstService"), Service.NULL).addListener(finishListener);
 
-        subBatchBuilder.addService(ServiceName.of("secondService"), Service.NULL).addListener(listener);
-        builder.install();
-        listener.await();
-        List<ServiceName> expectedStartedServices = Arrays.asList(ServiceName.of("firstService"), ServiceName.of("secondService"));
-        Assert.assertEquals(expectedStartedServices, batchListener.startedServices);
-        Assert.assertFalse(subBatchListener.startedServices.contains(ServiceName.of("firstService")));
-        Assert.assertTrue(subBatchListener.startedServices.contains(ServiceName.of("secondService")));
-        serviceContainer.shutdown();
+                final SubBatchBuilder subBatchBuilder = builder.subBatchBuilder();
+                subBatchBuilder.addListener(subBatchListener);
+                subBatchBuilder.addService(ServiceName.of("secondService"), Service.NULL).addListener(finishListener);
+                return Collections.singletonList(builder);
+            }
+
+            @Override
+            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
+                List<ServiceName> expectedStartedServices = Arrays.asList(ServiceName.of("firstService"), ServiceName.of("secondService"));
+                assertEquals(expectedStartedServices, batchListener.startedServices);
+                assertFalse(subBatchListener.startedServices.contains(ServiceName.of("firstService")));
+                assertTrue(subBatchListener.startedServices.contains(ServiceName.of("secondService")));
+            }
+        });
     }
 
     private static class MockListener extends AbstractServiceListener<Object> {

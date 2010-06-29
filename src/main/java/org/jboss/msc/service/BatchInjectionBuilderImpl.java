@@ -118,7 +118,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         if (injectionDestination != null) {
             throw alreadySpecified();
         }
-        injectionDestination = new MethodInjectionDestination(new LookupMethodValue(new ClassOfValue<Object>(target), name, parameterTypes), parameterValues);
+        injectionDestination = new MethodInjectionDestination(new LookupMethodValue(new ClassOfValue<Object>(target), name, parameterTypes), target, parameterValues);
         batchServiceBuilder.getInjections().add(this);
         return this;
     }
@@ -130,7 +130,31 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         if (injectionDestination != null) {
             throw alreadySpecified();
         }
-        injectionDestination = new MethodInjectionDestination(methodValue, parameterValues);
+        injectionDestination = new MethodInjectionDestination(methodValue, target, parameterValues);
+        batchServiceBuilder.getInjections().add(this);
+        return this;
+    }
+
+    public BatchInjectionBuilderImpl toMethod(final Method method, final List<? extends Value<?>> parameterValues) {
+        if (batchBuilder.isDone()) {
+            throw alreadyInstalled();
+        }
+        if (injectionDestination != null) {
+            throw alreadySpecified();
+        }
+        injectionDestination = new MethodInjectionDestination(Values.immediateValue(method), target, parameterValues);
+        batchServiceBuilder.getInjections().add(this);
+        return this;
+    }
+
+    public BatchInjectionBuilderImpl toMethod(final Method method, final Value<?> targetValue, final List<? extends Value<?>> parameterValues) {
+        if (batchBuilder.isDone()) {
+            throw alreadyInstalled();
+        }
+        if (injectionDestination != null) {
+            throw alreadySpecified();
+        }
+        injectionDestination = new MethodInjectionDestination(Values.immediateValue(method), targetValue, parameterValues);
         batchServiceBuilder.getInjections().add(this);
         return this;
     }
@@ -142,7 +166,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         if (injectionDestination != null) {
             throw alreadySpecified();
         }
-        injectionDestination = new MethodInjectionDestination(new LookupMethodValue(new ClassOfValue<Object>(targetValue), name, parameterTypes), parameterValues);
+        injectionDestination = new MethodInjectionDestination(new LookupMethodValue(new ClassOfValue<Object>(targetValue), name, parameterTypes), targetValue, parameterValues);
         batchServiceBuilder.getInjections().add(this);
         return this;
     }
@@ -166,7 +190,19 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         if (injectionDestination != null) {
             throw alreadySpecified();
         }
-        injectionDestination = new MethodInjectionDestination(new LookupMethodValue(new ClassOfValue<Object>(target), name, 1), Collections.singletonList(Values.injectedValue()));
+        injectionDestination = new MethodInjectionDestination(new LookupMethodValue(new ClassOfValue<Object>(target), name, 1),  target, Collections.singletonList(Values.injectedValue()));
+        batchServiceBuilder.getInjections().add(this);
+        return this;
+    }
+
+    public BatchInjectionBuilderImpl toMethod(final String name, final Value<?> targetValue) {
+        if (batchBuilder.isDone()) {
+            throw alreadyInstalled();
+        }
+        if (injectionDestination != null) {
+            throw alreadySpecified();
+        }
+        injectionDestination = new MethodInjectionDestination(new LookupMethodValue(new ClassOfValue<Object>(targetValue), name, 1),  targetValue, Collections.singletonList(Values.injectedValue()));
         batchServiceBuilder.getInjections().add(this);
         return this;
     }
@@ -302,90 +338,6 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
             throw alreadyInstalled();
         }
         target = new FieldValue<Object>(fieldValue, target);
-        return this;
-    }
-
-    public BatchInjectionBuilderImpl viaProperty(final String property) {
-        if (batchBuilder.isDone()) {
-            throw alreadyInstalled();
-        }
-        return this;
-    }
-
-    public BatchInjectionBuilderImpl viaProperty(final Property property) {
-        if (batchBuilder.isDone()) {
-            throw alreadyInstalled();
-        }
-        return this;
-    }
-
-    public BatchInjectionBuilderImpl viaPropertyValue(final Value<Property> property) {
-        if (batchBuilder.isDone()) {
-            throw alreadyInstalled();
-        }
-        return this;
-    }
-
-    public BatchInjectionBuilderImpl viaMethod(final String name, final List<? extends Value<Class<?>>> parameterTypes, final List<? extends Value<?>> parameterValues) {
-        if (batchBuilder.isDone()) {
-            throw alreadyInstalled();
-        }
-        return this;
-    }
-
-    public BatchInjectionBuilderImpl viaMethod(final Method method, final List<? extends Value<?>> parameterValues) {
-        return viaMethodValue(new ImmediateValue<Method>(method), parameterValues);
-    }
-
-    public BatchInjectionBuilderImpl viaMethodValue(final Value<Method> methodValue, final List<? extends Value<?>> parameterValues) {
-        if (batchBuilder.isDone()) {
-            throw alreadyInstalled();
-        }
-        return this;
-    }
-
-    public BatchInjectionBuilder viaMethod(final String name, final Value<?> targetValue, final List<? extends Value<Class<?>>> parameterTypes, final List<? extends Value<?>> parameterValues) {
-        return null;
-    }
-
-    public BatchInjectionBuilder viaMethod(final Method method, final Value<?> targetValue, final List<? extends Value<?>> parameterValues) {
-        return null;
-    }
-
-    public BatchInjectionBuilder viaMethodValue(final Value<Method> methodValue, final Value<?> targetValue, final List<? extends Value<?>> parameterValues) {
-        return null;
-    }
-
-    public BatchInjectionBuilderImpl viaMethod(final String name) {
-        if (batchBuilder.isDone()) {
-            throw alreadyInstalled();
-        }
-        return this;
-    }
-
-    public BatchInjectionBuilderImpl viaField(final String fieldName) {
-        if (batchBuilder.isDone()) {
-            throw alreadyInstalled();
-        }
-        return this;
-    }
-
-    public BatchInjectionBuilderImpl viaField(final Field field) {
-        return viaFieldValue(new ImmediateValue<Field>(field));
-    }
-
-    public BatchInjectionBuilderImpl viaFieldValue(final Value<Field> fieldValue) {
-        if (batchBuilder.isDone()) {
-            throw alreadyInstalled();
-        }
-        return this;
-    }
-
-    public BatchInjectionBuilderImpl via(final Translator<?, ?> translator) {
-        if (batchBuilder.isDone()) {
-            throw alreadyInstalled();
-        }
-        translators.add(translator);
         return this;
     }
 
