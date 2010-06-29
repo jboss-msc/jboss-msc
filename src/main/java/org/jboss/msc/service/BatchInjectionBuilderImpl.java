@@ -34,13 +34,10 @@ import org.jboss.msc.inject.Injector;
 import org.jboss.msc.reflect.Property;
 import org.jboss.msc.translate.Translator;
 import org.jboss.msc.value.ClassOfValue;
-import org.jboss.msc.value.FieldValue;
 import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.LookupFieldValue;
 import org.jboss.msc.value.LookupMethodValue;
 import org.jboss.msc.value.LookupPropertyValue;
-import org.jboss.msc.value.MethodValue;
-import org.jboss.msc.value.PropertyValue;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
 
@@ -293,7 +290,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
-        injectionSource = new MethodDelegatingInjectionSource(injectionSource, name, new ArrayList(), Values.<Object>emptyList());
+        injectionSource = new MethodDelegatingInjectionSource(injectionSource, name, Values.EMPTY_TYPE_LIST, Values.<Object>emptyList());
         return this;
     }
 
@@ -301,7 +298,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
-        injectionSource = new MethodInjectionSource(new LookupMethodValue(new ClassOfValue<Object>(targetValue), name, new ArrayList()), targetValue, Values.<Object>emptyList());
+        injectionSource = new MethodInjectionSource(new LookupMethodValue(new ClassOfValue<Object>(targetValue), name, Values.EMPTY_TYPE_LIST), targetValue, Values.<Object>emptyList());
         return this;
     }
 

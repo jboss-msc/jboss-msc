@@ -143,6 +143,11 @@ public final class Values {
     public static final List<Value<?>> EMPTY_LIST = emptyList();
 
     /**
+     * The empty value type list.
+     */
+    public static final List<? extends Value<Class<?>>> EMPTY_TYPE_LIST = new ArrayList<Value<Class<?>>>();
+
+    /**
      * The empty value list.
      *
      * @param <T> the value type

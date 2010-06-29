@@ -34,7 +34,6 @@ import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -261,7 +260,7 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
                 serviceBuilder = batch.addService(ServiceName.of("testServiceThree"), serviceThree);
                 serviceBuilder.addInjection(objectSource).fromMethodValue(Values.immediateValue(method), Values.<Object>emptyList()).toProperty("test");
                 serviceBuilder = batch.addService(ServiceName.of("testServiceFour"), serviceFour);
-                serviceBuilder.addInjection(objectSource).fromMethod("getTest", new ArrayList(), Values.<Object>emptyList()).toProperty("test");
+                serviceBuilder.addInjection(objectSource).fromMethod("getTest", Values.EMPTY_TYPE_LIST, Values.<Object>emptyList()).toProperty("test");
                 return Collections.singletonList(batch);
             }
 
@@ -330,7 +329,7 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
                 serviceBuilder = batch.addService(ServiceName.of("testServiceThree"), serviceThree);
                 serviceBuilder.addInjection(injectedValue).fromMethodValue(Values.immediateValue(method), objectSourceValue, Values.<Object>emptyList()).toProperty("test");
                 serviceBuilder = batch.addService(ServiceName.of("testServiceFour"), serviceFour);
-                serviceBuilder.addInjection(objectSource).fromMethod("getTest", objectSourceValue, new ArrayList(), Values.<Object>emptyList()).toProperty("test");
+                serviceBuilder.addInjection(objectSource).fromMethod("getTest", objectSourceValue, Values.EMPTY_TYPE_LIST, Values.<Object>emptyList()).toProperty("test");
                 return Collections.singletonList(batch);
             }
 
