@@ -242,6 +242,15 @@ public interface BatchInjectionBuilder {
     BatchInjectionBuilder fromMethod(String name);
 
     /**
+     * Specify that the injected value should come from the result of a no-args method call.
+     *
+     * @param name the name of the method to invoke
+     * @param target the object upon which to invoke the method (use {@link Values#nullValue()} for static methods)
+     * @return this builder
+     */
+    BatchInjectionBuilder fromMethod(String name, Value<?> target);
+
+    /**
      * Specify that the injected value should come from the result of a method call.  The
      * source object can be referenced with the {@link Values#thisValue()} value.
      *
@@ -283,10 +292,28 @@ public interface BatchInjectionBuilder {
      */
     BatchInjectionBuilder fromMethodValue(Value<Method> methodValue, Value<?> target, List<? extends Value<?>> parameterValues);
 
+    /**
+     * Specify that the injected value should come from a field on the source object.
+     *
+     * @param fieldName the field name
+     * @return this builder
+     */
     BatchInjectionBuilder fromField(String fieldName);
 
+    /**
+     * Specify that the injected value should come from a field on the source object.
+     *
+     * @param field the field
+     * @return this builder
+     */
     BatchInjectionBuilder fromField(Field field);
 
+    /**
+     * Specify that the injected value should come from a field on the source object.
+     *
+     * @param fieldValue the field value
+     * @return this builder
+     */
     BatchInjectionBuilder fromFieldValue(Value<Field> fieldValue);
 
 //    /**

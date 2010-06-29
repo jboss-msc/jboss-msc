@@ -254,7 +254,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         if (injectionDestination != null) {
             throw alreadySpecified();
         }
-        target = new PropertyValue<Object>(new LookupPropertyValue(new ClassOfValue<Object>(target), propertyName), target);
+        injectionSource = new PropertyDelegatingInjectionSource(injectionSource, propertyName);
         return this;
     }
 
@@ -269,7 +269,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         if (injectionDestination != null) {
             throw alreadySpecified();
         }
-        target = new PropertyValue<Object>(propertyValue, target);
+        injectionSource = new PropertyDelegatingInjectionSource(injectionSource, propertyValue);
         return this;
     }
 
@@ -277,7 +277,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
-        target = new MethodValue<Object>(new LookupMethodValue(new ClassOfValue<Object>(target), name, parameterTypes), target, parameterValues);
+        injectionSource = new MethodDelegatingInjectionSource(injectionSource, name, parameterTypes, parameterValues);
         return this;
     }
 
@@ -285,7 +285,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
-        this.target = new MethodValue<Object>(new LookupMethodValue(new ClassOfValue<Object>(target), name, parameterTypes), target, parameterValues);
+        injectionSource = new MethodInjectionSource(new LookupMethodValue(new ClassOfValue<Object>(target), name, parameterTypes), target, parameterValues);
         return this;
     }
 
@@ -293,7 +293,15 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
-        target = new MethodValue<Object>(new LookupMethodValue(new ClassOfValue<Object>(target), name, 0), target, Values.emptyList());
+        injectionSource = new MethodDelegatingInjectionSource(injectionSource, name, new ArrayList(), Values.<Object>emptyList());
+        return this;
+    }
+
+    public BatchInjectionBuilderImpl fromMethod(final String name, final Value<?> targetValue) {
+        if (batchBuilder.isDone()) {
+            throw alreadyInstalled();
+        }
+        injectionSource = new MethodInjectionSource(new LookupMethodValue(new ClassOfValue<Object>(targetValue), name, new ArrayList()), targetValue, Values.<Object>emptyList());
         return this;
     }
 
@@ -309,7 +317,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
-        target = new MethodValue<Object>(methodValue, target, parameterValues);
+        injectionSource = new MethodDelegatingInjectionSource(injectionSource, methodValue, parameterValues);
         return this;
     }
 
@@ -317,7 +325,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
-        this.target = new MethodValue<Object>(methodValue, target, parameterValues);
+        injectionSource = new MethodInjectionSource(methodValue, target, parameterValues);
         return this;
     }
 
@@ -325,7 +333,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
-        target = new FieldValue<Object>(new LookupFieldValue(new ClassOfValue<Object>(target), fieldName), target);
+        injectionSource = new FieldDelegatingInjectionSource(injectionSource, fieldName);
         return this;
     }
 
@@ -337,7 +345,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
-        target = new FieldValue<Object>(fieldValue, target);
+        injectionSource = new FieldDelegatingInjectionSource(injectionSource, fieldValue);
         return this;
     }
 

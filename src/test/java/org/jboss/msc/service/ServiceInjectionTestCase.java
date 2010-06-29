@@ -22,15 +22,19 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.reflect.Property;
 import org.jboss.msc.service.util.LatchedFinishListener;
 import org.jboss.msc.value.ClassOfValue;
+import org.jboss.msc.value.LookupClassValue;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -41,12 +45,20 @@ import java.util.List;
  */
 public class ServiceInjectionTestCase extends AbstractServiceTest {
 
-    private final TestObjectService service = new TestObjectService();
-    private final TestObjectService serviceTwo = new TestObjectService();
-    private final TestObjectService serviceThree = new TestObjectService();
-    private final TestObjectService serviceFour = new TestObjectService();
+    private TestObjectService service;
+    private TestObjectService serviceTwo;
+    private TestObjectService serviceThree;
+    private TestObjectService serviceFour;
 
     private final Object injectedValue = new Object();
+
+    @Before
+    public void setup() throws Exception {
+        service = new TestObjectService();
+        serviceTwo = new TestObjectService();
+        serviceThree = new TestObjectService();
+        serviceFour = new TestObjectService();
+    }
 
     @Test
     public void testFieldBasedInjection() throws Exception {
@@ -177,36 +189,162 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
         });
     }
 
-//    @Test
-//    public void testPropertyBasedInjectionFromProperty() throws Exception {
-//    perfromTest(new ServiceTestInstance() {
-//            @Override
-//            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
-//            }
-//
-//            @Override
-//            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-//            }
-//        });
-//        final ServiceContainer container = getServiceContainer();
-//        final LatchedFinishListener listener = new LatchedFinishListener();
-//        final BatchBuilder batch = container.batchBuilder();
-//        batch.addListener(listener);
-//
-//        final TestObjectService service = new TestObjectService();
-//
-//        final ObjectSource injectedValue = new ObjectSource("testVal");
-//
-//        BatchServiceBuilder<TestObjectService> serviceBuilder = batch.addService(ServiceName.of("testService"), service);
-//        serviceBuilder.addInjection(injectedValue).fromProperty("test").toProperty("test");
-//
-//        batch.install();
-//
-//        listener.await();
-//
-//        Assert.assertNotNull(service.test);
-//        Assert.assertEquals("testVal", service.test);
-//    }
+    @Test
+    public void testPropertyBasedInjectionFromProperty() throws Exception {
+        perfromTest(new ServiceTestInstance() {
+            @Override
+            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
+                final ObjectSource objectSource = new ObjectSource("testValue");
+                final BatchBuilder batch = serviceContainer.batchBuilder().addListener(finishListener);
+                BatchServiceBuilder<TestObjectService> serviceBuilder = batch.addService(ServiceName.of("testService"), service);
+                serviceBuilder.addInjection(objectSource).fromProperty("test").toProperty("test");
+                serviceBuilder = batch.addService(ServiceName.of("testServiceTwo"), serviceTwo);
+                serviceBuilder.addInjection(objectSource).fromProperty(Property.getProperty(ObjectSource.class, "test")).toProperty("test");
+                serviceBuilder = batch.addService(ServiceName.of("testServiceThree"), serviceThree);
+                serviceBuilder.addInjection(objectSource).fromPropertyValue(Values.immediateValue(Property.getProperty(ObjectSource.class, "test"))).toProperty("test");
+                return Collections.singletonList(batch);
+            }
+
+            @Override
+            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
+                Assert.assertNotNull(service.test);
+                Assert.assertEquals("testValue", service.test);
+                Assert.assertNotNull(serviceTwo.test);
+                Assert.assertEquals("testValue", serviceTwo.test);
+                Assert.assertNotNull(serviceThree.test);
+                Assert.assertEquals("testValue", serviceThree.test);
+            }
+        });
+    }
+
+    @Test
+    public void testPropertyBasedInjectionFromField() throws Exception {
+        perfromTest(new ServiceTestInstance() {
+            @Override
+            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
+                final ObjectSource objectSource = new ObjectSource("testValue");
+                final Field field = ObjectSource.class.getField("test");
+                final BatchBuilder batch = serviceContainer.batchBuilder().addListener(finishListener);
+                BatchServiceBuilder<TestObjectService> serviceBuilder = batch.addService(ServiceName.of("testService"), service);
+                serviceBuilder.addInjection(objectSource).fromField("test").toProperty("test");
+                serviceBuilder = batch.addService(ServiceName.of("testServiceTwo"), serviceTwo);
+                serviceBuilder.addInjection(objectSource).fromField(field).toProperty("test");
+                serviceBuilder = batch.addService(ServiceName.of("testServiceThree"), serviceThree);
+                serviceBuilder.addInjection(objectSource).fromFieldValue(Values.immediateValue(field)).toProperty("test");
+                return Collections.singletonList(batch);
+            }
+
+            @Override
+            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
+                Assert.assertNotNull(service.test);
+                Assert.assertEquals("testValue", service.test);
+                Assert.assertNotNull(serviceTwo.test);
+                Assert.assertEquals("testValue", serviceTwo.test);
+                Assert.assertNotNull(serviceThree.test);
+                Assert.assertEquals("testValue", serviceThree.test);
+            }
+        });
+    }
+
+    @Test
+    public void testPropertyBasedInjectionFromMethod() throws Exception {
+        perfromTest(new ServiceTestInstance() {
+            @Override
+            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
+                final ObjectSource objectSource = new ObjectSource("testValue");
+                final Method method = ObjectSource.class.getMethod("getTest");
+                final BatchBuilder batch = serviceContainer.batchBuilder().addListener(finishListener);
+                BatchServiceBuilder<TestObjectService> serviceBuilder = batch.addService(ServiceName.of("testService"), service);
+                serviceBuilder.addInjection(objectSource).fromMethod("getTest").toProperty("test");
+                serviceBuilder = batch.addService(ServiceName.of("testServiceTwo"), serviceTwo);
+                serviceBuilder.addInjection(objectSource).fromMethod(method, Values.<Object>emptyList()).toProperty("test");
+                serviceBuilder = batch.addService(ServiceName.of("testServiceThree"), serviceThree);
+                serviceBuilder.addInjection(objectSource).fromMethodValue(Values.immediateValue(method), Values.<Object>emptyList()).toProperty("test");
+                serviceBuilder = batch.addService(ServiceName.of("testServiceFour"), serviceFour);
+                serviceBuilder.addInjection(objectSource).fromMethod("getTest", new ArrayList(), Values.<Object>emptyList()).toProperty("test");
+                return Collections.singletonList(batch);
+            }
+
+            @Override
+            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
+                Assert.assertNotNull(service.test);
+                Assert.assertEquals("testValue", service.test);
+                Assert.assertNotNull(serviceTwo.test);
+                Assert.assertEquals("testValue", serviceTwo.test);
+                Assert.assertNotNull(serviceThree.test);
+                Assert.assertEquals("testValue", serviceThree.test);
+                Assert.assertNotNull(serviceFour.test);
+                Assert.assertEquals("testValue", serviceFour.test);
+            }
+        });
+    }
+
+    @Test
+    public void testPropertyBasedInjectionFromMethodWithParams() throws Exception {
+        perfromTest(new ServiceTestInstance() {
+            @Override
+            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
+                final ObjectSource objectSource = new ObjectSource("testValue");
+                final Method methodWithParam = ObjectSource.class.getMethod("getTestWithParam", String.class);
+                final BatchBuilder batch = serviceContainer.batchBuilder().addListener(finishListener);
+                BatchServiceBuilder<TestObjectService> serviceBuilder = batch.addService(ServiceName.of("testService"), service);
+                serviceBuilder.addInjection(objectSource).fromMethod("getTestWithParam",
+                    Collections.singletonList(new LookupClassValue(String.class.getName(), Values.immediateValue(getClass().getClassLoader()))), 
+                    Collections.singletonList(Values.immediateValue("someValue"))).toProperty("test");
+                serviceBuilder = batch.addService(ServiceName.of("testServiceTwo"), serviceTwo);
+                serviceBuilder.addInjection(objectSource).fromMethod(methodWithParam, Collections.singletonList(Values.immediateValue("someValue"))).toProperty("test");
+                serviceBuilder = batch.addService(ServiceName.of("testServiceThree"), serviceThree);
+                serviceBuilder.addInjection(objectSource).fromMethodValue(Values.immediateValue(methodWithParam), Collections.singletonList(Values.immediateValue("someValue"))).toProperty("test");
+
+                return Collections.singletonList(batch);
+            }
+
+            @Override
+            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
+                Assert.assertNotNull(service.test);
+                Assert.assertEquals("testValuesomeValue", service.test);
+                Assert.assertNotNull(serviceTwo.test);
+                Assert.assertEquals("testValuesomeValue", serviceTwo.test);
+                Assert.assertNotNull(serviceThree.test);
+                Assert.assertEquals("testValuesomeValue", serviceThree.test);
+            }
+        });
+    }
+
+    @Test
+    public void testPropertyBasedInjectionFromMethodTargetOverride() throws Exception {
+        perfromTest(new ServiceTestInstance() {
+            @Override
+            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
+                final ObjectSource objectSource = new ObjectSource("testValue");
+                final Value<ObjectSource> objectSourceValue = Values.immediateValue(objectSource);
+                final Method method = ObjectSource.class.getMethod("getTest");
+
+                final BatchBuilder batch = serviceContainer.batchBuilder().addListener(finishListener);
+                BatchServiceBuilder<TestObjectService> serviceBuilder = batch.addService(ServiceName.of("testService"), service);
+                serviceBuilder.addInjection(injectedValue).fromMethod("getTest", objectSourceValue).toProperty("test");
+
+                serviceBuilder = batch.addService(ServiceName.of("testServiceTwo"), serviceTwo);
+                serviceBuilder.addInjection(injectedValue).fromMethod(method, objectSourceValue, Values.<Object>emptyList()).toProperty("test");
+
+                serviceBuilder = batch.addService(ServiceName.of("testServiceThree"), serviceThree);
+                serviceBuilder.addInjection(injectedValue).fromMethodValue(Values.immediateValue(method), objectSourceValue, Values.<Object>emptyList()).toProperty("test");
+                serviceBuilder = batch.addService(ServiceName.of("testServiceFour"), serviceFour);
+                serviceBuilder.addInjection(objectSource).fromMethod("getTest", objectSourceValue, new ArrayList(), Values.<Object>emptyList()).toProperty("test");
+                return Collections.singletonList(batch);
+            }
+
+            @Override
+            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
+                Assert.assertNotNull(service.test);
+                Assert.assertEquals("testValue", service.test);
+                Assert.assertNotNull(serviceTwo.test);
+                Assert.assertEquals("testValue", serviceTwo.test);
+                Assert.assertNotNull(serviceThree.test);
+                Assert.assertEquals("testValue", serviceThree.test);
+            }
+        });
+    }
 
     public static class TestObjectService implements Service<TestObjectService> {
         public Object test;
@@ -243,7 +381,7 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
     }
 
     public static class ObjectSource {
-        private String test;
+        public String test;
 
         public ObjectSource(String test) {
             this.test = test;
@@ -251,6 +389,10 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
         public String getTest() {
             return test;
+        }
+
+        public String getTestWithParam(String param) {
+            return test + param;
         }
     }
 }

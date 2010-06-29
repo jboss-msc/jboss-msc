@@ -20,28 +20,30 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.value;
+package org.jboss.msc.service;
 
-import org.jboss.msc.reflect.Property;
+import org.jboss.msc.value.MethodValue;
+import org.jboss.msc.value.Value;
+
+import java.lang.reflect.Method;
+import java.util.List;
 
 /**
- * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author John E. Bailey
  */
-public final class PropertyValue<T> implements Value<T> {
-    private final Value<Property> propertyValue;
-    private final Value<?> target;
+public class MethodInjectionSource extends InjectionSource {
+    private final Value<Method> methodValue;
+    private final Value<?> targetValue;
+    private final List<? extends Value<?>> parameteres;
 
-    public PropertyValue(final Value<Property> propertyValue, final Value<?> target) {
-        this.propertyValue = propertyValue;
-        this.target = target;
+    public MethodInjectionSource(Value<Method> methodValue, Value<?> targetValue, List<? extends Value<?>> parameteres) {
+        this.methodValue = methodValue;
+        this.targetValue = targetValue;
+        this.parameteres = parameteres;
     }
 
-    @SuppressWarnings({ "unchecked" })
-    public T getValue() throws IllegalStateException {
-        try {
-            return (T) propertyValue.getValue().get(target.getValue());
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to get value", e);
-        }
+    @Override
+    protected <T> Value<?> getValue(Value<T> serviceValue, ServiceBuilder<T> serviceBuilder, ServiceContainerImpl container) {
+        return new MethodValue<T>(methodValue, targetValue, parameteres);
     }
 }
