@@ -28,7 +28,6 @@ import org.jboss.msc.value.ClassOfValue;
 import org.jboss.msc.value.LookupClassValue;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -36,6 +35,9 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Test case used to ensure basic service injection functionality.
@@ -78,12 +80,12 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
             @Override
             public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                Assert.assertNotNull(service.test);
-                Assert.assertEquals(injectedValue, service.test);
-                Assert.assertNotNull(serviceTwo.test);
-                Assert.assertEquals(injectedValue, serviceTwo.test);
-                Assert.assertNotNull(serviceThree.test);
-                Assert.assertEquals(injectedValue, serviceThree.test);
+                assertNotNull(service.test);
+                assertEquals(injectedValue, service.test);
+                assertNotNull(serviceTwo.test);
+                assertEquals(injectedValue, serviceTwo.test);
+                assertNotNull(serviceThree.test);
+                assertEquals(injectedValue, serviceThree.test);
             }
         });
     }
@@ -108,14 +110,14 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
             @Override
             public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                Assert.assertNotNull(service.test);
-                Assert.assertEquals(injectedValue, service.test);
-                Assert.assertNotNull(serviceTwo.test);
-                Assert.assertEquals(injectedValue, serviceTwo.test);
-                Assert.assertNotNull(serviceThree.test);
-                Assert.assertEquals(injectedValue, serviceThree.test);
-                Assert.assertNotNull(serviceFour.test);
-                Assert.assertEquals(injectedValue, serviceFour.test);
+                assertNotNull(service.test);
+                assertEquals(injectedValue, service.test);
+                assertNotNull(serviceTwo.test);
+                assertEquals(injectedValue, serviceTwo.test);
+                assertNotNull(serviceThree.test);
+                assertEquals(injectedValue, serviceThree.test);
+                assertNotNull(serviceFour.test);
+                assertEquals(injectedValue, serviceFour.test);
             }
         });
     }
@@ -151,14 +153,14 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
             @Override
             public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                Assert.assertNotNull(target.test);
-                Assert.assertEquals(injectedValue, target.test);
-                Assert.assertNotNull(targetTwo.test);
-                Assert.assertEquals(injectedValue, targetTwo.test);
-                Assert.assertNotNull(targetThree.test);
-                Assert.assertEquals(injectedValue, targetThree.test);
-                Assert.assertNotNull(targetFour.test);
-                Assert.assertEquals(injectedValue, targetFour.test);
+                assertNotNull(target.test);
+                assertEquals(injectedValue, target.test);
+                assertNotNull(targetTwo.test);
+                assertEquals(injectedValue, targetTwo.test);
+                assertNotNull(targetThree.test);
+                assertEquals(injectedValue, targetThree.test);
+                assertNotNull(targetFour.test);
+                assertEquals(injectedValue, targetFour.test);
             }
         });
     }
@@ -180,10 +182,10 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
             @Override
             public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                Assert.assertNotNull(service.test);
-                Assert.assertEquals(injectedValue, service.test);
-                Assert.assertNotNull(serviceTwo.test);
-                Assert.assertEquals(injectedValue, serviceTwo.test);
+                assertNotNull(service.test);
+                assertEquals(injectedValue, service.test);
+                assertNotNull(serviceTwo.test);
+                assertEquals(injectedValue, serviceTwo.test);
             }
         });
     }
@@ -206,12 +208,12 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
             @Override
             public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                Assert.assertNotNull(service.test);
-                Assert.assertEquals("testValue", service.test);
-                Assert.assertNotNull(serviceTwo.test);
-                Assert.assertEquals("testValue", serviceTwo.test);
-                Assert.assertNotNull(serviceThree.test);
-                Assert.assertEquals("testValue", serviceThree.test);
+                assertNotNull(service.test);
+                assertEquals("testValue", service.test);
+                assertNotNull(serviceTwo.test);
+                assertEquals("testValue", serviceTwo.test);
+                assertNotNull(serviceThree.test);
+                assertEquals("testValue", serviceThree.test);
             }
         });
     }
@@ -235,12 +237,12 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
             @Override
             public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                Assert.assertNotNull(service.test);
-                Assert.assertEquals("testValue", service.test);
-                Assert.assertNotNull(serviceTwo.test);
-                Assert.assertEquals("testValue", serviceTwo.test);
-                Assert.assertNotNull(serviceThree.test);
-                Assert.assertEquals("testValue", serviceThree.test);
+                assertNotNull(service.test);
+                assertEquals("testValue", service.test);
+                assertNotNull(serviceTwo.test);
+                assertEquals("testValue", serviceTwo.test);
+                assertNotNull(serviceThree.test);
+                assertEquals("testValue", serviceThree.test);
             }
         });
     }
@@ -266,14 +268,14 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
             @Override
             public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                Assert.assertNotNull(service.test);
-                Assert.assertEquals("testValue", service.test);
-                Assert.assertNotNull(serviceTwo.test);
-                Assert.assertEquals("testValue", serviceTwo.test);
-                Assert.assertNotNull(serviceThree.test);
-                Assert.assertEquals("testValue", serviceThree.test);
-                Assert.assertNotNull(serviceFour.test);
-                Assert.assertEquals("testValue", serviceFour.test);
+                assertNotNull(service.test);
+                assertEquals("testValue", service.test);
+                assertNotNull(serviceTwo.test);
+                assertEquals("testValue", serviceTwo.test);
+                assertNotNull(serviceThree.test);
+                assertEquals("testValue", serviceThree.test);
+                assertNotNull(serviceFour.test);
+                assertEquals("testValue", serviceFour.test);
             }
         });
     }
@@ -300,12 +302,12 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
             @Override
             public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                Assert.assertNotNull(service.test);
-                Assert.assertEquals("testValuesomeValue", service.test);
-                Assert.assertNotNull(serviceTwo.test);
-                Assert.assertEquals("testValuesomeValue", serviceTwo.test);
-                Assert.assertNotNull(serviceThree.test);
-                Assert.assertEquals("testValuesomeValue", serviceThree.test);
+                assertNotNull(service.test);
+                assertEquals("testValuesomeValue", service.test);
+                assertNotNull(serviceTwo.test);
+                assertEquals("testValuesomeValue", serviceTwo.test);
+                assertNotNull(serviceThree.test);
+                assertEquals("testValuesomeValue", serviceThree.test);
             }
         });
     }
@@ -335,12 +337,12 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
             @Override
             public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                Assert.assertNotNull(service.test);
-                Assert.assertEquals("testValue", service.test);
-                Assert.assertNotNull(serviceTwo.test);
-                Assert.assertEquals("testValue", serviceTwo.test);
-                Assert.assertNotNull(serviceThree.test);
-                Assert.assertEquals("testValue", serviceThree.test);
+                assertNotNull(service.test);
+                assertEquals("testValue", service.test);
+                assertNotNull(serviceTwo.test);
+                assertEquals("testValue", serviceTwo.test);
+                assertNotNull(serviceThree.test);
+                assertEquals("testValue", serviceThree.test);
             }
         });
     }

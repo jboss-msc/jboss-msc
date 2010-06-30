@@ -23,13 +23,13 @@
 package org.jboss.msc.service;
 
 import org.jboss.msc.service.util.LatchedFinishListener;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 /**
@@ -185,7 +185,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
                 Thread.sleep(50);
                 serviceContainer.getService(ServiceName.of("serviceTwo")).remove();
                 Thread.sleep(50);
-                Assert.assertNull(serviceContainer.getService(ServiceName.of("serviceTwo")));
+                assertNull(serviceContainer.getService(ServiceName.of("serviceTwo")));
                 assertState(serviceContainer, ServiceName.of("serviceOne"), ServiceController.State.DOWN);
             }
         });

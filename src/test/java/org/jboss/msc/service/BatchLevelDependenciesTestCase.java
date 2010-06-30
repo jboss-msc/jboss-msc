@@ -23,15 +23,16 @@
 package org.jboss.msc.service;
 
 import org.jboss.msc.service.util.LatchedFinishListener;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test to verify the functionality of batch level dependencies.
@@ -69,16 +70,16 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
                 final ServiceController<?> fourthController = serviceContainer.getService(ServiceName.of("fourthService"));
 
                 List<ServiceControllerImpl<?>> dependencies = getServiceDependencies(serviceContainer, ServiceName.of("firstService"));
-                Assert.assertTrue(dependencies.contains(fourthController));
+                assertTrue(dependencies.contains(fourthController));
 
                 dependencies = getServiceDependencies(serviceContainer, ServiceName.of("secondService"));
-                Assert.assertTrue(dependencies.contains(fourthController));
+                assertTrue(dependencies.contains(fourthController));
 
                 dependencies = getServiceDependencies(serviceContainer, ServiceName.of("thirdService"));
-                Assert.assertTrue(dependencies.contains(fourthController));
+                assertTrue(dependencies.contains(fourthController));
 
                 dependencies = getServiceDependencies(serviceContainer, ServiceName.of("fourthService"));
-                Assert.assertFalse(dependencies.contains(fourthController));
+                assertFalse(dependencies.contains(fourthController));
             }
         });
     }
@@ -106,16 +107,16 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
                 final ServiceController<?> fourthController = serviceContainer.getService(ServiceName.of("fourthService"));
 
                 List<ServiceControllerImpl<?>> dependencies = getServiceDependencies(serviceContainer, ServiceName.of("secondService"));
-                Assert.assertTrue(dependencies.contains(firstController));
-                Assert.assertTrue(dependencies.contains(fourthController));
+                assertTrue(dependencies.contains(firstController));
+                assertTrue(dependencies.contains(fourthController));
 
                 dependencies = getServiceDependencies(serviceContainer, ServiceName.of("thirdService"));
-                Assert.assertTrue(dependencies.contains(firstController));
-                Assert.assertTrue(dependencies.contains(fourthController));
+                assertTrue(dependencies.contains(firstController));
+                assertTrue(dependencies.contains(fourthController));
 
                 dependencies = getServiceDependencies(serviceContainer, ServiceName.of("fourthService"));
-                Assert.assertTrue(dependencies.contains(firstController));
-                Assert.assertFalse(dependencies.contains(fourthController));
+                assertTrue(dependencies.contains(firstController));
+                assertFalse(dependencies.contains(fourthController));
             }
         });
     }
