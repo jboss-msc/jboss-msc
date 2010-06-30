@@ -55,8 +55,11 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
     ServiceBuilder<T> builder;
 
     BatchServiceBuilderImpl(final BatchBuilderImpl batchBuilder, final Value<? extends Service<T>> serviceValue, final ServiceName serviceName, final boolean ifNotExist) {
+        if(batchBuilder == null) throw new IllegalArgumentException("BatchBuilder can not be null");
         this.batchBuilder = batchBuilder;
+        if(serviceValue == null) throw new IllegalArgumentException("ServiceValue can not be null");
         this.serviceValue = serviceValue;
+        if(serviceName == null) throw new IllegalArgumentException("ServiceName can not be null");
         this.serviceName = serviceName;
         this.ifNotExist = ifNotExist;
     }
@@ -103,7 +106,9 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         }
         final Set<ServiceName> dependencies = this.dependencies;
         for (ServiceName dependency : newDependencies) {
-            dependencies.add(dependency);
+            if(!serviceName.equals(dependency)) {
+                dependencies.add(dependency);
+            }
         }
         return this;
     }
@@ -114,7 +119,9 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         }
         final Set<ServiceName> dependencies = this.dependencies;
         for (ServiceName dependency : newDependencies) {
-            dependencies.add(dependency);
+            if(!serviceName.equals(dependency)) {
+                dependencies.add(dependency);
+            }
         }
         return this;
     }
@@ -123,7 +130,9 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
-        dependencies.add(dependency);
+        if(!serviceName.equals(dependency)) {
+            dependencies.add(dependency);
+        }
         return new BatchInjectionBuilderImpl(this, new ServiceInjectionSource(dependency), batchBuilder);
     }
 

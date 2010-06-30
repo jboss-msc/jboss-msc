@@ -31,22 +31,22 @@ import org.jboss.msc.value.Value;
 public final class PropertyInjector<T> implements Injector<T> {
 
     private final Value<Property> propertyValue;
-    private final Value<? super T> injectionValue;
+    private final Value<? super T> target;
 
-    public PropertyInjector(final Value<Property> propertyValue, final Value<? super T> injectionValue) {
+    public PropertyInjector(final Value<Property> propertyValue, final Value<? super T> target) {
         if (propertyValue == null) {
             throw new IllegalArgumentException("propertyValue is null");
         }
-        if (injectionValue == null) {
-            throw new IllegalArgumentException("injectionValue is null");
+        if (target == null) {
+            throw new IllegalArgumentException("target is null");
         }
         this.propertyValue = propertyValue;
-        this.injectionValue = injectionValue;
+        this.target = target;
     }
 
     public void inject(final T value) throws InjectionException {
         try {
-            propertyValue.getValue().set(injectionValue.getValue(), value);
+            propertyValue.getValue().set(target.getValue(), value);
         } catch (Exception e) {
             throw new InjectionException("Injection failed", e);
         }
@@ -54,7 +54,7 @@ public final class PropertyInjector<T> implements Injector<T> {
 
     public void uninject() {
         try {
-            propertyValue.getValue().set(injectionValue.getValue(), null);
+            propertyValue.getValue().set(target.getValue(), null);
         } catch (Exception e) {
             // todo log
         }

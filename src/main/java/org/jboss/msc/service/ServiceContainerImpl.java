@@ -229,32 +229,32 @@ final class ServiceContainerImpl implements ServiceContainer {
      */
     void install(final BatchBuilderImpl serviceBatch) throws ServiceRegistryException {
         try {
-            resolve(serviceBatch.getBatchServices(), serviceBatch.getListeners());
+            resolve(serviceBatch.getBatchServices());
         } catch (ResolutionException e) {
             throw new ServiceRegistryException("Failed to resolve dependencies", e);
         }
     }
 
-    private void resolve(final Map<ServiceName, BatchServiceBuilderImpl<?>> services, final Set<ServiceListener<Object>> batchListeners) throws ServiceRegistryException {
+    private void resolve(final Map<ServiceName, BatchServiceBuilderImpl<?>> services) throws ServiceRegistryException {
         for (BatchServiceBuilderImpl<?> batchEntry : services.values()) {
             if(!batchEntry.processed)
-                doResolve(batchEntry, services, batchListeners);
+                doResolve(batchEntry, services);
         }
     }
 
     @SuppressWarnings({ "unchecked" })
-    private <T> void doResolve(BatchServiceBuilderImpl<T> entry, final Map<ServiceName, BatchServiceBuilderImpl<?>> services, final Set<ServiceListener<Object>> batchListeners) throws ServiceRegistryException {
+    private <T> void doResolve(BatchServiceBuilderImpl<T> entry, final Map<ServiceName, BatchServiceBuilderImpl<?>> services) throws ServiceRegistryException {
         outer:
         while (entry != null) {
             final Value<? extends Service<T>> serviceValue = entry.getServiceValue();
 
+            final ServiceName name = entry.getName();
             ServiceBuilder<T> builder;
             if ((builder = entry.builder) == null) {
-                builder = entry.builder = buildService(serviceValue);
+                builder = entry.builder = buildService(name, serviceValue);
             }
 
             final ServiceName[] deps = entry.getDependencies();
-            final ServiceName name = entry.getName();
             final ServiceName[] aliases = entry.getAliases();
 
             while (entry.i < deps.length) {
@@ -287,21 +287,18 @@ final class ServiceContainerImpl implements ServiceContainer {
             // We are resolved.  Lets install
             builder.addListener(new ServiceUnregisterListener(name, aliases));
 
-            for(ServiceListener<Object> listener : batchListeners) {
-                builder.addListener(listener);
-            }
-
             for(ServiceListener<? super T> listener : entry.getListeners()) {
                 builder.addListener(listener);
             }
-
 
             for(BatchInjectionBuilderImpl injection : entry.getInjections()) {
                 builder.addValueInjection(
                         valueInjection(serviceValue, builder, injection)
                 );
             }
-
+            if(entry.getInitialMode() != null) {
+                builder.setInitialMode(entry.getInitialMode());
+            }
             final ServiceController<?> serviceController = builder.create();
             if (registry.putIfAbsent(name, serviceController) != null) {
                 if (! entry.isIfNotExist()) {

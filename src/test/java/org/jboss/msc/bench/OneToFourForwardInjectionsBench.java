@@ -31,6 +31,7 @@ import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
 import org.jboss.msc.service.TimingServiceListener;
+import org.jboss.msc.service.util.LatchedFinishListener;
 
 import java.util.concurrent.CountDownLatch;
 
@@ -42,12 +43,7 @@ public class OneToFourForwardInjectionsBench {
         final ServiceContainer container = ServiceContainer.Factory.create();
         BatchBuilder batch = container.batchBuilder();
 
-        final CountDownLatch latch = new CountDownLatch(1);
-        final TimingServiceListener listener = new TimingServiceListener(new Runnable() {
-            public void run() {
-                latch.countDown();
-            }
-        });
+        final LatchedFinishListener listener = new LatchedFinishListener();
 
         for (int i = 0; i < totalServiceDefinitions; i++) {
             final TestObject testObject = new TestObject("test" + i);
@@ -71,8 +67,7 @@ public class OneToFourForwardInjectionsBench {
         }
 
         batch.install();
-        listener.finishBatch();
-        latch.await();
+        listener.await();
         System.out.println(totalServiceDefinitions + " : " + listener.getElapsedTime() / 1000.0);
         container.shutdown();
     }

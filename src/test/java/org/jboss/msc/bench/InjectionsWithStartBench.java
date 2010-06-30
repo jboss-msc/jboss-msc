@@ -31,6 +31,7 @@ import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
 import org.jboss.msc.service.TimingServiceListener;
+import org.jboss.msc.service.util.LatchedFinishListener;
 import org.jboss.msc.value.CachedValue;
 import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.LookupFieldValue;
@@ -60,12 +61,7 @@ public class InjectionsWithStartBench {
 
         BatchBuilder batch = container.batchBuilder();
 
-        final CountDownLatch latch = new CountDownLatch(1);
-        final TimingServiceListener listener = new TimingServiceListener(new Runnable() {
-            public void run() {
-                latch.countDown();
-            }
-        });
+        final LatchedFinishListener listener = new LatchedFinishListener();
 
         final Value<Field> testFieldValue = new CachedValue<Field>(new LookupFieldValue(new ImmediateValue<Class<?>>(TestObject.class), "test"));
 
@@ -94,8 +90,7 @@ public class InjectionsWithStartBench {
         }
 
         batch.install();
-        listener.finishBatch();
-        latch.await();
+        listener.await();
         System.out.println(totalServiceDefinitions + " : " + listener.getElapsedTime() / 1000.0);
         container.shutdown();
         executor.shutdown();

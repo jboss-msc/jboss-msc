@@ -1,6 +1,27 @@
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2010, Red Hat Middleware LLC, and individual contributors
+ * as indicated by the @author tags. See the copyright.txt file in the
+ * distribution for a full listing of individual contributors.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+
 package org.jboss.msc.service;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -15,11 +36,11 @@ import org.jboss.msc.value.Value;
  * @author Jason T. Greene
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class BatchBuilderImpl implements BatchBuilder {
+final class BatchBuilderImpl extends AbstractBatchBuilder<BatchBuilder> implements BatchBuilder {
 
     private final Map<ServiceName, BatchServiceBuilderImpl<?>> batchServices = new HashMap<ServiceName, BatchServiceBuilderImpl<?>>();
+    private final Set<SubBatchBuilderImpl> subBatchBuilders = new HashSet<SubBatchBuilderImpl>();
     private final ServiceContainerImpl container;
-    private final Set<ServiceListener<Object>> listeners = new HashSet<ServiceListener<Object>>();
     private boolean done;
 
     BatchBuilderImpl(final ServiceContainerImpl container) {
@@ -27,15 +48,25 @@ final class BatchBuilderImpl implements BatchBuilder {
     }
 
     public void install() throws ServiceRegistryException {
-        if (done) {
+        if (isDone()) {
             throw alreadyInstalled();
         }
+        // Reconcile batch level listeners/dependencies
+        final Set<ServiceListener<Object>> batchListeners = this.getListeners();
+        final Set<ServiceName> batchDependencies = this.getDependencies();
+        for(BatchServiceBuilder<?> serviceBuilder : batchServices.values()) {
+            serviceBuilder.addListener(batchListeners);
+            serviceBuilder.addDependencies(batchDependencies);
+        }
+
+        // Reconcile sub-batch level listeners/dependencies
+        final Set<SubBatchBuilderImpl> subBatchBuilders = this.subBatchBuilders;
+        for(SubBatchBuilderImpl subBatchBuilder : subBatchBuilders) {
+            subBatchBuilder.reconcile();
+        }
+
         done = true;
         container.install(this);
-    }
-
-    static IllegalStateException alreadyInstalled() {
-        return new IllegalStateException("Batch already installed");
     }
 
     public <T> BatchServiceBuilderImpl<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws DuplicateServiceException {
@@ -64,53 +95,24 @@ final class BatchBuilderImpl implements BatchBuilder {
         return createServiceBuilder(name, new ImmediateValue<Service<T>>(service), false);
     }
 
-    @Override
-    public BatchBuilderImpl addListener(ServiceListener<Object> listener) {
-        if (done) {
-            throw alreadyInstalled();
-        }
-        listeners.add(listener);
-        return this;
-    }
-
-    @Override
-    public BatchBuilderImpl addListener(ServiceListener<Object>... listeners) {
-        if (done) {
-            throw alreadyInstalled();
-        }
-        final Set<ServiceListener<Object>> batchListeners = this.listeners;
-
-        for(ServiceListener<Object> listener : listeners) {
-            batchListeners.add(listener);
-        }
-
-        return this;
-    }
-
-    @Override
-    public BatchBuilderImpl addListener(Collection<ServiceListener<Object>> listeners) {
-        if (done) {
-            throw alreadyInstalled();
-        }
-        if(listeners == null)
-            throw new IllegalArgumentException("Listeners can not be null");
-
-        final Set<ServiceListener<Object>> batchListeners = this.listeners;
-
-        for(ServiceListener<Object> listener : listeners) {
-            batchListeners.add(listener);
-        }
-        return this;
-    }
-
-    Set<ServiceListener<Object>> getListeners() {
-        return listeners;
-    }
-
     Map<ServiceName, BatchServiceBuilderImpl<?>> getBatchServices() {
         return batchServices;
     }
 
+    @Override
+    BatchBuilder covariantReturn() {
+        return this;
+    }
+
+    @Override
+    public SubBatchBuilder subBatchBuilder() {
+        final Set<SubBatchBuilderImpl> subBatches = this.subBatchBuilders;
+        final SubBatchBuilderImpl subBatchBuilder = new SubBatchBuilderImpl(this);
+        subBatches.add(subBatchBuilder);
+        return subBatchBuilder;
+    }
+
+    @Override
     boolean isDone() {
         return done;
     }

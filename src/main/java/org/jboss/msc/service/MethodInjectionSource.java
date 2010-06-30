@@ -22,26 +22,28 @@
 
 package org.jboss.msc.service;
 
-import java.util.Collection;
+import org.jboss.msc.value.MethodValue;
 import org.jboss.msc.value.Value;
 
+import java.lang.reflect.Method;
+import java.util.List;
+
 /**
- * A batch builder for installing service definitions in a single action.  Create an instance via the
- * {@link ServiceContainer#batchBuilder()} method.
+ * @author John E. Bailey
  */
-public interface BatchBuilder extends BatchBuilderBase<BatchBuilder> {
+public class MethodInjectionSource extends InjectionSource {
+    private final Value<Method> methodValue;
+    private final Value<?> targetValue;
+    private final List<? extends Value<?>> parameteres;
 
-    /**
-     * Install all the defined services into the container.
-     *
-     * @throws ServiceRegistryException
-     */
-    void install() throws ServiceRegistryException;
+    public MethodInjectionSource(Value<Method> methodValue, Value<?> targetValue, List<? extends Value<?>> parameteres) {
+        this.methodValue = methodValue;
+        this.targetValue = targetValue;
+        this.parameteres = parameteres;
+    }
 
-    /**
-     * Create a sub-batch using this as the parent batch.
-     *
-     * @return a new SubBatchBuilder
-     */
-    SubBatchBuilder subBatchBuilder();
+    @Override
+    protected <T> Value<?> getValue(Value<T> serviceValue, ServiceBuilder<T> serviceBuilder, ServiceContainerImpl container) {
+        return new MethodValue<T>(methodValue, targetValue, parameteres);
+    }
 }

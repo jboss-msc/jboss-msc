@@ -26,6 +26,7 @@ import org.jboss.msc.service.BatchBuilder;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.TimingServiceListener;
+import org.jboss.msc.service.util.LatchedFinishListener;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -45,12 +46,7 @@ public class NoDepsSleepyStartBench {
 
         BatchBuilder batch = container.batchBuilder();
 
-        final CountDownLatch latch = new CountDownLatch(1);
-        final TimingServiceListener listener = new TimingServiceListener(new Runnable() {
-            public void run() {
-                latch.countDown();
-            }
-        });
+        final LatchedFinishListener listener = new LatchedFinishListener();
 
         for (int i = 0; i < totalServiceDefinitions; i++) {
             final SleepService service = new SleepService();
@@ -59,8 +55,7 @@ public class NoDepsSleepyStartBench {
         
         batch.addListener(listener);
         batch.install();
-        listener.finishBatch();
-        latch.await();
+        listener.await();
         System.out.println(totalServiceDefinitions + " : " + listener.getElapsedTime() / 1000.0);
         container.shutdown();
         executor.shutdown();

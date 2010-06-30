@@ -19,29 +19,13 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-
+  
 package org.jboss.msc.service;
 
-import java.util.Collection;
-import org.jboss.msc.value.Value;
-
 /**
- * A batch builder for installing service definitions in a single action.  Create an instance via the
- * {@link ServiceContainer#batchBuilder()} method.
+ * Marker interface for sub batches.
+ *
+ * @author John Bailey
  */
-public interface BatchBuilder extends BatchBuilderBase<BatchBuilder> {
-
-    /**
-     * Install all the defined services into the container.
-     *
-     * @throws ServiceRegistryException
-     */
-    void install() throws ServiceRegistryException;
-
-    /**
-     * Create a sub-batch using this as the parent batch.
-     *
-     * @return a new SubBatchBuilder
-     */
-    SubBatchBuilder subBatchBuilder();
+public interface SubBatchBuilder extends BatchBuilderBase<SubBatchBuilder> {
 }
