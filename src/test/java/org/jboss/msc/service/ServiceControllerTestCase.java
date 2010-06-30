@@ -41,7 +41,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
     @Test
     public void testStartModes() throws Exception {
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final BatchBuilder batch = serviceContainer.batchBuilder();
@@ -64,7 +64,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
     @Test
     public void testAutomatic() throws Exception {
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final BatchBuilder batch = serviceContainer.batchBuilder();
@@ -131,7 +131,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
     @Test
     public void testStop() throws Exception {
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final BatchBuilder batch = serviceContainer.batchBuilder();
@@ -159,7 +159,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
     @Test
     public void testRemove() throws Exception {
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final BatchBuilder batch = serviceContainer.batchBuilder();
@@ -194,7 +194,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
     @Test
     public void testFailedStart() throws Exception {
         final StartException startException = new StartException("Blahhhh");
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final BatchBuilder batch = serviceContainer.batchBuilder();

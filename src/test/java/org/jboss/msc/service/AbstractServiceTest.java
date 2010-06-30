@@ -43,7 +43,7 @@ public class AbstractServiceTest {
         }
     }
 
-    protected void perfromTest(ServiceTestInstance instance) throws Exception {
+    protected void performTest(ServiceTestInstance instance) throws Exception {
         final ServiceContainer serviceContainer = ServiceContainer.Factory.create();
         final LatchedFinishListener finishListener = new LatchedFinishListener();
 

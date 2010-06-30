@@ -46,7 +46,7 @@ public class BatchLevelListenersTestCase extends AbstractServiceTest {
         final MockListener listenerOne = new MockListener();
         final MockListener listenerTwo = new MockListener();
         final MockListener listenerThree = new MockListener();
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final BatchBuilder builder = serviceContainer.batchBuilder();
@@ -78,7 +78,7 @@ public class BatchLevelListenersTestCase extends AbstractServiceTest {
     public void testSubBatchLevel() throws Exception {
         final MockListener batchListener = new MockListener();
         final MockListener subBatchListener = new MockListener();
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final BatchBuilder builder = serviceContainer.batchBuilder();

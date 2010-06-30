@@ -51,7 +51,7 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
 
     @Test
     public void testBatchLevel() throws Exception {
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final BatchBuilder builder = serviceContainer.batchBuilder();
@@ -86,7 +86,7 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
 
     @Test
     public void testSubBatchLevel() throws Exception {
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final BatchBuilder builder = serviceContainer.batchBuilder();

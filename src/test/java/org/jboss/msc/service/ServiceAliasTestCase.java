@@ -40,7 +40,7 @@ public class ServiceAliasTestCase extends AbstractServiceTest {
 
     @Test
     public void testAliases() throws Exception {
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final BatchBuilder builder = serviceContainer.batchBuilder();
