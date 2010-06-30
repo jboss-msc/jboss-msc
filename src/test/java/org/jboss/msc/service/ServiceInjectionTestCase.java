@@ -62,7 +62,7 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
     @Test
     public void testFieldBasedInjection() throws Exception {
 
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final Field field = TestObjectService.class.getField("test");
@@ -90,7 +90,7 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
     @Test
     public void testMethodBasedInjection() throws Exception {
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final Method method = TestObjectService.class.getMethod("setTest", Object.class);
@@ -134,7 +134,7 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
         final Method method = AlternateObject.class.getMethod("setTest", Object.class);
 
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final BatchBuilder batch = serviceContainer.batchBuilder().addListener(finishListener);
@@ -165,7 +165,7 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
     @Test
     public void testPropertyBasedInjection() throws Exception {
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final BatchBuilder batch = serviceContainer.batchBuilder().addListener(finishListener);
@@ -190,7 +190,7 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
     @Test
     public void testPropertyBasedInjectionFromProperty() throws Exception {
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final ObjectSource objectSource = new ObjectSource("testValue");
@@ -218,7 +218,7 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
     @Test
     public void testPropertyBasedInjectionFromField() throws Exception {
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final ObjectSource objectSource = new ObjectSource("testValue");
@@ -247,7 +247,7 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
     @Test
     public void testPropertyBasedInjectionFromMethod() throws Exception {
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final ObjectSource objectSource = new ObjectSource("testValue");
@@ -280,7 +280,7 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
     @Test
     public void testPropertyBasedInjectionFromMethodWithParams() throws Exception {
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final ObjectSource objectSource = new ObjectSource("testValue");
@@ -312,7 +312,7 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
 
     @Test
     public void testPropertyBasedInjectionFromMethodTargetOverride() throws Exception {
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final ObjectSource objectSource = new ObjectSource("testValue");

@@ -52,7 +52,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
     @Test
     public void testResolvable() throws Exception {
         final OrderedStartListener startListener = new OrderedStartListener();
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final BatchBuilder builder = serviceContainer.batchBuilder();
@@ -89,7 +89,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
     @Test
     public void testResolvableWithPreexistingDeps() throws Exception {
         final OrderedStartListener startListener = new OrderedStartListener();
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final BatchBuilder builder1 = serviceContainer.batchBuilder().addListener(finishListener).addListener(startListener);
@@ -127,7 +127,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
     @Test
     public void testMissingDependency() throws Exception {
 
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             private boolean failed;
             
             @Override
@@ -160,7 +160,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
 
     @Test
     public void testCircular() throws Exception {
-        perfromTest(new ServiceTestInstance() {
+        performTest(new ServiceTestInstance() {
             private boolean failed;
             @Override
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
