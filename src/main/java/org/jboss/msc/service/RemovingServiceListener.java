@@ -30,27 +30,27 @@ package org.jboss.msc.service;
 public final class RemovingServiceListener extends AbstractServiceListener<Object> {
 
     /** {@inheritDoc} */
-    public void listenerAdded(final ServiceController<? extends Object> serviceController) {
+    public void listenerAdded(final ServiceController<?> serviceController) {
         serviceController.setMode(ServiceController.Mode.NEVER);
     }
 
     /** {@inheritDoc} */
-    public void serviceStarting(final ServiceController<? extends Object> serviceController) {
+    public void serviceStarting(final ServiceController<?> serviceController) {
         serviceController.setMode(ServiceController.Mode.NEVER);
     }
 
     /** {@inheritDoc} */
-    public void serviceStarted(final ServiceController<? extends Object> serviceController) {
+    public void serviceStarted(final ServiceController<?> serviceController) {
         serviceController.setMode(ServiceController.Mode.NEVER);
     }
 
     /** {@inheritDoc} */
-    public void serviceFailed(final ServiceController<? extends Object> serviceController, final StartException reason) {
+    public void serviceFailed(final ServiceController<?> serviceController, final StartException reason) {
         serviceController.setMode(ServiceController.Mode.NEVER);
     }
 
     /** {@inheritDoc} */
-    public void serviceStopping(final ServiceController<? extends Object> serviceController) {
+    public void serviceStopping(final ServiceController<?> serviceController) {
         serviceController.setMode(ServiceController.Mode.NEVER);
     }
 
