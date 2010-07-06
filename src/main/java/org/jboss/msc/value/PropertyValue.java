@@ -39,7 +39,7 @@ public final class PropertyValue<T> implements Value<T> {
     @SuppressWarnings({ "unchecked" })
     public T getValue() throws IllegalStateException {
         try {
-            return (T) propertyValue.getValue().get(target);
+            return (T) propertyValue.getValue().get(target.getValue());
         } catch (Exception e) {
             throw new IllegalStateException("Failed to get value", e);
         }

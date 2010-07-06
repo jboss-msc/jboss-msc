@@ -145,6 +145,10 @@
                     <includes>
                         <include>**/*TestCase.java</include>
                     </includes>
+                    <excludes>
+                        <exclude>org/jboss/msc/bench/*.java</exclude>
+                    </excludes>
+                    <enableAssertions>false</enableAssertions>
                 </configuration>
             </plugin>
             <plugin>

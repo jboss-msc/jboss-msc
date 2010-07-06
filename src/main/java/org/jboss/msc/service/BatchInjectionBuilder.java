@@ -27,7 +27,6 @@ import java.lang.reflect.Method;
 import java.util.List;
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.reflect.Property;
-import org.jboss.msc.translate.Translator;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
 
@@ -84,6 +83,17 @@ public interface BatchInjectionBuilder {
      * referenced in the parameter list with the {@link Values#injectedValue()} value; the
      * destination object can be referenced with the {@link Values#thisValue()} value.
      *
+     * @param method the method
+     * @param parameterValues the parameter values
+     * @return this builder
+     */
+    BatchInjectionBuilder toMethod(Method method, List<? extends Value<?>> parameterValues);
+
+    /**
+     * Specify that the target of injection be a method on the destination object.  The object being injected can be
+     * referenced in the parameter list with the {@link Values#injectedValue()} value; the
+     * destination object can be referenced with the {@link Values#thisValue()} value.
+     *
      * @param methodValue the method value
      * @param parameterValues the parameter values
      * @return this builder
@@ -108,6 +118,17 @@ public interface BatchInjectionBuilder {
      * referenced in the parameter list with the {@link Values#injectedValue()} value; the
      * destination object can be referenced with the {@link Values#thisValue()} value.
      *
+     * @param method the method
+     * @param parameterValues the parameter values
+     * @return this builder
+     */
+    BatchInjectionBuilder toMethod(Method method, Value<?> targetValue,  List<? extends Value<?>> parameterValues);
+
+    /**
+     * Specify that the target of injection be a method on the destination object.  The object being injected can be
+     * referenced in the parameter list with the {@link Values#injectedValue()} value; the
+     * destination object can be referenced with the {@link Values#thisValue()} value.
+     *
      * @param methodValue the method value
      * @param targetValue the value upon which the method should be invoked (use {@link Values#nullValue()} for static methods)
      * @param parameterValues the parameter values
@@ -124,12 +145,13 @@ public interface BatchInjectionBuilder {
     BatchInjectionBuilder toMethod(String name);
 
     /**
-     * Specify that the target of injection be an injector.
+     * Specify that the target of injection be a one-argument method on the destination object.
      *
-     * @param injector the target
+     * @param name the method name
+     * @param targetValue  the value upon which the method should be invoked (use {@link Values#nullValue()} for static methods)
      * @return this builder
      */
-    BatchInjectionBuilder toInjector(Injector<?> injector);
+    BatchInjectionBuilder toMethod(String name, Value<?> targetValue);
 
     /**
      * Specify that the target of injection be a field on the target object.
@@ -154,6 +176,15 @@ public interface BatchInjectionBuilder {
      * @return this builder
      */
     BatchInjectionBuilder toFieldValue(Value<Field> fieldValue);
+
+    /**
+     * Specify that the target of injection be an injector.
+     *
+     * @param injector the target
+     * @return this builder
+     */
+    BatchInjectionBuilder toInjector(Injector<?> injector);
+
 
     /**
      * Specify that the injected value should come from a property on the source object.
@@ -211,6 +242,15 @@ public interface BatchInjectionBuilder {
     BatchInjectionBuilder fromMethod(String name);
 
     /**
+     * Specify that the injected value should come from the result of a no-args method call.
+     *
+     * @param name the name of the method to invoke
+     * @param target the object upon which to invoke the method (use {@link Values#nullValue()} for static methods)
+     * @return this builder
+     */
+    BatchInjectionBuilder fromMethod(String name, Value<?> target);
+
+    /**
      * Specify that the injected value should come from the result of a method call.  The
      * source object can be referenced with the {@link Values#thisValue()} value.
      *
@@ -252,43 +292,35 @@ public interface BatchInjectionBuilder {
      */
     BatchInjectionBuilder fromMethodValue(Value<Method> methodValue, Value<?> target, List<? extends Value<?>> parameterValues);
 
-    BatchInjectionBuilder fromField(String fieldName);
-
-    BatchInjectionBuilder fromField(Field field);
-
-    BatchInjectionBuilder fromFieldValue(Value<Field> fieldValue);
-
-    BatchInjectionBuilder viaProperty(String property);
-
-    BatchInjectionBuilder viaProperty(Property property);
-
-    BatchInjectionBuilder viaPropertyValue(Value<Property> property);
-
-    BatchInjectionBuilder viaMethod(String name, List<? extends Value<Class<?>>> parameterTypes, List<? extends Value<?>> parameterValues);
-
-    BatchInjectionBuilder viaMethod(Method method, List<? extends Value<?>> parameterValues);
-
-    BatchInjectionBuilder viaMethodValue(Value<Method> methodValue, List<? extends Value<?>> parameterValues);
-
-    BatchInjectionBuilder viaMethod(String name, Value<?> targetValue, List<? extends Value<Class<?>>> parameterTypes, List<? extends Value<?>> parameterValues);
-
-    BatchInjectionBuilder viaMethod(Method method, Value<?> targetValue, List<? extends Value<?>> parameterValues);
-
-    BatchInjectionBuilder viaMethodValue(Value<Method> methodValue, Value<?> targetValue, List<? extends Value<?>> parameterValues);
-
-    BatchInjectionBuilder viaMethod(String name);
-
-    BatchInjectionBuilder viaField(String fieldName);
-
-    BatchInjectionBuilder viaField(Field field);
-
-    BatchInjectionBuilder viaFieldValue(Value<Field> fieldValue);
-
     /**
-     * Add a translator which will translate the injection target.
+     * Specify that the injected value should come from a field on the source object.
      *
-     * @param translator the translator
+     * @param fieldName the field name
      * @return this builder
      */
-    BatchInjectionBuilder via(Translator<?, ?> translator);
+    BatchInjectionBuilder fromField(String fieldName);
+
+    /**
+     * Specify that the injected value should come from a field on the source object.
+     *
+     * @param field the field
+     * @return this builder
+     */
+    BatchInjectionBuilder fromField(Field field);
+
+    /**
+     * Specify that the injected value should come from a field on the source object.
+     *
+     * @param fieldValue the field value
+     * @return this builder
+     */
+    BatchInjectionBuilder fromFieldValue(Value<Field> fieldValue);
+
+//    /**
+//     * Add a translator which will translate the injection target.
+//     *
+//     * @param translator the translator
+//     * @return this builder
+//     */
+//    BatchInjectionBuilder via(Translator<?, ?> translator);
 }
