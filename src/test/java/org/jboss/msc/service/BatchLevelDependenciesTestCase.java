@@ -91,7 +91,7 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
             public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
                 final BatchBuilder builder = serviceContainer.batchBuilder();
                 builder.addService(ServiceName.of("firstService"), Service.NULL);
-                final SubBatchBuilder subBatchBuilder = builder.subBatchBuilder();
+                final BatchBuilder subBatchBuilder = builder.subBatchBuilder();
                 subBatchBuilder.addService(ServiceName.of("secondService"), Service.NULL);
                 subBatchBuilder.addService(ServiceName.of("thirdService"), Service.NULL);
                 subBatchBuilder.addService(ServiceName.of("fourthService"), Service.NULL);

@@ -85,7 +85,7 @@ public class BatchLevelListenersTestCase extends AbstractServiceTest {
                 builder.addListener(batchListener);
                 builder.addService(ServiceName.of("firstService"), Service.NULL).addListener(finishListener);
 
-                final SubBatchBuilder subBatchBuilder = builder.subBatchBuilder();
+                final BatchBuilder subBatchBuilder = builder.subBatchBuilder();
                 subBatchBuilder.addListener(subBatchListener);
                 subBatchBuilder.addService(ServiceName.of("secondService"), Service.NULL).addListener(finishListener);
                 return Collections.singletonList(builder);

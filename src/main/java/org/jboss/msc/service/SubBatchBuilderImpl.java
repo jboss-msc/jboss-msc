@@ -24,7 +24,6 @@ package org.jboss.msc.service;
 
 import org.jboss.msc.value.Value;
 
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -34,7 +33,7 @@ import java.util.Set;
  *
  * @author John Bailey
  */
-final class SubBatchBuilderImpl extends AbstractBatchBuilder<SubBatchBuilder> implements SubBatchBuilder {
+final class SubBatchBuilderImpl extends AbstractBatchBuilder {
 
     private final BatchBuilderImpl parentBatch;
     // This duplicate collection sucks.  But we need some way to know what is in the sub batch.
@@ -90,7 +89,12 @@ final class SubBatchBuilderImpl extends AbstractBatchBuilder<SubBatchBuilder> im
     }
 
     @Override
-    SubBatchBuilder covariantReturn() {
-        return this;
+    public void install() throws ServiceRegistryException {
+        throw new UnsupportedOperationException("Sub-batches do not support the install operation.");
+    }
+
+    @Override
+    public BatchBuilder subBatchBuilder() {
+        throw new UnsupportedOperationException("Sub-batches do not support creating nested sub-batches.");
     }
 }
