@@ -22,8 +22,6 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.value.Value;
-
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -32,27 +30,24 @@ import java.util.Set;
  * Abstract base class used for BatchBuilders
  *
  * @author John Bailey
- * @param <B> The BatchBuilder subtype
  */
-abstract class AbstractBatchBuilder<B extends BatchBuilderBase<B>> implements BatchBuilderBase<B> {
+abstract class AbstractBatchBuilder implements BatchBuilder {
     private final Set<ServiceListener<Object>> listeners = new HashSet<ServiceListener<Object>>();
     private final Set<ServiceName> dependencies = new HashSet<ServiceName>();
-
-    abstract B covariantReturn();
 
     abstract boolean isDone();
 
     @Override
-    public B addListener(ServiceListener<Object> listener) {
+    public BatchBuilder addListener(ServiceListener<Object> listener) {
         if(isDone()) {
             throw alreadyInstalled();
         }
         listeners.add(listener);
-        return covariantReturn();
+        return this;
     }
 
     @Override
-    public B addListener(ServiceListener<Object>... listeners) {
+    public BatchBuilder addListener(ServiceListener<Object>... listeners) {
         if(isDone()) {
             throw alreadyInstalled();
         }
@@ -61,11 +56,11 @@ abstract class AbstractBatchBuilder<B extends BatchBuilderBase<B>> implements Ba
         for(ServiceListener<Object> listener : listeners) {
             batchListeners.add(listener);
         }
-        return covariantReturn();
+        return this;
     }
 
     @Override
-    public B addListener(Collection<ServiceListener<Object>> listeners) {
+    public BatchBuilder addListener(Collection<ServiceListener<Object>> listeners) {
         if(isDone()) {
             throw alreadyInstalled();
         }
@@ -77,20 +72,20 @@ abstract class AbstractBatchBuilder<B extends BatchBuilderBase<B>> implements Ba
         for(ServiceListener<Object> listener : listeners) {
             batchListeners.add(listener);
         }
-        return covariantReturn();
+        return this;
     }
 
     @Override
-    public B addDependency(ServiceName dependency) {
+    public BatchBuilder addDependency(ServiceName dependency) {
         if(isDone()) {
             throw alreadyInstalled();
         }
         dependencies.add(dependency);
-        return covariantReturn();
+        return this;
     }
 
     @Override
-    public B addDependency(ServiceName... dependencies) {
+    public BatchBuilder addDependency(ServiceName... dependencies) {
         if(isDone()) {
             throw alreadyInstalled();
         }
@@ -98,11 +93,11 @@ abstract class AbstractBatchBuilder<B extends BatchBuilderBase<B>> implements Ba
         for(ServiceName dependency : dependencies) {
             batchDependencies.add(dependency);
         }
-        return covariantReturn();
+        return this;
     }
 
     @Override
-    public B addDependency(Collection<ServiceName> dependencies) {
+    public BatchBuilder addDependency(Collection<ServiceName> dependencies) {
         if(isDone()) {
             throw alreadyInstalled();
         }
@@ -111,7 +106,7 @@ abstract class AbstractBatchBuilder<B extends BatchBuilderBase<B>> implements Ba
         for(ServiceName dependency : dependencies) {
             batchDependencies.add(dependency);
         }
-        return covariantReturn();
+        return this;
     }
 
     static IllegalStateException alreadyInstalled() {

@@ -34,9 +34,10 @@ import org.jboss.msc.value.Value;
  * An ordered set of service batchEntries that should be processed as one.
  * 
  * @author Jason T. Greene
+ * @author John E. Bailey
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class BatchBuilderImpl extends AbstractBatchBuilder<BatchBuilder> implements BatchBuilder {
+final class BatchBuilderImpl extends AbstractBatchBuilder {
 
     private final Map<ServiceName, BatchServiceBuilderImpl<?>> batchServices = new HashMap<ServiceName, BatchServiceBuilderImpl<?>>();
     private final Set<SubBatchBuilderImpl> subBatchBuilders = new HashSet<SubBatchBuilderImpl>();
@@ -100,12 +101,7 @@ final class BatchBuilderImpl extends AbstractBatchBuilder<BatchBuilder> implemen
     }
 
     @Override
-    BatchBuilder covariantReturn() {
-        return this;
-    }
-
-    @Override
-    public SubBatchBuilder subBatchBuilder() {
+    public BatchBuilder subBatchBuilder() {
         final Set<SubBatchBuilderImpl> subBatches = this.subBatchBuilders;
         final SubBatchBuilderImpl subBatchBuilder = new SubBatchBuilderImpl(this);
         subBatches.add(subBatchBuilder);
