@@ -134,7 +134,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     public void addListener(final ServiceListener<? super S> listener) {
-        assert ! Thread.holdsLock(this);
+        assert !lockHeld();
         final Substate state;
         synchronized (this) {
             runningListeners ++;
@@ -145,8 +145,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         doFinishListener(null);
     }
 
+    private boolean lockHeld() {
+        return Thread.holdsLock(this);
+    }
+
     private void invokeListener(final ServiceListener<? super S> listener, final State state) {
-        assert ! Thread.holdsLock(this);
+        assert !lockHeld();
         try {
             switch (state) {
                 case DOWN: {
@@ -174,6 +178,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     break;
                 }
             }
+        } catch (Throwable t) {
+            // todo log error
         } finally {
             doFinishListener(null);
         }
@@ -209,7 +215,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     public void retry() {
-        assert ! Thread.holdsLock(this);
+        assert !lockHeld();
         final ServiceListener<? super S>[] listeners;
         synchronized (this) {
             if (state.getState() != State.START_FAILED) {
@@ -233,7 +239,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     public void setMode(final Mode newMode) {
-        assert ! Thread.holdsLock(this);
+        assert !lockHeld();
         Substate newState = null;
         ServiceListener<? super S>[] listeners = null;
         synchronized (this) {
@@ -402,7 +408,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
      */
     @SuppressWarnings({ "unchecked" })
     ServiceListener<? super S>[] getListeners(int plusCount, Substate newState) {
-        assert Thread.holdsLock(this);
+        assert lockHeld();
         final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
         final int size = listeners.size();
         runningListeners = size + plusCount;
@@ -434,7 +440,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
      * @param state the state we are in
      */
     void runListeners(final ServiceListener<? super S>[] listeners, final State state) {
-        assert ! Thread.holdsLock(this);
+        assert !lockHeld();
         final Executor executor = container.getExecutor();
         for (final ServiceListener<? super S> listener : listeners) {
             if (listener != null) try {
@@ -447,8 +453,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     private void doStart(ServiceListener<? super S>[] listeners) {
         try {
-            assert ! Thread.holdsLock(this);
-            final Service service = serviceValue.getValue();
+            assert !lockHeld();
+            final Service<?> service = serviceValue.getValue();
             if (service == null) {
                 throw new IllegalStateException(SERVICE_NOT_AVAILABLE);
             }
@@ -469,7 +475,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     private void doFinishListener(StartException e) {
-        assert ! Thread.holdsLock(this);
+        assert !lockHeld();
         Substate newState = null;
         ServiceListener<? super S>[] listeners = null;
         synchronized (this) {
@@ -544,7 +550,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     private void doFail(final StartException e) {
-        assert Thread.holdsLock(this);
+        assert lockHeld();
         assert state == Substate.STARTING;
         state = Substate.START_FAILED;
         startException = e;
@@ -552,10 +558,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     private void doStop(final ServiceListener<? super S>[] listeners) {
-        assert Thread.holdsLock(this);
+        assert lockHeld();
         assert state == Substate.UP;
         try {
-            final Service service = serviceValue.getValue();
+            final Service<?> service = serviceValue.getValue();
             if (service == null) {
                 throw new IllegalStateException(SERVICE_NOT_AVAILABLE);
             }
@@ -572,14 +578,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     private void doDemandParents() {
-        assert Thread.holdsLock(this);
+        assert lockHeld();
         for (ServiceControllerImpl<?> dependency : dependencies) {
             dependency.addDemand();
         }
     }
 
     private void doUndemandParents() {
-        assert Thread.holdsLock(this);
+        assert lockHeld();
         for (ServiceControllerImpl<?> dependency : dependencies) {
             dependency.removeDemand();
         }
@@ -745,14 +751,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     private class StartTask implements Runnable {
 
-        private final Service service;
+        private final Service<?> service;
 
-        public StartTask(final Service service) {
+        public StartTask(final Service<?> service) {
             this.service = service;
         }
 
         public void run() {
-            assert ! Thread.holdsLock(ServiceControllerImpl.this);
+            assert !lockHeld();
             final StartContextImpl context = new StartContextImpl();
             try {
                 final ValueInjection<?>[] injections = ServiceControllerImpl.this.injections;
@@ -807,14 +813,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     private class StopTask implements Runnable {
 
-        private final Service service;
+        private final Service<?> service;
 
-        public StopTask(final Service service) {
+        public StopTask(final Service<?> service) {
             this.service = service;
         }
 
         public void run() {
-            assert ! Thread.holdsLock(ServiceControllerImpl.this);
+            assert !lockHeld();
             final StopContextImpl context = new StopContextImpl();
             try {
                 service.stop(context);
@@ -855,7 +861,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         }
 
         public void run() {
-            assert ! Thread.holdsLock(ServiceControllerImpl.this);
+            assert !lockHeld();
             invokeListener(listener, state);
         }
     }
