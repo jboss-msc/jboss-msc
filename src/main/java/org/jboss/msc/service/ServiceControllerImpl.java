@@ -141,8 +141,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             state = this.state;
             if (state != Substate.REMOVED) listeners.add(listener);
         }
-        listener.listenerAdded(this);
-        doFinishListener(null);
+        invokeListener(listener, null);
     }
 
     private boolean lockHeld() {
@@ -152,7 +151,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     private void invokeListener(final ServiceListener<? super S> listener, final State state) {
         assert !lockHeld();
         try {
-            switch (state) {
+            if (state == null) {
+                listener.listenerAdded(this);
+            } else switch (state) {
                 case DOWN: {
                     listener.serviceStopped(this);
                     break;
@@ -244,7 +245,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         ServiceListener<? super S>[] listeners = null;
         synchronized (this) {
             final Substate state = this.state;
-            if (state == Substate.REMOVED) {
+            if (state == Substate.REMOVED && newMode != Mode.NEVER) {
                 throw new IllegalStateException(SERVICE_REMOVED);
             }
             final Mode oldMode = mode;
@@ -855,7 +856,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         private final ServiceListener<? super S> listener;
         private final State state;
 
-        public ListenerTask(final ServiceListener<? super S> listener, final State state) {
+        ListenerTask(final ServiceListener<? super S> listener, final State state) {
             this.listener = listener;
             this.state = state;
         }
