@@ -70,29 +70,29 @@ final class BatchBuilderImpl extends AbstractBatchBuilder {
         container.install(this);
     }
 
-    public <T> BatchServiceBuilderImpl<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws DuplicateServiceException {
+    public <T> BatchServiceBuilderImpl<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
         return createServiceBuilder(name, value, false);
     }
 
-    private <T> BatchServiceBuilderImpl<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value, final boolean ifNotExist) throws DuplicateServiceException {
+    private <T> BatchServiceBuilderImpl<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value, final boolean ifNotExist) throws IllegalArgumentException {
         if (done) {
             throw alreadyInstalled();
         }
         final Map<ServiceName, BatchServiceBuilderImpl<?>> batchServices = this.batchServices;
         final BatchServiceBuilderImpl<?> old = batchServices.get(name);
         if (old != null && ! ifNotExist) {
-            throw new DuplicateServiceException("Service named " + name + " is already defined in this batch");
+            throw new IllegalArgumentException("Service named " + name + " is already defined in this batch");
         }
         final BatchServiceBuilderImpl<T> builder = new BatchServiceBuilderImpl<T>(this, value, name, ifNotExist);
         batchServices.put(name, builder);
         return builder;
     }
 
-    public <T> BatchServiceBuilder<T> addServiceValueIfNotExist(final ServiceName name, final Value<? extends Service<T>> value) throws DuplicateServiceException {
+    public <T> BatchServiceBuilder<T> addServiceValueIfNotExist(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
         return createServiceBuilder(name, value, true);
     }
 
-    public <T> BatchServiceBuilderImpl<T> addService(final ServiceName name, final Service<T> service) throws DuplicateServiceException {
+    public <T> BatchServiceBuilderImpl<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
         return createServiceBuilder(name, new ImmediateValue<Service<T>>(service), false);
     }
 

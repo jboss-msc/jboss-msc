@@ -37,7 +37,7 @@ public interface BatchBuilder  {
      * @param value the service value
      * @return the builder for the service
      */
-    <T> BatchServiceBuilder<T> addServiceValue(ServiceName name, Value<? extends Service<T>> value) throws DuplicateServiceException;
+    <T> BatchServiceBuilder<T> addServiceValue(ServiceName name, Value<? extends Service<T>> value) throws IllegalArgumentException;
 
     /**
      * Get a builder which can be used to add a service to this batch.
@@ -46,7 +46,7 @@ public interface BatchBuilder  {
      * @param service the service
      * @return the builder for the service
      */
-    <T> BatchServiceBuilder<T> addService(ServiceName name, Service<T> service) throws DuplicateServiceException;
+    <T> BatchServiceBuilder<T> addService(ServiceName name, Service<T> service) throws IllegalArgumentException;
 
     /**
      * Get a builder which can be used to add a service to this batch which is installed only if another service
@@ -58,7 +58,7 @@ public interface BatchBuilder  {
      * @param value the service value
      * @return the builder for the service
      */
-    <T> BatchServiceBuilder<T> addServiceValueIfNotExist(ServiceName name, Value<? extends Service<T>> value) throws DuplicateServiceException;
+    <T> BatchServiceBuilder<T> addServiceValueIfNotExist(ServiceName name, Value<? extends Service<T>> value) throws IllegalArgumentException;
 
     /**
      * Add a service listener that will be added to the all the ServiceDefinitions in the batch.

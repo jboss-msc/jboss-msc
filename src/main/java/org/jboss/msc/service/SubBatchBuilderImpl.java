@@ -44,7 +44,7 @@ final class SubBatchBuilderImpl extends AbstractBatchBuilder {
     }
 
     @Override
-    public <T> BatchServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws DuplicateServiceException {
+    public <T> BatchServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
         if (isDone()) {
             throw alreadyInstalled();
         }
@@ -54,7 +54,7 @@ final class SubBatchBuilderImpl extends AbstractBatchBuilder {
     }
 
     @Override
-    public <T> BatchServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws DuplicateServiceException {
+    public <T> BatchServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
         if (isDone()) {
             throw alreadyInstalled();
         }
@@ -64,7 +64,7 @@ final class SubBatchBuilderImpl extends AbstractBatchBuilder {
     }
 
     @Override
-    public <T> BatchServiceBuilder<T> addServiceValueIfNotExist(ServiceName name, Value<? extends Service<T>> value) throws DuplicateServiceException {
+    public <T> BatchServiceBuilder<T> addServiceValueIfNotExist(ServiceName name, Value<? extends Service<T>> value) throws IllegalArgumentException {
         if (isDone()) {
             throw alreadyInstalled();
         }
