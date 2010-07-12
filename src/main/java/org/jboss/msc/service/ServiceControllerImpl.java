@@ -549,6 +549,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             }
             case START_FAILED: {
                 runListeners(listeners, State.START_FAILED);
+                break;
             }
         }
     }
