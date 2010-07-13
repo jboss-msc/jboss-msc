@@ -193,7 +193,7 @@
         </repository>
     </distributionManagement>
 
-	<repositories>
+    <repositories>
         <repository>
             <id>jboss-public-repository</id>
             <name>JBoss Repository</name>
