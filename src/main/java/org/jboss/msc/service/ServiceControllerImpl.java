@@ -27,6 +27,93 @@ import java.util.concurrent.Executor;
 import org.jboss.msc.value.Value;
 
 /**
+ * The service controller implementation.  Instances of this class follow a strict state table.
+ *  <style type="text/css">
+ *      table.state {
+ *          table-layout: fixed;
+ *          border-collapse: collapse;
+ *          border-width: 1px;
+ *          border-style: solid;
+ *      }
+ *
+ *      table.state th {
+ *          border-collapse: collapse;
+ *          border-width: 1px;
+ *          border-style: solid;
+ *      }
+ *
+ *      table.state td {
+ *          border-collapse: collapse;
+ *          border-width: 1px;
+ *          border-style: solid;
+ *      }
+ *
+ *      table.state li {
+ *          
+ *      }
+ *  </style>
+ *  <table class="state">
+ *      <thead>
+ *          <tr>
+ *              <th colspan="1">State: <b>REMOVED</b></th>
+ *              <th colspan="2">State: <b>DOWN</b></th>
+ *              <th colspan="1">State: <b>STOPPING</b></th>
+ *              <th colspan="2">State: <b>STOP_REQUESTED</b></th>
+ *              <th colspan="1">State: <b>UP</b></th>
+ *              <th colspan="2">State: <b>START_FAILED</b></th>
+ *              <th colspan="2">State: <b>STARTING</b></th>
+ *              <th colspan="2">State: <b>START_REQUESTED</b></th>
+ *          </tr>
+ *      </thead>
+ *      <tbody>
+ *          <tr class="transition">
+ *              <td></td>
+ *              <td>Go to: <b>START_REQUESTED</b></td>
+ *              <td>Go to: <b>REMOVED</b></td>
+ *              <td>Go to: <b>DOWN</b></td>
+ *              <td>Go to: <b>UP</b></td>
+ *              <td>Go to: <b>STOPPING</b></td>
+ *              <td>Go to: <b>STOP_REQUESTED</b></td>
+ *              <td>Go to: <b>STARTING</b></td>
+ *              <td>Go to: <b>DOWN</b></td>
+ *              <td>Go to: <b>UP</b></td>
+ *              <td>Go to: <b>START_FAILED</b></td>
+ *              <td>Go to: <b>STARTING</b></td>
+ *              <td>Go to: <b>DOWN</b></td>
+ *          </tr>
+ *          <tr class="criteria">
+ *              <td></td>
+ *              <td><ul><li>A = 0</li><li>U > 0</li><li>MODE ≠ NEVER</li><li>MODE ≠ REMOVE</li></ul></td>
+ *              <td><ul><li>A = 0</li><li>MODE = REMOVE</li></ul></td>
+ *              <td><ul><li>A = 0</li></ul></td>
+ *              <td><ul><li>A = 0</li><li>U > 0</li></ul></td>
+ *              <td><ul><li>A = 0</li><li>R = 0</li></ul></td>
+ *              <td><ul><li>A = 0</li><li>U ≤ 0</li></ul></td>
+ *              <td><ul><li>A = 0</li><li>Retry = TRUE</li></ul></td>
+ *              <td><ul><li>A = 0</li><li>U ≤ 0</li></ul></td>
+ *              <td><ul><li>A = 0</li><li>No exception</li></ul></td>
+ *              <td><ul><li>A = 0</li><li>Exception</li></ul></td>
+ *              <td><ul><li>A = 0</li><li>U > 0</li></ul></td>
+ *              <td><ul><li>A = 0</li><li>U ≤ 0</li></ul></td>
+ *          </tr>
+ *          <tr class="operations"/>
+ *              <td></td>
+ *              <td><ul><li>R(parents) + 1 (async task)</li></ul></td>
+ *              <td><ul><li>Call listeners (async task)</li><li>Remove dependents</ul></td>
+ *              <td><ul><li>Call listeners (async task)</li><li>R(parents) - 1 (async task)</ul></td>
+ *              <td><ul><li>U(dependents) + 1 (async task)</il></ul></td>
+ *              <td><ul><li>Call listeners, then stop, then uninject (async task)</li></ul></td>
+ *              <td><ul><li>U(dependents) + 1 (async task)</li></ul></td>
+ *              <td><ul><li>Call listeners, then start (async task)</li></ul></td>
+ *              <td><ul><li>Call uninject, then listeners (stopped) (async task)</li><li>R(parents) - 1 (async task)</li></ul></td>
+ *              <td><ul><li>Call listeners (async task)</li><li>U(dependents) + 1 (async task)</li></ul></td>
+ *              <td><ul><li>Call listeners (async task)</li></ul></td>
+ *              <td><ul><li>Call inject, then start (async task)</li><li>Call listeners (async task)</li></ul></td>
+ *              <td><ul><li>R(parents) - 1 (async task)</li></ul></td>
+ *          </tr>
+ *      </tbody>
+ *  </table>
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 final class ServiceControllerImpl<S> implements ServiceController<S> {
