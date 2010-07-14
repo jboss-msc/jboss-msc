@@ -296,9 +296,8 @@ final class ServiceContainerImpl implements ServiceContainer {
                         valueInjection(serviceValue, builder, injection)
                 );
             }
-            if(entry.getInitialMode() != null) {
-                builder.setInitialMode(entry.getInitialMode());
-            }
+            final ServiceController.Mode initialMode = entry.getInitialMode();
+            builder.setInitialMode(ServiceController.Mode.NEVER);
             final ServiceController<?> serviceController = builder.create();
             if (registry.putIfAbsent(name, serviceController) != null) {
                 if (! entry.isIfNotExist()) {
@@ -311,6 +310,7 @@ final class ServiceContainerImpl implements ServiceContainer {
                     }
                 }
             }
+            serviceController.setMode(initialMode == null ? ServiceController.Mode.AUTOMATIC : initialMode);
 
             // Cleanup
             entry.builder = null;
