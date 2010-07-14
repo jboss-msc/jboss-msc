@@ -41,11 +41,13 @@
             <groupId>org.jboss.modules</groupId>
             <artifactId>jboss-modules</artifactId>
             <version>1.0.0.Beta1-SNAPSHOT</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.jboss</groupId>
             <artifactId>jboss-vfs</artifactId>
             <version>3.0.0.CR5</version>
+            <scope>provided</scope>
             <exclusions>
                 <exclusion>
                     <groupId>org.jboss.logging</groupId>
@@ -57,16 +59,19 @@
             <groupId>org.jboss.logging</groupId>
             <artifactId>jboss-logging</artifactId>
             <version>3.0.0.Beta3-SNAPSHOT</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.jboss.threads</groupId>
             <artifactId>jboss-threads</artifactId>
             <version>2.0.0.CR4</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>javax.inject</groupId>
             <artifactId>javax.inject</artifactId>
             <version>1.0-PFD-1</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
