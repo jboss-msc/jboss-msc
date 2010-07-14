@@ -40,7 +40,7 @@
         <dependency>
             <groupId>org.jboss.modules</groupId>
             <artifactId>jboss-modules</artifactId>
-            <version>1.0.0.Beta1-SNAPSHOT</version>
+            <version>1.0.0.Beta1</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
