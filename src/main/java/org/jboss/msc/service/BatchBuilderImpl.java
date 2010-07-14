@@ -53,8 +53,8 @@ final class BatchBuilderImpl extends AbstractBatchBuilder {
             throw alreadyInstalled();
         }
         // Reconcile batch level listeners/dependencies
-        final Set<ServiceListener<Object>> batchListeners = this.getListeners();
-        final Set<ServiceName> batchDependencies = this.getDependencies();
+        final Set<ServiceListener<Object>> batchListeners = getListeners();
+        final Set<ServiceName> batchDependencies = getDependencies();
         for(BatchServiceBuilder<?> serviceBuilder : batchServices.values()) {
             serviceBuilder.addListener(batchListeners);
             serviceBuilder.addDependencies(batchDependencies);
@@ -102,7 +102,7 @@ final class BatchBuilderImpl extends AbstractBatchBuilder {
 
     @Override
     public BatchBuilder subBatchBuilder() {
-        final Set<SubBatchBuilderImpl> subBatches = this.subBatchBuilders;
+        final Set<SubBatchBuilderImpl> subBatches = subBatchBuilders;
         final SubBatchBuilderImpl subBatchBuilder = new SubBatchBuilderImpl(this);
         subBatches.add(subBatchBuilder);
         return subBatchBuilder;
