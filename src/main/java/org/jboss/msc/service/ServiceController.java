@@ -114,37 +114,20 @@ public interface ServiceController<S> extends Value<S> {
 
         /**
          * Down.  All dependents are down.
-         *
-         * @enter all dependents are DOWN
-         * @exit STARTING all dependencies are UP
-         * @exit * running listener count = 0
-         * @exit STARTING mode is IMMEDIATE or AUTOMATIC, or mode is ON_DEMAND and demand count > 0
-         * @exit REMOVED no dependents exist
          */
         DOWN,
         /**
          * Service is starting.  Dependencies may not enter the {@code DOWN} state.  This state may not be left until
          * the {@code start} method has finished or failed.
-         *
-         * @enter all dependencies are UP
-         * @exit * running listener count = 0
          */
         STARTING,
         /**
          * Start failed, or was cancelled.  From this state, the start may be retried or the service may enter the
          * {@code DOWN} state.
-         *
-         * @enter all dependencies are UP
-         * @exit * running listener count = 0
-         * @exit STARTING retry == true
-         * @exit DOWN mode is ON_DEMAND and demand count == 0, or mode is NEVER, or a dependency enters STOPPING
          */
         START_FAILED,
         /**
          * Up.
-         *
-         * @enter all dependencies are UP
-         * @exit STOPPING mode is ON_DEMAND and demand count == 0, or mode is NEVER, or a dependency enters STOPPING
          */
         UP,
         /**
@@ -154,9 +137,6 @@ public interface ServiceController<S> extends Value<S> {
         STOPPING,
         /**
          * Removed from the container.
-         *
-         * @enter No dependents exist.
-         * @enter mode == NEVER
          */
         REMOVED,
         ;
@@ -166,6 +146,11 @@ public interface ServiceController<S> extends Value<S> {
      * The controller mode for a service.
      */
     enum Mode {
+
+        /**
+         * Remove this service and all of its dependents.
+         */
+        REMOVE,
         /**
          * Do not start; in addition, ignore demands from dependents.
          */
