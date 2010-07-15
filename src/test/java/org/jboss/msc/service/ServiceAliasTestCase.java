@@ -55,10 +55,8 @@ public class ServiceAliasTestCase extends AbstractServiceTest {
                 assertEquals(serviceContainer.getService(ServiceName.of("service1")), serviceContainer.getService(ServiceName.of("alias1")));
                 assertEquals(serviceContainer.getService(ServiceName.of("service1")), serviceContainer.getService(ServiceName.of("alias2")));
 
-                ServiceController controller = serviceContainer.getService(ServiceName.of("service1"));
-                controller.setMode(ServiceController.Mode.NEVER);
-                Thread.sleep(100);
-                controller.remove();
+                ServiceController<?> controller = serviceContainer.getService(ServiceName.of("service1"));
+                controller.setMode(ServiceController.Mode.REMOVE);
                 Thread.sleep(100);
                 assertNull(serviceContainer.getService(ServiceName.of("service1")));
                 assertNull(serviceContainer.getService(ServiceName.of("alias1")));
