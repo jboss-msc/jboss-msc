@@ -25,38 +25,15 @@ package org.jboss.msc.service;
 /**
  * A service listener which removes the given service as soon as it is down, used to "kill" a service.
  *
+ * @deprecated replaced with {@link ServiceController.Mode#REMOVE}.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
+@Deprecated
 public final class RemovingServiceListener extends AbstractServiceListener<Object> {
 
     /** {@inheritDoc} */
     public void listenerAdded(final ServiceController<?> serviceController) {
-        serviceController.setMode(ServiceController.Mode.NEVER);
-    }
-
-    /** {@inheritDoc} */
-    public void serviceStarting(final ServiceController<?> serviceController) {
-        serviceController.setMode(ServiceController.Mode.NEVER);
-    }
-
-    /** {@inheritDoc} */
-    public void serviceStarted(final ServiceController<?> serviceController) {
-        serviceController.setMode(ServiceController.Mode.NEVER);
-    }
-
-    /** {@inheritDoc} */
-    public void serviceFailed(final ServiceController<?> serviceController, final StartException reason) {
-        serviceController.setMode(ServiceController.Mode.NEVER);
-    }
-
-    /** {@inheritDoc} */
-    public void serviceStopping(final ServiceController<?> serviceController) {
-        serviceController.setMode(ServiceController.Mode.NEVER);
-    }
-
-    /** {@inheritDoc} */
-    public void serviceStopped(final ServiceController<?> serviceController) {
-        serviceController.setMode(ServiceController.Mode.NEVER);
-        serviceController.remove();
+        serviceController.setMode(ServiceController.Mode.REMOVE);
     }
 }
