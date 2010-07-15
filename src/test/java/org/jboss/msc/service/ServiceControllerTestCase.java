@@ -229,7 +229,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
         });
     }
 
-    private void assertState(final ServiceContainer serviceContainer, final ServiceName serviceName, final ServiceController.State state) {
+    private static void assertState(final ServiceContainer serviceContainer, final ServiceName serviceName, final ServiceController.State state) {
         assertEquals(state, serviceContainer.getService(serviceName).getState());
     }
 }
