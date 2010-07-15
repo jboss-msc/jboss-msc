@@ -57,11 +57,7 @@ public final class ServiceUtils {
         final AtomicInteger cnt = new AtomicInteger(controllers.size());
         final AbstractServiceListener<Object> listener = new AbstractServiceListener<Object>() {
             public void listenerAdded(final ServiceController<? extends Object> serviceController) {
-                serviceController.setMode(ServiceController.Mode.NEVER);
-            }
-
-            public void serviceStopped(final ServiceController<? extends Object> serviceController) {
-                serviceController.remove();
+                serviceController.setMode(ServiceController.Mode.REMOVE);
             }
 
             public void serviceRemoved(final ServiceController<? extends Object> serviceController) {
