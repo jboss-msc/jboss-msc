@@ -256,7 +256,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 assert mode != Mode.NEVER;
                 listeners = getListeners(1, Substate.STARTING);
             } else {
-                state = Substate.START_FAILED_RETRY_PENDING;
+                startException = null;
                 return;
             }
         }
@@ -572,7 +572,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     case START_FAILED: {
                         if (upperCount <= 0 || mode == Mode.NEVER) {
                             listeners = getListeners(0, newState = Substate.DOWN);
-                        } else if (state == Substate.START_FAILED_RETRY_PENDING) {
+                        } else if (startException == null) {
                             listeners = getListeners(1, newState = Substate.STARTING);
                         }
                         break;
@@ -803,10 +803,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     enum Substate {
         DOWN(State.DOWN),
+        START_REQUESTED(State.DOWN),
         STARTING(State.STARTING),
         START_FAILED(State.START_FAILED),
-        START_FAILED_RETRY_PENDING(State.START_FAILED),
         UP(State.UP),
+        STOP_REQUESTED(State.UP),
         STOPPING(State.STOPPING),
         REMOVED(State.REMOVED),
         ;
