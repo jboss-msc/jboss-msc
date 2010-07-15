@@ -184,12 +184,10 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
                 serviceContainer.getService(ServiceName.of("serviceTwo")).setMode(ServiceController.Mode.NEVER);
                 Thread.sleep(50);
                 final ServiceController<?> serviceTwo = serviceContainer.getService(ServiceName.of("serviceTwo"));
-                serviceTwo.remove();
+                serviceTwo.setMode(ServiceController.Mode.REMOVE);
                 Thread.sleep(50);
                 assertNull(serviceContainer.getService(ServiceName.of("serviceTwo")));
                 assertState(serviceContainer, ServiceName.of("serviceOne"), ServiceController.State.DOWN);
-                // should not throw an exception if the service is removed
-                serviceTwo.setMode(ServiceController.Mode.NEVER);
             }
         });
     }
