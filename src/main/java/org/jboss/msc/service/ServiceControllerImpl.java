@@ -23,6 +23,7 @@
 package org.jboss.msc.service;
 
 import java.util.Arrays;
+import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import org.jboss.msc.value.Value;
 
@@ -119,11 +120,9 @@ import org.jboss.msc.value.Value;
 final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     private static final String ILLEGAL_CONTROLLER_STATE = "Illegal controller state";
-    private static final String START_FAIL_EXCEPTION = "Start failed due to exception";
     private static final String SERVICE_REMOVED = "Service has been removed";
-    private static final String SERVICE_NOT_AVAILABLE = "Service is not available";
 
-    private static final ServiceListener<?>[] NO_LISTENERS = new ServiceListener<?>[0];
+    private static final ServiceControllerImpl<?>[] NO_DEPENDENTS = new ServiceControllerImpl[0];
 
     /**
      * The service container which contains this instance.
@@ -192,11 +191,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
      */
     private int asyncTasks;
 
-    /**
-     * Listener which is added to dependencies of this service.
-     */
-    private final ServiceListener<Object> dependencyListener = new DependencyListener();
-
     ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service<? extends S>> serviceValue, final Location location, final ServiceControllerImpl<?>[] dependencies, final ValueInjection<?>[] injections, final ServiceName serviceName) {
         this.container = container;
         this.serviceValue = serviceValue;
@@ -206,7 +200,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         this.serviceName = serviceName;
         upperCount = - dependencies.length;
         for (ServiceControllerImpl<?> controller : dependencies) {
-            controller.addListener(dependencyListener);
+            //noinspection ThisEscapedInObjectConstruction
+            controller.addDependent(this);
         }
     }
 
@@ -251,20 +246,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     public void retry() {
         assert !lockHeld();
-        final ServiceListener<? super S>[] listeners;
+        final Runnable[] tasks;
         synchronized (this) {
             if (state.getState() != State.START_FAILED) {
                 return;
             }
-            if (upperCount == 1) {
-                assert mode != Mode.NEVER;
-                listeners = getListeners(1, Substate.STARTING);
-            } else {
-                startException = null;
-                return;
-            }
+            startException = null;
+            tasks = transition();
         }
-        doStart(listeners);
+        doExecute(tasks);
     }
 
     public Mode getMode() {
@@ -275,9 +265,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     public void setMode(final Mode newMode) {
         assert !lockHeld();
-        ServiceListener<? super S>[] listeners = null;
-        final Transition transition;
-        final Runnable task;
+        final Runnable[] tasks;
         synchronized (this) {
             final Mode oldMode = mode;
             mode = newMode;
@@ -390,21 +378,27 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     break;
                 }
             }
-            transition = getTransition();
-            if (transition == null) {
-                // no further action needed
-                return;
-            }
-            task = runTransitionLockedPortion(transition);
-            if (transition.needsListeners()) {
-                listeners = getListeners(task == null ? 0 : 1, transition.getAfter());
-            }
+            tasks = transition();
         }
-        runTransitionUnlockedPortion(transition);
-        doExecute(task);
-        if (listeners != null) {
-            runListeners(listeners, transition.getAfter().getState());
+        doExecute(tasks);
+    }
+
+    /**
+     * Add a dependent to this controller.
+     *
+     * @param dependent the dependent to add
+     */
+    private void addDependent(final ServiceControllerImpl<?> dependent) {
+        assert !lockHeld();
+        assert !dependent.lockHeld();
+        final Substate state;
+        synchronized (this) {
+            state = this.state;
+            if (state != Substate.REMOVED) dependents.add(dependent);
+            if (state != Substate.UP) return;
+            asyncTasks++;
         }
+        doExecute(new DependencyStartedTask(new ServiceControllerImpl<?>[] { dependent }));
     }
 
     /**
@@ -493,79 +487,82 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     /**
      * Run the locked portion of a transition.  Call under lock.
      *
-     * @param transition the transition to take
-     * @return the async task to start when the lock is not held, {@code null} for none
+     * @return the async tasks to start when the lock is not held, {@code null} for none
      */
-    private Runnable runTransitionLockedPortion(final Transition transition) {
+    private Runnable[] transition() {
         assert lockHeld();
+        final Transition transition = getTransition();
+        if (transition == null) {
+            return null;
+        }
+        final Runnable[] tasks;
         switch (transition) {
             case STOPPING_to_DOWN:
             case START_REQUESTED_to_DOWN: {
-                return new Runnable() {
-                    public void run() {
-                        for (ServiceControllerImpl<?> controller : dependencies) {
-                            controller.dependentStopped();
-                        }
-                    }
-                };
+                tasks = getListenerTasks(State.DOWN, new DependentStoppedTask());
+                break;
             }
             case START_REQUESTED_to_STARTING: {
-                return new StartTask(true);
+                tasks = getListenerTasks(State.STARTING, new StartTask(true));
+                break;
             }
-            case UP_to_STOP_REQUESTED:
-            case STARTING_to_UP:
+            case UP_to_STOP_REQUESTED: {
+                tasks = new Runnable[] { new DependencyStoppedTask(dependents.toScatteredArray(NO_DEPENDENTS)) };
+                break;
+            }
+            case STARTING_to_UP: {
+                tasks = getListenerTasks(State.UP, new DependentStartedTask());
+                break;
+            }
             case STARTING_to_START_FAILED: {
-                return null;
+                tasks = new Runnable[] { new DependentStartedTask() };
+                break;
             }
             case START_FAILED_to_STARTING: {
-                return new StartTask(false);
+                tasks = getListenerTasks(State.STARTING, new StartTask(false));
+                break;
             }
             case START_FAILED_to_DOWN: {
-                return new StopTask(true);
+                tasks = getListenerTasks(State.DOWN, new StopTask(true));
+                break;
             }
-            case STOP_REQUESTED_to_UP:
+            case STOP_REQUESTED_to_UP: {
+                tasks = new Runnable[] { new DependencyStartedTask(dependents.toScatteredArray(NO_DEPENDENTS)) };
                 break;
-            case STOP_REQUESTED_to_STOPPING:
+            }
+            case STOP_REQUESTED_to_STOPPING: {
+                tasks = getListenerTasks(State.STOPPING, new StopTask(false));
                 break;
-            case DOWN_to_REMOVED:
+            }
+            case DOWN_to_REMOVED: {
+                tasks = getListenerTasks(State.REMOVED, new RemoveDependentsTask(dependents.toScatteredArray(NO_DEPENDENTS)));
+                dependents.clear();
+                Arrays.fill(dependencies, null);
+                listeners.clear();
                 break;
-            case DOWN_to_START_REQUESTED:
+            }
+            case DOWN_to_START_REQUESTED: {
+                tasks = new Runnable[] { new DependentStartedTask() };
                 break;
+            }
+            default: {
+                throw new IllegalStateException();
+            }
         }
-        return null;
+        asyncTasks = tasks.length;
+        return tasks;
     }
 
-    /**
-     * Run the unlocked portion of a transition.  Call outside of lock.
-     */
-    private void runTransitionUnlockedPortion(final Transition transition) {
-        assert ! lockHeld();
-        switch (transition) {
-            case START_REQUESTED_to_DOWN:
-                break;
-            case START_REQUESTED_to_STARTING:
-                break;
-            case STARTING_to_UP:
-                break;
-            case STARTING_to_START_FAILED:
-                break;
-            case START_FAILED_to_STARTING:
-                break;
-            case START_FAILED_to_DOWN:
-                break;
-            case UP_to_STOP_REQUESTED:
-                break;
-            case STOP_REQUESTED_to_UP:
-                break;
-            case STOP_REQUESTED_to_STOPPING:
-                break;
-            case STOPPING_to_DOWN:
-                break;
-            case DOWN_to_REMOVED:
-                break;
-            case DOWN_to_START_REQUESTED:
-                break;
+    private Runnable[] getListenerTasks(final State newState, final Runnable extraTask) {
+        final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
+        final int size = listeners.size();
+        final Runnable[] tasks = new Runnable[size + 1];
+        int i = 0;
+        for (ServiceListener<? super S> listener : listeners) {
+            tasks[i++] = new ListenerTask(listener, newState);
         }
+        tasks[i] = extraTask;
+        return tasks;
     }
 
     /**
@@ -611,7 +608,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         } catch (Throwable t) {
             // todo log error
         } finally {
-            doFinishListener(null);
+            final Runnable[] tasks;
+            synchronized (this) {
+                asyncTasks--;
+                tasks = transition();
+            }
+            doExecute(tasks);
         }
     }
 
@@ -620,69 +622,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         ASYNC,
         COMPLETE,
         FAILED,
-    }
-
-    /**
-     * Set a new state and get the state listeners under the lock.
-     *
-     * @param plusCount the number of extra listeners to register, if any
-     * @param newState the new state to set
-     * @return the listeners
-     */
-    @SuppressWarnings({ "unchecked" })
-    ServiceListener<? super S>[] getListeners(int plusCount, Substate newState) {
-        assert lockHeld();
-        final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
-        final int size = listeners.size();
-        asyncTasks = size + plusCount;
-        final ServiceListener[] listenersArray = listeners.toScatteredArray((ServiceListener<? super S>[]) NO_LISTENERS);
-        state = newState;
-        switch (newState) {
-            case STARTING:
-            case DOWN: {
-                startException = null;
-                break;
-            }
-            case REMOVED: {
-                final ServiceListener<Object> dependencyListener = this.dependencyListener;
-                for (ServiceControllerImpl<?> controller : dependencies) {
-                    controller.removeListener(dependencyListener);
-                }
-                this.listeners.clear();
-                // todo recurse
-                dependents.clear();
-                Arrays.fill(dependencies, null);
-                break;
-            }
-        }
-        return listenersArray;
-    }
-
-    /**
-     * Run the service listeners outside of the lock.
-     *
-     * @param listeners the listeners
-     * @param state the state we are in
-     */
-    void runListeners(final ServiceListener<? super S>[] listeners, final State state) {
-        assert !lockHeld();
-        for (final ServiceListener<? super S> listener : listeners) {
-            if (listener != null) try {
-                doExecute(new ListenerTask(listener, state));
-            } catch (RuntimeException e) {
-                // todo log it and continue
-            }
-        }
-    }
-
-    private void doStart(ServiceListener<? super S>[] listeners) {
-        try {
-            assert !lockHeld();
-            runListeners(listeners, State.STARTING);
-            doExecute(new StartTask(true));
-        } catch (Throwable t) {
-            doFail(new StartException(START_FAIL_EXCEPTION, t, location, serviceName));
-        }
     }
 
     private void doExecute(final Runnable task) {
@@ -695,114 +634,21 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         }
     }
 
+    private void doExecute(final Runnable... tasks) {
+        assert ! lockHeld();
+        if (tasks == null) return;
+        final Executor executor = container.getExecutor();
+        for (Runnable task : tasks) {
+            try {
+                executor.execute(task);
+            } catch (RejectedExecutionException e) {
+                task.run();
+            }
+        }
+    }
+
     private static <T> void doInject(final ValueInjection<T> injection) {
         injection.getTarget().inject(injection.getSource().getValue());
-    }
-
-    private void doStartComplete(final ServiceListener<? super S>[] listeners) {
-        runListeners(listeners, State.UP);
-    }
-
-    private void doFinishListener(StartException e) {
-        assert !lockHeld();
-        Substate newState = null;
-        ServiceListener<? super S>[] listeners = null;
-        synchronized (this) {
-            if (e != null) startException = e;
-            if (--asyncTasks == 0) {
-                switch (state) {
-                    case DOWN: {
-                        if (upperCount > 0 && mode != Mode.NEVER) {
-                            listeners = getListeners(1, newState = Substate.STARTING);
-                        }
-                        break;
-                    }
-                    case STARTING: {
-                        if (startException != null) {
-                            listeners = getListeners(0, newState = Substate.START_FAILED);
-                        } else {
-                            listeners = getListeners(0, newState = Substate.UP);
-                        }
-                        break;
-                    }
-                    case START_FAILED: {
-                        if (upperCount <= 0 || mode == Mode.NEVER) {
-                            listeners = getListeners(0, newState = Substate.DOWN);
-                        } else if (startException == null) {
-                            listeners = getListeners(1, newState = Substate.STARTING);
-                        }
-                        break;
-                    }
-                    case UP: {
-                        if (upperCount <= 0 || mode == Mode.NEVER) {
-                            listeners = getListeners(1, newState = Substate.STOPPING);
-                        }
-                        break;
-                    }
-                    case STOPPING: {
-                        listeners = getListeners(0, newState = Substate.DOWN);
-                        break;
-                    }
-                    case REMOVED: {
-                        // nothing to do; the service is utterly done
-                        break;
-                    }
-                }
-            }
-        }
-        if (newState != null) switch (newState) {
-            case STARTING: {
-                doStart(listeners);
-                break;
-            }
-            case UP: {
-                doStartComplete(listeners);
-                break;
-            }
-            case STOPPING: {
-                doStop(listeners);
-                break;
-            }
-            case DOWN: {
-                doStopComplete(listeners);
-                break;
-            }
-            case REMOVED: {
-                runListeners(listeners, State.REMOVED);
-                break;
-            }
-            case START_FAILED: {
-                runListeners(listeners, State.START_FAILED);
-                break;
-            }
-        }
-    }
-
-    private void doFail(final StartException e) {
-        assert lockHeld();
-        assert state == Substate.STARTING;
-        state = Substate.START_FAILED;
-        startException = e;
-        // todo invoke listeners
-    }
-
-    private void doStop(final ServiceListener<? super S>[] listeners) {
-        assert lockHeld();
-        assert state == Substate.UP;
-        try {
-            final Service<?> service = serviceValue.getValue();
-            if (service == null) {
-                throw new IllegalStateException(SERVICE_NOT_AVAILABLE);
-            }
-            runListeners(listeners, State.STOPPING);
-            doExecute(new StopTask(false));
-        } catch (RuntimeException e) {
-            // todo log it
-        }
-    }
-
-    private void doStopComplete(final ServiceListener<? super S>[] listeners) {
-        runListeners(listeners, State.DOWN);
     }
 
     private void doDemandParents() {
@@ -820,49 +666,37 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     void addDemand() {
-        final ServiceListener<? super S>[] listeners;
+        assert ! lockHeld();
+        final Runnable[] tasks;
         synchronized (this) {
             final int cnt = demandedByCount++;
             if (cnt != 0 || mode != Mode.ON_DEMAND) {
+                // no change
                 return;
             }
-            if (upperCount++ != 0 || state != Substate.DOWN || asyncTasks != 0) {
-                return;
-            }
-            listeners = getListeners(1, Substate.STARTING);
+            upperCount++;
+            tasks = transition();
         }
-        if (listeners != null) doStart(listeners);
+        doExecute(tasks);
     }
 
     void removeDemand() {
-        final boolean stop;
-        final ServiceListener<? super S>[] listeners;
+        assert ! lockHeld();
+        final Runnable[] tasks;
         synchronized (this) {
             final int cnt = --demandedByCount;
             if (cnt != 0 || mode != Mode.ON_DEMAND) {
+                // no change;
                 return;
             }
-            if (--upperCount != 0 || asyncTasks != 0) {
-                return;
-            }
-            if (state == Substate.UP) {
-                stop = true;
-                listeners = getListeners(1, Substate.STOPPING);
-            } else if (state.getState() == State.START_FAILED) {
-                stop = false;
-                listeners = getListeners(0, Substate.DOWN);
-            } else {
-                return;
-            }
+            upperCount--;
+            tasks = transition();
         }
-        if (stop) {
-            doStop(listeners);
-        } else {
-            doStopComplete(listeners);
-        }
+        doExecute(tasks);
     }
 
     void dependentStarted() {
+        assert ! lockHeld();
         synchronized (this) {
             runningDependents++;
         }
@@ -870,17 +704,36 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     void dependentStopped() {
         assert ! lockHeld();
-        final ServiceListener<? super S>[] listeners;
+        final Runnable[] tasks;
         synchronized (this) {
             if (--runningDependents != 0) {
                 return;
             }
-            if (state != Substate.STOPPING || asyncTasks != 0) {
+            tasks = transition();
+        }
+        doExecute(tasks);
+    }
+    
+    void dependencyUp() {
+        Runnable[] tasks = null;
+        synchronized (this) {
+            if (upperCount ++ != 1) {
                 return;
             }
-            listeners = getListeners(0, Substate.DOWN);
+            tasks = transition();
         }
-        doStopComplete(listeners);
+        doExecute(tasks);
+    }
+
+    void dependencyDown() {
+        Runnable[] tasks = null;
+        synchronized (this) {
+            if (upperCount -- != 1) {
+                return;
+            }
+            tasks = transition();
+        }
+        doExecute(tasks);
     }
 
     private class StartContextImpl implements StartContext {
@@ -888,14 +741,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         private ContextState state = ContextState.SYNC;
 
         public void failed(final StartException reason) throws IllegalStateException {
+            final Runnable[] tasks;
             synchronized (ServiceControllerImpl.this) {
-                if (state == ContextState.ASYNC) {
-                    state = ContextState.FAILED;
-                    doFinishListener(reason);
-                } else {
+                if (state != ContextState.ASYNC) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
+                state = ContextState.FAILED;
+                startException = reason;
+                asyncTasks--;
+                tasks = transition();
             }
+            doExecute(tasks);
         }
 
         public void asynchronous() throws IllegalStateException {
@@ -912,7 +768,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             synchronized (ServiceControllerImpl.this) {
                 if (state == ContextState.ASYNC) {
                     state = ContextState.COMPLETE;
-                    doFinishListener(null);
+                    final Runnable[] tasks;
+                    synchronized (ServiceControllerImpl.this) {
+                        asyncTasks--;
+                        tasks = transition();
+                    }
+                    doExecute(tasks);
                 } else {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
@@ -945,7 +806,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     for (ValueInjection<?> injection : injections) {
                         injection.getTarget().uninject();
                     }
-                    doFinishListener(null);
+                    final Runnable[] tasks;
+                    synchronized (ServiceControllerImpl.this) {
+                        asyncTasks--;
+                        tasks = transition();
+                    }
+                    doExecute(tasks);
                 } else {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
@@ -1008,55 +874,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         public Substate getAfter() {
             return after;
         }
-
-        public boolean needsListeners() {
-            return before.state != after.state;
-        }
-    }
-
-    private class DependentUpdateTask implements Runnable {
-        private final boolean up;
-        private final ServiceControllerImpl<?>[] dependents;
-
-        private DependentUpdateTask(final boolean up, final ServiceControllerImpl<?>[] dependents) {
-            this.up = up;
-            this.dependents = dependents;
-        }
-
-        public void run() {
-            if (up) {
-                for (ServiceControllerImpl<?> dependent : dependents) {
-                    dependent.dependencyUp();
-                }
-            } else {
-                for (ServiceControllerImpl<?> dependent : dependents) {
-                    dependent.dependencyDown();
-                }
-            }
-        }
-    }
-
-    void dependencyUp() {
-        ServiceListener<? super S>[] listeners = null;
-        Transition transition = null;
-        Runnable task = null;
-        synchronized (this) {
-            if (upperCount ++ == 1) {
-                transition = getTransition();
-                if (transition == null) {
-                    return;
-                }
-                task = runTransitionLockedPortion(transition);
-                if (transition.needsListeners()) {
-                    listeners = getListeners(task != null ? 1 : 0, transition.getAfter());
-                }
-            }
-        }
-        runTransitionUnlockedPortion(transition);
-        doExecute(task);
-        if (listeners != null) {
-            runListeners(listeners, transition.getAfter().getState());
-        }
     }
 
     private class StartTask implements Runnable {
@@ -1095,34 +912,45 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     throw new IllegalArgumentException("Service is null");
                 }
                 service.start(context);
+                final Runnable[] tasks;
                 synchronized (ServiceControllerImpl.this) {
-                    if (context.state == ContextState.SYNC) {
-                        context.state = ContextState.COMPLETE;
-                        doFinishListener(null);
+                    if (context.state != ContextState.SYNC) {
+                        return;
                     }
+                    context.state = ContextState.COMPLETE;
+                    asyncTasks--;
+                    tasks = transition();
                 }
+                doExecute(tasks);
             } catch (StartException e) {
                 e.setServiceName(serviceName);
+                final Runnable[] tasks;
                 synchronized (ServiceControllerImpl.this) {
                     final ContextState oldState = context.state;
-                    if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
-                        context.state = ContextState.FAILED;
-                        doFinishListener(e);
-                    } else {
+                    if (oldState != ContextState.SYNC && oldState != ContextState.ASYNC) {
                         // todo log warning
+                        return;
                     }
+                    context.state = ContextState.FAILED;
+                    asyncTasks--;
+                    startException = e;
+                    tasks = transition();
                 }
+                doExecute(tasks);
             } catch (Throwable t) {
+                final Runnable[] tasks;
                 synchronized (ServiceControllerImpl.this) {
                     final ContextState oldState = context.state;
-                    if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
-                        context.state = ContextState.FAILED;
-                        startException = new StartException("Failed to start service", t, location, serviceName);
-                        doFinishListener(null);
-                    } else {
+                    if (oldState != ContextState.SYNC && oldState != ContextState.ASYNC) {
                         // todo log warning
+                        return;
                     }
+                    context.state = ContextState.FAILED;
+                    asyncTasks--;
+                    startException = new StartException("Failed to start service", t, location, serviceName);
+                    tasks = transition();
                 }
+                doExecute(tasks);
             }
         }
     }
@@ -1137,37 +965,36 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         public void run() {
             assert !lockHeld();
             final StopContextImpl context = new StopContextImpl();
+            boolean ok = false;
             try {
                 if (! onlyUninject) {
                     final Service<? extends S> service = serviceValue.getValue();
                     if (service != null) {
-                        service.stop(context);
+                        try {
+                            service.stop(context);
+                            ok = true;
+                        } catch (Throwable t) {
+                            // todo log it
+                        }
                     } else {
                         // todo log missing service warning
                     }
                 }
+            } finally {
+                Runnable[] tasks = null;
                 synchronized (ServiceControllerImpl.this) {
-                    if (context.state == ContextState.SYNC) {
+                    if (! ok || context.state == ContextState.SYNC || context.state == ContextState.FAILED) {
                         context.state = ContextState.COMPLETE;
-                        for (ValueInjection<?> injection : injections) {
+                        asyncTasks--;
+                        for (ValueInjection<?> injection : injections) try {
                             injection.getTarget().uninject();
+                        } catch (Throwable t) {
+                            // todo log
                         }
-                        doFinishListener(null);
+                        tasks = transition();
                     }
                 }
-            } catch (Throwable t) {
-                synchronized (ServiceControllerImpl.this) {
-                    final ContextState oldState = context.state;
-                    if (oldState == ContextState.SYNC || oldState == ContextState.ASYNC) {
-                        context.state = ContextState.FAILED;
-                        for (ValueInjection<?> injection : injections) {
-                            injection.getTarget().uninject();
-                        }
-                        doFinishListener(null);
-                    } else {
-                    }
-                }
-                // todo log warning
+                doExecute(tasks);
             }
         }
     }
@@ -1188,44 +1015,95 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         }
     }
 
-    private class DependencyListener extends AbstractServiceListener<Object> {
+    private class DependentStoppedTask implements Runnable {
 
-        public void listenerAdded(final ServiceController<? extends Object> serviceController) {
-            ServiceListener<? super S>[] listeners = null;
-            if (serviceController.getState() == State.UP) {
-                synchronized (ServiceControllerImpl.this) {
-                    if (++upperCount == 1 && mode != Mode.NEVER) {
-                        if (asyncTasks == 0 && state == Substate.DOWN) {
-                            listeners = getListeners(1, Substate.STARTING);
-                        }
-                    }
-                }
-                if (listeners != null) doStart(listeners);
+        public void run() {
+            for (ServiceControllerImpl<?> controller : dependencies) {
+                controller.dependentStopped();
             }
+            final Runnable[] tasks;
+            synchronized (ServiceControllerImpl.this) {
+                asyncTasks--;
+                tasks = transition();
+            }
+            doExecute(tasks);
+        }
+    }
+
+    private class DependentStartedTask implements Runnable {
+
+        public void run() {
+            for (ServiceControllerImpl<?> controller : dependencies) {
+                controller.dependentStarted();
+            }
+            final Runnable[] tasks;
+            synchronized (ServiceControllerImpl.this) {
+                asyncTasks--;
+                tasks = transition();
+            }
+            doExecute(tasks);
+        }
+    }
+
+    private class DependencyStartedTask implements Runnable {
+
+        private final ServiceControllerImpl<?>[] dependents;
+
+        DependencyStartedTask(final ServiceControllerImpl<?>[] dependents) {
+            this.dependents = dependents;
         }
 
-        public void serviceStarted(final ServiceController<? extends Object> serviceController) {
-            ServiceListener<? super S>[] listeners = null;
-            synchronized (ServiceControllerImpl.this) {
-                if (++upperCount == 1 && mode != Mode.NEVER) {
-                    if (asyncTasks == 0 && state == Substate.DOWN) {
-                        listeners = getListeners(1, Substate.STARTING);
-                    }
-                }
+        public void run() {
+            for (ServiceControllerImpl<?> dependent : dependents) {
+                dependent.dependencyUp();
             }
-            if (listeners != null) doStart(listeners);
+            final Runnable[] tasks;
+            synchronized (ServiceControllerImpl.this) {
+                asyncTasks--;
+                tasks = transition();
+            }
+            doExecute(tasks);
+        }
+    }
+
+    private class DependencyStoppedTask implements Runnable {
+
+        private final ServiceControllerImpl<?>[] dependents;
+
+        DependencyStoppedTask(final ServiceControllerImpl<?>[] dependents) {
+            this.dependents = dependents;
         }
 
-        public void serviceStopping(final ServiceController<? extends Object> serviceController) {
-            ServiceListener<? super S>[] listeners = null;
-            synchronized (ServiceControllerImpl.this) {
-                if (--upperCount == 0 || mode == Mode.NEVER) {
-                    if (asyncTasks == 0 && state == Substate.UP) {
-                        listeners = getListeners(1, Substate.STOPPING);
-                    }
-                }
+        public void run() {
+            for (ServiceControllerImpl<?> dependent : dependents) {
+                dependent.dependencyDown();
             }
-            if (listeners != null) doStop(listeners);
+            final Runnable[] tasks;
+            synchronized (ServiceControllerImpl.this) {
+                asyncTasks--;
+                tasks = transition();
+            }
+            doExecute(tasks);
+        }
+    }
+
+    private class RemoveDependentsTask implements Runnable {
+        private final ServiceControllerImpl<?>[] dependents;
+
+        RemoveDependentsTask(final ServiceControllerImpl<?>[] dependents) {
+            this.dependents = dependents;
+        }
+
+        public void run() {
+            for (ServiceControllerImpl<?> dependent : dependents) {
+                dependent.setMode(Mode.REMOVE);
+            }
+            final Runnable[] tasks;
+            synchronized (ServiceControllerImpl.this) {
+                asyncTasks--;
+                tasks = transition();
+            }
+            doExecute(tasks);
         }
     }
 }
