@@ -89,13 +89,6 @@ public interface ServiceController<S> extends Value<S> {
     void removeListener(ServiceListener<? super S> serviceListener);
 
     /**
-     * Remove this service from the controller.  Once removed, this service may no longer be started.
-     *
-     * @throws IllegalStateException if the service is not in the {@code DOWN} state
-     */
-    void remove() throws IllegalStateException;
-
-    /**
      * Get the reason why the last start failed.
      *
      * @return the last start exception, or {@code null} if the last start succeeded or the service has not yet started

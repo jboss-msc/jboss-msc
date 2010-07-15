@@ -279,23 +279,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         }
     }
 
-    public void remove() throws IllegalStateException {
-        final ServiceListener<? super S>[] listeners;
-        synchronized (this) {
-            if (state == Substate.DOWN) {
-                if (runningListeners == 0) {
-                    listeners = getListeners(0, Substate.REMOVED);
-                } else {
-                    state = Substate.DOWN_REMOVING;
-                    return;
-                }
-            } else {
-                throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
-            }
-        }
-        runListeners(listeners, State.REMOVED);
-    }
-
     public StartException getStartException() {
         synchronized (this) {
             return startException;
@@ -576,10 +559,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                         }
                         break;
                     }
-                    case DOWN_REMOVING: {
-                        listeners = getListeners(0, Substate.REMOVED);
-                        break;
-                    }
                     case STARTING: {
                         if (startException != null) {
                             listeners = getListeners(0, newState = Substate.START_FAILED);
@@ -822,7 +801,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     enum Substate {
         DOWN(State.DOWN),
-        DOWN_REMOVING(State.DOWN),
         STARTING(State.STARTING),
         START_FAILED(State.START_FAILED),
         START_FAILED_RETRY_PENDING(State.START_FAILED),
