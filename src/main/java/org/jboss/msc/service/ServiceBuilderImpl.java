@@ -151,6 +151,7 @@ final class ServiceBuilderImpl<S> implements ServiceBuilder<S> {
             final ServiceControllerImpl<?>[] depArray = depsSize == 0 ? NO_DEPS : deps.toArray(new ServiceControllerImpl<?>[depsSize]);
             final ValueInjection<?>[] injectionArray = injectionsSize == 0 ? NO_INJECTIONS : injections.toArray(new ValueInjection<?>[injectionsSize]);
             final ServiceControllerImpl<S> controller = this.controller = new ServiceControllerImpl<S>(container, service, location, depArray, injectionArray, serviceName);
+            controller.initialize();
             for (ServiceListener<? super S> listener : listeners) {
                 controller.addListener(listener);
             }

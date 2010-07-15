@@ -167,11 +167,11 @@ final class ServiceContainerImpl implements ServiceContainer {
     }
 
     public void shutdown() {
-        root.setMode(ServiceController.Mode.NEVER);
+        root.setMode(ServiceController.Mode.REMOVE);
     }
 
     protected void finalize() throws Throwable {
-        root.setMode(ServiceController.Mode.NEVER);
+        root.setMode(ServiceController.Mode.REMOVE);
     }
 
     static final class LatchListener extends CountDownLatch implements ServiceListener<Object> {
