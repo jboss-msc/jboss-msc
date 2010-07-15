@@ -173,7 +173,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     /**
      * Semaphore count for bringing this dep up.  If the value is <= 0, the service is stopped.  Each unstarted
      * dependency will put a load of -1 on this value.  A mode of AUTOMATIC or IMMEDIATE will put a load of +1 on this
-     * value.  A mode of NEVER will cause this value to be ignored.
+     * value.  A mode of NEVER will cause this value to be ignored.  A mode of ON_DEMAND will put a load of +1 on this
+     * value <b>if</b> {@link #demandedByCount} is >0.
      */
     private int upperCount;
     /**
@@ -182,9 +183,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
      */
     private int runningDependents;
     /**
-     * The number of listeners that are currently running.
+     * The number of asynchronous tasks that are currently running.  This includes listeners, start/stop methods,
+     * outstanding asynchronous start/stops, and internal tasks.
      */
-    private int runningListeners;
+    private int asyncTasks;
 
     /**
      * Listener which is added to dependencies of this service.
@@ -224,53 +226,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         assert !lockHeld();
         final Substate state;
         synchronized (this) {
-            runningListeners ++;
+            asyncTasks++;
             state = this.state;
             if (state != Substate.REMOVED) listeners.add(listener);
         }
         invokeListener(listener, null);
-    }
-
-    private boolean lockHeld() {
-        return Thread.holdsLock(this);
-    }
-
-    private void invokeListener(final ServiceListener<? super S> listener, final State state) {
-        assert !lockHeld();
-        try {
-            if (state == null) {
-                listener.listenerAdded(this);
-            } else switch (state) {
-                case DOWN: {
-                    listener.serviceStopped(this);
-                    break;
-                }
-                case STARTING: {
-                    listener.serviceStarting(this);
-                    break;
-                }
-                case START_FAILED: {
-                    listener.serviceFailed(this, startException);
-                    break;
-                }
-                case UP: {
-                    listener.serviceStarted(this);
-                    break;
-                }
-                case STOPPING: {
-                    listener.serviceStopping(this);
-                    break;
-                }
-                case REMOVED: {
-                    listener.serviceRemoved(this);
-                    break;
-                }
-            }
-        } catch (Throwable t) {
-            // todo log error
-        } finally {
-            doFinishListener(null);
-        }
     }
 
     public void removeListener(final ServiceListener<? super S> listener) {
@@ -463,6 +423,48 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         }
     }
 
+    private boolean lockHeld() {
+        return Thread.holdsLock(this);
+    }
+
+    private void invokeListener(final ServiceListener<? super S> listener, final State state) {
+        assert !lockHeld();
+        try {
+            if (state == null) {
+                listener.listenerAdded(this);
+            } else switch (state) {
+                case DOWN: {
+                    listener.serviceStopped(this);
+                    break;
+                }
+                case STARTING: {
+                    listener.serviceStarting(this);
+                    break;
+                }
+                case START_FAILED: {
+                    listener.serviceFailed(this, startException);
+                    break;
+                }
+                case UP: {
+                    listener.serviceStarted(this);
+                    break;
+                }
+                case STOPPING: {
+                    listener.serviceStopping(this);
+                    break;
+                }
+                case REMOVED: {
+                    listener.serviceRemoved(this);
+                    break;
+                }
+            }
+        } catch (Throwable t) {
+            // todo log error
+        } finally {
+            doFinishListener(null);
+        }
+    }
+
     enum ContextState {
         SYNC,
         ASYNC,
@@ -482,7 +484,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         assert lockHeld();
         final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
         final int size = listeners.size();
-        runningListeners = size + plusCount;
+        asyncTasks = size + plusCount;
         final ServiceListener[] listenersArray = listeners.toScatteredArray((ServiceListener<? super S>[]) NO_LISTENERS);
         state = newState;
         switch (newState) {
@@ -551,7 +553,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         ServiceListener<? super S>[] listeners = null;
         synchronized (this) {
             if (e != null) startException = e;
-            if (--runningListeners == 0) {
+            if (--asyncTasks == 0) {
                 switch (state) {
                     case DOWN: {
                         if (upperCount > 0 && mode != Mode.NEVER) {
@@ -669,7 +671,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             if (cnt != 0 || mode != Mode.ON_DEMAND) {
                 return;
             }
-            if (upperCount++ != 0 || state != Substate.DOWN || runningListeners != 0) {
+            if (upperCount++ != 0 || state != Substate.DOWN || asyncTasks != 0) {
                 return;
             }
             listeners = getListeners(1, Substate.STARTING);
@@ -685,7 +687,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             if (cnt != 0 || mode != Mode.ON_DEMAND) {
                 return;
             }
-            if (--upperCount != 0 || runningListeners != 0) {
+            if (--upperCount != 0 || asyncTasks != 0) {
                 return;
             }
             if (state == Substate.UP) {
@@ -717,7 +719,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             if (--runningDependents != 0) {
                 return;
             }
-            if (state != Substate.STOPPING || runningListeners != 0) {
+            if (state != Substate.STOPPING || asyncTasks != 0) {
                 return;
             }
             listeners = getListeners(0, Substate.DOWN);
@@ -943,7 +945,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             if (serviceController.getState() == State.UP) {
                 synchronized (ServiceControllerImpl.this) {
                     if (++upperCount == 1 && mode != Mode.NEVER) {
-                        if (runningListeners == 0 && state == Substate.DOWN) {
+                        if (asyncTasks == 0 && state == Substate.DOWN) {
                             listeners = getListeners(1, Substate.STARTING);
                         }
                     }
@@ -956,7 +958,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             ServiceListener<? super S>[] listeners = null;
             synchronized (ServiceControllerImpl.this) {
                 if (++upperCount == 1 && mode != Mode.NEVER) {
-                    if (runningListeners == 0 && state == Substate.DOWN) {
+                    if (asyncTasks == 0 && state == Substate.DOWN) {
                         listeners = getListeners(1, Substate.STARTING);
                     }
                 }
@@ -968,7 +970,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             ServiceListener<? super S>[] listeners = null;
             synchronized (ServiceControllerImpl.this) {
                 if (--upperCount == 0 || mode == Mode.NEVER) {
-                    if (runningListeners == 0 && state == Substate.UP) {
+                    if (asyncTasks == 0 && state == Substate.UP) {
                         listeners = getListeners(1, Substate.STOPPING);
                     }
                 }
