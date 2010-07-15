@@ -175,19 +175,10 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
                 assertState(serviceContainer, ServiceName.of("serviceOne"), ServiceController.State.UP);
                 assertState(serviceContainer, ServiceName.of("serviceTwo"), ServiceController.State.UP);
 
-                try {
-                    serviceContainer.getService(ServiceName.of("serviceTwo")).remove();
-                    fail("Should throw an IllegalStateException since the controller is not stopped");
-                } catch (IllegalStateException expected) {
-                }
-
-                serviceContainer.getService(ServiceName.of("serviceTwo")).setMode(ServiceController.Mode.NEVER);
-                Thread.sleep(50);
-                final ServiceController<?> serviceTwo = serviceContainer.getService(ServiceName.of("serviceTwo"));
-                serviceTwo.setMode(ServiceController.Mode.REMOVE);
+                serviceContainer.getService(ServiceName.of("serviceTwo")).setMode(ServiceController.Mode.REMOVE);
                 Thread.sleep(50);
                 assertNull(serviceContainer.getService(ServiceName.of("serviceTwo")));
-                assertState(serviceContainer, ServiceName.of("serviceOne"), ServiceController.State.DOWN);
+                assertNull(serviceContainer.getService(ServiceName.of("serviceOne")));
             }
         });
     }
