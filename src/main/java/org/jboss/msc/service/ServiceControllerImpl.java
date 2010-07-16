@@ -231,10 +231,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             // Always run listener if removed.
             if (state != Substate.REMOVED) {
                 if (! listeners.add(listener)) {
-                    return;
+                    // Duplicates not allowed
+                    throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + serviceName);
                 }
             }
-            System.out.println("Add listener " + listener + " to " + serviceName);
+            System.out.println("Add listener " + listener + " to " + serviceName + " in state " + state);
             asyncTasks++;
         }
         invokeListener(listener, null);
@@ -414,7 +415,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         synchronized (this) {
             state = this.state;
             System.out.println("Add dependent " + dependent.serviceName + " to " + serviceName + " in state " + state);
-            if (state != Substate.REMOVED) dependents.add(dependent);
+            if (state != Substate.REMOVED) {
+                final boolean result = dependents.add(dependent);
+                assert result;
+            }
             if (state != Substate.UP) return;
             asyncTasks++;
         }
@@ -556,6 +560,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 break;
             }
             case START_FAILED_to_DOWN: {
+                startException = null;
                 tasks = getListenerTasks(transition.getAfter().getState(), new StopTask(true), new DependentStoppedTask());
                 break;
             }
@@ -632,7 +637,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     private void invokeListener(final ServiceListener<? super S> listener, final State state) {
-//        System.out.printf("Running listener %s state %s on %s\n", listener, state, serviceName);
+        System.out.printf("Running listener %s state %s on %s (%s)\n", listener, state, serviceName, this);
         assert !lockHeld();
         try {
             if (state == null) {

@@ -187,7 +187,6 @@ final class ServiceContainerImpl implements ServiceContainer {
             final ServiceController.State state = serviceController.getState();
             if (state == ServiceController.State.REMOVED) {
                 countDown();
-                serviceController.removeListener(this);
             }
         }
 
