@@ -95,6 +95,7 @@ final class ServiceContainerImpl implements ServiceContainer {
                                 for (Reference<ServiceContainerImpl, Void> containerRef : set) {
                                     final ServiceContainerImpl container = containerRef.get();
                                     if (container == null) {
+                                        listener.countDown();
                                         continue;
                                     }
                                     final ServiceControllerImpl<ServiceContainer> root = container.root;
@@ -106,7 +107,7 @@ final class ServiceContainerImpl implements ServiceContainer {
                             // wait for all services to finish.
                             for (;;) try {
                                 if (! listener.await(10L, TimeUnit.SECONDS)) {
-                                    System.err.println("Failed to shut down in 10 seconds; exiting");
+                                    System.err.println("Failed to shut down in 10 seconds (" + listener.getCount() + " containers remain); exiting");
                                     return;
                                 }
                                 break;
@@ -182,32 +183,31 @@ final class ServiceContainerImpl implements ServiceContainer {
             super(count);
         }
 
-        public void listenerAdded(final ServiceController<? extends Object> serviceController) {
+        public void listenerAdded(final ServiceController<?> serviceController) {
             final ServiceController.State state = serviceController.getState();
-            if (state == ServiceController.State.DOWN || state == ServiceController.State.REMOVED) {
+            if (state == ServiceController.State.REMOVED) {
                 countDown();
                 serviceController.removeListener(this);
             }
         }
 
-        public void serviceStarting(final ServiceController<? extends Object> serviceController) {
+        public void serviceStarting(final ServiceController<?> serviceController) {
         }
 
-        public void serviceStarted(final ServiceController<? extends Object> serviceController) {
+        public void serviceStarted(final ServiceController<?> serviceController) {
         }
 
-        public void serviceFailed(final ServiceController<? extends Object> serviceController, final StartException reason) {
+        public void serviceFailed(final ServiceController<?> serviceController, final StartException reason) {
         }
 
-        public void serviceStopping(final ServiceController<? extends Object> serviceController) {
+        public void serviceStopping(final ServiceController<?> serviceController) {
         }
 
-        public void serviceStopped(final ServiceController<? extends Object> serviceController) {
+        public void serviceStopped(final ServiceController<?> serviceController) {
+        }
+
+        public void serviceRemoved(final ServiceController<?> serviceController) {
             countDown();
-            serviceController.removeListener(this);
-        }
-
-        public void serviceRemoved(final ServiceController<? extends Object> serviceController) {
         }
     }
 

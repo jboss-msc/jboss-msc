@@ -413,11 +413,20 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         final Substate state;
         synchronized (this) {
             state = this.state;
+            System.out.println("Add dependent " + dependent.serviceName + " to " + serviceName + " in state " + state);
             if (state != Substate.REMOVED) dependents.add(dependent);
             if (state != Substate.UP) return;
             asyncTasks++;
         }
-        doExecute(new DependencyStartedTask(new ServiceControllerImpl<?>[] { dependent }));
+        if (state == Substate.UP) {
+            dependent.dependencyUp();
+        }
+        final Runnable[] tasks;
+        synchronized (this) {
+            asyncTasks--;
+            tasks = transition();
+        }
+        doExecute(tasks);
     }
 
     /**
@@ -623,7 +632,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     private void invokeListener(final ServiceListener<? super S> listener, final State state) {
-//        System.out.printf("Running listener %s state %s\n", listener, state);
+//        System.out.printf("Running listener %s state %s on %s\n", listener, state, serviceName);
         assert !lockHeld();
         try {
             if (state == null) {
@@ -738,7 +747,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         synchronized (this) {
             final int cnt = --demandedByCount;
             if (cnt != 0 || mode != Mode.ON_DEMAND) {
-                // no change;
+                // no change
                 return;
             }
             upperCount--;
@@ -769,9 +778,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     void dependencyUp() {
         Runnable[] tasks = null;
         synchronized (this) {
-            if (upperCount ++ != 1) {
+            if (++upperCount != 1) {
                 return;
             }
+            // we raised it to 1
             tasks = transition();
         }
         doExecute(tasks);
@@ -780,9 +790,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     void dependencyDown() {
         Runnable[] tasks = null;
         synchronized (this) {
-            if (upperCount -- != 1) {
+            if (--upperCount == 0) {
                 return;
             }
+            // we dropped it below 0
             tasks = transition();
         }
         doExecute(tasks);
@@ -817,19 +828,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         }
 
         public void complete() throws IllegalStateException {
+            final Runnable[] tasks;
             synchronized (ServiceControllerImpl.this) {
-                if (state == ContextState.ASYNC) {
-                    state = ContextState.COMPLETE;
-                    final Runnable[] tasks;
-                    synchronized (ServiceControllerImpl.this) {
-                        asyncTasks--;
-                        tasks = transition();
-                    }
-                    doExecute(tasks);
-                } else {
+                if (state != ContextState.ASYNC) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
+                } else {
+                    state = ContextState.COMPLETE;
+                    asyncTasks--;
+                    tasks = transition();
                 }
             }
+            doExecute(tasks);
         }
 
         public ServiceController<?> getController() {
@@ -853,21 +862,20 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
         public void complete() throws IllegalStateException {
             synchronized (ServiceControllerImpl.this) {
-                if (state == ContextState.ASYNC) {
-                    state = ContextState.COMPLETE;
-                    for (ValueInjection<?> injection : injections) {
-                        injection.getTarget().uninject();
-                    }
-                    final Runnable[] tasks;
-                    synchronized (ServiceControllerImpl.this) {
-                        asyncTasks--;
-                        tasks = transition();
-                    }
-                    doExecute(tasks);
-                } else {
+                if (state != ContextState.ASYNC) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
+                state = ContextState.COMPLETE;
             }
+            for (ValueInjection<?> injection : injections) {
+                injection.getTarget().uninject();
+            }
+            final Runnable[] tasks;
+            synchronized (ServiceControllerImpl.this) {
+                asyncTasks--;
+                tasks = transition();
+            }
+            doExecute(tasks);
         }
 
         public ServiceController<?> getController() {
@@ -1038,17 +1046,22 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             } finally {
                 Runnable[] tasks = null;
                 synchronized (ServiceControllerImpl.this) {
-                    if (! ok || context.state == ContextState.SYNC || context.state == ContextState.FAILED) {
-                        context.state = ContextState.COMPLETE;
-                        asyncTasks--;
-                        for (ValueInjection<?> injection : injections) try {
-                            injection.getTarget().uninject();
-                        } catch (Throwable t) {
-                            // todo log
-                            t.printStackTrace();
-                        }
-                        tasks = transition();
+                    if (ok && context.state != ContextState.SYNC) {
+                        // We want to discard the exception anyway, if there was one.  Which there can't be.
+                        //noinspection ReturnInsideFinallyBlock
+                        return;
                     }
+                    context.state = ContextState.COMPLETE;
+                }
+                for (ValueInjection<?> injection : injections) try {
+                    injection.getTarget().uninject();
+                } catch (Throwable t) {
+                    // todo log
+                    t.printStackTrace();
+                }
+                synchronized (ServiceControllerImpl.this) {
+                    asyncTasks--;
+                    tasks = transition();
                 }
                 doExecute(tasks);
             }
