@@ -22,9 +22,15 @@
 
 package org.jboss.msc.service;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.jboss.msc.service.util.LatchedFinishListener;
 
 import java.util.List;
+
+import static junit.framework.Assert.assertTrue;
+import static junit.framework.Assert.fail;
 
 /**
  * Test base used for service test cases.
@@ -58,5 +64,55 @@ public class AbstractServiceTest {
         finishListener.await();
         instance.performAssertions(serviceContainer);
         serviceContainer.shutdown();
+    }
+
+    protected void awaitState(ServiceController<?> controller, final ServiceController.State state, long millis) {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicBoolean ran = new AtomicBoolean(false);
+        controller.addListener(new ServiceListener<Object>() {
+            public void listenerAdded(final ServiceController<?> serviceController) {
+                check(serviceController);
+            }
+
+            public void serviceStarting(final ServiceController<?> serviceController) {
+                check(serviceController);
+            }
+
+            public void serviceStarted(final ServiceController<?> serviceController) {
+                check(serviceController);
+            }
+
+            public void serviceFailed(final ServiceController<?> serviceController, final StartException reason) {
+                check(serviceController);
+            }
+
+            public void serviceStopping(final ServiceController<?> serviceController) {
+                check(serviceController);
+            }
+
+            public void serviceStopped(final ServiceController<?> serviceController) {
+                check(serviceController);
+            }
+
+            public void serviceRemoved(final ServiceController<?> serviceController) {
+                check(serviceController);
+            }
+
+            private void check(final ServiceController<?> serviceController) {
+                if (serviceController.getState() == state) {
+                    if (! ran.getAndSet(true)) {
+                        latch.countDown();
+                        serviceController.removeListener(this);
+                    }
+                }
+            }
+        });
+        boolean ok = false;
+        try {
+            ok = latch.await(millis, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            fail("Interrupted waiting for state " + state + " of controller " + controller);
+        }
+        assertTrue("Timed out waiting for state " + state + " of controller " + controller, ok);
     }
 }

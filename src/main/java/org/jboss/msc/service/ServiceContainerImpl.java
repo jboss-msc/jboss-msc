@@ -49,6 +49,8 @@ final class ServiceContainerImpl implements ServiceContainer {
     final Object lock = new Object();
     final ServiceControllerImpl<ServiceContainer> root;
 
+    static final ServiceName ROOT = ServiceName.of("ROOT");
+
     private static final class ExecutorHolder {
         private static final Executor VALUE;
 
@@ -96,7 +98,7 @@ final class ServiceContainerImpl implements ServiceContainer {
                                         continue;
                                     }
                                     final ServiceControllerImpl<ServiceContainer> root = container.root;
-                                    root.setMode(ServiceController.Mode.NEVER);
+                                    root.setMode(ServiceController.Mode.REMOVE);
                                     root.addListener(listener);
                                 }
                                 set.clear();
@@ -140,11 +142,11 @@ final class ServiceContainerImpl implements ServiceContainer {
                 public ServiceContainer getValue() throws IllegalStateException {
                     return ServiceContainerImpl.this;
                 }
-            }), null);
-            root = builder.setInitialMode(down ? ServiceController.Mode.NEVER : ServiceController.Mode.AUTOMATIC).create();
+            }), ROOT);
+            root = builder.setInitialMode(down ? ServiceController.Mode.REMOVE : ServiceController.Mode.AUTOMATIC).create();
             if (! down) {
                 set.add(new WeakReference<ServiceContainerImpl, Void>(this, null, new Reaper<ServiceContainerImpl, Void>() {
-                    public void reap(final org.jboss.msc.ref.Reference<ServiceContainerImpl, Void> reference) {
+                    public void reap(final Reference<ServiceContainerImpl, Void> reference) {
                         ShutdownHookHolder.containers.remove(reference);
                     }
                 }));

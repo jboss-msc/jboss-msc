@@ -75,7 +75,8 @@ public interface ServiceContainer {
          * @return a new service container instance
          */
         public static ServiceContainer create() {
-            return new ServiceContainerImpl();
+            final ServiceContainerImpl container = new ServiceContainerImpl();
+            return container;
         }
     }
 }

@@ -234,6 +234,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     return;
                 }
             }
+            System.out.println("Add listener " + listener + " to " + serviceName);
             asyncTasks++;
         }
         invokeListener(listener, null);
@@ -273,9 +274,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     public void setMode(final Mode newMode) {
         assert !lockHeld();
         final Runnable[] tasks;
+        Runnable specialTask = null;
         synchronized (this) {
             final Mode oldMode = mode;
             mode = newMode;
+            System.out.println("Set mode of " + serviceName + " from " + oldMode + " to " + newMode);
             switch (oldMode) {
                 case REMOVE: {
                     switch (newMode) {
@@ -303,7 +306,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                             break;
                         }
                         case IMMEDIATE: {
-                            doDemandParents();
+                            specialTask = new DemandParentsTask();
+                            asyncTasks++;
                             upperCount++;
                             break;
                         }
@@ -329,7 +333,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                             break;
                         }
                         case IMMEDIATE: {
-                            doDemandParents();
+                            specialTask = new DemandParentsTask();
+                            asyncTasks++;
                             if (demandedByCount == 0) {
                                 upperCount++;
                             }
@@ -355,7 +360,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                             return;
                         }
                         case IMMEDIATE: {
-                            doDemandParents();
+                            specialTask = new DemandParentsTask();
+                            asyncTasks++;
                             break;
                         }
                     }
@@ -365,17 +371,22 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     switch (newMode) {
                         case REMOVE:
                         case NEVER: {
+                            specialTask = new UndemandParentsTask();
+                            asyncTasks++;
                             upperCount--;
                             break;
                         }
                         case ON_DEMAND: {
+                            specialTask = new UndemandParentsTask();
+                            asyncTasks++;
                             if (demandedByCount == 0) {
                                 upperCount--;
                             }
                             break;
                         }
                         case AUTOMATIC: {
-                            doUndemandParents();
+                            specialTask = new UndemandParentsTask();
+                            asyncTasks++;
                             break;
                         }
                         case IMMEDIATE: {
@@ -388,6 +399,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             tasks = transition();
         }
         doExecute(tasks);
+        doExecute(specialTask);
     }
 
     /**
@@ -406,6 +418,19 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             asyncTasks++;
         }
         doExecute(new DependencyStartedTask(new ServiceControllerImpl<?>[] { dependent }));
+    }
+
+    /**
+     * Remove a dependent from this controller.
+     *
+     * @param dependent the dependent to remove
+     */
+    private void removeDependent(final ServiceControllerImpl<?> dependent) {
+        assert !lockHeld();
+        assert !dependent.lockHeld();
+        synchronized (this) {
+            dependents.remove(dependent);
+        }
     }
 
     /**
@@ -534,9 +559,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 break;
             }
             case DOWN_to_REMOVED: {
-                tasks = getListenerTasks(transition.getAfter().getState(), new RemoveDependentsTask(dependents.toScatteredArray(NO_DEPENDENTS)));
-                dependents.clear();
-                Arrays.fill(dependencies, null);
+                tasks = getListenerTasks(transition.getAfter().getState(), new RemoveTask(dependents.toScatteredArray(NO_DEPENDENTS)));
                 listeners.clear();
                 break;
             }
@@ -548,8 +571,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 throw new IllegalStateException();
             }
         }
+        System.out.println("Transition " + serviceName + " from " + transition.getBefore() + " to " + transition.getAfter());
         state = transition.getAfter();
-        asyncTasks = tasks.length;
+        asyncTasks += tasks.length;
         return tasks;
     }
 
@@ -632,6 +656,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             }
         } catch (Throwable t) {
             // todo log error
+            t.printStackTrace();
         } finally {
             final Runnable[] tasks;
             synchronized (this) {
@@ -653,6 +678,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         assert ! lockHeld();
         if (task == null) return;
         try {
+            System.out.println("Async task of " + serviceName + ": " + task);
             container.getExecutor().execute(task);
         } catch (RejectedExecutionException e) {
             task.run();
@@ -665,6 +691,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         final Executor executor = container.getExecutor();
         for (Runnable task : tasks) {
             try {
+                System.out.println("Async task of " + serviceName + ": " + task);
                 executor.execute(task);
             } catch (RejectedExecutionException e) {
                 task.run();
@@ -677,14 +704,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     private void doDemandParents() {
-        assert lockHeld();
+        assert ! lockHeld();
         for (ServiceControllerImpl<?> dependency : dependencies) {
             dependency.addDemand();
         }
     }
 
     private void doUndemandParents() {
-        assert lockHeld();
+        assert ! lockHeld();
         for (ServiceControllerImpl<?> dependency : dependencies) {
             dependency.removeDemand();
         }
@@ -1047,30 +1074,40 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     private class DependentStoppedTask implements Runnable {
 
         public void run() {
-            for (ServiceControllerImpl<?> controller : dependencies) {
-                controller.dependentStopped();
+            try {
+                for (ServiceControllerImpl<?> controller : dependencies) {
+                    controller.dependentStopped();
+                }
+                final Runnable[] tasks;
+                synchronized (ServiceControllerImpl.this) {
+                    asyncTasks--;
+                    tasks = transition();
+                }
+                doExecute(tasks);
+            } catch (Throwable t) {
+                // todo log it
+                t.printStackTrace();
             }
-            final Runnable[] tasks;
-            synchronized (ServiceControllerImpl.this) {
-                asyncTasks--;
-                tasks = transition();
-            }
-            doExecute(tasks);
         }
     }
 
     private class DependentStartedTask implements Runnable {
 
         public void run() {
-            for (ServiceControllerImpl<?> controller : dependencies) {
-                controller.dependentStarted();
+            try {
+                for (ServiceControllerImpl<?> controller : dependencies) {
+                    controller.dependentStarted();
+                }
+                final Runnable[] tasks;
+                synchronized (ServiceControllerImpl.this) {
+                    asyncTasks--;
+                    tasks = transition();
+                }
+                doExecute(tasks);
+            } catch (Throwable t) {
+                // todo log it
+                t.printStackTrace();
             }
-            final Runnable[] tasks;
-            synchronized (ServiceControllerImpl.this) {
-                asyncTasks--;
-                tasks = transition();
-            }
-            doExecute(tasks);
         }
     }
 
@@ -1083,15 +1120,20 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         }
 
         public void run() {
-            for (ServiceControllerImpl<?> dependent : dependents) {
-                if (dependent != null) dependent.dependencyUp();
+            try {
+                for (ServiceControllerImpl<?> dependent : dependents) {
+                    if (dependent != null) dependent.dependencyUp();
+                }
+                final Runnable[] tasks;
+                synchronized (ServiceControllerImpl.this) {
+                    asyncTasks--;
+                    tasks = transition();
+                }
+                doExecute(tasks);
+            } catch (Throwable t) {
+                // todo log it
+                t.printStackTrace();
             }
-            final Runnable[] tasks;
-            synchronized (ServiceControllerImpl.this) {
-                asyncTasks--;
-                tasks = transition();
-            }
-            doExecute(tasks);
         }
     }
 
@@ -1104,35 +1146,82 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         }
 
         public void run() {
-            for (ServiceControllerImpl<?> dependent : dependents) {
-                if (dependent != null) dependent.dependencyDown();
+            try {
+                for (ServiceControllerImpl<?> dependent : dependents) {
+                    if (dependent != null) dependent.dependencyDown();
+                }
+                final Runnable[] tasks;
+                synchronized (ServiceControllerImpl.this) {
+                    asyncTasks--;
+                    tasks = transition();
+                }
+                doExecute(tasks);
+            } catch (Throwable t) {
+                // todo log it
+                t.printStackTrace();
             }
-            final Runnable[] tasks;
-            synchronized (ServiceControllerImpl.this) {
-                asyncTasks--;
-                tasks = transition();
-            }
-            doExecute(tasks);
         }
     }
 
-    private class RemoveDependentsTask implements Runnable {
+    private class RemoveTask implements Runnable {
         private final ServiceControllerImpl<?>[] dependents;
 
-        RemoveDependentsTask(final ServiceControllerImpl<?>[] dependents) {
+        RemoveTask(final ServiceControllerImpl<?>[] dependents) {
             this.dependents = dependents;
         }
 
         public void run() {
-            for (ServiceControllerImpl<?> dependent : dependents) {
-                if (dependent != null) dependent.setMode(Mode.REMOVE);
+            try {
+                for (ServiceControllerImpl<?> dependent : dependents) {
+                    if (dependent != null) dependent.setMode(Mode.REMOVE);
+                }
+                for (ServiceControllerImpl<?> dependency : dependencies) {
+                    dependency.removeDependent(ServiceControllerImpl.this);
+                }
+                synchronized (ServiceControllerImpl.this) {
+                    Arrays.fill(dependencies, null);
+                    asyncTasks--;
+                }
+            } catch (Throwable t) {
+                // todo log it
+                t.printStackTrace();
             }
-            final Runnable[] tasks;
-            synchronized (ServiceControllerImpl.this) {
-                asyncTasks--;
-                tasks = transition();
+        }
+    }
+
+    private class DemandParentsTask implements Runnable {
+
+        public void run() {
+            try {
+                doDemandParents();
+                final Runnable[] tasks;
+                synchronized (ServiceControllerImpl.this) {
+                    asyncTasks--;
+                    tasks = transition();
+                }
+                doExecute(tasks);
+            } catch (Throwable t) {
+                // todo log it
+                t.printStackTrace();
             }
-            doExecute(tasks);
+        }
+    }
+
+    private class UndemandParentsTask implements Runnable {
+
+        public void run() {
+            try {
+                doUndemandParents();
+                final Runnable[] tasks;
+                synchronized (ServiceControllerImpl.this) {
+                    asyncTasks--;
+                    tasks = transition();
+                }
+                doExecute(tasks);
+            } catch (Throwable t) {
+                // todo log it
+                t.printStackTrace();
+            }
         }
     }
 }
