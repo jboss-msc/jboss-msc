@@ -235,7 +235,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + serviceName);
                 }
             }
-            System.out.println("Add listener " + listener + " to " + serviceName + " in state " + state);
+//            System.out.println("Add listener " + listener + " to " + serviceName + " in state " + state);
             asyncTasks++;
         }
         invokeListener(listener, null);
@@ -279,7 +279,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         synchronized (this) {
             final Mode oldMode = mode;
             mode = newMode;
-            System.out.println("Set mode of " + serviceName + " from " + oldMode + " to " + newMode);
+//            System.out.println("Set mode of " + serviceName + " from " + oldMode + " to " + newMode);
             switch (oldMode) {
                 case REMOVE: {
                     switch (newMode) {
@@ -414,7 +414,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         final Substate state;
         synchronized (this) {
             state = this.state;
-            System.out.println("Add dependent " + dependent.serviceName + " to " + serviceName + " in state " + state);
+//            System.out.println("Add dependent " + dependent.serviceName + " to " + serviceName + " in state " + state);
             if (state != Substate.REMOVED) {
                 final boolean result = dependents.add(dependent);
                 assert result;
@@ -585,7 +585,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 throw new IllegalStateException();
             }
         }
-        System.out.println("Transition " + serviceName + " from " + transition.getBefore() + " to " + transition.getAfter());
+//        System.out.println("Transition " + serviceName + " from " + transition.getBefore() + " to " + transition.getAfter());
         state = transition.getAfter();
         asyncTasks += tasks.length;
         return tasks;
@@ -637,7 +637,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     private void invokeListener(final ServiceListener<? super S> listener, final State state) {
-        System.out.printf("Running listener %s state %s on %s (%s)\n", listener, state, serviceName, this);
+//        System.out.printf("Running listener %s state %s on %s (%s)\n", listener, state, serviceName, this);
         assert !lockHeld();
         try {
             if (state == null) {
@@ -692,7 +692,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         assert ! lockHeld();
         if (task == null) return;
         try {
-            System.out.println("Async task of " + serviceName + ": " + task);
+//            System.out.println("Async task of " + serviceName + ": " + task);
             container.getExecutor().execute(task);
         } catch (RejectedExecutionException e) {
             task.run();
@@ -705,7 +705,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         final Executor executor = container.getExecutor();
         for (Runnable task : tasks) {
             try {
-                System.out.println("Async task of " + serviceName + ": " + task);
+//                System.out.println("Async task of " + serviceName + ": " + task);
                 executor.execute(task);
             } catch (RejectedExecutionException e) {
                 task.run();
