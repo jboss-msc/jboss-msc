@@ -795,7 +795,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     void dependencyDown() {
         Runnable[] tasks = null;
         synchronized (this) {
-            if (--upperCount == 0) {
+            if (--upperCount != 0) {
                 return;
             }
             // we dropped it below 0
@@ -1190,6 +1190,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
         public void run() {
             try {
+                assert getMode() == Mode.REMOVE;
+                assert getState() == State.REMOVED;
                 for (ServiceControllerImpl<?> dependent : dependents) {
                     if (dependent != null) dependent.setMode(Mode.REMOVE);
                 }
