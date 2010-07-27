@@ -24,6 +24,8 @@ package org.jboss.msc.service;
 
 import org.jboss.msc.reflect.Property;
 import org.jboss.msc.service.util.LatchedFinishListener;
+import org.jboss.msc.translate.TranslationException;
+import org.jboss.msc.translate.Translator;
 import org.jboss.msc.value.ClassOfValue;
 import org.jboss.msc.value.LookupClassValue;
 import org.jboss.msc.value.Value;
@@ -343,6 +345,32 @@ public class ServiceInjectionTestCase extends AbstractServiceTest {
                 assertEquals("testValue", serviceTwo.test);
                 assertNotNull(serviceThree.test);
                 assertEquals("testValue", serviceThree.test);
+            }
+        });
+    }
+
+    @Test
+    public void testPropertyBasedInjectionWithTranslator() throws Exception {
+        performTest(new ServiceTestInstance() {
+            @Override
+            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
+                final ObjectSource objectSource = new ObjectSource("testValue");
+                final BatchBuilder batch = serviceContainer.batchBuilder().addListener(finishListener);
+
+                BatchServiceBuilder<TestObjectService> serviceBuilder = batch.addService(ServiceName.of("testService"), service);
+                serviceBuilder.addInjection(objectSource).toProperty("test").via(new Translator<ObjectSource, String>() {
+                    @Override
+                    public String translate(ObjectSource input) throws TranslationException {
+                        return input.getTest();
+                    }
+                });
+                return Collections.singletonList(batch);
+            }
+
+            @Override
+            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
+                assertNotNull(service.test);
+                assertEquals("testValue", service.test);
             }
         });
     }
