@@ -106,10 +106,7 @@ final class ServiceContainerImpl implements ServiceContainer {
                             }
                             // wait for all services to finish.
                             for (;;) try {
-                                if (! listener.await(10L, TimeUnit.SECONDS)) {
-                                    System.err.println("Failed to shut down in 10 seconds (" + listener.getCount() + " containers remain); exiting");
-                                    return;
-                                }
+                                listener.await();
                                 break;
                             } catch (InterruptedException e) {
                             }
