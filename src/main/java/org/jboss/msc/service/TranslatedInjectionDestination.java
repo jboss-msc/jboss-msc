@@ -42,8 +42,8 @@ public class TranslatedInjectionDestination<I, O> extends InjectionDestination {
     }
 
     @Override
-    protected <T> Injector<?> getInjector(Value<T> injectionValue, ServiceBuilder<T> serviceBuilder, ServiceContainerImpl registry) {
-        final Injector<O> delegateInjector = (Injector<O>) delegate.getInjector(injectionValue, serviceBuilder, registry);
+    protected <T> Injector<?> getInjector(Value<T> injectionValue) {
+        final Injector<O> delegateInjector = (Injector<O>) delegate.getInjector(injectionValue);
         return new TranslatingInjector(translator, delegateInjector);
     }
 }
