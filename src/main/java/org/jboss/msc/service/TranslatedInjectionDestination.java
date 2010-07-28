@@ -31,7 +31,7 @@ import org.jboss.msc.value.Value;
  * Injection destination that applies a translator to an existing injector.
  * @author John E. Bailey
  */
-public class TranslatedInjectionDestination<I, O> extends InjectionDestination {
+class TranslatedInjectionDestination<I, O> extends InjectionDestination {
 
     private final InjectionDestination delegate;
     private final Translator<I, O> translator;
