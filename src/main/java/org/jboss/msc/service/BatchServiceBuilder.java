@@ -90,7 +90,7 @@ public interface BatchServiceBuilder<T> {
      *
      * @param dependency the name of the dependency
      * @return an injection builder for optionally injecting the dependency
-     * @deprecated Use {@link #addDependency(ServiceName, org.jboss.msc.inject.Injector)} instead.
+     * @deprecated This method has inadequate type safety.  Use {@link #addDependencies(ServiceName...)} or {@link #addDependency(ServiceName, org.jboss.msc.inject.Injector)} or similar instead.
      */
     BatchInjectionBuilder addDependency(ServiceName dependency);
 
