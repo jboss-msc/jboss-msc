@@ -22,11 +22,6 @@
 
 package org.jboss.msc.service;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.reflect.Property;
 import org.jboss.msc.translate.Translator;
@@ -37,6 +32,12 @@ import org.jboss.msc.value.LookupMethodValue;
 import org.jboss.msc.value.LookupPropertyValue;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import static org.jboss.msc.service.BatchBuilderImpl.alreadyInstalled;
 
@@ -342,6 +343,15 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
             throw alreadyInstalled();
         }
         injectionSource = new FieldDelegatingInjectionSource(injectionSource, fieldValue);
+        return this;
+    }
+
+    @Override
+    public BatchInjectionBuilder via(Translator<?, ?> translator) {
+        if (batchBuilder.isDone()) {
+            throw alreadyInstalled();
+        }
+        injectionDestination = new TranslatedInjectionDestination(injectionDestination, translator);
         return this;
     }
 

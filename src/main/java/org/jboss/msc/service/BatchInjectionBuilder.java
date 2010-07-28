@@ -22,13 +22,15 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.inject.Injector;
+import org.jboss.msc.reflect.Property;
+import org.jboss.msc.translate.Translator;
+import org.jboss.msc.value.Value;
+import org.jboss.msc.value.Values;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
-import org.jboss.msc.inject.Injector;
-import org.jboss.msc.reflect.Property;
-import org.jboss.msc.value.Value;
-import org.jboss.msc.value.Values;
 
 /**
  * A builder for a specific injection specification.  Create an instance via any of the following methods:
@@ -316,11 +318,11 @@ public interface BatchInjectionBuilder {
      */
     BatchInjectionBuilder fromFieldValue(Value<Field> fieldValue);
 
-//    /**
-//     * Add a translator which will translate the injection target.
-//     *
-//     * @param translator the translator
-//     * @return this builder
-//     */
-//    BatchInjectionBuilder via(Translator<?, ?> translator);
+    /**
+     * Add a translator which will translate the injection target.
+     *
+     * @param translator the translator
+     * @return this builder
+     */
+    BatchInjectionBuilder via(Translator<?, ?> translator);
 }
