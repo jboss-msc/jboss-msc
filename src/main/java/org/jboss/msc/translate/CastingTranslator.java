@@ -20,33 +20,31 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.service;
-
-import org.jboss.msc.value.Value;
+package org.jboss.msc.translate;
 
 /**
- * Base injection source that delegates to another injection source, and is intended to be extended to support source chaining.
+ * A translator which casts (narrows) the type of its input.
  *
- * @author John E. Bailey
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-abstract class DelegatingInjectionSource extends InjectionSource {
-
-    private final InjectionSource delegate;
-
-    protected DelegatingInjectionSource(InjectionSource delegate) {
-        this.delegate = delegate;
-    }
-
-    @Override
-    protected <T> Value<?> getValue(Value<T> serviceValue, ServiceContainerImpl container) {
-        return getValue(delegate.getValue(serviceValue, container));
-    }
+public final class CastingTranslator<I, O> implements Translator<I, O> {
+    private final Class<O> type;
 
     /**
-     * Contract method providing children with the value of the delegate InjectionSource.
+     * Construct a new instance.
      *
-     * @param delegateValue The value from the delegate injection source
-     * @return The value of the injection source
+     * @param type the type to narrow to
      */
-    protected abstract <T> Value<?> getValue(Value<?> delegateValue);
+    public CastingTranslator(final Class<O> type) {
+        this.type = type;
+    }
+
+    /** {@inheritDoc} */
+    public O translate(final I input) throws TranslationException {
+        try {
+            return type.cast(input);
+        } catch (ClassCastException e) {
+            throw new TranslationException("Input is not of the correct type (expected " + type + ", got " + input.getClass() + ")");
+        }
+    }
 }

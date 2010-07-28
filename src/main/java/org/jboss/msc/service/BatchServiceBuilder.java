@@ -23,6 +23,7 @@
 package org.jboss.msc.service;
 
 import java.util.Collection;
+import org.jboss.msc.inject.Injector;
 import org.jboss.msc.value.Value;
 
 /**
@@ -89,14 +90,39 @@ public interface BatchServiceBuilder<T> {
      *
      * @param dependency the name of the dependency
      * @return an injection builder for optionally injecting the dependency
+     * @deprecated Use {@link #addDependency(ServiceName, org.jboss.msc.inject.Injector)} instead.
      */
     BatchInjectionBuilder addDependency(ServiceName dependency);
+
+    /**
+     * Add a service dependency.  Calling this method multiple times for the same service name will only add it as a
+     * dependency one time; however this may be useful to specify multiple injections for one dependency.
+     *
+     * @param dependency the name of the dependency
+     * @param target the injector into which the dependency should be stored
+     * @return this builder
+     */
+    BatchServiceBuilder<T> addDependency(ServiceName dependency, Injector<Object> target);
+
+    /**
+     * Add a service dependency.  The type of the dependency is checked before it is passed into the (type-safe) injector
+     * instance.  Calling this method multiple times for the same service name will only add it as a
+     * dependency one time; however this may be useful to specify multiple injections for one dependency.
+     *
+     * @param dependency the name of the dependency
+     * @param type the class of the value of the dependency
+     * @param target the injector into which the dependency should be stored
+     * @param <I> the type of the value of the dependency
+     * @return this builder
+     */
+    <I> BatchServiceBuilder<T> addDependency(ServiceName dependency, Class<I> type, Injector<I> target);
 
     /**
      * Add an injection value.
      *
      * @param value the value to inject
      * @return an injection builder for specifying the injection target
+     * @deprecated Use {@link #addInjectionValue(org.jboss.msc.inject.Injector, Value)} instead.
      */
     BatchInjectionBuilder addInjectionValue(Value<?> value);
 
@@ -105,8 +131,31 @@ public interface BatchServiceBuilder<T> {
      *
      * @param value the value to inject
      * @return an injection builder for specifying the injection target
+     * @deprecated Use {@link #addInjection(org.jboss.msc.inject.Injector, Object)} instead.
      */
     BatchInjectionBuilder addInjection(Object value);
+
+    /**
+     * Add an injection.  The given value will be injected into the given injector before service start, and uninjected
+     * after service stop.
+     *
+     * @param target the injection target
+     * @param value the injection value
+     * @param <I> the injection type
+     * @return this builder
+     */
+    <I> BatchServiceBuilder<T> addInjection(Injector<? super I> target, I value);
+
+    /**
+     * Add an injection value.  The given value will be injected into the given injector before service start, and uninjected
+     * after service stop.
+     *
+     * @param target the injection target
+     * @param value the injection value
+     * @param <I> the injection type
+     * @return this builder
+     */
+    <I> BatchServiceBuilder<T> addInjectionValue(Injector<? super I> target, Value<I> value);
 
     /**
      * Add a service listener that will be added to this service.

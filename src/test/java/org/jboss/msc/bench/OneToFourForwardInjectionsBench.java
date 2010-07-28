@@ -52,7 +52,7 @@ public class OneToFourForwardInjectionsBench {
             final BatchServiceBuilder<TestObject> builder = batch.addService(ServiceName.of(("test" + i).intern()), service);
 
             final Object injectedValue = new Object();
-            builder.addInjection(injectedValue).toField("test");
+            builder.addInjection(injectedValue);//.toField("test");
 
             int nextDivByFive = (5 - (i % 5)) + i;
             int numDeps = Math.min(nextDivByFive - i, totalServiceDefinitions - i - 1);
@@ -61,8 +61,8 @@ public class OneToFourForwardInjectionsBench {
                 if(depId % 5 ==0)
                     continue;
 
-                builder.addDependency(ServiceName.of(("test" + depId).intern()))
-                    .toMethod("setOther" + (i));
+                builder.addDependency(ServiceName.of(("test" + depId).intern()));
+//                    .toMethod("setOther" + (i));
             }
         }
 

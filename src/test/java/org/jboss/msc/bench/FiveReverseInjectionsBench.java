@@ -22,6 +22,8 @@
 
 package org.jboss.msc.bench;
 
+import org.jboss.msc.inject.FieldInjector;
+import org.jboss.msc.inject.MethodInjector;
 import org.jboss.msc.service.BatchBuilder;
 import org.jboss.msc.service.BatchServiceBuilder;
 import org.jboss.msc.service.Service;
@@ -70,11 +72,11 @@ public class FiveReverseInjectionsBench {
             builder.addListener(listener);
 
             final Object injectedValue = new Object();
-            builder.addInjectionValue(new ImmediateValue<Object>(injectedValue)).toFieldValue(testFieldValue);
+            builder.addInjectionValue(new ImmediateValue<Object>(injectedValue)).toInjector(new FieldInjector<Object>(new ImmediateValue<Object>(testObject), testFieldValue));
 
             int numDeps = Math.min(5, i);
             for (int j = 0; j < numDeps; j++) {
-                builder.addDependency(ServiceName.of(("test" + (i - j - 1)).intern())).toMethodValue(setterMethodValues.get(4 - j), Collections.singletonList(Values.injectedValue()));
+                builder.addDependency(ServiceName.of(("test" + (i - j - 1)).intern())).toInjector(new MethodInjector(setterMethodValues.get(4 - j), new ImmediateValue<Object>(testObject), new ImmediateValue<Object>(injectedValue), Collections.singletonList(Values.injectedValue())));
             }
         }
 

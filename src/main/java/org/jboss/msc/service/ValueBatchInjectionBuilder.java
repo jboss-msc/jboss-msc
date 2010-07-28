@@ -22,20 +22,34 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.inject.Injector;
 import org.jboss.msc.value.Value;
+
+import static org.jboss.msc.service.BatchBuilderImpl.alreadyInstalled;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class ValueInjectionSource extends InjectionSource {
+@Deprecated
+final class ValueBatchInjectionBuilder implements BatchInjectionBuilder {
 
-    private final Value<?> sourceValue;
+    private final BatchServiceBuilderImpl<?> batchServiceBuilder;
+    private final BatchBuilderImpl batchBuilder;
+    private final Value<?> source;
 
-    ValueInjectionSource(final Value<?> sourceValue) {
-        this.sourceValue = sourceValue;
+    ValueBatchInjectionBuilder(final BatchServiceBuilderImpl<?> batchServiceBuilder, final BatchBuilderImpl batchBuilder, final Value<?> source) {
+        this.batchServiceBuilder = batchServiceBuilder;
+        this.batchBuilder = batchBuilder;
+        this.source = source;
     }
 
-    protected <T> Value<?> getValue(final Value<T> serviceValue, final ServiceContainerImpl registry) {
-        return sourceValue;
+    @SuppressWarnings({ "unchecked" })
+    @Deprecated
+    public ValueBatchInjectionBuilder toInjector(final Injector<?> injector) {
+        if (batchBuilder.isDone()) {
+            throw alreadyInstalled();
+        }
+        batchServiceBuilder.addInjectionValue(injector, source);
+        return this;
     }
 }

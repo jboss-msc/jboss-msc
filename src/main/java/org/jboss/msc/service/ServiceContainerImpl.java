@@ -288,11 +288,13 @@ final class ServiceContainerImpl implements ServiceContainer {
                 builder.addListener(listener);
             }
 
-            for(BatchInjectionBuilderImpl injection : entry.getInjections()) {
-                builder.addValueInjection(
-                        valueInjection(serviceValue, injection)
-                );
+            for (NamedInjection namedInjection : entry.getNamedInjections()) {
+                builder.addValueInjection(new ValueInjection<Object>(getRequiredService(namedInjection.getName()), namedInjection.getTarget()));
             }
+            for (ValueInjection<?> valueInjection : entry.getValueInjections()) {
+                builder.addValueInjection(valueInjection);
+            }
+
             final ServiceController.Mode initialMode = entry.getInitialMode();
             builder.setInitialMode(ServiceController.Mode.NEVER);
             final ServiceController<?> serviceController = builder.create();
@@ -319,14 +321,6 @@ final class ServiceContainerImpl implements ServiceContainer {
             entry.visited = false;
             entry = prev;
         }
-    }
-
-    @SuppressWarnings({ "unchecked" })
-    private <T> ValueInjection<T> valueInjection(final Value<? extends Service<T>> serviceValue, final BatchInjectionBuilderImpl injection) {
-        return new ValueInjection(
-                injection.getSource().getValue((Value)serviceValue, this),
-                injection.getDestination().getInjector((Value)serviceValue)
-        );
     }
 
     public ServiceController<?> getRequiredService(final ServiceName serviceName) throws ServiceNotFoundException {

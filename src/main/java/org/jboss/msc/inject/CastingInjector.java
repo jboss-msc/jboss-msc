@@ -20,23 +20,41 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.service;
-
-import org.jboss.msc.inject.Injector;
-import org.jboss.msc.value.Value;
+package org.jboss.msc.inject;
 
 /**
+ * An injector which casts the value to a specific type.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class InjectorInjectionDestination extends InjectionDestination {
+public final class CastingInjector<T> implements Injector<Object> {
+    private final Injector<T> target;
+    private final Class<T> type;
 
-    private final Injector<?> injector;
-
-    InjectorInjectionDestination(final Injector<?> injector) {
-        this.injector = injector;
+    /**
+     * Construct a new instance.
+     *
+     * @param target the injection target
+     * @param type the type to cast to
+     */
+    public CastingInjector(final Injector<T> target, final Class<T> type) {
+        this.target = target;
+        this.type = type;
     }
 
-    protected <T> Injector<?> getInjector(final Value<T> injectionValue) {
-        return injector;
+    /** {@inheritDoc} */
+    public void inject(final Object value) throws InjectionException {
+        final T castValue;
+        try {
+            castValue = type.cast(value);
+        } catch (ClassCastException e) {
+            throw new InjectionException("Injecting the wrong type (expected " + type + ", got " + value.getClass() + ")", e);
+        }
+        target.inject(castValue);
+    }
+
+    /** {@inheritDoc} */
+    public void uninject() {
+        target.uninject();
     }
 }

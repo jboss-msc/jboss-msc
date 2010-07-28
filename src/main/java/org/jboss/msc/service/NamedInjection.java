@@ -23,11 +23,24 @@
 package org.jboss.msc.service;
 
 import org.jboss.msc.inject.Injector;
-import org.jboss.msc.value.Value;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-abstract class InjectionDestination {
-    protected abstract <T> Injector<?> getInjector(final Value<T> injectionValue);
+final class NamedInjection {
+    private final ServiceName name;
+    private final Injector<Object> target;
+
+    NamedInjection(final ServiceName name, final Injector<Object> target) {
+        this.name = name;
+        this.target = target;
+    }
+
+    public ServiceName getName() {
+        return name;
+    }
+
+    public Injector<Object> getTarget() {
+        return target;
+    }
 }

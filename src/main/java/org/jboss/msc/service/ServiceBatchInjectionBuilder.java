@@ -22,27 +22,33 @@
 
 package org.jboss.msc.service;
 
-import java.lang.reflect.Method;
-import java.util.List;
-import org.jboss.msc.value.MethodValue;
-import org.jboss.msc.value.Value;
+import org.jboss.msc.inject.Injector;
+
+import static org.jboss.msc.service.BatchBuilderImpl.alreadyInstalled;
 
 /**
- * @author John E. Bailey
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-class MethodInjectionSource extends InjectionSource {
-    private final Value<Method> methodValue;
-    private final Value<?> targetValue;
-    private final List<? extends Value<?>> parameteres;
+@Deprecated
+final class ServiceBatchInjectionBuilder implements BatchInjectionBuilder {
 
-    public MethodInjectionSource(Value<Method> methodValue, Value<?> targetValue, List<? extends Value<?>> parameteres) {
-        this.methodValue = methodValue;
-        this.targetValue = targetValue;
-        this.parameteres = parameteres;
+    private final BatchServiceBuilderImpl<?> batchServiceBuilder;
+    private final BatchBuilderImpl batchBuilder;
+    private final ServiceName source;
+
+    ServiceBatchInjectionBuilder(final BatchServiceBuilderImpl<?> batchServiceBuilder, final BatchBuilderImpl batchBuilder, final ServiceName source) {
+        this.batchServiceBuilder = batchServiceBuilder;
+        this.batchBuilder = batchBuilder;
+        this.source = source;
     }
 
-    @Override
-    protected <T> Value<?> getValue(Value<T> serviceValue, ServiceContainerImpl container) {
-        return new MethodValue<T>(methodValue, targetValue, parameteres);
+    @SuppressWarnings({ "unchecked" })
+    @Deprecated
+    public ServiceBatchInjectionBuilder toInjector(final Injector<?> injector) {
+        if (batchBuilder.isDone()) {
+            throw alreadyInstalled();
+        }
+        batchServiceBuilder.addDependency(source, (Injector<Object>) injector);
+        return this;
     }
 }
