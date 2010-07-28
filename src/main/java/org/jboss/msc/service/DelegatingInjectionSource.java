@@ -39,16 +39,14 @@ abstract class DelegatingInjectionSource extends InjectionSource {
 
     @Override
     protected <T> Value<?> getValue(Value<T> serviceValue, ServiceContainerImpl container) {
-        return getValue(delegate.getValue(serviceValue, container), serviceValue, container);
+        return getValue(delegate.getValue(serviceValue, container));
     }
 
     /**
      * Contract method providing children with the value of the delegate InjectionSource.
      *
      * @param delegateValue The value from the delegate injection source
-     * @param serviceValue The service value
-     * @param container The service container
      * @return The value of the injection source
      */
-    protected abstract <T> Value<?> getValue(Value<?> delegateValue, Value<T> serviceValue, ServiceContainerImpl container);
+    protected abstract <T> Value<?> getValue(Value<?> delegateValue);
 }

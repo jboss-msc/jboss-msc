@@ -41,6 +41,7 @@ public class TranslatedInjectionDestination<I, O> extends InjectionDestination {
         this.translator = translator;
     }
 
+    @SuppressWarnings({ "unchecked" })
     @Override
     protected <T> Injector<?> getInjector(Value<T> injectionValue) {
         final Injector<O> delegateInjector = (Injector<O>) delegate.getInjector(injectionValue);

@@ -50,7 +50,7 @@ class FieldDelegatingInjectionSource extends DelegatingInjectionSource {
     }
 
     @Override
-    protected <T> Value<?> getValue(final Value<?> delegateValue, final Value<T> serviceValue, final ServiceContainerImpl container) {
+    protected <T> Value<?> getValue(final Value<?> delegateValue) {
         return new FieldValue(getFieldValue(delegateValue), delegateValue);
     }
 

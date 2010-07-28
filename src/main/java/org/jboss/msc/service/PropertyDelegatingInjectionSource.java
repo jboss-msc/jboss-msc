@@ -50,7 +50,7 @@ class PropertyDelegatingInjectionSource extends DelegatingInjectionSource {
     }
 
     @Override
-    protected <T> Value<?> getValue(final Value<?> delegateValue, final Value<T> serviceValue, final ServiceContainerImpl container) {
+    protected <T> Value<?> getValue(final Value<?> delegateValue) {
         return new PropertyValue(getPropertyValue(delegateValue), delegateValue);
     }
 
