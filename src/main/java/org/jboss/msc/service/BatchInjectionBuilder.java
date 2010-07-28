@@ -23,7 +23,6 @@
 package org.jboss.msc.service;
 
 import org.jboss.msc.inject.Injector;
-import org.jboss.msc.reflect.Property;
 import org.jboss.msc.translate.Translator;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
@@ -43,30 +42,6 @@ import java.util.List;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface BatchInjectionBuilder {
-
-    /**
-     * Specify that the target of injection be a property on the destination object.
-     *
-     * @param property the destination property name
-     * @return this builder
-     */
-    BatchInjectionBuilder toProperty(String property);
-
-    /**
-     * Specify that the target of injection be a property on the destination object.
-     *
-     * @param property the destination property
-     * @return this builder
-     */
-    BatchInjectionBuilder toProperty(Property property);
-
-    /**
-     * Specify that the target of injection be a property on the destination object.
-     *
-     * @param propertyValue the value of the destination property
-     * @return this builder
-     */
-    BatchInjectionBuilder toPropertyValue(Value<Property> propertyValue);
 
     /**
      * Specify that the target of injection be a method on the destination object.  The object being injected can be
@@ -186,31 +161,6 @@ public interface BatchInjectionBuilder {
      * @return this builder
      */
     BatchInjectionBuilder toInjector(Injector<?> injector);
-
-
-    /**
-     * Specify that the injected value should come from a property on the source object.
-     *
-     * @param propertyName the property name
-     * @return this builder
-     */
-    BatchInjectionBuilder fromProperty(String propertyName);
-
-    /**
-     * Specify that the injected value should come from a property on the source object.
-     *
-     * @param property the property
-     * @return this builder
-     */
-    BatchInjectionBuilder fromProperty(Property property);
-
-    /**
-     * Specify that the injected value should come from a property on the source object.
-     *
-     * @param propertyValue the property value
-     * @return this builder
-     */
-    BatchInjectionBuilder fromPropertyValue(Value<Property> propertyValue);
 
     /**
      * Specify that the injected value should come from the result of a method call.  The

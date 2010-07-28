@@ -23,13 +23,11 @@
 package org.jboss.msc.service;
 
 import org.jboss.msc.inject.Injector;
-import org.jboss.msc.reflect.Property;
 import org.jboss.msc.translate.Translator;
 import org.jboss.msc.value.ClassOfValue;
 import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.LookupFieldValue;
 import org.jboss.msc.value.LookupMethodValue;
-import org.jboss.msc.value.LookupPropertyValue;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
 
@@ -61,48 +59,6 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
 
     private static IllegalStateException alreadySpecified() {
         return new IllegalStateException("Injection destination already specified");
-    }
-
-    public BatchInjectionBuilderImpl toProperty(final String propertyName) {
-        if (batchBuilder.isDone()) {
-            throw alreadyInstalled();
-        }
-        if (injectionDestination != null) {
-            throw alreadySpecified();
-        }
-        injectionDestination = new PropertyInjectionDestination(new LookupPropertyValue(new ClassOfValue<Object>(target), propertyName));
-        batchServiceBuilder.getInjections().add(this);
-        return this;
-    }
-
-    public BatchInjectionBuilder toProperty(final Property property) {
-        if (batchBuilder.isDone()) {
-            throw alreadyInstalled();
-        }
-        if (injectionDestination != null) {
-            throw alreadySpecified();
-        }
-        injectionDestination = new PropertyInjectionDestination(new ImmediateValue<Property>(property));
-        batchServiceBuilder.getInjections().add(this);
-        return this;
-    }
-
-    public BatchInjectionBuilder toPropertyValue(final Value<Property> propertyValue) {
-        if (batchBuilder.isDone()) {
-            throw alreadyInstalled();
-        }
-        if (injectionDestination != null) {
-            throw alreadySpecified();
-        }
-        if (batchBuilder == null) {
-            throw new IllegalArgumentException("batchBuilder is null");
-        }
-        if (injectionDestination == null) {
-            throw new IllegalArgumentException("injectionDestination is null");
-        }
-        injectionDestination = new PropertyInjectionDestination(propertyValue);
-        batchServiceBuilder.getInjections().add(this);
-        return this;
     }
 
     public BatchInjectionBuilderImpl toMethod(final String name, final List<? extends Value<Class<?>>> parameterTypes, final List<? extends Value<?>> parameterValues) {
@@ -238,32 +194,6 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         }
         injectionDestination = new InjectorInjectionDestination(injector);
         batchServiceBuilder.getInjections().add(this);
-        return this;
-    }
-
-    public BatchInjectionBuilderImpl fromProperty(final String propertyName) {
-        if (batchBuilder.isDone()) {
-            throw alreadyInstalled();
-        }
-        if (injectionDestination != null) {
-            throw alreadySpecified();
-        }
-        injectionSource = new PropertyDelegatingInjectionSource(injectionSource, propertyName);
-        return this;
-    }
-
-    public BatchInjectionBuilderImpl fromProperty(final Property property) {
-        return fromPropertyValue(new ImmediateValue<Property>(property));
-    }
-
-    public BatchInjectionBuilderImpl fromPropertyValue(final Value<Property> propertyValue) {
-        if (batchBuilder.isDone()) {
-            throw alreadyInstalled();
-        }
-        if (injectionDestination != null) {
-            throw alreadySpecified();
-        }
-        injectionSource = new PropertyDelegatingInjectionSource(injectionSource, propertyValue);
         return this;
     }
 
