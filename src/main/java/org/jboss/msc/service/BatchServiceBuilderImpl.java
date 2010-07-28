@@ -129,15 +129,14 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         return this;
     }
 
-    @Deprecated
-    public ServiceBatchInjectionBuilder addDependency(final ServiceName dependency) {
+    public BatchServiceBuilder<T> addDependency(final ServiceName dependency) {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
         if(!serviceName.equals(dependency)) {
             dependencies.add(dependency);
         }
-        return new ServiceBatchInjectionBuilder(this, batchBuilder, dependency);
+        return this;
     }
 
     public BatchServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
@@ -160,22 +159,6 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         }
         namedInjections.add(new NamedInjection(dependency, new CastingInjector<I>(target, type)));
         return this;
-    }
-
-    @Deprecated
-    public ValueBatchInjectionBuilder addInjectionValue(final Value<?> value) {
-        if (batchBuilder.isDone()) {
-            throw alreadyInstalled();
-        }
-        return new ValueBatchInjectionBuilder(this, batchBuilder, value);
-    }
-
-    @Deprecated
-    public ValueBatchInjectionBuilder addInjection(final Object value) {
-        if (batchBuilder.isDone()) {
-            throw alreadyInstalled();
-        }
-        return new ValueBatchInjectionBuilder(this, batchBuilder, new ImmediateValue<Object>(value));
     }
 
     public <I> BatchServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {

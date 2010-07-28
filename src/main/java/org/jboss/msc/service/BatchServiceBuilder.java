@@ -90,9 +90,8 @@ public interface BatchServiceBuilder<T> {
      *
      * @param dependency the name of the dependency
      * @return an injection builder for optionally injecting the dependency
-     * @deprecated This method has inadequate type safety.  Use {@link #addDependencies(ServiceName...)} or {@link #addDependency(ServiceName, org.jboss.msc.inject.Injector)} or similar instead.
      */
-    BatchInjectionBuilder addDependency(ServiceName dependency);
+    BatchServiceBuilder<T> addDependency(ServiceName dependency);
 
     /**
      * Add a service dependency.  Calling this method multiple times for the same service name will only add it as a
@@ -116,24 +115,6 @@ public interface BatchServiceBuilder<T> {
      * @return this builder
      */
     <I> BatchServiceBuilder<T> addDependency(ServiceName dependency, Class<I> type, Injector<I> target);
-
-    /**
-     * Add an injection value.
-     *
-     * @param value the value to inject
-     * @return an injection builder for specifying the injection target
-     * @deprecated Use {@link #addInjectionValue(org.jboss.msc.inject.Injector, Value)} instead.
-     */
-    BatchInjectionBuilder addInjectionValue(Value<?> value);
-
-    /**
-     * Add an injection.
-     *
-     * @param value the value to inject
-     * @return an injection builder for specifying the injection target
-     * @deprecated Use {@link #addInjection(org.jboss.msc.inject.Injector, Object)} instead.
-     */
-    BatchInjectionBuilder addInjection(Object value);
 
     /**
      * Add an injection.  The given value will be injected into the given injector before service start, and uninjected
