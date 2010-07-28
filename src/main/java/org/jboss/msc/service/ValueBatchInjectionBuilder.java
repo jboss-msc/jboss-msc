@@ -49,7 +49,7 @@ final class ValueBatchInjectionBuilder implements BatchInjectionBuilder {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
-        batchServiceBuilder.addInjectionValue(injector, source);
+        batchServiceBuilder.<Object>addInjectionValue((Injector<Object>) injector, (Value<Object>) source);
         return this;
     }
 }
