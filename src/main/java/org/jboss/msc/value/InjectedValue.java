@@ -60,4 +60,14 @@ public final class InjectedValue<T> implements Injector<T>, Value<T> {
     public void uninject() {
         value = null;
     }
+
+    /**
+     * Get the value if it was injected, or return {@code null} if it was not.
+     *
+     * @return the value or {@code null} if it was not injected
+     */
+    public T getOptionalValue() {
+        final Value<T> value = this.value;
+        return value == null ? null : value.getValue();
+    }
 }
