@@ -22,20 +22,19 @@
 
 package org.jboss.msc.service;
 
+import java.lang.reflect.Method;
+import java.util.List;
 import org.jboss.msc.value.ClassOfValue;
 import org.jboss.msc.value.LookupMethodValue;
 import org.jboss.msc.value.MethodValue;
 import org.jboss.msc.value.Value;
-
-import java.lang.reflect.Method;
-import java.util.List;
 
 /**
  * InjectionSource that gets the value of a method from the value of a delegate InjectionSource.
  *
  * @author John E. Bailey
  */
-public class MethodDelegatingInjectionSource extends DelegatingInjectionSource {
+class MethodDelegatingInjectionSource extends DelegatingInjectionSource {
     private final String methodName;
     private final Value<Method> methodValue;
     private final List<? extends Value<?>> parameters;

@@ -33,7 +33,7 @@ import org.jboss.msc.value.Value;
  * 
  * @author John E. Bailey
  */
-public class PropertyDelegatingInjectionSource extends DelegatingInjectionSource {
+class PropertyDelegatingInjectionSource extends DelegatingInjectionSource {
     private final String propertyName;
     private final Value<Property> propertyValue;
 

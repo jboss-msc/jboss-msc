@@ -22,10 +22,9 @@
     
 package org.jboss.msc.service;
 
-import org.jboss.msc.value.Value;
-
 import java.util.HashSet;
 import java.util.Set;
+import org.jboss.msc.value.Value;
 
 /**
  * A sub-batch set of service batchEntries that should be processed as one.  Mainly used to apply batch level

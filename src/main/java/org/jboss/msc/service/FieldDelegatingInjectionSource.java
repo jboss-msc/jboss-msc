@@ -22,33 +22,31 @@
 
 package org.jboss.msc.service;
 
+import java.lang.reflect.Field;
 import org.jboss.msc.value.ClassOfValue;
 import org.jboss.msc.value.FieldValue;
 import org.jboss.msc.value.LookupFieldValue;
-import org.jboss.msc.value.LookupPropertyValue;
 import org.jboss.msc.value.Value;
-
-import java.lang.reflect.Field;
 
 /**
  * InjectionSource that gets the value of a field from the value of a delegate InjectionSource. 
  *
  * @author John E. Bailey
  */
-public class FieldDelegatingInjectionSource extends DelegatingInjectionSource {
+class FieldDelegatingInjectionSource extends DelegatingInjectionSource {
     private final Value<Field> fieldValue;
     private final String fieldName;
 
     public FieldDelegatingInjectionSource(final InjectionSource delegate, final Value<Field> fieldValue) {
         super(delegate);
         this.fieldValue = fieldValue;
-        this.fieldName = null;
+        fieldName = null;
     }
 
     public FieldDelegatingInjectionSource(final InjectionSource delegate, final String fieldName) {
         super(delegate);
         this.fieldName = fieldName;
-        this.fieldValue = null;
+        fieldValue = null;
     }
 
     @Override

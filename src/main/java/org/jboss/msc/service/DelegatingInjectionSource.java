@@ -29,7 +29,7 @@ import org.jboss.msc.value.Value;
  *
  * @author John E. Bailey
  */
-public abstract class DelegatingInjectionSource extends InjectionSource {
+abstract class DelegatingInjectionSource extends InjectionSource {
 
     private final InjectionSource delegate;
 

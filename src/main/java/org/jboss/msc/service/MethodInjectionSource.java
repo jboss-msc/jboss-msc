@@ -22,16 +22,15 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.value.MethodValue;
-import org.jboss.msc.value.Value;
-
 import java.lang.reflect.Method;
 import java.util.List;
+import org.jboss.msc.value.MethodValue;
+import org.jboss.msc.value.Value;
 
 /**
  * @author John E. Bailey
  */
-public class MethodInjectionSource extends InjectionSource {
+class MethodInjectionSource extends InjectionSource {
     private final Value<Method> methodValue;
     private final Value<?> targetValue;
     private final List<? extends Value<?>> parameteres;
