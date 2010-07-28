@@ -37,7 +37,7 @@ final class PropertyInjectionDestination extends InjectionDestination {
         this.propertyValue = propertyValue;
     }
 
-    protected <T> Injector<?> getInjector(final Value<T> injectionValue, final ServiceBuilder<T> serviceBuilder, final ServiceContainerImpl registry) {
+    protected <T> Injector<?> getInjector(final Value<T> injectionValue) {
         return new PropertyInjector<T>(propertyValue, injectionValue);
     }
 }

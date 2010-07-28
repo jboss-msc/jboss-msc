@@ -38,7 +38,7 @@ final class FieldInjectionDestination extends InjectionDestination {
         this.fieldValue = fieldValue;
     }
 
-    protected <T> Injector<?> getInjector(final Value<T> injectionValue, final ServiceBuilder<T> serviceBuilder, final ServiceContainerImpl registry) {
+    protected <T> Injector<?> getInjector(final Value<T> injectionValue) {
         return new FieldInjector<Object>(injectionValue, fieldValue);
     }
 }

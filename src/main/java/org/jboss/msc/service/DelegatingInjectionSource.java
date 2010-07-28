@@ -33,13 +33,13 @@ public abstract class DelegatingInjectionSource extends InjectionSource {
 
     private final InjectionSource delegate;
 
-    public DelegatingInjectionSource(InjectionSource delegate) {
+    protected DelegatingInjectionSource(InjectionSource delegate) {
         this.delegate = delegate;
     }
 
     @Override
-    protected <T> Value<?> getValue(Value<T> serviceValue, ServiceBuilder<T> serviceBuilder, ServiceContainerImpl container) {
-        return getValue(delegate.getValue(serviceValue, serviceBuilder, container), serviceValue, serviceBuilder, container);
+    protected <T> Value<?> getValue(Value<T> serviceValue, ServiceContainerImpl container) {
+        return getValue(delegate.getValue(serviceValue, container), serviceValue, container);
     }
 
     /**
@@ -47,9 +47,8 @@ public abstract class DelegatingInjectionSource extends InjectionSource {
      *
      * @param delegateValue The value from the delegate injection source
      * @param serviceValue The service value
-     * @param serviceBuilder The service builder
      * @param container The service container
      * @return The value of the injection source
      */
-    protected abstract <T> Value<?> getValue(Value<?> delegateValue, Value<T> serviceValue, ServiceBuilder<T> serviceBuilder, ServiceContainerImpl container);
+    protected abstract <T> Value<?> getValue(Value<?> delegateValue, Value<T> serviceValue, ServiceContainerImpl container);
 }

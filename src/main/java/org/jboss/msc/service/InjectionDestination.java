@@ -29,5 +29,5 @@ import org.jboss.msc.value.Value;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 abstract class InjectionDestination {
-    protected abstract <T> Injector<?> getInjector(final Value<T> injectionValue, ServiceBuilder<T> serviceBuilder, ServiceContainerImpl registry);
+    protected abstract <T> Injector<?> getInjector(final Value<T> injectionValue);
 }

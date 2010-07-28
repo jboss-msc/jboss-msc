@@ -42,7 +42,7 @@ final class PropertyInjectionSource extends InjectionSource {
         this.propertySpec = propertySpec;
     }
 
-    protected <T> Value<?> getValue(final Value<T> serviceValue, final ServiceBuilder<T> serviceBuilder, final ServiceContainerImpl registry) {
+    protected <T> Value<?> getValue(final Value<T> serviceValue, final ServiceContainerImpl registry) {
         final String propertySpec = this.propertySpec;
         Value<?> prevValue = registry.getService(dependency);
         for (int current = 0, next = propertySpec.indexOf('.'); current != -1; current = next, next = propertySpec.indexOf('.', current + 1)) {

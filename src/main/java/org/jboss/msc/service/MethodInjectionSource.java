@@ -43,7 +43,7 @@ public class MethodInjectionSource extends InjectionSource {
     }
 
     @Override
-    protected <T> Value<?> getValue(Value<T> serviceValue, ServiceBuilder<T> serviceBuilder, ServiceContainerImpl container) {
+    protected <T> Value<?> getValue(Value<T> serviceValue, ServiceContainerImpl container) {
         return new MethodValue<T>(methodValue, targetValue, parameteres);
     }
 }

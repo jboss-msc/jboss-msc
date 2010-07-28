@@ -28,6 +28,6 @@ import org.jboss.msc.value.Value;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 abstract class InjectionSource {
-    protected abstract <T> Value<?> getValue(final Value<T> serviceValue, ServiceBuilder<T> serviceBuilder, ServiceContainerImpl container);
+    protected abstract <T> Value<?> getValue(final Value<T> serviceValue, ServiceContainerImpl container);
 
 }

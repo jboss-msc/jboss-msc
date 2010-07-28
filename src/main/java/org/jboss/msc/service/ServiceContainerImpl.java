@@ -291,7 +291,7 @@ final class ServiceContainerImpl implements ServiceContainer {
 
             for(BatchInjectionBuilderImpl injection : entry.getInjections()) {
                 builder.addValueInjection(
-                        valueInjection(serviceValue, builder, injection)
+                        valueInjection(serviceValue, injection)
                 );
             }
             final ServiceController.Mode initialMode = entry.getInitialMode();
@@ -323,10 +323,10 @@ final class ServiceContainerImpl implements ServiceContainer {
     }
 
     @SuppressWarnings({ "unchecked" })
-    private <T> ValueInjection<T> valueInjection(final Value<? extends Service<T>> serviceValue, final ServiceBuilder<T> builder, final BatchInjectionBuilderImpl injection) {
+    private <T> ValueInjection<T> valueInjection(final Value<? extends Service<T>> serviceValue, final BatchInjectionBuilderImpl injection) {
         return new ValueInjection(
-                injection.getSource().getValue((Value)serviceValue, builder, this),
-                injection.getDestination().getInjector((Value)serviceValue, builder, this)
+                injection.getSource().getValue((Value)serviceValue, this),
+                injection.getDestination().getInjector((Value)serviceValue)
         );
     }
 

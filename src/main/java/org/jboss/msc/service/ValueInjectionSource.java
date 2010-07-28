@@ -35,7 +35,7 @@ final class ValueInjectionSource extends InjectionSource {
         this.sourceValue = sourceValue;
     }
 
-    protected <T> Value<?> getValue(final Value<T> serviceValue, final ServiceBuilder<T> serviceBuilder, final ServiceContainerImpl registry) {
+    protected <T> Value<?> getValue(final Value<T> serviceValue, final ServiceContainerImpl registry) {
         return sourceValue;
     }
 }

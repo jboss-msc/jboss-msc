@@ -36,7 +36,7 @@ final class InjectorInjectionDestination extends InjectionDestination {
         this.injector = injector;
     }
 
-    protected <T> Injector<?> getInjector(final Value<T> injectionValue, final ServiceBuilder<T> serviceBuilder, final ServiceContainerImpl registry) {
+    protected <T> Injector<?> getInjector(final Value<T> injectionValue) {
         return injector;
     }
 }

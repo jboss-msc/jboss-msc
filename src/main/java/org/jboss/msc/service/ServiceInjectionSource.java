@@ -34,7 +34,7 @@ final class ServiceInjectionSource extends InjectionSource {
         this.serviceName = serviceName;
     }
 
-    protected <T> Value<?> getValue(final Value<T> serviceValue, final ServiceBuilder<T> serviceBuilder, final ServiceContainerImpl registry) {
+    protected <T> Value<?> getValue(final Value<T> serviceValue, final ServiceContainerImpl registry) {
         try {
             return registry.getRequiredService(serviceName);
         } catch (ServiceNotFoundException e) {

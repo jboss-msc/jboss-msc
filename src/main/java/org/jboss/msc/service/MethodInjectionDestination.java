@@ -50,7 +50,7 @@ final class MethodInjectionDestination extends InjectionDestination {
         this.targetValue = targetValue;
     }
 
-    protected <T> Injector<?> getInjector(final Value<T> injectionValue, final ServiceBuilder<T> serviceBuilder, final ServiceContainerImpl registry) {
+    protected <T> Injector<?> getInjector(final Value<T> injectionValue) {
         return new MethodInjector<Object>(methodValue, targetValue, injectionValue, parameterValues);
     }
 }
