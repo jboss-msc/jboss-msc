@@ -35,7 +35,6 @@ import org.jboss.msc.value.Values;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -46,12 +45,10 @@ import static org.jboss.msc.service.BatchBuilderImpl.alreadyInstalled;
  */
 final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
 
-    private final List<Translator<?, ?>> translators = new ArrayList<Translator<?,?>>();
     private final BatchServiceBuilderImpl<?> batchServiceBuilder;
     private final BatchBuilderImpl batchBuilder;
 
     private Value<?> target;
-    private Value<?> injectionValue;
     private InjectionSource injectionSource;
     private InjectionDestination injectionDestination;
 
@@ -59,7 +56,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         this.batchServiceBuilder = batchServiceBuilder;
         this.injectionSource = injectionSource;
         this.batchBuilder = batchBuilder;
-        this.target = batchServiceBuilder.getServiceValue();
+        target = batchServiceBuilder.getServiceValue();
     }
 
     private static IllegalStateException alreadySpecified() {
@@ -346,6 +343,7 @@ final class BatchInjectionBuilderImpl implements BatchInjectionBuilder {
         return this;
     }
 
+    @SuppressWarnings({ "unchecked" })
     @Override
     public BatchInjectionBuilder via(Translator<?, ?> translator) {
         if (batchBuilder.isDone()) {
