@@ -33,7 +33,6 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <msc.version>1.0.0.CR1</msc.version>
     </properties>
 
     <dependencies>
@@ -110,7 +109,7 @@
                 <configuration>
                     <bytecodeInjections>
                         <bytecodeInjection>
-                            <expression>${msc.version}</expression>
+                            <expression>${project.version}</expression>
                             <targetMembers>
                                 <methodBodyReturn>
                                     <className>org.jboss.msc.Version</className>
