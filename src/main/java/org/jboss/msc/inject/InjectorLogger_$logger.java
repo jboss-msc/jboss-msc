@@ -22,47 +22,20 @@
 
 package org.jboss.msc.inject;
 
-import java.lang.reflect.Field;
-import org.jboss.msc.value.Value;
+import org.jboss.logging.Cause;
+import org.jboss.logging.Logger;
 
 /**
- * An injector which updates the value of a field.
- *
- * @param <T> the value type
+ * @deprecated Will be removed when the logger tooling is complete.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class FieldInjector<T> implements Injector<T> {
+@Deprecated
+public final class InjectorLogger_$logger implements InjectorLogger {
 
-    private final Value<?> target;
-    private final Value<Field> fieldValue;
-
-    /**
-     * Construct a new instance.
-     *
-     * @param target the object whose field is to be updated
-     * @param fieldValue the field to update
-     */
-    public FieldInjector(final Value<?> target, final Value<Field> fieldValue) {
-        this.target = target;
-        this.fieldValue = fieldValue;
+    public InjectorLogger_$logger(Logger logger) {
     }
 
-    /** {@inheritDoc} */
-    public void inject(final T value) {
-        try {
-            fieldValue.getValue().set(target.getValue(), value);
-        } catch (Exception e) {
-            throw new InjectionException("Failed to inject value into field", e);
-        }
-    }
-
-    /** {@inheritDoc} */
-    public void uninject() {
-        try {
-            fieldValue.getValue().set(target.getValue(), null);
-        } catch (Throwable throwable) {
-            InjectorLogger.INSTANCE.uninjectFailed(throwable, fieldValue);
-        }
+    public void uninjectFailed(@Cause final Throwable cause, final Object target) {
     }
 }

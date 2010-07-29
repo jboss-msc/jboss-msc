@@ -23,7 +23,6 @@
 package org.jboss.msc.inject;
 
 import java.lang.reflect.Method;
-import org.jboss.logging.Logger;
 import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 
@@ -35,7 +34,6 @@ import org.jboss.msc.value.Value;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class SetMethodInjector<T> implements Injector<T> {
-    private static final Logger log = Logger.getI18nLogger("org.jboss.msc.inject.method", null, "MSC");
 
     private final static Object[] NULL_PARAM = new Object[] {null};
 
@@ -133,7 +131,7 @@ public final class SetMethodInjector<T> implements Injector<T> {
         try {
             methodValue.getValue().invoke(target.getValue(), NULL_PARAM);
         } catch (Exception e) {
-            log.warnf(e, "Unexpected failure to uninject method");
+            InjectorLogger.INSTANCE.uninjectFailed(e, methodValue);
         }
     }
 }

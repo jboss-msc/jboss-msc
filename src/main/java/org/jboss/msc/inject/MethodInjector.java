@@ -22,7 +22,6 @@
 
 package org.jboss.msc.inject;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 import org.jboss.msc.value.ImmediateValue;
@@ -78,10 +77,8 @@ public final class MethodInjector<T> implements Injector<T> {
             final Value<?> oldThis = thisValue.getAndSetValue(targetValue);
             try {
                 methodValue.getValue().invoke(targetValue.getValue(), Values.getValues(parameterList));
-            } catch (InvocationTargetException e) {
-                // todo log it
-            } catch (IllegalAccessException e) {
-                // todo log it
+            } catch (Throwable t) {
+                InjectorLogger.INSTANCE.uninjectFailed(t, methodValue);
             } finally {
                 thisValue.setValue(oldThis);
             }
