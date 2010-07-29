@@ -232,6 +232,16 @@ final class ServiceContainerImpl implements ServiceContainer {
         }
     }
 
+    /**
+     * Remove an entry.
+     *
+     * @param serviceName the service name
+     * @param controller the controller
+     */
+    void remove(final ServiceName serviceName, final ServiceControllerImpl<?> controller) {
+        registry.remove(serviceName, controller);
+    }
+
     private void resolve(final Map<ServiceName, BatchServiceBuilderImpl<?>> services) throws ServiceRegistryException {
         for (BatchServiceBuilderImpl<?> batchEntry : services.values()) {
             if(!batchEntry.processed)
@@ -250,6 +260,7 @@ final class ServiceContainerImpl implements ServiceContainer {
             if ((builder = entry.builder) == null) {
                 builder = entry.builder = buildService(name, serviceValue);
             }
+            builder.addAliases(entry.getAliases());
 
             final ServiceName[] deps = entry.getDependencies();
             final ServiceName[] aliases = entry.getAliases();
@@ -282,8 +293,6 @@ final class ServiceContainerImpl implements ServiceContainer {
             }
 
             // We are resolved.  Lets install
-            builder.addListener(new ServiceUnregisterListener(name, aliases));
-
             for(ServiceListener<? super T> listener : entry.getListeners()) {
                 builder.addListener(listener);
             }
@@ -333,26 +342,5 @@ final class ServiceContainerImpl implements ServiceContainer {
 
     public ServiceController<?> getService(final ServiceName serviceName) {
         return registry.get(serviceName);
-    }
-
-    private class ServiceUnregisterListener extends AbstractServiceListener<Object> {
-        private final ServiceName serviceName;
-        private final ServiceName[] aliases;
-
-        private ServiceUnregisterListener(ServiceName serviceName, ServiceName[] aliases) {
-            this.serviceName = serviceName;
-            this.aliases = aliases;
-        }
-
-        @Override
-        public void serviceRemoved(ServiceController serviceController) {
-            if(!registry.remove(serviceName, serviceController))
-                throw new RuntimeException("Removed service [" + serviceName + "] was not unregistered");
-            
-            for(ServiceName alias : aliases) {
-                if(!registry.remove(alias, serviceController))
-                    throw new RuntimeException("Removed service alias [" + alias + "] was not unregistered");
-            }
-        }
     }
 }

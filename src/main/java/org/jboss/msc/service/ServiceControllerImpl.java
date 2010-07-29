@@ -158,9 +158,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
      */
     private final IdentityHashSet<ServiceControllerImpl<?>> dependents = new IdentityHashSet<ServiceControllerImpl<?>>(0);
     /**
-     * The service name, if any.
+     * The service name.
      */
     private final ServiceName serviceName;
+    /**
+     * The service's aliases, if any.
+     */
+    private final ServiceName[] serviceAliases;
     /**
      * The start exception.
      */
@@ -196,13 +200,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
      */
     private int asyncTasks;
 
-    ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service<? extends S>> serviceValue, final Location location, final ServiceControllerImpl<?>[] dependencies, final ValueInjection<?>[] injections, final ServiceName serviceName) {
+    ServiceControllerImpl(final ServiceContainerImpl container, final Value<? extends Service<? extends S>> serviceValue, final Location location, final ServiceControllerImpl<?>[] dependencies, final ValueInjection<?>[] injections, final ServiceName serviceName, final ServiceName[] serviceAliases) {
         this.container = container;
         this.serviceValue = serviceValue;
         this.location = location;
         this.dependencies = dependencies;
         this.injections = injections;
         this.serviceName = serviceName;
+        this.serviceAliases = serviceAliases;
         upperCount = - dependencies.length;
     }
 
@@ -226,6 +231,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
 
     public ServiceName getName() {
         return serviceName;
+    }
+
+    public ServiceName[] getAliases() {
+        final ServiceName[] names = serviceAliases;
+        return names.length == 0 ? names : names.clone();
     }
 
     public void addListener(final ServiceListener<? super S> listener) {
@@ -1181,6 +1191,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             try {
                 assert getMode() == Mode.REMOVE;
                 assert getState() == State.REMOVED;
+                container.remove(serviceName, ServiceControllerImpl.this);
+                for (ServiceName name : serviceAliases) {
+                    container.remove(name, ServiceControllerImpl.this);
+                }
                 for (ServiceControllerImpl<?> dependent : dependents) {
                     if (dependent != null) dependent.setMode(Mode.REMOVE);
                 }

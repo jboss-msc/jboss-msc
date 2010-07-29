@@ -95,4 +95,20 @@ interface ServiceBuilder<S> {
      * @return the service controller
      */
     ServiceController<S> create();
+
+    /**
+     * Add an alias for this service.
+     *
+     * @param alias the alias
+     * @return this builder
+     */
+    ServiceBuilder<S> addAlias(ServiceName alias);
+
+    /**
+     * Add aliases for this service.
+     *
+     * @param aliases the aliases
+     * @return this builder
+     */
+    ServiceBuilder<S> addAliases(ServiceName... aliases);
 }

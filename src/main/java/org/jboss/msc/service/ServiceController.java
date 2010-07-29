@@ -75,6 +75,13 @@ public interface ServiceController<S> extends Value<S> {
     ServiceName getName();
 
     /**
+     * Get other names this service is known as.
+     *
+     * @return the aliases
+     */
+    ServiceName[] getAliases();
+
+    /**
      * Add a service listener.  The method corresponding to the current service state is called.
      *
      * @param serviceListener the service listener

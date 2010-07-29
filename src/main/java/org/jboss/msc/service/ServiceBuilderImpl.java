@@ -23,6 +23,7 @@
 package org.jboss.msc.service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.value.Value;
@@ -36,6 +37,7 @@ final class ServiceBuilderImpl<S> implements ServiceBuilder<S> {
     private final List<ServiceControllerImpl<?>> deps = new ArrayList<ServiceControllerImpl<?>>(0);
     private final List<ValueInjection<?>> injections = new ArrayList<ValueInjection<?>>(0);
     private final List<ServiceListener<? super S>> listeners = new ArrayList<ServiceListener<? super S>>(0);
+    private final List<ServiceName> aliases = new ArrayList<ServiceName>(0);
     private final Value<? extends Service<? extends S>> service;
     private final ServiceName serviceName;
 
@@ -138,8 +140,19 @@ final class ServiceBuilderImpl<S> implements ServiceBuilder<S> {
         }
     }
 
+    public ServiceBuilderImpl<S> addAlias(ServiceName alias) {
+        aliases.add(alias);
+        return this;
+    }
+
+    public ServiceBuilderImpl<S> addAliases(ServiceName... aliases) {
+        this.aliases.addAll(Arrays.asList(aliases));
+        return this;
+    }
+
     private static final ServiceControllerImpl<?>[] NO_DEPS = new ServiceControllerImpl<?>[0];
     private static final ValueInjection<?>[] NO_INJECTIONS = new ValueInjection<?>[0];
+    private static final ServiceName[] NO_ALIASES = new ServiceName[0];
 
     private ServiceControllerImpl<S> doCreate() {
         synchronized (this) {
@@ -147,9 +160,11 @@ final class ServiceBuilderImpl<S> implements ServiceBuilder<S> {
             final List<ValueInjection<?>> injections = this.injections;
             final int depsSize = deps.size();
             final int injectionsSize = injections.size();
+            final int aliasesSize = aliases.size();
             final ServiceControllerImpl<?>[] depArray = depsSize == 0 ? NO_DEPS : deps.toArray(new ServiceControllerImpl<?>[depsSize]);
             final ValueInjection<?>[] injectionArray = injectionsSize == 0 ? NO_INJECTIONS : injections.toArray(new ValueInjection<?>[injectionsSize]);
-            final ServiceControllerImpl<S> controller = this.controller = new ServiceControllerImpl<S>(container, service, location, depArray, injectionArray, serviceName);
+            final ServiceName[] aliasNames = aliasesSize == 0 ? NO_ALIASES : aliases.toArray(new ServiceName[aliasesSize]);
+            final ServiceControllerImpl<S> controller = this.controller = new ServiceControllerImpl<S>(container, service, location, depArray, injectionArray, serviceName, aliasNames);
             controller.initialize();
             for (ServiceListener<? super S> listener : listeners) {
                 controller.addListener(listener);
