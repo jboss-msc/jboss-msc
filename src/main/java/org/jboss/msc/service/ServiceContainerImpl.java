@@ -275,7 +275,7 @@ final class ServiceContainerImpl implements ServiceContainer {
 
                         continue outer;
                     } else if(serviceDependency.isOptional()) {
-                        entry.invalidInjections.addAll(serviceDependency.getNamedInjections());
+                        entry.missingOptionalDependencies.add(dependencyName);
                     } else {
                         throw new MissingDependencyException("Missing dependency: " + name + " depends on " + dependencyName + " which can not be found");
                     }
@@ -294,7 +294,7 @@ final class ServiceContainerImpl implements ServiceContainer {
             }
 
             for(NamedInjection namedInjection : entry.getNamedInjections()) {
-                if(!entry.invalidInjections.contains(namedInjection))
+                if(!entry.missingOptionalDependencies.contains(namedInjection.getName()))
                     builder.addValueInjection(new ValueInjection<Object>(getRequiredService(namedInjection.getName()), namedInjection.getTarget()));
             }
 

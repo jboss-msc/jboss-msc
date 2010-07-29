@@ -22,9 +22,6 @@
 
 package org.jboss.msc.service;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * A service dependency used when describing service controller configuration.
  * 
@@ -33,17 +30,10 @@ import java.util.List;
 final class ServiceDependency {
     private final ServiceName serviceName;
     private boolean optional;
-    private final List<NamedInjection> namedInjections = new ArrayList<NamedInjection>();
 
     ServiceDependency(ServiceName serviceName, boolean optional) {
-        this(serviceName, optional, null);
-    }
-
-    ServiceDependency(ServiceName serviceName, boolean optional, NamedInjection namedInjection) {
         this.serviceName = serviceName;
         this.optional = optional;
-        if(namedInjection != null)
-            namedInjections.add(namedInjection);
     }
 
     ServiceName getServiceName() {
@@ -56,13 +46,5 @@ final class ServiceDependency {
 
     boolean isOptional() {
         return optional;
-    }
-
-    void addNamedInjection(final NamedInjection namedInjection) {
-        namedInjections.add(namedInjection);
-    }
-
-    List<NamedInjection> getNamedInjections() {
-        return namedInjections;
     }
 }
