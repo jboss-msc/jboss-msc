@@ -31,7 +31,6 @@ import org.jboss.msc.value.Value;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -275,17 +274,14 @@ final class ServiceContainerImpl implements ServiceContainer {
                             throw new CircularDependencyException("Circular dependency discovered: " + name);
 
                         continue outer;
-                    } else if(!serviceDependency.isOptional()) {
+                    } else if(serviceDependency.isOptional()) {
+                        entry.invalidInjections.addAll(serviceDependency.getNamedInjections());
+                    } else {
                         throw new MissingDependencyException("Missing dependency: " + name + " depends on " + dependencyName + " which can not be found");
                     }
                 } else {
                     // Either the dep already exists, or we are unrolling and just created it
                     builder.addDependency(dependencyController);
-                    // If the dep has an injections
-                    final List<NamedInjection> namedInjections = serviceDependency.getNamedInjections();
-                    for(NamedInjection namedInjection : namedInjections) {
-                        builder.addValueInjection(new ValueInjection<Object>(dependencyController, namedInjection.getTarget()));
-                    }
                 }
                 entry.i++;
             }
@@ -295,6 +291,11 @@ final class ServiceContainerImpl implements ServiceContainer {
 
             for(ServiceListener<? super T> listener : entry.getListeners()) {
                 builder.addListener(listener);
+            }
+
+            for(NamedInjection namedInjection : entry.getNamedInjections()) {
+                if(!entry.invalidInjections.contains(namedInjection))
+                    builder.addValueInjection(new ValueInjection<Object>(getRequiredService(namedInjection.getName()), namedInjection.getTarget()));
             }
 
             for (ValueInjection<?> valueInjection : entry.getValueInjections()) {

@@ -51,7 +51,7 @@ final class ServiceDependency {
     }
 
     void setOptional(boolean optional) {
-        this.optional = this.optional && optional;  
+        this.optional = this.optional && optional;
     }
 
     boolean isOptional() {
