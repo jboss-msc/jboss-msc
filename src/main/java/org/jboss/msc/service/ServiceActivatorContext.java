@@ -23,16 +23,15 @@
 package org.jboss.msc.service;
 
 /**
- * A service activator which contributes services to a batch.
+ * Context provided to ServiceActivator instances at execution time.
  *
- * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author John E. Bailey
  */
-public interface ServiceActivator {
-
+public interface ServiceActivatorContext {
     /**
-     * Activate services.
+     * Get the BatchBuilder for this activation.
      *
-     * @param serviceActivatorContext the activation context
+     * @return the batch builder
      */
-    void activate(ServiceActivatorContext serviceActivatorContext);
+    BatchBuilder getBatchBuilder();
 }

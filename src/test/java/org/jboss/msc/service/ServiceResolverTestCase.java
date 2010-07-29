@@ -21,15 +21,15 @@
  */
 package org.jboss.msc.service;
 
+import org.jboss.msc.service.util.LatchedFinishListener;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-import org.jboss.msc.service.util.LatchedFinishListener;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -183,6 +183,30 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
             }
         });
     }
+
+
+    @Test
+    public void testOptionalDependency() throws Exception {
+        final OrderedStartListener startListener = new OrderedStartListener();
+        performTest(new ServiceTestInstance() {
+            private boolean failed;
+
+            @Override
+            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
+                final BatchBuilder builder = serviceContainer.batchBuilder();
+                builder.addService(ServiceName.of("7"), Service.NULL).addOptionalDependencies(ServiceName.of("11"), ServiceName.of("8"));
+                builder.addListener(startListener);
+                builder.addListener(finishListener);
+                return Collections.singletonList(builder);
+            }
+
+            @Override
+            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
+                assertEquals(1, startListener.startedControllers.size());
+            }
+        });
+    }
+
 
     private List<ServiceController<?>> getServiceDependencies(ServiceContainer serviceContainer, final ServiceController<?> serviceController) throws IllegalAccessException {
         ServiceController<?>[] deps = (ServiceControllerImpl<?>[]) dependenciesField.get(serviceController);

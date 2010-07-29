@@ -22,6 +22,13 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.ref.Reaper;
+import org.jboss.msc.ref.Reference;
+import org.jboss.msc.ref.WeakReference;
+import org.jboss.msc.value.ImmediateValue;
+import org.jboss.msc.value.Value;
+import org.jboss.msc.value.Values;
+
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashSet;
@@ -35,11 +42,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import org.jboss.msc.ref.Reaper;
-import org.jboss.msc.ref.Reference;
-import org.jboss.msc.ref.WeakReference;
-import org.jboss.msc.value.ImmediateValue;
-import org.jboss.msc.value.Value;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -271,24 +273,27 @@ final class ServiceContainerImpl implements ServiceContainer {
                 ServiceController<?> dependencyController = registry.get(dependencyName);
                 if (dependencyController == null) {
                     final BatchServiceBuilderImpl dependencyEntry = services.get(dependencyName);
-                    if (dependencyEntry == null)
+                    if(dependencyEntry != null) {
+                        // Backup the last position, so that we can unroll
+                        assert dependencyEntry.prev == null;
+                        dependencyEntry.prev = entry;
+
+                        entry.visited = true;
+                        entry = dependencyEntry;
+
+                        if (entry.visited)
+                            throw new CircularDependencyException("Circular dependency discovered: " + name);
+
+                        continue outer;
+                    } else if(entry.isOptionalDependency(dependencyName)) {
+                        entry.missingOptionalDependencies.add(dependencyName);
+                    } else {
                         throw new MissingDependencyException("Missing dependency: " + name + " depends on " + dependencyName + " which can not be found");
-
-                    // Backup the last position, so that we can unroll
-                    assert dependencyEntry.prev == null;
-                    dependencyEntry.prev = entry;
-
-                    entry.visited = true;
-                    entry = dependencyEntry;
-
-                    if (entry.visited)
-                        throw new CircularDependencyException("Circular dependency discovered: " + name);
-
-                    continue outer;
+                    }
+                } else {
+                    // Either the dep already exists, or we are unrolling and just created it
+                    builder.addDependency(dependencyController);
                 }
-
-                // Either the dep already exists, or we are unrolling and just created it
-                builder.addDependency(dependencyController);
                 entry.i++;
             }
 
@@ -297,9 +302,14 @@ final class ServiceContainerImpl implements ServiceContainer {
                 builder.addListener(listener);
             }
 
-            for (NamedInjection namedInjection : entry.getNamedInjections()) {
-                builder.addValueInjection(new ValueInjection<Object>(getRequiredService(namedInjection.getName()), namedInjection.getTarget()));
+            for(NamedInjection namedInjection : entry.getNamedInjections()) {
+                if(!entry.missingOptionalDependencies.contains(namedInjection.getName())) {
+                    builder.addValueInjection(new ValueInjection<Object>(getRequiredService(namedInjection.getName()), namedInjection.getTarget()));
+                } else {
+                    builder.addValueInjection(new ValueInjection<Object>(Values.nullValue(), namedInjection.getTarget()));
+                }
             }
+
             for (ValueInjection<?> valueInjection : entry.getValueInjections()) {
                 builder.addValueInjection(valueInjection);
             }
