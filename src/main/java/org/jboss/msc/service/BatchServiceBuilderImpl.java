@@ -190,7 +190,7 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
 
     private void doAddDependency(final ServiceName dependency, final boolean optional) {
         final Boolean existing = dependencies.get(dependency);
-        dependencies.put(dependency, existing != null ? existing && optional : optional);
+        dependencies.put(dependency, Boolean.valueOf(existing != null ? existing.booleanValue() && optional : optional));
     }
 
     public <I> BatchServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {
