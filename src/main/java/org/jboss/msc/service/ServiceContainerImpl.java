@@ -253,12 +253,11 @@ final class ServiceContainerImpl implements ServiceContainer {
                 builder = entry.builder = buildService(name, serviceValue);
             }
 
-            final ServiceDependency[] deps = entry.getDependencies();
+            final ServiceName[] deps = entry.getDependencies();
             final ServiceName[] aliases = entry.getAliases();
 
             while (entry.i < deps.length) {
-                final ServiceDependency serviceDependency = deps[entry.i];
-                final ServiceName dependencyName = serviceDependency.getServiceName();
+                final ServiceName dependencyName = deps[entry.i];
 
                 ServiceController<?> dependencyController = registry.get(dependencyName);
                 if (dependencyController == null) {
@@ -275,7 +274,7 @@ final class ServiceContainerImpl implements ServiceContainer {
                             throw new CircularDependencyException("Circular dependency discovered: " + name);
 
                         continue outer;
-                    } else if(serviceDependency.isOptional()) {
+                    } else if(entry.isOptionalDependency(dependencyName)) {
                         entry.missingOptionalDependencies.add(dependencyName);
                     } else {
                         throw new MissingDependencyException("Missing dependency: " + name + " depends on " + dependencyName + " which can not be found");

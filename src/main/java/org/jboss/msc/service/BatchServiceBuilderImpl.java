@@ -48,11 +48,11 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
     private Location location;
     private ServiceController.Mode initialMode;
     private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
-    private final Map<ServiceName, ServiceDependency> dependencies = new HashMap<ServiceName, ServiceDependency>(0);
+    private final Map<ServiceName, Boolean> dependencies = new HashMap<ServiceName, Boolean>(0);
     private final List<ServiceListener<? super T>> listeners = new ArrayList<ServiceListener<? super T>>(0);
     private final List<ValueInjection<?>> valueInjections = new ArrayList<ValueInjection<?>>(0);
     private final List<NamedInjection> namedInjections = new ArrayList<NamedInjection>(0);
-    private ServiceDependency[] serviceDependenciesArray;
+    private ServiceName[] dependenciesArray;
 
     // Resolver state
     boolean processed;
@@ -189,12 +189,8 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
     }
 
     private void doAddDependency(final ServiceName dependency, final boolean optional) {
-        if(dependencies.containsKey(dependency)) {
-            final ServiceDependency serviceDependency = dependencies.get(dependency);
-            serviceDependency.setOptional(optional);
-        } else {
-            dependencies.put(dependency, new ServiceDependency(dependency, optional));
-        }
+        final Boolean existing = dependencies.get(dependency);
+        dependencies.put(dependency, existing != null ? existing && optional : optional);
     }
 
     public <I> BatchServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {
@@ -246,11 +242,16 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         return aliases.toArray(new ServiceName[aliases.size()]);
     }
 
-    ServiceDependency[] getDependencies() {
-        if(serviceDependenciesArray == null) {
-            serviceDependenciesArray = dependencies.values().toArray(new ServiceDependency[dependencies.size()]);
+    ServiceName[] getDependencies() {
+        if(dependenciesArray == null) {
+            dependenciesArray = dependencies.keySet().toArray(new ServiceName[dependencies.size()]);
         }
-        return serviceDependenciesArray;
+        return dependenciesArray;
+    }
+
+    boolean isOptionalDependency(final ServiceName serviceName) {
+        final Boolean optional = dependencies.get(serviceName);
+        return optional != null ? optional.booleanValue() : false;
     }
 
     Iterable<? extends ServiceListener<? super T>> getListeners() {
