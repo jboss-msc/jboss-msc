@@ -22,15 +22,18 @@
 
 package org.jboss.msc.service;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import org.jboss.msc.inject.CastingInjector;
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.jboss.msc.service.BatchBuilderImpl.alreadyInstalled;
 
@@ -45,10 +48,9 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
     private Location location;
     private ServiceController.Mode initialMode;
     private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
-    private final Set<ServiceName> dependencies = new HashSet<ServiceName>(0);
+    private final Map<ServiceName, ServiceDependency> dependencies = new HashMap<ServiceName, ServiceDependency>(0);
     private final List<ServiceListener<? super T>> listeners = new ArrayList<ServiceListener<? super T>>(0);
     private final List<ValueInjection<?>> valueInjections = new ArrayList<ValueInjection<?>>(0);
-    private final List<NamedInjection> namedInjections = new ArrayList<NamedInjection>(0);
 
     // Resolver state
     boolean processed;
@@ -104,61 +106,110 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
     }
 
     public BatchServiceBuilder<T> addDependencies(final ServiceName... newDependencies) {
+        return addDependencies(false, newDependencies);
+    }
+
+    public BatchServiceBuilder<T> addOptionalDependencies(final ServiceName... newDependencies) {
+        return addDependencies(true, newDependencies);
+    }
+
+    private BatchServiceBuilder<T> addDependencies(final boolean optional, final ServiceName... newDependencies) {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
-        final Set<ServiceName> dependencies = this.dependencies;
         for (ServiceName dependency : newDependencies) {
             if(!serviceName.equals(dependency)) {
-                dependencies.add(dependency);
+                addDependency(dependency, (NamedInjection)null, optional);
             }
         }
         return this;
     }
 
     public BatchServiceBuilder<T> addDependencies(final Iterable<ServiceName> newDependencies) {
+        return addDependencies(newDependencies, false);
+    }
+
+    public BatchServiceBuilder<T> addOptionalDependencies(final Iterable<ServiceName> newDependencies) {
+        return addDependencies(newDependencies, true);
+    }
+
+    private BatchServiceBuilder<T> addDependencies(final Iterable<ServiceName> newDependencies, final boolean optional) {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
-        final Set<ServiceName> dependencies = this.dependencies;
         for (ServiceName dependency : newDependencies) {
             if(!serviceName.equals(dependency)) {
-                dependencies.add(dependency);
+                addDependency(dependency, (NamedInjection)null, optional);
             }
         }
         return this;
     }
 
     public BatchServiceBuilder<T> addDependency(final ServiceName dependency) {
+        return addDependency(dependency, false);
+    }
+
+    public BatchServiceBuilder<T> addOptionalDependency(final ServiceName dependency) {
+        return addDependency(dependency, false);
+    }
+
+    private BatchServiceBuilder<T> addDependency(final ServiceName dependency, final boolean optional) {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
         if(!serviceName.equals(dependency)) {
-            dependencies.add(dependency);
+            addDependency(dependency, (NamedInjection)null, optional);
         }
         return this;
     }
 
     public BatchServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
+        return addDependency(dependency, target, false);
+    }
+
+    public BatchServiceBuilder<T> addOptionalDependency(final ServiceName dependency, final Injector<Object> target) {
+        return addDependency(dependency, target, true);
+    }
+
+    private BatchServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target, final boolean optional) {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
+        final NamedInjection injection = new NamedInjection(dependency, target);
         if(!serviceName.equals(dependency)) {
-            dependencies.add(dependency);
+            addDependency(dependency, injection, optional);
         }
-        namedInjections.add(new NamedInjection(dependency, target));
         return this;
     }
 
     public <I> BatchServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
+        return addDependency(dependency, type, target, false);
+    }
+
+    public <I> BatchServiceBuilder<T> addOptionalDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
+        return addDependency(dependency, type, target, true);
+    }
+
+    private <I> BatchServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target, final boolean optional) {
         if (batchBuilder.isDone()) {
             throw alreadyInstalled();
         }
+        final NamedInjection injection = new NamedInjection(dependency, new CastingInjector<I>(target, type));
         if(!serviceName.equals(dependency)) {
-            dependencies.add(dependency);
+            addDependency(dependency, injection, optional);
         }
-        namedInjections.add(new NamedInjection(dependency, new CastingInjector<I>(target, type)));
         return this;
+    }
+
+    private void addDependency(final ServiceName dependency, final NamedInjection namedInjection, final boolean optional) {
+        if(dependencies.containsKey(dependency)) {
+            final ServiceDependency serviceDependency = dependencies.get(dependency);
+            serviceDependency.setOptional(optional);
+            if(namedInjection != null)
+                serviceDependency.addNamedInjection(namedInjection);
+        } else {
+            dependencies.put(dependency, new ServiceDependency(dependency, optional, namedInjection));
+        }
     }
 
     public <I> BatchServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {
@@ -212,8 +263,8 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         return aliases.toArray(new ServiceName[aliases.size()]);
     }
 
-    ServiceName[] getDependencies() {
-        return dependencies.toArray(new ServiceName[dependencies.size()]);
+    ServiceDependency[] getDependencies() {
+        return new ArrayList<ServiceDependency>(dependencies.values()).toArray(new ServiceDependency[dependencies.size()]);
     }
 
     Iterable<? extends ServiceListener<? super T>> getListeners() {
@@ -222,10 +273,6 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
 
     List<ValueInjection<?>> getValueInjections() {
         return valueInjections;
-    }
-
-    List<NamedInjection> getNamedInjections() {
-        return namedInjections;
     }
 
     ServiceController.Mode getInitialMode() {
