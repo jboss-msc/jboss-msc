@@ -46,24 +46,28 @@ public interface ServiceController<S> extends Value<S> {
     Mode getMode();
 
     /**
-     * Change the service controller's current mode.  Might result in the service starting or stopping.
+     * Change the service controller's current mode.  Might result in the service starting or stopping.  The mode
+     * may only be changed if it was not already set to {@link Mode#REMOVE}.  Calling this method with the controller's
+     * current mode has no effect and is always allowed.
      *
      * @param mode the new controller mode
+     * @throws IllegalStateException if the mode given is {@code null}, or the caller attempted to change the
+     *  service's mode from {@link Mode#REMOVE} to a different mode
      */
     void setMode(Mode mode);
 
     /**
-     * Get the current service state.
+     * Get the current service controller state.
      *
      * @return the current state
      */
     State getState();
 
     /**
-     * Get the service.
+     * Get the service value.
      *
-     * @return the service
-     * @throws IllegalStateException if the service is not available
+     * @return the service value
+     * @throws IllegalStateException if the service is not available (i.e. it is not up)
      */
     S getValue() throws IllegalStateException;
 
