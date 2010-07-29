@@ -25,6 +25,7 @@ package org.jboss.msc.service;
 import java.util.Arrays;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+import org.jboss.msc.Version;
 import org.jboss.msc.value.Value;
 
 /**
@@ -123,6 +124,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     private static final String SERVICE_REMOVED = "Service has been removed";
 
     private static final ServiceControllerImpl<?>[] NO_DEPENDENTS = new ServiceControllerImpl[0];
+
+    static {
+        ServiceLogger.INSTANCE.greeting(Version.getVersionString());
+    }
 
     /**
      * The service container which contains this instance.
@@ -235,7 +240,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + serviceName);
                 }
             }
-//            System.out.println("Add listener " + listener + " to " + serviceName + " in state " + state);
             asyncTasks++;
         }
         invokeListener(listener, null);
@@ -279,7 +283,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         synchronized (this) {
             final Mode oldMode = mode;
             mode = newMode;
-//            System.out.println("Set mode of " + serviceName + " from " + oldMode + " to " + newMode);
             switch (oldMode) {
                 case REMOVE: {
                     switch (newMode) {
@@ -414,7 +417,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         final Substate state;
         synchronized (this) {
             state = this.state;
-//            System.out.println("Add dependent " + dependent.serviceName + " to " + serviceName + " in state " + state);
             if (state != Substate.REMOVED) {
                 final boolean result = dependents.add(dependent);
                 assert result;
@@ -585,7 +587,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 throw new IllegalStateException();
             }
         }
-//        System.out.println("Transition " + serviceName + " from " + transition.getBefore() + " to " + transition.getAfter());
         state = transition.getAfter();
         asyncTasks += tasks.length;
         return tasks;
@@ -637,7 +638,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     }
 
     private void invokeListener(final ServiceListener<? super S> listener, final State state) {
-//        System.out.printf("Running listener %s state %s on %s (%s)\n", listener, state, serviceName, this);
         assert !lockHeld();
         try {
             if (state == null) {
@@ -669,8 +669,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 }
             }
         } catch (Throwable t) {
-            // todo log error
-            t.printStackTrace();
+            ServiceLogger.INSTANCE.listenerFailed(t, listener);
         } finally {
             final Runnable[] tasks;
             synchronized (this) {
@@ -692,7 +691,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         assert ! lockHeld();
         if (task == null) return;
         try {
-//            System.out.println("Async task of " + serviceName + ": " + task);
             container.getExecutor().execute(task);
         } catch (RejectedExecutionException e) {
             task.run();
@@ -705,7 +703,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         final Executor executor = container.getExecutor();
         for (Runnable task : tasks) {
             try {
-//                System.out.println("Async task of " + serviceName + ": " + task);
                 executor.execute(task);
             } catch (RejectedExecutionException e) {
                 task.run();
@@ -993,8 +990,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 synchronized (ServiceControllerImpl.this) {
                     final ContextState oldState = context.state;
                     if (oldState != ContextState.SYNC && oldState != ContextState.ASYNC) {
-                        e.printStackTrace();
-                        // todo log warning
+                        ServiceLogger.INSTANCE.exceptionAfterComplete(e, serviceName);
                         return;
                     }
                     context.state = ContextState.FAILED;
@@ -1008,8 +1004,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 synchronized (ServiceControllerImpl.this) {
                     final ContextState oldState = context.state;
                     if (oldState != ContextState.SYNC && oldState != ContextState.ASYNC) {
-                        // todo log warning
-                        t.printStackTrace();
+                        ServiceLogger.INSTANCE.exceptionAfterComplete(t, serviceName);
                         return;
                     }
                     context.state = ContextState.FAILED;
@@ -1035,17 +1030,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             boolean ok = false;
             try {
                 if (! onlyUninject) {
-                    final Service<? extends S> service = serviceValue.getValue();
-                    if (service != null) {
-                        try {
+                    try {
+                        final Service<? extends S> service = serviceValue.getValue();
+                        if (service != null) {
                             service.stop(context);
                             ok = true;
-                        } catch (Throwable t) {
-                            // todo log it
-                            t.printStackTrace();
+                        } else {
+                            ServiceLogger.INSTANCE.stopServiceMissing(serviceName);
                         }
-                    } else {
-                        // todo log missing service warning
+                    } catch (Throwable t) {
+                        ServiceLogger.INSTANCE.stopFailed(t, serviceName);
                     }
                 }
             } finally {
@@ -1061,8 +1055,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 for (ValueInjection<?> injection : injections) try {
                     injection.getTarget().uninject();
                 } catch (Throwable t) {
-                    // todo log
-                    t.printStackTrace();
+                    ServiceLogger.INSTANCE.uninjectFailed(t, serviceName, injection);
                 }
                 synchronized (ServiceControllerImpl.this) {
                     asyncTasks--;
@@ -1103,8 +1096,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
-                // todo log it
-                t.printStackTrace();
+                ServiceLogger.INSTANCE.internalServiceError(t, serviceName);
             }
         }
     }
@@ -1123,8 +1115,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
-                // todo log it
-                t.printStackTrace();
+                ServiceLogger.INSTANCE.internalServiceError(t, serviceName);
             }
         }
     }
@@ -1149,8 +1140,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
-                // todo log it
-                t.printStackTrace();
+                ServiceLogger.INSTANCE.internalServiceError(t, serviceName);
             }
         }
     }
@@ -1175,8 +1165,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
-                // todo log it
-                t.printStackTrace();
+                ServiceLogger.INSTANCE.internalServiceError(t, serviceName);
             }
         }
     }
@@ -1203,8 +1192,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     asyncTasks--;
                 }
             } catch (Throwable t) {
-                // todo log it
-                t.printStackTrace();
+                ServiceLogger.INSTANCE.internalServiceError(t, serviceName);
             }
         }
     }
@@ -1221,8 +1209,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
-                // todo log it
-                t.printStackTrace();
+                ServiceLogger.INSTANCE.internalServiceError(t, serviceName);
             }
         }
     }
@@ -1239,8 +1226,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
-                // todo log it
-                t.printStackTrace();
+                ServiceLogger.INSTANCE.internalServiceError(t, serviceName);
             }
         }
     }
