@@ -27,6 +27,7 @@ import org.jboss.msc.ref.Reference;
 import org.jboss.msc.ref.WeakReference;
 import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
+import org.jboss.msc.value.Values;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -294,8 +295,11 @@ final class ServiceContainerImpl implements ServiceContainer {
             }
 
             for(NamedInjection namedInjection : entry.getNamedInjections()) {
-                if(!entry.missingOptionalDependencies.contains(namedInjection.getName()))
+                if(!entry.missingOptionalDependencies.contains(namedInjection.getName())) {
                     builder.addValueInjection(new ValueInjection<Object>(getRequiredService(namedInjection.getName()), namedInjection.getTarget()));
+                } else {
+                    builder.addValueInjection(new ValueInjection<Object>(Values.nullValue(), namedInjection.getTarget()));
+                }
             }
 
             for (ValueInjection<?> valueInjection : entry.getValueInjections()) {
