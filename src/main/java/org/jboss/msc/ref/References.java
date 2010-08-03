@@ -60,13 +60,13 @@ public final class References {
         }
 
         public void run() {
-            try {
+            for (;;) try {
                 final java.lang.ref.Reference<? extends Object> ref = REAPER_QUEUE.remove();
                 if (ref instanceof Reapable) {
                     reap((Reapable<?, ?>) ref);
                 }
-            } catch (InterruptedException e) {
-                // ignored
+            } catch (InterruptedException ignored) {
+            } catch (Throwable ignored) {
             }
         }
 
