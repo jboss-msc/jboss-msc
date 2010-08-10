@@ -22,16 +22,20 @@
 
 package org.jboss.msc.service;
 
+import java.io.Serializable;
+
 /**
  * A location at which a service was defined.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class Location {
+public final class Location implements Serializable {
     private final String fileName;
     private final int lineNumber;
     private final int columnNumber;
     private final Location parentLocation;
+
+    private static final long serialVersionUID = -5262621932084512835L;
 
     /**
      * Create a new instance.
