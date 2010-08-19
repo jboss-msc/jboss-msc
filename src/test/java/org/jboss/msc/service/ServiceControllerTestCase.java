@@ -22,14 +22,14 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.service.util.LatchedFinishListener;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import org.jboss.msc.service.util.LatchedFinishListener;
+import org.junit.Test;
 
 /**
  * Test to verify ServiceController behavior.
@@ -125,9 +125,41 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
         assertState(serviceContainer, ServiceName.of("on_demand"), ServiceController.State.UP);
         assertState(serviceContainer, ServiceName.of("automatic"), ServiceController.State.UP);
+        assertState(serviceContainer, ServiceName.of("immediate"), ServiceController.State.UP);
         serviceContainer.shutdown();
     }
 
+    @Test
+    public void testAnotherOnDemand() throws Exception {
+        final ServiceContainer serviceContainer = ServiceContainer.Factory.create();
+
+        final BatchBuilder batch = serviceContainer.batchBuilder();
+
+        batch.addService(ServiceName.of("sbm"), Service.NULL).setInitialMode(ServiceController.Mode.ON_DEMAND);
+        batch.addService(ServiceName.of("nic1"), Service.NULL).setInitialMode(ServiceController.Mode.ON_DEMAND);
+
+        batch.addService(ServiceName.of("sb1"), Service.NULL)
+            .addDependencies(ServiceName.of("sbm"), ServiceName.of("nic1"))
+            .setInitialMode(ServiceController.Mode.ON_DEMAND);
+
+        batch.addService(ServiceName.of("server"), Service.NULL)
+            .setInitialMode(ServiceController.Mode.ON_DEMAND);
+
+        batch.addService(ServiceName.of("connector"), Service.NULL)
+            .addDependencies(ServiceName.of("sb1"), ServiceName.of("server"))
+            .setInitialMode(ServiceController.Mode.IMMEDIATE);
+
+        batch.install();
+        Thread.sleep(100);
+
+        assertState(serviceContainer, ServiceName.of("sbm"), ServiceController.State.UP);
+        assertState(serviceContainer, ServiceName.of("nic1"), ServiceController.State.UP);
+        assertState(serviceContainer, ServiceName.of("sb1"), ServiceController.State.UP);
+        assertState(serviceContainer, ServiceName.of("server"), ServiceController.State.UP);
+        assertState(serviceContainer, ServiceName.of("connector"), ServiceController.State.UP);
+        serviceContainer.shutdown();
+    }
+    
     @Test
     public void testStop() throws Exception {
         performTest(new ServiceTestInstance() {
