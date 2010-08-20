@@ -22,11 +22,12 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.Version;
+import org.jboss.msc.value.Value;
+
 import java.util.Arrays;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
-import org.jboss.msc.Version;
-import org.jboss.msc.value.Value;
 
 /**
  * The service controller implementation.  Instances of this class follow a strict state table.
@@ -585,6 +586,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                 break;
             }
             case DOWN_to_REMOVED: {
+                container.remove(serviceName, ServiceControllerImpl.this);
+                for (ServiceName name : serviceAliases) {
+                    container.remove(name, ServiceControllerImpl.this);
+                }
                 tasks = getListenerTasks(transition.getAfter().getState(), new RemoveTask(dependents.toScatteredArray(NO_DEPENDENTS)));
                 listeners.clear();
                 break;
@@ -1201,10 +1206,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
             try {
                 assert getMode() == Mode.REMOVE;
                 assert getState() == State.REMOVED;
-                container.remove(serviceName, ServiceControllerImpl.this);
-                for (ServiceName name : serviceAliases) {
-                    container.remove(name, ServiceControllerImpl.this);
-                }
                 for (ServiceControllerImpl<?> dependent : dependents) {
                     if (dependent != null) dependent.setMode(Mode.REMOVE);
                 }

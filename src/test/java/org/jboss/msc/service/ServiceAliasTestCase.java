@@ -28,6 +28,7 @@ import org.junit.Test;
 import java.util.concurrent.Future;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 /**
@@ -51,18 +52,16 @@ public class ServiceAliasTestCase extends AbstractServiceTest {
 
         builder.install();
 
-        future.get();
+        ServiceController<?> controller = future.get();
 
         assertEquals(serviceContainer.getService(ServiceName.of("service1")), serviceContainer.getService(ServiceName.of("alias1")));
         assertEquals(serviceContainer.getService(ServiceName.of("service1")), serviceContainer.getService(ServiceName.of("alias2")));
-
-        ServiceController<?> controller = serviceContainer.getService(ServiceName.of("service1"));
 
         final Future<ServiceController<?>> removeFuture = listener.expectServiceRemoval(ServiceName.of("service1"));
 
         controller.setMode(ServiceController.Mode.REMOVE);
 
-        removeFuture.get();
+        assertNotNull(removeFuture.get());
 
         assertNull(serviceContainer.getService(ServiceName.of("service1")));
         assertNull(serviceContainer.getService(ServiceName.of("alias1")));
