@@ -26,6 +26,7 @@ import org.junit.Test;
 
 import static java.lang.Integer.signum;
 import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.fail;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -58,5 +59,74 @@ public final class ServiceNameTestCase {
         assertEquals("compareTo uneven greater-than (1)", 1, signum(ServiceName.of("aaaa", "bbbb").compareTo(ServiceName.of("aaaa"))));
         assertEquals("compareTo uneven greater-than (2)", 1, signum(ServiceName.of("aaab", "bbbb").compareTo(ServiceName.of("aaaa"))));
         assertEquals("compareTo uneven greater-than (3)", 1, signum(ServiceName.of("aaab", "bbbb").compareTo(ServiceName.of("aaaa", "cccc", "xxxx"))));
+    }
+
+    @Test
+    public void testCanonicalization() {
+        assertEquals("simple canonical (string side)", "a.b.c", ServiceName.parse("a.b.c").getCanonicalName());
+        assertEquals("simple canonical", ServiceName.of("a", "b", "c"), ServiceName.parse("a.b.c"));
+        assertEquals("complex canonical (string side)", "a.\"\\r\\n\".b", ServiceName.parse("\"a\".\"\\r\\n\".b").getCanonicalName());
+        assertEquals("complex canonical", ServiceName.of("a", "\r\n", "b"), ServiceName.parse("\"a\".\"\\r\\n\".b"));
+        try {
+            ServiceName.parse(" foo");
+            fail("Expected exception: whitespace in simple name");
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            ServiceName.parse("foo ");
+            fail("Expected exception: whitespace in simple name");
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            ServiceName.parse("");
+            fail("Expected exception: empty name");
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            ServiceName.parse("\"\"");
+            fail("Expected exception: empty name");
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            ServiceName.parse("\tfoo");
+            fail("Expected exception: tab character in simple name");
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            ServiceName.parse("foo\t");
+            fail("Expected exception: tab character in simple name");
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            ServiceName.parse("\"\\u\"");
+            fail("Expected exception: incomplete unicode escape");
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            ServiceName.parse("\"\\u0\"");
+            fail("Expected exception: incomplete unicode escape");
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            ServiceName.parse("\"\\u00\"");
+            fail("Expected exception: incomplete unicode escape");
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            ServiceName.parse("\"\\u000\"");
+            fail("Expected exception: incomplete unicode escape");
+        } catch (IllegalArgumentException expected) {
+        }
+        ServiceName.parse("\"\\u0000\"");
+        try {
+            ServiceName.parse("\"");
+            fail("Expected exception: unexpected end of string");
+        } catch (IllegalArgumentException expected) {
+        }
+        try {
+            ServiceName.parse("\"foo");
+            fail("Expected exception: unexpected end of string");
+        } catch (IllegalArgumentException expected) {
+        }
     }
 }

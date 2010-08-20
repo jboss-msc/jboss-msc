@@ -28,7 +28,8 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Service name class.
@@ -71,8 +72,12 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
             throw new IllegalArgumentException("Must provide at least one name segment");
         
         ServiceName current = parent;
-        for(String part : parts)
+        for (String part : parts) {
+            if (part.isEmpty()) {
+                throw new IllegalArgumentException("Empty name segment is not allowed");
+            }
             current = new ServiceName(current, part);
+        }
         return current;
     }
 
@@ -193,37 +198,274 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
      */
     @Override
     public String toString() {
-        return toString(new StringBuilder()).toString();
+        return "service " + getCanonicalName();
     }
 
-    private static final Pattern SIMPLE_NAME = Pattern.compile("^[-_a-z@-Z0-9!#$%^&*()+=\\[\\]{}|/?<>,;:~]+$");
+    /**
+     * Get the canonical name of this service name.
+     *
+     * @return the canonical name
+     */
+    public String getCanonicalName() {
+        return getCanonicalName(new StringBuilder()).toString();
+    }
 
-    private StringBuilder toString(StringBuilder target) {
+    /**
+     * Parse a string-form service name.  If the given name contains quoted sections (surrounded by '{@code "}' characters), then
+     * the section will be parsed as a quoted string with optional escaped characters.  The set of valid escapes is
+     * similar to what is supported by the JLS (§3.3 and §3.10.6), with one exception: the string {@code \0} is always parsed as a NUL character
+     * (0) and not as an octal escape sequence.  Control characters are not allowed in any part of a name
+     * and must be escaped in a quoted section if they are present in the service name string.  Whitespace characters
+     * are allowed only in a quoted section.
+     *
+     * @param original the string form of a service name
+     * @return a {@code ServiceName} instance
+     * @throws IllegalArgumentException if the original is not valid
+     */
+    public static ServiceName parse(String original) throws IllegalArgumentException {
+        final int originalLength = original.length();
+        final List<String> segments = new ArrayList<String>();
+        final StringBuilder builder = new StringBuilder();
+        int state = 0;
+        char escapedChar = '\0';
+        int charSize;
+        for (int i = 0; i < originalLength; i += charSize) {
+            int nextOffset = original.offsetByCodePoints(i, 1);
+            charSize = nextOffset - i;
+            final int c = original.codePointAt(i);
+            if (! Character.isValidCodePoint(c)) {
+                throw invalidCodePoint(i);
+            }
+            if (Character.isISOControl(c)) {
+                throw invalidNameCharacter(i);
+            }
+            switch (state) {
+                case 0: {
+                    // First character in a section.
+                    builder.setLength(0);
+                    if (c == '"') {
+                        // Quoted section.
+                        state = 2;
+                        continue;
+                    } else {
+                        // Unquoted section.  Make sure c is valid.
+                        if (c == '.' || c == '\\' || Character.isWhitespace(c)) {
+                            throw invalidNameCharacter(i);
+                        }
+                        builder.append(original.substring(i, nextOffset));
+                        state = 1;
+                        continue;
+                    }
+                    // not reached
+                }
+                case 1: {
+                    // Subsequent character in an unquoted section.
+                    if (c == '\\' || c == '"' || Character.isWhitespace(c)) {
+                        throw invalidNameCharacter(i);
+                    } else if (c == '.') {
+                        // Section finished.
+                        segments.add(builder.toString());
+                        state = 0;
+                        continue;
+                    } else {
+                        builder.append(original.substring(i, nextOffset));
+                        continue;
+                    }
+                    // not reached
+                }
+                case 2: {
+                    // First character in a quoted section.
+                    if (c == '"') {
+                        throw invalidNameCharacter(i);
+                    } else if (c == '\\') {
+                        // First character is escaped.
+                        state = 3;
+                        continue;
+                    } else {
+                        builder.append(original.substring(i, nextOffset));
+                        state = 4;
+                        continue;
+                    }
+                    // not reached
+                }
+                case 3: {
+                    // First character in a quoted section, after a \ character.
+                    // All valid escapes:
+                    switch (c) {
+                        case '"': builder.append('"'); state = 4; continue;
+                        case '\'': builder.append('\''); state = 4; continue;
+                        case '\\': builder.append('\\'); state = 4; continue;
+                        case 'u': state = 5; continue;
+                        case 'b': builder.append('\b'); state = 4; continue;
+                        case 't': builder.append('\t'); state = 4; continue;
+                        case 'n': builder.append('\n'); state = 4; continue;
+                        case 'f': builder.append('\f'); state = 4; continue;
+                        case 'r': builder.append('\r'); state = 4; continue;
+                        case '0': builder.append('\0'); state = 4; continue;
+                        default: throw invalidNameCharacter(i);
+                    }
+                    // not reached
+                }
+                case 4: {
+                    // Subsequent character in a quoted section
+                    if (c == '"') {
+                        // End of section; expect only a . next.
+                        segments.add(builder.toString());
+                        state = 9;
+                        continue;
+                    } else if (c == '\\') {
+                        // Character is escaped.
+                        state = 3;
+                        continue;
+                    } else {
+                        builder.append(original.substring(i, nextOffset));
+                        continue;
+                    }
+                    // not reached
+                }
+                case 5: {
+                    // Unicode escape, first char.
+                    int v;
+                    try {
+                        v = Integer.parseInt(original.substring(i, nextOffset), 16);
+                    } catch (NumberFormatException e) {
+                        throw invalidNameCharacter(i);
+                    }
+                    escapedChar = (char) (v << 12);
+                    state = 6;
+                    continue;
+                }
+                case 6: {
+                    // Unicode escape, second char.
+                    int v;
+                    try {
+                        v = Integer.parseInt(original.substring(i, nextOffset), 16);
+                    } catch (NumberFormatException e) {
+                        throw invalidNameCharacter(i);
+                    }
+                    escapedChar |= (char) (v << 8);
+                    state = 7;
+                    continue;
+                }
+                case 7: {
+                    // Unicode escape, third char.
+                    int v;
+                    try {
+                        v = Integer.parseInt(original.substring(i, nextOffset), 16);
+                    } catch (NumberFormatException e) {
+                        throw invalidNameCharacter(i);
+                    }
+                    escapedChar |= (char) (v << 4);
+                    state = 8;
+                    continue;
+                }
+                case 8: {
+                    // Unicode escape, last char.
+                    int v;
+                    try {
+                        v = Integer.parseInt(original.substring(i, nextOffset), 16);
+                    } catch (NumberFormatException e) {
+                        throw invalidNameCharacter(i);
+                    }
+                    escapedChar |= (char) v;
+                    builder.append(escapedChar);
+                    state = 4;
+                    continue;
+                }
+                case 9: {
+                    if (c == '.') {
+                        state = 0;
+                        continue;
+                    }
+                    throw invalidNameCharacter(i);
+                }
+                default: {
+                    throw new IllegalStateException();
+                }
+            }
+            // not reached
+        }
+        switch (state) {
+            case 0:
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+            case 8: {
+                // End of string unexpected.
+                throw unexpectedEnd();
+            }
+            case 1:
+            case 9: {
+                segments.add(builder.toString());
+                break;
+            }
+            default: throw new IllegalStateException();
+        }
+        return ServiceName.of(segments.toArray(new String[segments.size()]));
+    }
+
+    private static IllegalArgumentException unexpectedEnd() {
+        return new IllegalArgumentException("Unexpected end of name");
+    }
+
+    private static IllegalArgumentException invalidCodePoint(final int i) {
+        return new IllegalArgumentException("Invalid code point at offset " + i);
+    }
+
+    private static IllegalArgumentException invalidNameCharacter(final int i) {
+        return new IllegalArgumentException("Invalid name character at offset " + i);
+    }
+
+    private StringBuilder getCanonicalName(StringBuilder target) {
         final ServiceName parent = this.parent;
         if (parent != null) {
-            parent.toString(target);
+            parent.getCanonicalName(target);
             target.append('.');
         }
         final String name = this.name;
-        if (SIMPLE_NAME.matcher(name).matches()) {
+        final int nameLength = name.length();
+        boolean simple = true;
+        for (int i = 0; i < nameLength; i += name.offsetByCodePoints(i, 1)) {
+            final int c = name.codePointAt(i);
+            if (Character.isISOControl(c) || Character.isWhitespace(c) || c == '.' || c == '"') {
+                simple = false;
+                break;
+            }
+        }
+        if (simple) {
             target.append(name);
         } else {
             target.append('"');
-            final int len = name.length();
-            for (int i = 0; i < len; i++) {
-                final char c = name.charAt(i);
-                if (Character.isISOControl(c)) {
-                    final String hs = Integer.toHexString(c);
-                    target.append("\\u");
-                    for (int j = hs.length(); j < 4; j ++) {
-                        target.append('0');
+            int charSize;
+            for (int i = 0; i < nameLength; i += charSize) {
+                int nextOffset = name.offsetByCodePoints(i, 1);
+                charSize = nextOffset - i;
+                final int c = name.codePointAt(i);
+                switch (c) {
+                    case '\b': target.append('\\').append('b'); break;
+                    case '\t': target.append('\\').append('t'); break;
+                    case '\n': target.append('\\').append('n'); break;
+                    case '\f': target.append('\\').append('f'); break;
+                    case '\r': target.append('\\').append('r'); break;
+                    case '\0': target.append('\\').append('0'); break;
+                    case '\"': target.append('\\').append('"'); break;
+                    case '\\': target.append('\\').append('\\'); break;
+                    default: {
+                        if (Character.isISOControl(c)) {
+                            final String hs = Integer.toHexString(c);
+                            target.append("\\u");
+                            for (int j = hs.length(); j < 4; j ++) {
+                                target.append('0');
+                            }
+                            target.append(hs);
+                        } else {
+                            target.append(name.substring(i, nextOffset));
+                        }
+                        break;
                     }
-                    target.append(hs);
-                } else if (c == '\\' || c == '"') {
-                    target.append('\\');
-                    target.append(c);
-                } else {
-                    target.append(c);
                 }
             }
             target.append('"');
