@@ -741,31 +741,41 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
     void addDemand() {
         assert ! lockHeld();
         final Runnable[] tasks;
+        final boolean propagate;
         synchronized (this) {
             final int cnt = demandedByCount++;
-            if (cnt != 0 || mode != Mode.ON_DEMAND) {
+            propagate = cnt == 0;
+            if (cnt == 0 && mode == Mode.ON_DEMAND) {
+                upperCount++;
+                tasks = transition();
+            } else {
                 // no change
-                return;
+                tasks = null;
             }
-            upperCount++;
-            tasks = transition();
+            if (propagate) asyncTasks++;
         }
         doExecute(tasks);
+        if (propagate) doExecute(new DemandParentsTask());
     }
 
     void removeDemand() {
         assert ! lockHeld();
         final Runnable[] tasks;
+        final boolean propagate;
         synchronized (this) {
             final int cnt = --demandedByCount;
-            if (cnt != 0 || mode != Mode.ON_DEMAND) {
+            propagate = cnt == 0;
+            if (cnt == 0 && mode == Mode.ON_DEMAND) {
+                upperCount--;
+                tasks = transition();
+            } else {
                 // no change
-                return;
+                tasks = null;
             }
-            upperCount--;
-            tasks = transition();
+            if (propagate) asyncTasks++;
         }
         doExecute(tasks);
+        if (propagate) doExecute(new UndemandParentsTask());
     }
 
     void dependentStarted() {
