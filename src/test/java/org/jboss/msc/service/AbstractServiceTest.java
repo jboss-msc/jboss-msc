@@ -22,9 +22,8 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.service.util.LatchedFinishListener;
-
-import java.util.List;
+import org.junit.After;
+import org.junit.Before;
 
 /**
  * Test base used for service test cases.
@@ -33,30 +32,15 @@ import java.util.List;
  */
 public class AbstractServiceTest {
 
-    public static abstract class ServiceTestInstance {
-        public abstract List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception;
+    protected ServiceContainer serviceContainer;
 
-        public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-        }
-
-        public void handle(BatchBuilder batch, Throwable t) {
-        }
+    @Before
+    public void setUp() throws Exception {
+        serviceContainer = ServiceContainer.Factory.create();
     }
 
-    protected void performTest(ServiceTestInstance instance) throws Exception {
-        final ServiceContainer serviceContainer = ServiceContainer.Factory.create();
-        final LatchedFinishListener finishListener = new LatchedFinishListener();
-
-        final List<BatchBuilder> batches = instance.initializeBatches(serviceContainer, finishListener);
-        for (BatchBuilder batch : batches) {
-            try {
-                batch.install();
-            } catch (Throwable t) {
-                instance.handle(batch, t);
-            }
-        }
-        finishListener.await();
-        instance.performAssertions(serviceContainer);
+    @After
+    public void tearDown() throws Exception {
         serviceContainer.shutdown();
     }
 }

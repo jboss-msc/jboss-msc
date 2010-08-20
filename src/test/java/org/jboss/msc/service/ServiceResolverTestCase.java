@@ -22,17 +22,19 @@
 package org.jboss.msc.service;
 
 import org.jboss.msc.service.util.LatchedFinishListener;
+import org.jboss.msc.util.TestServiceListener;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Future;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Test case used to ensure functionality for the Resolver.
@@ -52,159 +54,118 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
     @Test
     public void testResolvable() throws Exception {
         final OrderedStartListener startListener = new OrderedStartListener();
-        performTest(new ServiceTestInstance() {
-            @Override
-            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
-                final BatchBuilder builder = serviceContainer.batchBuilder();
-                builder.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"));
-                builder.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
-                builder.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"));
-                builder.addService(ServiceName.of("11"), Service.NULL).addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"));
-                builder.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9"));
-                builder.addService(ServiceName.of("2"), Service.NULL);
-                builder.addService(ServiceName.of("9"), Service.NULL);
-                builder.addService(ServiceName.of("10"), Service.NULL);
-                builder.addListener(finishListener);
-                builder.addListener(startListener);
-                return Collections.singletonList(builder);
-            }
+        final BatchBuilder builder = serviceContainer.batchBuilder();
+        final LatchedFinishListener listener = new LatchedFinishListener();
+        builder.addListener(listener);
+        builder.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"));
+        builder.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
+        builder.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"));
+        builder.addService(ServiceName.of("11"), Service.NULL).addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"));
+        builder.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9"));
+        builder.addService(ServiceName.of("2"), Service.NULL);
+        builder.addService(ServiceName.of("9"), Service.NULL);
+        builder.addService(ServiceName.of("10"), Service.NULL);
 
-            @Override
-            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                assertEquals(8, startListener.startedControllers.size());
-                final List<ServiceController<?>> processed = new ArrayList<ServiceController<?>>(startListener.startedControllers.size());
-                for(ServiceController serviceController : startListener.startedControllers) {
-                    assertEquals(ServiceController.State.UP, serviceController.getState());
-                    final List<ServiceController<?>> deps = getServiceDependencies(serviceContainer, serviceController);
-                    for(ServiceController<?> depController : deps) {
-                        if(depController.getValue() != serviceContainer)
-                            assertTrue(processed.contains(depController));
-                    }
-                    processed.add(serviceController);
-                }
+        builder.addListener(startListener);
+
+        builder.install();
+        listener.await();
+
+        assertEquals(8, startListener.startedControllers.size());
+        final List<ServiceController<?>> processed = new ArrayList<ServiceController<?>>(startListener.startedControllers.size());
+        for(ServiceController serviceController : startListener.startedControllers) {
+            assertEquals(ServiceController.State.UP, serviceController.getState());
+            final List<ServiceController<?>> deps = getServiceDependencies(serviceContainer, serviceController);
+            for(ServiceController<?> depController : deps) {
+                if(depController.getValue() != serviceContainer)
+                    assertTrue(processed.contains(depController));
             }
-        });
+            processed.add(serviceController);
+        }
     }
 
     @Test
     public void testResolvableWithPreexistingDeps() throws Exception {
         final OrderedStartListener startListener = new OrderedStartListener();
-        performTest(new ServiceTestInstance() {
-            @Override
-            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
-                final BatchBuilder builder1 = serviceContainer.batchBuilder().addListener(finishListener).addListener(startListener);
-                builder1.addService(ServiceName.of("2"), Service.NULL);
-                builder1.addService(ServiceName.of("9"), Service.NULL);
-                builder1.addService(ServiceName.of("10"), Service.NULL);
+        final LatchedFinishListener finishListener = new LatchedFinishListener();
+        final BatchBuilder builder1 = serviceContainer.batchBuilder().addListener(finishListener).addListener(startListener);
+        builder1.addService(ServiceName.of("2"), Service.NULL);
+        builder1.addService(ServiceName.of("9"), Service.NULL);
+        builder1.addService(ServiceName.of("10"), Service.NULL);
 
-                final BatchBuilder builder2 = serviceContainer.batchBuilder().addListener(finishListener).addListener(startListener);
-                builder2.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"));
-                builder2.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
-                builder2.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"));
-                builder2.addService(ServiceName.of("11"), Service.NULL).addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"));
-                builder2.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9"));
-                return Arrays.asList(builder1, builder2);
-            }
+        final BatchBuilder builder2 = serviceContainer.batchBuilder().addListener(finishListener).addListener(startListener);
+        builder2.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"));
+        builder2.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
+        builder2.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"));
+        builder2.addService(ServiceName.of("11"), Service.NULL).addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"));
+        builder2.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9"));
 
-            @Override
-            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                assertEquals(8, startListener.startedControllers.size());
-                final List<ServiceController<?>> processed = new ArrayList<ServiceController<?>>(startListener.startedControllers.size());
-                for(ServiceController serviceController : startListener.startedControllers) {
-                    assertEquals(ServiceController.State.UP, serviceController.getState());
-                    final List<ServiceController<?>> deps = getServiceDependencies(serviceContainer, serviceController);
-                    for(ServiceController<?> depController : deps) {
-                        if(depController.getValue() != serviceContainer)
-                            assertTrue(processed.contains(depController));
-                    }
-                    processed.add(serviceController);
-                }
+        builder1.install();
+        builder2.install();
+
+        finishListener.await();
+
+        assertEquals(8, startListener.startedControllers.size());
+        final List<ServiceController<?>> processed = new ArrayList<ServiceController<?>>(startListener.startedControllers.size());
+        for(ServiceController serviceController : startListener.startedControllers) {
+            assertEquals(ServiceController.State.UP, serviceController.getState());
+            final List<ServiceController<?>> deps = getServiceDependencies(serviceContainer, serviceController);
+            for(ServiceController<?> depController : deps) {
+                if(depController.getValue() != serviceContainer)
+                    assertTrue(processed.contains(depController));
             }
-        });
+            processed.add(serviceController);
+        }
     }
 
 
     @Test
     public void testMissingDependency() throws Exception {
+        final BatchBuilder builder = serviceContainer.batchBuilder();
+        builder.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"));
+        builder.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
+        builder.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"));
+        builder.addService(ServiceName.of("11"), Service.NULL).addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"));
+        builder.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9"));
+        builder.addService(ServiceName.of("2"), Service.NULL).addDependencies(ServiceName.of("1"));
+        builder.addService(ServiceName.of("9"), Service.NULL);
+        builder.addService(ServiceName.of("10"), Service.NULL);
 
-        performTest(new ServiceTestInstance() {
-            private boolean failed;
-            
-            @Override
-            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
-                final BatchBuilder builder = serviceContainer.batchBuilder();
-                builder.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"));
-                builder.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
-                builder.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"));
-                builder.addService(ServiceName.of("11"), Service.NULL).addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"));
-                builder.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9"));
-                builder.addService(ServiceName.of("2"), Service.NULL).addDependencies(ServiceName.of("1"));
-                builder.addService(ServiceName.of("9"), Service.NULL);
-                builder.addService(ServiceName.of("10"), Service.NULL);
-                return Collections.singletonList(builder);
-            }
-
-            @Override
-            public void handle(BatchBuilder batch, Throwable t) {
-                failed = true;
-                assertTrue(t instanceof ServiceRegistryException);
-                assertTrue(t.getCause() instanceof MissingDependencyException);
-            }
-
-            @Override
-            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                assertTrue("Should have thrown missing dependency exception", failed);
-            }
-        });
+        try {
+            builder.install();
+            fail("Should have thrown a MissingDependencyException");
+        } catch(ServiceRegistryException expected) {
+            assertTrue(expected.getCause() instanceof MissingDependencyException);
+        }
     }
 
     @Test
     public void testCircular() throws Exception {
-        performTest(new ServiceTestInstance() {
-            private boolean failed;
-            @Override
-            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
-                final BatchBuilder builder = serviceContainer.batchBuilder();
-                builder.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("5"));
-                builder.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
-                builder.addService(ServiceName.of("11"), Service.NULL).addDependencies(ServiceName.of("7"));
-                return Collections.singletonList(builder);
-            }
-
-            @Override
-            public void handle(BatchBuilder batch, Throwable t) {
-                failed = true;
-                assertTrue(t instanceof ServiceRegistryException);
-            }
-
-            @Override
-            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                assertTrue("Should have thrown circular dependency exception", failed);
-            }
-        });
+        final BatchBuilder builder = serviceContainer.batchBuilder();
+        builder.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("5"));
+        builder.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
+        builder.addService(ServiceName.of("11"), Service.NULL).addDependencies(ServiceName.of("7"));
+        try {
+            builder.install();
+            fail("Should have thrown circular dependency exception");
+        } catch(ServiceRegistryException expected) {
+        }
     }
 
 
     @Test
     public void testOptionalDependency() throws Exception {
-        final OrderedStartListener startListener = new OrderedStartListener();
-        performTest(new ServiceTestInstance() {
-            private boolean failed;
+        final BatchBuilder builder = serviceContainer.batchBuilder();
+        final TestServiceListener listener = new TestServiceListener();
+        builder.addListener(listener);
 
-            @Override
-            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
-                final BatchBuilder builder = serviceContainer.batchBuilder();
-                builder.addService(ServiceName.of("7"), Service.NULL).addOptionalDependencies(ServiceName.of("11"), ServiceName.of("8"));
-                builder.addListener(startListener);
-                builder.addListener(finishListener);
-                return Collections.singletonList(builder);
-            }
+        builder.addService(ServiceName.of("7"), Service.NULL).addOptionalDependencies(ServiceName.of("11"), ServiceName.of("8"));
 
-            @Override
-            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                assertEquals(1, startListener.startedControllers.size());
-            }
-        });
+        final Future<ServiceController<?>> startFuture = listener.expectServiceStart(ServiceName.of("7"));
+
+        builder.install();
+
+        assertEquals(ServiceController.State.UP, startFuture.get().getState());
     }
 
 

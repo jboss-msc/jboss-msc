@@ -28,6 +28,7 @@ import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.TimingServiceListener;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author John E. Bailey
@@ -78,7 +79,7 @@ public class LatchedFinishListener implements ServiceListener<Object> {
 
     public void await() throws Exception {
         timingServiceListener.finishBatch();
-        latch.await();
+        latch.await(30L, TimeUnit.SECONDS);
     }
 
     public long getElapsedTime() {

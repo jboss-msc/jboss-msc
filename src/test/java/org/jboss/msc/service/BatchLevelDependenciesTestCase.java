@@ -22,14 +22,14 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.service.util.LatchedFinishListener;
+import org.jboss.msc.util.TestServiceListener;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Future;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -51,80 +51,81 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
 
     @Test
     public void testBatchLevel() throws Exception {
-        performTest(new ServiceTestInstance() {
-            @Override
-            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
-                final BatchBuilder builder = serviceContainer.batchBuilder();
-                builder.addService(ServiceName.of("firstService"), Service.NULL);
-                builder.addService(ServiceName.of("secondService"), Service.NULL);
-                builder.addService(ServiceName.of("thirdService"), Service.NULL);
-                builder.addService(ServiceName.of("fourthService"), Service.NULL);
+        final BatchBuilder builder = serviceContainer.batchBuilder();
+        final TestServiceListener listener = new TestServiceListener();
+        builder.addListener(listener);
 
-                builder.addDependency(ServiceName.of("fourthService"));
-                builder.addListener(finishListener);
-                return Collections.singletonList(builder);
-            }
+        builder.addService(ServiceName.of("firstService"), Service.NULL);
+        builder.addService(ServiceName.of("secondService"), Service.NULL);
+        builder.addService(ServiceName.of("thirdService"), Service.NULL);
+        builder.addService(ServiceName.of("fourthService"), Service.NULL);
 
-            @Override
-            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                final ServiceController<?> fourthController = serviceContainer.getService(ServiceName.of("fourthService"));
+        builder.addDependency(ServiceName.of("fourthService"));
 
-                List<ServiceControllerImpl<?>> dependencies = getServiceDependencies(serviceContainer, ServiceName.of("firstService"));
-                assertTrue(dependencies.contains(fourthController));
+        final Future<ServiceController<?>> firstService = listener.expectServiceStart(ServiceName.of("firstService"));
+        final Future<ServiceController<?>> secondService = listener.expectServiceStart(ServiceName.of("secondService"));
+        final Future<ServiceController<?>> thirdService = listener.expectServiceStart(ServiceName.of("thirdService"));
+        final Future<ServiceController<?>> fourthService = listener.expectServiceStart(ServiceName.of("fourthService"));
 
-                dependencies = getServiceDependencies(serviceContainer, ServiceName.of("secondService"));
-                assertTrue(dependencies.contains(fourthController));
+        builder.install();
 
-                dependencies = getServiceDependencies(serviceContainer, ServiceName.of("thirdService"));
-                assertTrue(dependencies.contains(fourthController));
+        final ServiceController<?> fourthController = fourthService.get();
 
-                dependencies = getServiceDependencies(serviceContainer, ServiceName.of("fourthService"));
-                assertFalse(dependencies.contains(fourthController));
-            }
-        });
+
+        List<ServiceControllerImpl<?>> dependencies = getServiceDependencies(firstService.get());
+        assertTrue(dependencies.contains(fourthController));
+
+        dependencies = getServiceDependencies(secondService.get());
+        assertTrue(dependencies.contains(fourthController));
+
+        dependencies = getServiceDependencies(thirdService.get());
+        assertTrue(dependencies.contains(fourthController));
+
+        dependencies = getServiceDependencies(fourthController);
+        assertFalse(dependencies.contains(fourthController));
     }
 
     @Test
     public void testSubBatchLevel() throws Exception {
-        performTest(new ServiceTestInstance() {
-            @Override
-            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
-                final BatchBuilder builder = serviceContainer.batchBuilder();
-                builder.addService(ServiceName.of("firstService"), Service.NULL);
-                final BatchBuilder subBatchBuilder = builder.subBatchBuilder();
-                subBatchBuilder.addService(ServiceName.of("secondService"), Service.NULL);
-                subBatchBuilder.addService(ServiceName.of("thirdService"), Service.NULL);
-                subBatchBuilder.addService(ServiceName.of("fourthService"), Service.NULL);
+        final BatchBuilder builder = serviceContainer.batchBuilder();
+        final TestServiceListener listener = new TestServiceListener();
+        builder.addListener(listener);
 
-                subBatchBuilder.addDependency(ServiceName.of("firstService"));
-                subBatchBuilder.addDependency(ServiceName.of("fourthService"));
-                return Collections.singletonList(builder);
-            }
+        builder.addService(ServiceName.of("firstService"), Service.NULL);
+        final BatchBuilder subBatchBuilder = builder.subBatchBuilder();
+        subBatchBuilder.addService(ServiceName.of("secondService"), Service.NULL);
+        subBatchBuilder.addService(ServiceName.of("thirdService"), Service.NULL);
+        subBatchBuilder.addService(ServiceName.of("fourthService"), Service.NULL);
 
-            @Override
-            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                final ServiceController<?> firstController = serviceContainer.getService(ServiceName.of("firstService"));
-                final ServiceController<?> fourthController = serviceContainer.getService(ServiceName.of("fourthService"));
+        subBatchBuilder.addDependency(ServiceName.of("firstService"));
+        subBatchBuilder.addDependency(ServiceName.of("fourthService"));
 
-                List<ServiceControllerImpl<?>> dependencies = getServiceDependencies(serviceContainer, ServiceName.of("secondService"));
-                assertTrue(dependencies.contains(firstController));
-                assertTrue(dependencies.contains(fourthController));
+        final Future<ServiceController<?>> firstService = listener.expectServiceStart(ServiceName.of("firstService"));
+        final Future<ServiceController<?>> secondService = listener.expectServiceStart(ServiceName.of("secondService"));
+        final Future<ServiceController<?>> thirdService = listener.expectServiceStart(ServiceName.of("thirdService"));
+        final Future<ServiceController<?>> fourthService = listener.expectServiceStart(ServiceName.of("fourthService"));
 
-                dependencies = getServiceDependencies(serviceContainer, ServiceName.of("thirdService"));
-                assertTrue(dependencies.contains(firstController));
-                assertTrue(dependencies.contains(fourthController));
+        builder.install();
 
-                dependencies = getServiceDependencies(serviceContainer, ServiceName.of("fourthService"));
-                assertTrue(dependencies.contains(firstController));
-                assertFalse(dependencies.contains(fourthController));
-            }
-        });
+        final ServiceController<?> firstController = firstService.get();
+        final ServiceController<?> fourthController = fourthService.get();
+
+        List<ServiceControllerImpl<?>> dependencies = getServiceDependencies(secondService.get());
+        assertTrue(dependencies.contains(firstController));
+        assertTrue(dependencies.contains(fourthController));
+
+        dependencies = getServiceDependencies(thirdService.get());
+        assertTrue(dependencies.contains(firstController));
+        assertTrue(dependencies.contains(fourthController));
+
+        dependencies = getServiceDependencies(fourthController);
+        assertTrue(dependencies.contains(firstController));
+        assertFalse(dependencies.contains(fourthController));
     }
 
 
-    private List<ServiceControllerImpl<?>> getServiceDependencies(ServiceContainer serviceContainer, final ServiceName serviceName) throws IllegalAccessException {
-        ServiceControllerImpl<?> controller = (ServiceControllerImpl) serviceContainer.getService(serviceName);
-        ServiceControllerImpl<?>[] deps = (ServiceControllerImpl<?>[]) dependenciesField.get(controller);
+    private List<ServiceControllerImpl<?>> getServiceDependencies(ServiceController<?> serviceController) throws IllegalAccessException {
+        ServiceControllerImpl<?>[] deps = (ServiceControllerImpl<?>[]) dependenciesField.get(serviceController);
         return Arrays.asList(deps);
     }
 }

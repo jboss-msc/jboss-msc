@@ -22,13 +22,12 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.service.util.LatchedFinishListener;
+import org.jboss.msc.util.TestServiceListener;
 import org.junit.Test;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.concurrent.Future;
 
-import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 /**
@@ -40,29 +39,33 @@ public class ServiceAliasTestCase extends AbstractServiceTest {
 
     @Test
     public void testAliases() throws Exception {
-        performTest(new ServiceTestInstance() {
-            @Override
-            public List<BatchBuilder> initializeBatches(ServiceContainer serviceContainer, LatchedFinishListener finishListener) throws Exception {
-                final BatchBuilder builder = serviceContainer.batchBuilder();
-                builder.addService(ServiceName.of("service1"), Service.NULL)
-                    .addAliases(ServiceName.of("alias1"))
-                    .addAliases(ServiceName.of("alias2"));
-                return Collections.singletonList(builder);
-            }
+        final BatchBuilder builder = serviceContainer.batchBuilder();
+        final TestServiceListener listener = new TestServiceListener();
+        builder.addListener(listener);
 
-            @Override
-            public void performAssertions(ServiceContainer serviceContainer) throws Exception {
-                assertEquals(serviceContainer.getService(ServiceName.of("service1")), serviceContainer.getService(ServiceName.of("alias1")));
-                assertEquals(serviceContainer.getService(ServiceName.of("service1")), serviceContainer.getService(ServiceName.of("alias2")));
+        builder.addService(ServiceName.of("service1"), Service.NULL)
+            .addAliases(ServiceName.of("alias1"))
+            .addAliases(ServiceName.of("alias2"));
 
-                ServiceController<?> controller = serviceContainer.getService(ServiceName.of("service1"));
-                controller.setMode(ServiceController.Mode.REMOVE);
-                Thread.sleep(100);
-                assertNull(serviceContainer.getService(ServiceName.of("service1")));
-                assertNull(serviceContainer.getService(ServiceName.of("alias1")));
-                assertNull(serviceContainer.getService(ServiceName.of("alias2")));
-            }
-        });
+        final Future<ServiceController<?>> future = listener.expectServiceStart(ServiceName.of("service1"));
+
+        builder.install();
+
+        future.get();
+
+        assertEquals(serviceContainer.getService(ServiceName.of("service1")), serviceContainer.getService(ServiceName.of("alias1")));
+        assertEquals(serviceContainer.getService(ServiceName.of("service1")), serviceContainer.getService(ServiceName.of("alias2")));
+
+        ServiceController<?> controller = serviceContainer.getService(ServiceName.of("service1"));
+
+        final Future<ServiceController<?>> removeFuture = listener.expectServiceRemoval(ServiceName.of("service1"));
+
+        controller.setMode(ServiceController.Mode.REMOVE);
+
+        removeFuture.get();
+
+        assertNull(serviceContainer.getService(ServiceName.of("service1")));
+        assertNull(serviceContainer.getService(ServiceName.of("alias1")));
+        assertNull(serviceContainer.getService(ServiceName.of("alias2")));
     }
-
 }
