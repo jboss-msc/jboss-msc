@@ -143,7 +143,7 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
     }
 
     public BatchServiceBuilder<T> addOptionalDependency(final ServiceName dependency) {
-        return addDependency(dependency, false);
+        return addDependency(dependency, true);
     }
 
     private BatchServiceBuilder<T> addDependency(final ServiceName dependency, final boolean optional) {
