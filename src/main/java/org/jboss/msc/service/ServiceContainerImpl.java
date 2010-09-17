@@ -113,7 +113,7 @@ final class ServiceContainerImpl implements ServiceContainer {
                             }
                         }
                     });
-                    hook.setDaemon(true);
+                    hook.setDaemon(false);
                     Runtime.getRuntime().addShutdownHook(hook);
                     return null;
                 }
