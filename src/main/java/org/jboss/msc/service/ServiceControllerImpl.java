@@ -31,9 +31,7 @@ import java.util.concurrent.RejectedExecutionException;
 
 /**
  * The service controller implementation.  Instances of this class follow a strict state table.
- *
- * <p>
- * <img src="doc-files/state-machine.svg"/>
+ * See {@link org.jboss.msc.service.package-info} for more information.
  * 
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
