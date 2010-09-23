@@ -41,7 +41,7 @@ final class ServiceBuilderImpl<S> implements ServiceBuilder<S> {
     private final Value<? extends Service<? extends S>> service;
     private final ServiceName serviceName;
 
-    private ServiceController.Mode mode = ServiceController.Mode.AUTOMATIC;
+    private ServiceController.Mode mode = ServiceController.Mode.ACTIVE;
     private ServiceControllerImpl<S> controller;
     private Location location;
 

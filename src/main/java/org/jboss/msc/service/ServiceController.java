@@ -164,13 +164,13 @@ public interface ServiceController<S> extends Value<S> {
          */
         ON_DEMAND,
         /**
-         * Come up automatically as soon as all dependencies are satisfied.  This is the default mode.
+         * Come up automatically as soon as all dependencies are satisfied.
          */
-        AUTOMATIC,
+        PASSIVE,
         /**
-         * Demand to start, recursively demanding dependencies.
+         * Demand to start, recursively demanding dependencies.  This is the default mode.
          */
-        IMMEDIATE,
+        ACTIVE,
         ;
     }
 }
