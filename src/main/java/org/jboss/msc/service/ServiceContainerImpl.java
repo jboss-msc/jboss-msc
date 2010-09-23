@@ -213,7 +213,7 @@ final class ServiceContainerImpl implements ServiceContainer {
         return executor != null ? executor : ExecutorHolder.VALUE;
     }
 
-    private final ConcurrentMap<ServiceName, ServiceController<?>> registry = new ConcurrentHashMap<ServiceName, ServiceController<?>>();
+    private final ConcurrentMap<ServiceName, ServiceRegistrationImpl> registry = new ConcurrentHashMap<ServiceName, ServiceRegistrationImpl>();
 
     public BatchBuilderImpl batchBuilder() {
         return new BatchBuilderImpl(this);
@@ -238,10 +238,10 @@ final class ServiceContainerImpl implements ServiceContainer {
      * Remove an entry.
      *
      * @param serviceName the service name
-     * @param controller the controller
+     * @param registration the controller
      */
-    void remove(final ServiceName serviceName, final ServiceControllerImpl<?> controller) {
-        registry.remove(serviceName, controller);
+    void remove(final ServiceName serviceName, final ServiceRegistrationImpl registration) {
+        registry.remove(serviceName, registration);
     }
 
     private void resolve(final Map<ServiceName, BatchServiceBuilderImpl<?>> services) throws ServiceRegistryException {

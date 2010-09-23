@@ -46,10 +46,6 @@ import java.util.Set;
  * @author Jason T. Greene
  */
 class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Serializable {
-    /**
-     * Marks null keys.
-     */
-    private static final Object NULL = new Object();
 
     /**
      * Serialization ID
@@ -114,13 +110,13 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
     public IdentityHashSet(Set<? extends E> set) {
         if (set instanceof IdentityHashSet) {
             IdentityHashSet<? extends E> fast = (IdentityHashSet<? extends E>) set;
-            this.table = fast.table.clone();
-            this.loadFactor = fast.loadFactor;
-            this.size = fast.size;
-            this.threshold = fast.threshold;
+            table = fast.table.clone();
+            loadFactor = fast.loadFactor;
+            size = fast.size;
+            threshold = fast.threshold;
         } else {
-            this.loadFactor = DEFAULT_LOAD_FACTOR;
-            init(set.size(), this.loadFactor);
+            loadFactor = DEFAULT_LOAD_FACTOR;
+            init(set.size(), loadFactor);
             addAll(set);
         }
     }
@@ -136,7 +132,7 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
             threshold = (int) (c * loadFactor);
         }
 
-        this.table = new Object[c];
+        table = new Object[c];
     }
 
     public IdentityHashSet(int initialCapacity) {
@@ -148,19 +144,10 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
     }
 
     // The normal bit spreader...
-    private static final int hash(Object o) {
+    private static int hash(Object o) {
         int h = System.identityHashCode(o);
         h ^= (h >>> 20) ^ (h >>> 12);
         return h ^ (h >>> 7) ^ (h >>> 4);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static final <K> K maskNull(K key) {
-        return key == null ? (K) NULL : key;
-    }
-
-    private static final <K> K unmaskNull(K key) {
-        return key == NULL ? null : key;
     }
 
     private int nextIndex(int index, int length) {
@@ -168,7 +155,7 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
         return index;
     }
 
-    private static final int index(int hashCode, int length) {
+    private static int index(int hashCode, int length) {
         return hashCode & (length - 1);
     }
 
@@ -181,7 +168,7 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
     }
 
     public boolean contains(Object entry) {
-        entry = maskNull(entry);
+        if (entry == null) return false;
 
         int hash = hash(entry);
         int length = table.length;
@@ -202,7 +189,9 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
     }
 
     public boolean add(E entry) {
-        entry = maskNull(entry);
+        if (entry == null) {
+            throw new NullPointerException("entry is null");
+        }
 
         Object[] table = this.table;
         int hash = hash(entry);
@@ -255,6 +244,7 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
         table = newTable;
     }
 
+    @SuppressWarnings({ "unchecked" })
     public boolean addAll(Collection<? extends E> collection) {
         int size = collection.size();
         if (size == 0)
@@ -272,14 +262,19 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
 
         boolean state = false;
 
-        for (E e : collection)
-            state |= add(e);
+        if (collection instanceof IdentityHashSet) {
+            for (E e : ((E[]) (((IdentityHashSet) collection).table)))
+                if (e != null) state |= add(e);
+        } else {
+            for (E e : collection)
+                state |= add(e);
+        }
 
         return state;
     }
 
     public boolean remove(Object o) {
-        o = maskNull(o);
+        if (o == null) return false;
 
         Object[] table = this.table;
         int length = table.length;
@@ -366,7 +361,30 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
         
         return ret;
     }
-    
+
+    /**
+     * Warning: this will crap out if the set contains a {@code null}.
+     *
+     * @param target the target to write to
+     * @param offs the offset into the target
+     * @param len the length to write
+     * @return the target array
+     */
+    @SuppressWarnings({ "unchecked" })
+    public E[] toArray(final E[] target, final int offs, final int len) {
+        assert len <= size;
+        final E[] table = (E[]) this.table;
+        E e;
+        final int last = offs + len;
+        for (int i = offs, j = 0; i < last; j ++) {
+            e = table[j];
+            if (e != null) {
+                target[i++] = e;
+            }
+        }
+        return target;
+    }
+
     public void printDebugStats() {
         int optimal = 0;
         int total = 0;
@@ -413,7 +431,6 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
     }
 
     private void putForCreate(E entry) {
-        entry = maskNull(entry);
 
         Object[] table = this.table;
         int hash = hash(entry);
@@ -435,7 +452,7 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
 
         for (Object e : table) {
             if (e != null) {
-                s.writeObject(unmaskNull(e));
+                s.writeObject(e);
             }
         }
     }

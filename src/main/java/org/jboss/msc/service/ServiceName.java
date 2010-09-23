@@ -46,7 +46,7 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
 
     private final String name;
     private final ServiceName parent;
-    private transient final int hashCode;
+    private final transient int hashCode;
 
     /**
      * The root name "jboss".
