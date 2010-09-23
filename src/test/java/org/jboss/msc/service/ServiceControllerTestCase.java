@@ -42,9 +42,9 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
         final BatchBuilder batch = serviceContainer.batchBuilder();
         final TestServiceListener listener = new TestServiceListener();
         batch.addListener(listener);
-        batch.addService(ServiceName.of("automatic"), Service.NULL).setInitialMode(ServiceController.Mode.AUTOMATIC);
+        batch.addService(ServiceName.of("automatic"), Service.NULL).setInitialMode(ServiceController.Mode.PASSIVE);
         batch.addService(ServiceName.of("never"), Service.NULL).setInitialMode(ServiceController.Mode.NEVER);
-        batch.addService(ServiceName.of("immediate"), Service.NULL).setInitialMode(ServiceController.Mode.IMMEDIATE);
+        batch.addService(ServiceName.of("immediate"), Service.NULL).setInitialMode(ServiceController.Mode.ACTIVE);
         batch.addService(ServiceName.of("on_demand"), Service.NULL).setInitialMode(ServiceController.Mode.ON_DEMAND);
 
         final Future<ServiceController<?>> automaticServiceFuture = listener.expectServiceStart(ServiceName.of("automatic"));
@@ -66,7 +66,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
         batch.addListener(listener);
 
         batch.addService(ServiceName.of("serviceOne"), Service.NULL)
-            .setInitialMode(ServiceController.Mode.AUTOMATIC)
+            .setInitialMode(ServiceController.Mode.PASSIVE)
                 .addDependencies(ServiceName.of("serviceTwo"));
         batch.addService(ServiceName.of("serviceTwo"), Service.NULL).setInitialMode(ServiceController.Mode.NEVER);
 
@@ -77,7 +77,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
         final Future<ServiceController<?>> serviceOneFuture = listener.expectServiceStart(ServiceName.of("serviceTwo"));
 
-        serviceContainer.getService(ServiceName.of("serviceTwo")).setMode(ServiceController.Mode.IMMEDIATE);
+        serviceContainer.getService(ServiceName.of("serviceTwo")).setMode(ServiceController.Mode.ACTIVE);
 
         assertEquals(ServiceController.State.UP, serviceOneFuture.get().getState());
         assertState(serviceContainer, ServiceName.of("serviceTwo"), ServiceController.State.UP);
@@ -97,7 +97,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
         final BatchBuilder anotherBatch = serviceContainer.batchBuilder();
 
         anotherBatch.addService(ServiceName.of("serviceTwo"), Service.NULL)
-            .setInitialMode(ServiceController.Mode.AUTOMATIC)
+            .setInitialMode(ServiceController.Mode.PASSIVE)
             .addDependencies(ServiceName.of("serviceOne"));
 
         anotherBatch.install();
@@ -107,7 +107,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
         final BatchBuilder yetAnotherBatch = serviceContainer.batchBuilder();
 
         yetAnotherBatch.addService(ServiceName.of("serviceThree"), Service.NULL)
-            .setInitialMode(ServiceController.Mode.IMMEDIATE)
+            .setInitialMode(ServiceController.Mode.ACTIVE)
             .addDependencies(ServiceName.of("serviceOne"))
             .addListener(listener);
 
@@ -138,7 +138,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
         batch.addService(ServiceName.of("connector"), Service.NULL)
             .addDependencies(ServiceName.of("sb1"), ServiceName.of("server"))
-            .setInitialMode(ServiceController.Mode.IMMEDIATE);
+            .setInitialMode(ServiceController.Mode.ACTIVE);
 
         final Future<ServiceController<?>> connectorFuture = listener.expectServiceStart(ServiceName.of("connector"));
 

@@ -142,7 +142,7 @@ final class ServiceContainerImpl implements ServiceContainer {
                     return ServiceContainerImpl.this;
                 }
             }), ROOT);
-            root = builder.setInitialMode(down ? ServiceController.Mode.REMOVE : ServiceController.Mode.AUTOMATIC).create();
+            root = builder.setInitialMode(down ? ServiceController.Mode.REMOVE : ServiceController.Mode.ACTIVE).create();
             if (! down) {
                 set.add(new WeakReference<ServiceContainerImpl, Void>(this, null, new Reaper<ServiceContainerImpl, Void>() {
                     public void reap(final Reference<ServiceContainerImpl, Void> reference) {
@@ -328,7 +328,7 @@ final class ServiceContainerImpl implements ServiceContainer {
                     }
                 }
             }
-            serviceController.setMode(initialMode == null ? ServiceController.Mode.AUTOMATIC : initialMode);
+            serviceController.setMode(initialMode == null ? ServiceController.Mode.ACTIVE : initialMode);
 
             // Cleanup
             entry.builder = null;

@@ -232,11 +232,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                             }
                             break;
                         }
-                        case AUTOMATIC: {
+                        case PASSIVE: {
                             upperCount++;
                             break;
                         }
-                        case IMMEDIATE: {
+                        case ACTIVE: {
                             specialTask = new DemandParentsTask();
                             asyncTasks++;
                             upperCount++;
@@ -257,13 +257,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                         case ON_DEMAND: {
                             return;
                         }
-                        case AUTOMATIC: {
+                        case PASSIVE: {
                             if (demandedByCount == 0) {
                                 upperCount++;
                             }
                             break;
                         }
-                        case IMMEDIATE: {
+                        case ACTIVE: {
                             specialTask = new DemandParentsTask();
                             asyncTasks++;
                             if (demandedByCount == 0) {
@@ -274,7 +274,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     }
                     break;
                 }
-                case AUTOMATIC: {
+                case PASSIVE: {
                     switch (newMode) {
                         case REMOVE:
                         case NEVER: {
@@ -287,10 +287,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                             }
                             break;
                         }
-                        case AUTOMATIC: {
+                        case PASSIVE: {
                             return;
                         }
-                        case IMMEDIATE: {
+                        case ACTIVE: {
                             specialTask = new DemandParentsTask();
                             asyncTasks++;
                             break;
@@ -298,7 +298,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                     }
                     break;
                 }
-                case IMMEDIATE: {
+                case ACTIVE: {
                     switch (newMode) {
                         case REMOVE:
                         case NEVER: {
@@ -315,12 +315,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
                             }
                             break;
                         }
-                        case AUTOMATIC: {
+                        case PASSIVE: {
                             specialTask = new UndemandParentsTask();
                             asyncTasks++;
                             break;
                         }
-                        case IMMEDIATE: {
+                        case ACTIVE: {
                             return;
                         }
                     }
