@@ -54,14 +54,6 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
     private final List<NamedInjection> namedInjections = new ArrayList<NamedInjection>(0);
     private ServiceName[] dependenciesArray;
 
-    // Resolver state
-    boolean processed;
-    boolean visited;
-    BatchServiceBuilderImpl<?> prev;
-    int i;
-    ServiceBuilder<T> builder;
-    final Set<ServiceName> missingOptionalDependencies = new HashSet<ServiceName>();
-
     BatchServiceBuilderImpl(final BatchBuilderImpl batchBuilder, final Value<? extends Service<T>> serviceValue, final ServiceName serviceName, final boolean ifNotExist) {
         if(batchBuilder == null) throw new IllegalArgumentException("BatchBuilder can not be null");
         this.batchBuilder = batchBuilder;

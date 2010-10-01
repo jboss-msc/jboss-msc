@@ -73,8 +73,8 @@ final class SubBatchBuilderImpl extends AbstractBatchBuilder {
     }
 
     void reconcile() {
-        final Set<ServiceListener<Object>> listeners = this.getListeners();
-        final Set<ServiceName> dependencies = this.getDependencies();
+        final Set<ServiceListener<Object>> listeners = getListeners();
+        final Set<ServiceName> dependencies = getDependencies();
         final Set<BatchServiceBuilder<?>> subBatchServiceBuilders = this.subBatchServiceBuilders;
         for(BatchServiceBuilder<?> batchServiceBuilder : subBatchServiceBuilders) {
             batchServiceBuilder.addListener(listeners);

@@ -45,7 +45,7 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
 
     @BeforeClass
     public static void initDependenciesField() throws Exception {
-        dependenciesField = ServiceControllerImpl.class.getDeclaredField("dependencies");
+        dependenciesField = ServiceInstanceImpl.class.getDeclaredField("dependencies");
         dependenciesField.setAccessible(true);
     }
 
@@ -71,8 +71,7 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
 
         final ServiceController<?> fourthController = fourthService.get();
 
-
-        List<ServiceControllerImpl<?>> dependencies = getServiceDependencies(firstService.get());
+        List<ServiceRegistrationImpl> dependencies = getServiceDependencies(firstService.get());
         assertTrue(dependencies.contains(fourthController));
 
         dependencies = getServiceDependencies(secondService.get());
@@ -124,8 +123,8 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
     }
 
 
-    private List<ServiceControllerImpl<?>> getServiceDependencies(ServiceController<?> serviceController) throws IllegalAccessException {
-        ServiceControllerImpl<?>[] deps = (ServiceControllerImpl<?>[]) dependenciesField.get(serviceController);
+    private List<ServiceInstanceImpl<?>> getServiceDependencies(ServiceController<?> serviceController) throws IllegalAccessException {
+        ServiceInstanceImpl<?>[] deps = ((ServiceRegistrationImpl[]) dependenciesField.get(serviceController).);
         return Arrays.asList(deps);
     }
 }

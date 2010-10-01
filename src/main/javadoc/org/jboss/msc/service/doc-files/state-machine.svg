@@ -41,6 +41,14 @@
 
     <style xml:space="preserve" type="text/css">
         <![CDATA[
+        text {
+            stroke-width: 0.2px;
+        }
+
+        text tspan {
+            stroke-width: 0.2px;
+        }
+
         svg.state rect {
             stroke: #000000;
             fill: url(#stateGradient);
@@ -49,7 +57,9 @@
         svg.state text.title {
             font-family: monospace;
             font-size: 11pt;
+            stroke-width: 0.4px;
             stroke: #002244;
+            fill: #002244;
             alignment-baseline: middle;
         }
         ]]>
@@ -64,26 +74,34 @@
             font-family: Arial;
             font-size: 8pt;
             stroke: #000000;
+            fill: #000000;
             stroke-width: 1px;
             alignment-baseline: hanging;
         }
 
         svg.transition text tspan {
             alignment-baseline: hanging;
+            stroke: #000000;
+            fill: #000000;
         }
 
         svg.transition text tspan.when {
+            stroke-width: 0.3px;
             font-size: 9pt;
             stroke: #0000CC;
+            fill: #0000CC;
         }
 
         svg.transition text tspan.action {
+            stroke-width: 0.3px;
             font-size: 9pt;
             stroke: #CC0000;
+            fill: #CC0000;
         }
 
         svg.transition text tspan.var {
             stroke: #005555;
+            fill: #005555;
         }
     </style>
 

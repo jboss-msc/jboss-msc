@@ -43,9 +43,17 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
      */
     private final Location location;
     /**
-     * The dependencies of this service.
+     * The required dependencies of this service.
      */
-    private final ServiceRegistrationImpl[] dependencies;
+    private final ServiceRegistrationImpl[] required;
+    /**
+     * The optional dependencies of this service.
+     */
+    private final ServiceRegistrationImpl[] optional;
+    /**
+     * The optionality of each dependency.
+     */
+    private final boolean[] optionals;
     /**
      * The injections of this service.
      */
@@ -66,6 +74,10 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
      * The alias registrations of this service.
      */
     private final ServiceRegistrationImpl[] aliasRegistrations;
+    /**
+     * The current running dependencies; only populated 
+     */
+    private IdentityHashSet<ServiceInstanceImpl<?>> dependencies = new IdentityHashSet<ServiceInstanceImpl<?>>(0);
     /**
      * The start exception.
      */
@@ -101,19 +113,29 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
      */
     private int asyncTasks;
 
-    ServiceInstanceImpl(final Value<? extends Service<? extends S>> serviceValue, final Location location, final ServiceRegistrationImpl[] dependencies, final ValueInjection<?>[] injections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations) {
+    private static final ServiceRegistrationImpl[] NO_REGISTRATIONS = new ServiceRegistrationImpl[0];
+    private static final ServiceInstanceImpl<?>[] NO_DEPENDENTS = new ServiceInstanceImpl<?>[0];
+    private static final ValueInjection<?>[] NO_INJECTIONS = new ValueInjection<?>[0];
+    private static final boolean[] NO_BOOLEANS = new boolean[0];
+
+    ServiceInstanceImpl(final Value<? extends Service<? extends S>> serviceValue, final Location location, final ServiceRegistrationImpl[] configuredDependencies, final boolean[] optionals, final ValueInjection<?>[] injections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations) {
         this.serviceValue = serviceValue;
         this.location = location;
-        this.dependencies = dependencies;
+        this.configuredDependencies = configuredDependencies;
+        this.optionals = optionals;
         this.injections = injections;
         this.primaryRegistration = primaryRegistration;
         this.aliasRegistrations = aliasRegistrations;
     }
 
-    void initialize() {
-        for (ServiceRegistrationImpl controller : dependencies) {
-            controller.addDependent(this);
-        }
+    ServiceInstanceImpl(final Value<? extends Service<? extends S>> serviceValue, final ServiceRegistrationImpl primaryRegistration) {
+        this.serviceValue = serviceValue;
+        this.primaryRegistration = primaryRegistration;
+        location = null;
+        configuredDependencies = NO_REGISTRATIONS;
+        optionals = NO_BOOLEANS;
+        injections = NO_INJECTIONS;
+        aliasRegistrations = NO_REGISTRATIONS;
     }
 
     /**
@@ -208,8 +230,6 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
         }
         return null;
     }
-
-    private static final ServiceInstanceImpl<?>[] NO_DEPENDENTS = new ServiceInstanceImpl<?>[0];
 
     /**
      * Run the locked portion of a transition.  Call under lock.

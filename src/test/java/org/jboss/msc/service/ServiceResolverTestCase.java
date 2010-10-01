@@ -47,7 +47,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
 
     @BeforeClass
     public static void initDependenciesField() throws Exception {
-        dependenciesField = ServiceControllerImpl.class.getDeclaredField("dependencies");
+        dependenciesField = ServiceInstanceImpl.class.getDeclaredField("dependencies");
         dependenciesField.setAccessible(true);
     }
 
@@ -170,7 +170,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
 
 
     private List<ServiceController<?>> getServiceDependencies(ServiceContainer serviceContainer, final ServiceController<?> serviceController) throws IllegalAccessException {
-        ServiceController<?>[] deps = (ServiceControllerImpl<?>[]) dependenciesField.get(serviceController);
+        ServiceController<?>[] deps = (ServiceInstanceImpl<?>[]) dependenciesField.get(serviceController);
         return Arrays.asList(deps);
     }
 

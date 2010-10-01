@@ -42,6 +42,10 @@ final class ServiceRegistrationImpl {
      * The set of dependents on this registration.
      */
     private final IdentityHashSet<ServiceInstanceImpl<?>> dependents = new IdentityHashSet<ServiceInstanceImpl<?>>(0);
+    /**
+     * The set of optional dependents on this registration.
+     */
+    private final IdentityHashSet<ServiceInstanceImpl<?>> optionalDependents = new IdentityHashSet<ServiceInstanceImpl<?>>(0);
 
     // Mutable properties
 
@@ -111,13 +115,13 @@ final class ServiceRegistrationImpl {
         }
     }
 
-    void setInstance(final ServiceInstanceImpl<?> instance) throws CircularDependencyException {
+    void setInstance(final ServiceInstanceImpl<?> instance) throws DuplicateServiceException {
         assert instance != null;
         assert !lockHeld();
         assert !instance.lockHeld();
         synchronized (this) {
             if (this.instance != null) {
-                throw new IllegalStateException("Service already registered");
+                throw new DuplicateServiceException("Service already registered");
             }
             this.instance = instance;
             synchronized (instance) {
@@ -205,6 +209,12 @@ final class ServiceRegistrationImpl {
             if (instance != null) {
                 instance.addDemand();
             }
+        }
+    }
+
+    ServiceController<?> getInstance() {
+        synchronized (this) {
+            return instance;
         }
     }
 }

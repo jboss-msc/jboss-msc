@@ -26,8 +26,6 @@ import org.jboss.msc.ref.Reaper;
 import org.jboss.msc.ref.Reference;
 import org.jboss.msc.ref.WeakReference;
 import org.jboss.msc.value.ImmediateValue;
-import org.jboss.msc.value.Value;
-import org.jboss.msc.value.Values;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -48,9 +46,7 @@ import java.util.concurrent.TimeUnit;
  */
 final class ServiceContainerImpl implements ServiceContainer {
     final Object lock = new Object();
-    final ServiceControllerImpl<ServiceContainer> root;
-
-    static final ServiceName ROOT = ServiceName.of("ROOT");
+    final ServiceInstanceImpl<ServiceContainer> root;
 
     private static final class ExecutorHolder {
         private static final Executor VALUE;
@@ -99,7 +95,7 @@ final class ServiceContainerImpl implements ServiceContainer {
                                         listener.countDown();
                                         continue;
                                     }
-                                    final ServiceControllerImpl<ServiceContainer> root = container.root;
+                                    final ServiceInstanceImpl<ServiceContainer> root = container.root;
                                     root.setMode(ServiceController.Mode.REMOVE);
                                     root.addListener(listener);
                                 }
@@ -131,7 +127,7 @@ final class ServiceContainerImpl implements ServiceContainer {
         synchronized (set) {
             // if the shutdown hook was triggered, then no services can ever come up in any new containers.
             final boolean down = ShutdownHookHolder.down;
-            final ServiceBuilderImpl<ServiceContainer> builder = new ServiceBuilderImpl<ServiceContainer>(this, new ImmediateValue<Service<ServiceContainer>>(new Service<ServiceContainer>() {
+            root = new ServiceInstanceImpl<ServiceContainer>(new ImmediateValue<Service<ServiceContainer>>(new Service<ServiceContainer>() {
                 public void start(final StartContext context) throws StartException {
                 }
 
@@ -141,8 +137,7 @@ final class ServiceContainerImpl implements ServiceContainer {
                 public ServiceContainer getValue() throws IllegalStateException {
                     return ServiceContainerImpl.this;
                 }
-            }), ROOT);
-            root = builder.setInitialMode(down ? ServiceController.Mode.REMOVE : ServiceController.Mode.ACTIVE).create();
+            }), null, new ServiceRegistrationImpl[0], optionals, new ValueInjection<?>[0], new ServiceRegistrationImpl(this, ServiceName.of("root")), new ServiceRegistrationImpl[0]);
             if (! down) {
                 set.add(new WeakReference<ServiceContainerImpl, Void>(this, null, new Reaper<ServiceContainerImpl, Void>() {
                     public void reap(final Reference<ServiceContainerImpl, Void> reference) {
@@ -151,16 +146,6 @@ final class ServiceContainerImpl implements ServiceContainer {
                 }));
             }
         }
-    }
-
-    public <T> ServiceBuilderImpl<T> buildService(final Value<? extends Service<? extends T>> service) {
-        return buildService(null, service);
-    }
-
-    public <T> ServiceBuilderImpl<T> buildService(final ServiceName serviceName, final Value<? extends Service<? extends T>> service) {
-        final ServiceBuilderImpl<T> builder = new ServiceBuilderImpl<T>(this, service, serviceName);
-        builder.addDependency(root);
-        return builder;
     }
 
     public void setExecutor(final Executor executor) {
@@ -246,100 +231,37 @@ final class ServiceContainerImpl implements ServiceContainer {
 
     private void resolve(final Map<ServiceName, BatchServiceBuilderImpl<?>> services) throws ServiceRegistryException {
         for (BatchServiceBuilderImpl<?> batchEntry : services.values()) {
-            if(!batchEntry.processed)
-                doResolve(batchEntry, services);
+            installEntry(batchEntry);
         }
     }
 
-    @SuppressWarnings({ "unchecked" })
-    private <T> void doResolve(BatchServiceBuilderImpl<T> entry, final Map<ServiceName, BatchServiceBuilderImpl<?>> services) throws ServiceRegistryException {
-        outer:
-        while (entry != null) {
-            final Value<? extends Service<T>> serviceValue = entry.getServiceValue();
-
-            final ServiceName name = entry.getName();
-            ServiceBuilder<T> builder;
-            if ((builder = entry.builder) == null) {
-                builder = entry.builder = buildService(name, serviceValue);
-            }
-            builder.addAliases(entry.getAliases());
-
-            final ServiceName[] deps = entry.getDependencies();
-            final ServiceName[] aliases = entry.getAliases();
-
-            while (entry.i < deps.length) {
-                final ServiceName dependencyName = deps[entry.i];
-
-                ServiceController<?> dependencyController = registry.get(dependencyName);
-                if (dependencyController == null) {
-                    final BatchServiceBuilderImpl dependencyEntry = services.get(dependencyName);
-                    if(dependencyEntry != null) {
-                        // Backup the last position, so that we can unroll
-                        assert dependencyEntry.prev == null;
-                        dependencyEntry.prev = entry;
-
-                        entry.visited = true;
-                        entry = dependencyEntry;
-
-                        if (entry.visited)
-                            throw new CircularDependencyException("Circular dependency discovered: " + name);
-
-                        continue outer;
-                    } else if(entry.isOptionalDependency(dependencyName)) {
-                        entry.missingOptionalDependencies.add(dependencyName);
-                    } else {
-                        throw new MissingDependencyException("Missing dependency: " + name + " depends on " + dependencyName + " which can not be found");
-                    }
-                } else {
-                    // Either the dep already exists, or we are unrolling and just created it
-                    builder.addDependency(dependencyController);
-                }
-                entry.i++;
-            }
-
-            // We are resolved.  Lets install
-            for(ServiceListener<? super T> listener : entry.getListeners()) {
-                builder.addListener(listener);
-            }
-
-            for(NamedInjection namedInjection : entry.getNamedInjections()) {
-                if(!entry.missingOptionalDependencies.contains(namedInjection.getName())) {
-                    builder.addValueInjection(new ValueInjection<Object>(getRequiredService(namedInjection.getName()), namedInjection.getTarget()));
-                } else {
-                    builder.addValueInjection(new ValueInjection<Object>(Values.nullValue(), namedInjection.getTarget()));
-                }
-            }
-
-            for (ValueInjection<?> valueInjection : entry.getValueInjections()) {
-                builder.addValueInjection(valueInjection);
-            }
-
-            final ServiceController.Mode initialMode = entry.getInitialMode();
-            builder.setInitialMode(ServiceController.Mode.NEVER);
-            final ServiceController<?> serviceController = builder.create();
-            if (registry.putIfAbsent(name, serviceController) != null) {
-                if (! entry.isIfNotExist()) {
-                    throw new DuplicateServiceException("Duplicate service name provided: " + name);
-                }
-            } else {
-                for(ServiceName alias : aliases) {
-                    if (registry.putIfAbsent(alias, serviceController) != null) {
-                        throw new DuplicateServiceException("Duplicate service name provided: " + alias);
-                    }
-                }
-            }
-            serviceController.setMode(initialMode == null ? ServiceController.Mode.ACTIVE : initialMode);
-
-            // Cleanup
-            entry.builder = null;
-            BatchServiceBuilderImpl prev = entry.prev;
-            entry.prev = null;
-
-            // Unroll!
-            entry.processed = true;
-            entry.visited = false;
-            entry = prev;
+    private <S> void installEntry(final BatchServiceBuilderImpl<S> batchEntry) throws DuplicateServiceException {
+        // First, create all registrations
+        final ServiceName name = batchEntry.getName();
+        ServiceRegistrationImpl primaryRegistration = getOrCreateRegistration(name);
+        final ServiceName[] aliases = batchEntry.getAliases();
+        final ServiceRegistrationImpl[] aliasRegistrations = new ServiceRegistrationImpl[aliases.length];
+        for (int i = 0; i < aliases.length; i++) {
+            aliasRegistrations[i] = getOrCreateRegistration(aliases[i]);
         }
+
+        // Next create the actual controller
+        final ServiceInstanceImpl<S> instance = new ServiceInstanceImpl<S>(batchEntry.getServiceValue(), null, null, optionals, null, primaryRegistration, aliasRegistrations);
+
+        // Try to install the controller in each registration
+        primaryRegistration.setInstance(instance);
+    }
+
+    private ServiceRegistrationImpl getOrCreateRegistration(final ServiceName name) {
+        ServiceRegistrationImpl registration = registry.get(name);
+        if (registration == null) {
+            registration = new ServiceRegistrationImpl(this, name);
+            ServiceRegistrationImpl appearing = registry.putIfAbsent(name, registration);
+            if (appearing != null) {
+                return appearing;
+            }
+        }
+        return registration;
     }
 
     public ServiceController<?> getRequiredService(final ServiceName serviceName) throws ServiceNotFoundException {
@@ -351,6 +273,7 @@ final class ServiceContainerImpl implements ServiceContainer {
     }
 
     public ServiceController<?> getService(final ServiceName serviceName) {
-        return registry.get(serviceName);
+        final ServiceRegistrationImpl registration = registry.get(serviceName);
+        return registration == null ? null : registration.getInstance();
     }
 }
