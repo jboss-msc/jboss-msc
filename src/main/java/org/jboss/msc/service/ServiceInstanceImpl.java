@@ -25,6 +25,7 @@ package org.jboss.msc.service;
 import java.util.Arrays;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+
 import org.jboss.msc.value.Value;
 
 /**
@@ -43,17 +44,9 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
      */
     private final Location location;
     /**
-     * The required dependencies of this service.
+     * The dependencies of this service.
      */
-    private final ServiceRegistrationImpl[] required;
-    /**
-     * The optional dependencies of this service.
-     */
-    private final ServiceRegistrationImpl[] optional;
-    /**
-     * The optionality of each dependency.
-     */
-    private final boolean[] optionals;
+    private final ServiceRegistrationImpl[] dependencies;
     /**
      * The injections of this service.
      */
@@ -74,10 +67,6 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
      * The alias registrations of this service.
      */
     private final ServiceRegistrationImpl[] aliasRegistrations;
-    /**
-     * The current running dependencies; only populated 
-     */
-    private IdentityHashSet<ServiceInstanceImpl<?>> dependencies = new IdentityHashSet<ServiceInstanceImpl<?>>(0);
     /**
      * The start exception.
      */
@@ -116,13 +105,11 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
     private static final ServiceRegistrationImpl[] NO_REGISTRATIONS = new ServiceRegistrationImpl[0];
     private static final ServiceInstanceImpl<?>[] NO_DEPENDENTS = new ServiceInstanceImpl<?>[0];
     private static final ValueInjection<?>[] NO_INJECTIONS = new ValueInjection<?>[0];
-    private static final boolean[] NO_BOOLEANS = new boolean[0];
 
-    ServiceInstanceImpl(final Value<? extends Service<? extends S>> serviceValue, final Location location, final ServiceRegistrationImpl[] configuredDependencies, final boolean[] optionals, final ValueInjection<?>[] injections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations) {
+    ServiceInstanceImpl(final Value<? extends Service<? extends S>> serviceValue, final Location location, final ServiceRegistrationImpl[] dependencies, final ValueInjection<?>[] injections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations) {
         this.serviceValue = serviceValue;
         this.location = location;
-        this.configuredDependencies = configuredDependencies;
-        this.optionals = optionals;
+        this.dependencies = dependencies;
         this.injections = injections;
         this.primaryRegistration = primaryRegistration;
         this.aliasRegistrations = aliasRegistrations;
@@ -132,8 +119,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
         this.serviceValue = serviceValue;
         this.primaryRegistration = primaryRegistration;
         location = null;
-        configuredDependencies = NO_REGISTRATIONS;
-        optionals = NO_BOOLEANS;
+        dependencies = NO_REGISTRATIONS;
         injections = NO_INJECTIONS;
         aliasRegistrations = NO_REGISTRATIONS;
     }

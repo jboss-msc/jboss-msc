@@ -42,10 +42,6 @@ final class ServiceRegistrationImpl {
      * The set of dependents on this registration.
      */
     private final IdentityHashSet<ServiceInstanceImpl<?>> dependents = new IdentityHashSet<ServiceInstanceImpl<?>>(0);
-    /**
-     * The set of optional dependents on this registration.
-     */
-    private final IdentityHashSet<ServiceInstanceImpl<?>> optionalDependents = new IdentityHashSet<ServiceInstanceImpl<?>>(0);
 
     // Mutable properties
 
@@ -207,7 +203,7 @@ final class ServiceRegistrationImpl {
             demandedByCount--;
             final ServiceInstanceImpl<?> instance = this.instance;
             if (instance != null) {
-                instance.addDemand();
+                instance.removeDemand();
             }
         }
     }

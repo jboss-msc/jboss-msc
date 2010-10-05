@@ -137,7 +137,7 @@ final class ServiceContainerImpl implements ServiceContainer {
                 public ServiceContainer getValue() throws IllegalStateException {
                     return ServiceContainerImpl.this;
                 }
-            }), null, new ServiceRegistrationImpl[0], optionals, new ValueInjection<?>[0], new ServiceRegistrationImpl(this, ServiceName.of("root")), new ServiceRegistrationImpl[0]);
+            }), null, new ServiceRegistrationImpl[0], new ValueInjection<?>[0], new ServiceRegistrationImpl(this, ServiceName.of("root")), new ServiceRegistrationImpl[0]);
             if (! down) {
                 set.add(new WeakReference<ServiceContainerImpl, Void>(this, null, new Reaper<ServiceContainerImpl, Void>() {
                     public void reap(final Reference<ServiceContainerImpl, Void> reference) {
@@ -246,8 +246,7 @@ final class ServiceContainerImpl implements ServiceContainer {
         }
 
         // Next create the actual controller
-        final ServiceInstanceImpl<S> instance = new ServiceInstanceImpl<S>(batchEntry.getServiceValue(), null, null, optionals, null, primaryRegistration, aliasRegistrations);
-
+        final ServiceInstanceImpl<S> instance = new ServiceInstanceImpl<S>(batchEntry.getServiceValue(), null, null, null, primaryRegistration, aliasRegistrations);
         // Try to install the controller in each registration
         primaryRegistration.setInstance(instance);
     }
