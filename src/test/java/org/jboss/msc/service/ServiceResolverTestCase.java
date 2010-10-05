@@ -88,12 +88,14 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
     public void testResolvableWithPreexistingDeps() throws Exception {
         final OrderedStartListener startListener = new OrderedStartListener();
         final LatchedFinishListener finishListener = new LatchedFinishListener();
-        final BatchBuilder builder1 = serviceContainer.batchBuilder().addListener(finishListener).addListener(startListener);
+        final BatchBuilder builder1 = serviceContainer.batchBuilder();
+        builder1.addListener(finishListener).addListener(startListener);
         builder1.addService(ServiceName.of("2"), Service.NULL);
         builder1.addService(ServiceName.of("9"), Service.NULL);
         builder1.addService(ServiceName.of("10"), Service.NULL);
 
-        final BatchBuilder builder2 = serviceContainer.batchBuilder().addListener(finishListener).addListener(startListener);
+        final BatchBuilder builder2 = serviceContainer.batchBuilder();
+        builder2.addListener(finishListener).addListener(startListener);
         builder2.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"));
         builder2.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
         builder2.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"));

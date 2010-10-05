@@ -40,8 +40,8 @@ import static org.jboss.msc.service.BatchBuilderImpl.alreadyInstalled;
 /**
 * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
 */
-final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
-    private final BatchBuilderImpl batchBuilder;
+abstract class AbstractServiceBuilder<T> implements ServiceBuilder<T> {
+
     private final Value<? extends Service<T>> serviceValue;
     private final ServiceName serviceName;
     private final boolean ifNotExist;
@@ -53,10 +53,9 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
     private final List<ValueInjection<?>> valueInjections = new ArrayList<ValueInjection<?>>(0);
     private final List<NamedInjection> namedInjections = new ArrayList<NamedInjection>(0);
     private ServiceName[] dependenciesArray;
+    private boolean installed = false;
 
-    BatchServiceBuilderImpl(final BatchBuilderImpl batchBuilder, final Value<? extends Service<T>> serviceValue, final ServiceName serviceName, final boolean ifNotExist) {
-        if(batchBuilder == null) throw new IllegalArgumentException("BatchBuilder can not be null");
-        this.batchBuilder = batchBuilder;
+    AbstractServiceBuilder(final Value<? extends Service<T>> serviceValue, final ServiceName serviceName, final boolean ifNotExist) {
         if(serviceValue == null) throw new IllegalArgumentException("ServiceValue can not be null");
         this.serviceValue = serviceValue;
         if(serviceName == null) throw new IllegalArgumentException("ServiceName can not be null");
@@ -65,7 +64,7 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
     }
 
     @Override
-    public BatchServiceBuilder<T> addAliases(ServiceName... aliases) {
+    public ServiceBuilder<T> addAliases(ServiceName... aliases) {
         for(ServiceName alias : aliases) {
             if(!alias.equals(serviceName)) {
                 this.aliases.add(alias);
@@ -74,7 +73,7 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         return this;
     }
 
-    public BatchServiceBuilderImpl<T> setLocation() {
+    public AbstractServiceBuilder<T> setLocation() {
         checkAlreadyInstalled();
         final StackTraceElement element = new Throwable().getStackTrace()[1];
         final String fileName = element.getFileName();
@@ -82,27 +81,27 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         return setLocation(new Location(fileName, lineNumber, -1, null));
     }
 
-    public BatchServiceBuilderImpl<T> setLocation(final Location location) {
+    public AbstractServiceBuilder<T> setLocation(final Location location) {
         checkAlreadyInstalled();
         this.location = location;
         return this;
     }
 
-    public BatchServiceBuilderImpl<T> setInitialMode(final ServiceController.Mode mode) {
+    public AbstractServiceBuilder<T> setInitialMode(final ServiceController.Mode mode) {
         checkAlreadyInstalled();
         initialMode = mode;
         return this;
     }
 
-    public BatchServiceBuilder<T> addDependencies(final ServiceName... newDependencies) {
+    public ServiceBuilder<T> addDependencies(final ServiceName... newDependencies) {
         return addDependencies(false, newDependencies);
     }
 
-    public BatchServiceBuilder<T> addOptionalDependencies(final ServiceName... newDependencies) {
+    public ServiceBuilder<T> addOptionalDependencies(final ServiceName... newDependencies) {
         return addDependencies(true, newDependencies);
     }
 
-    private BatchServiceBuilder<T> addDependencies(final boolean optional, final ServiceName... newDependencies) {
+    private ServiceBuilder<T> addDependencies(final boolean optional, final ServiceName... newDependencies) {
         checkAlreadyInstalled();
         for (ServiceName dependency : newDependencies) {
             if(!serviceName.equals(dependency)) {
@@ -112,15 +111,15 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         return this;
     }
 
-    public BatchServiceBuilder<T> addDependencies(final Iterable<ServiceName> newDependencies) {
+    public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> newDependencies) {
         return addDependencies(newDependencies, false);
     }
 
-    public BatchServiceBuilder<T> addOptionalDependencies(final Iterable<ServiceName> newDependencies) {
+    public ServiceBuilder<T> addOptionalDependencies(final Iterable<ServiceName> newDependencies) {
         return addDependencies(newDependencies, true);
     }
 
-    private BatchServiceBuilder<T> addDependencies(final Iterable<ServiceName> newDependencies, final boolean optional) {
+    private ServiceBuilder<T> addDependencies(final Iterable<ServiceName> newDependencies, final boolean optional) {
         checkAlreadyInstalled();
         for (ServiceName dependency : newDependencies) {
             if(!serviceName.equals(dependency)) {
@@ -130,15 +129,15 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         return this;
     }
 
-    public BatchServiceBuilder<T> addDependency(final ServiceName dependency) {
+    public ServiceBuilder<T> addDependency(final ServiceName dependency) {
         return addDependency(dependency, false);
     }
 
-    public BatchServiceBuilder<T> addOptionalDependency(final ServiceName dependency) {
+    public ServiceBuilder<T> addOptionalDependency(final ServiceName dependency) {
         return addDependency(dependency, true);
     }
 
-    private BatchServiceBuilder<T> addDependency(final ServiceName dependency, final boolean optional) {
+    private ServiceBuilder<T> addDependency(final ServiceName dependency, final boolean optional) {
         checkAlreadyInstalled();
         if(!serviceName.equals(dependency)) {
             doAddDependency(dependency, optional);
@@ -146,15 +145,15 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         return this;
     }
 
-    public BatchServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
+    public ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
         return addDependency(dependency, target, false);
     }
 
-    public BatchServiceBuilder<T> addOptionalDependency(final ServiceName dependency, final Injector<Object> target) {
+    public ServiceBuilder<T> addOptionalDependency(final ServiceName dependency, final Injector<Object> target) {
         return addDependency(dependency, target, true);
     }
 
-    private BatchServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target, boolean optional) {
+    private ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target, boolean optional) {
         checkAlreadyInstalled();
         if(!serviceName.equals(dependency)) {
             doAddDependency(dependency, optional);
@@ -163,15 +162,15 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         return this;
     }
 
-    public <I> BatchServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
+    public <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
         return addDependency(dependency, type, target, false);
     }
 
-    public <I> BatchServiceBuilder<T> addOptionalDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
+    public <I> ServiceBuilder<T> addOptionalDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
         return addDependency(dependency, type, target, true);
     }
 
-    private <I> BatchServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target, final boolean optional) {
+    private <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target, final boolean optional) {
         checkAlreadyInstalled();
         if(!serviceName.equals(dependency)) {
             doAddDependency(dependency, optional);
@@ -185,23 +184,23 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         dependencies.put(dependency, Boolean.valueOf(existing != null ? existing.booleanValue() && optional : optional));
     }
 
-    public <I> BatchServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {
+    public <I> ServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {
         return addInjectionValue(target, new ImmediateValue<I>(value));
     }
 
-    public <I> BatchServiceBuilder<T> addInjectionValue(final Injector<? super I> target, final Value<I> value) {
+    public <I> ServiceBuilder<T> addInjectionValue(final Injector<? super I> target, final Value<I> value) {
         checkAlreadyInstalled();
         valueInjections.add(new ValueInjection<I>(value, target));
         return this;
     }
 
-    public BatchServiceBuilderImpl<T> addListener(final ServiceListener<? super T> listener) {
+    public AbstractServiceBuilder<T> addListener(final ServiceListener<? super T> listener) {
         checkAlreadyInstalled();
         listeners.add(listener);
         return this;
     }
 
-    public BatchServiceBuilderImpl<T> addListener(final ServiceListener<? super T>... serviceListeners) {
+    public AbstractServiceBuilder<T> addListener(final ServiceListener<? super T>... serviceListeners) {
         checkAlreadyInstalled();
         for (ServiceListener<? super T> listener : serviceListeners) {
             final List<ServiceListener<? super T>> listeners = this.listeners;
@@ -210,14 +209,24 @@ final class BatchServiceBuilderImpl<T> implements BatchServiceBuilder<T> {
         return this;
     }
 
-    public BatchServiceBuilderImpl<T> addListener(final Collection<? extends ServiceListener<? super T>> serviceListeners) {
+    public AbstractServiceBuilder<T> addListener(final Collection<? extends ServiceListener<? super T>> serviceListeners) {
         checkAlreadyInstalled();
         listeners.addAll(serviceListeners);
         return this;
     }
+    
+    public void install() throws ServiceRegistryException {
+        if (!installed) {
+            // mark it before doInstall, so we avoid ServiceRegistryException being multiple times
+            installed = true;
+            doInstall();
+        }
+    }
+    
+    protected abstract void doInstall() throws ServiceRegistryException;
 
     private void checkAlreadyInstalled() {
-        if (batchBuilder.isDone()) {
+        if (installed) {
             throw alreadyInstalled();
         }
     }

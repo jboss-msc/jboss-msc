@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import org.jboss.msc.service.BatchBuilder;
-import org.jboss.msc.service.BatchServiceBuilder;
+import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
@@ -51,7 +51,7 @@ public class TenForwardBench {
             for (int j = 1; j < numDeps + 1; j++) {
                 deps.add(ServiceName.of(("test" + (i + j)).intern()));
             }
-            final BatchServiceBuilder<Void> builder = batch.addService(ServiceName.of(("test" + i).intern()), Service.NULL);
+            final ServiceBuilder<Void> builder = batch.addService(ServiceName.of(("test" + i).intern()), Service.NULL);
             for (ServiceName dep : deps) {
                 builder.addDependency(dep);
             }

@@ -22,33 +22,10 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.value.Value;
-
-
 /**
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
- * @param <T>
- * 
  *
  */
-final class BatchServiceBuilder<T> extends AbstractServiceBuilder<T> {
-
-     final BatchBuilderImpl batchBuilder;
-
-    /**
-     * @param batchBuilder
-     * @param serviceValue
-     * @param serviceName
-     * @param ifNotExist
-     */
-    BatchServiceBuilder(BatchBuilderImpl batchBuilder, Value<? extends Service<T>> serviceValue, ServiceName serviceName,
-            boolean ifNotExist) {
-        super(serviceValue, serviceName, ifNotExist);
-        this.batchBuilder = batchBuilder;
-    }
-
-    @Override
-    protected void doInstall() throws ServiceRegistryException {
-        batchBuilder.install(this);
-    }
+public interface ServiceBuilderFactory {
+    ServiceBuilder<?> getServiceBuilder();
 }

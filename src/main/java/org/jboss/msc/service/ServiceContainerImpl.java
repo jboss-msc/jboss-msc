@@ -22,11 +22,6 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.ref.Reaper;
-import org.jboss.msc.ref.Reference;
-import org.jboss.msc.ref.WeakReference;
-import org.jboss.msc.value.ImmediateValue;
-
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashSet;
@@ -41,10 +36,17 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.jboss.msc.ref.Reaper;
+import org.jboss.msc.ref.Reference;
+import org.jboss.msc.ref.WeakReference;
+import org.jboss.msc.value.ImmediateValue;
+import org.jboss.msc.value.Value;
+
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
-final class ServiceContainerImpl implements ServiceContainer {
+final class ServiceContainerImpl extends AbstractServiceContext implements ServiceContainer {
     final Object lock = new Object();
     final ServiceInstanceImpl<ServiceContainer> root;
 
@@ -229,24 +231,33 @@ final class ServiceContainerImpl implements ServiceContainer {
         registry.remove(serviceName, registration);
     }
 
-    private void resolve(final Map<ServiceName, BatchServiceBuilderImpl<?>> services) throws ServiceRegistryException {
-        for (BatchServiceBuilderImpl<?> batchEntry : services.values()) {
-            installEntry(batchEntry);
+    private void resolve(final Map<ServiceName, ? extends AbstractServiceBuilder<?>> serviceBuilders) throws ServiceRegistryException {
+        for (AbstractServiceBuilder<?> serviceBuilder : serviceBuilders.values()) {
+            install(serviceBuilder);
         }
     }
 
-    private <S> void installEntry(final BatchServiceBuilderImpl<S> batchEntry) throws DuplicateServiceException {
+    <S> void install(final ContainerServiceBuilder<S> containerServiceBuilder) throws DuplicateServiceException {
+        apply(containerServiceBuilder);
+        doInstall(containerServiceBuilder);
+    }
+
+    <S> void install(final AbstractServiceBuilder<S> serviceBuilder) throws DuplicateServiceException {
+        doInstall(serviceBuilder);
+    }
+
+    <S> void doInstall(final AbstractServiceBuilder<S> serviceBuilder) throws DuplicateServiceException {
         // First, create all registrations
-        final ServiceName name = batchEntry.getName();
+        final ServiceName name = serviceBuilder.getName();
         ServiceRegistrationImpl primaryRegistration = getOrCreateRegistration(name);
-        final ServiceName[] aliases = batchEntry.getAliases();
+        final ServiceName[] aliases = serviceBuilder.getAliases();
         final ServiceRegistrationImpl[] aliasRegistrations = new ServiceRegistrationImpl[aliases.length];
         for (int i = 0; i < aliases.length; i++) {
             aliasRegistrations[i] = getOrCreateRegistration(aliases[i]);
         }
 
         // Next create the actual controller
-        final ServiceInstanceImpl<S> instance = new ServiceInstanceImpl<S>(batchEntry.getServiceValue(), null, null, null, primaryRegistration, aliasRegistrations);
+        final ServiceInstanceImpl<S> instance = new ServiceInstanceImpl<S>(serviceBuilder.getServiceValue(), null, null, null, primaryRegistration, aliasRegistrations);
         // Try to install the controller in each registration
         primaryRegistration.setInstance(instance);
     }
@@ -274,5 +285,32 @@ final class ServiceContainerImpl implements ServiceContainer {
     public ServiceController<?> getService(final ServiceName serviceName) {
         final ServiceRegistrationImpl registration = registry.get(serviceName);
         return registration == null ? null : registration.getInstance();
+    }
+
+    @Override
+    public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
+        return createServiceBuilder(name, value, false);
+    }
+
+    private <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value, final boolean ifNotExist) throws IllegalArgumentException {
+        if (this.registry.containsKey(name)) {
+            throw new IllegalArgumentException("Service named " + name + " is already defined in this container");
+        }
+        return new ContainerServiceBuilder<T>(this, value, name, ifNotExist);
+    }
+
+    @Override
+    public <T> ServiceBuilder<T> addServiceValueIfNotExist(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
+        return createServiceBuilder(name, value, true);
+    }
+
+    @Override
+    public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
+        return createServiceBuilder(name, new ImmediateValue<Service<T>>(service), false);
+    }
+
+    @Override
+    boolean isDone() {
+        return false;
     }
 }

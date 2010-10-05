@@ -23,9 +23,8 @@
 package org.jboss.msc.service;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
+
 import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 
@@ -35,11 +34,11 @@ import org.jboss.msc.value.Value;
  * @author Jason T. Greene
  * @author John E. Bailey
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
-final class BatchBuilderImpl extends AbstractBatchBuilder {
+final class BatchBuilderImpl extends AbstractServiceContext implements BatchBuilder {
 
-    private final Map<ServiceName, BatchServiceBuilderImpl<?>> batchServices = new HashMap<ServiceName, BatchServiceBuilderImpl<?>>();
-    private final Set<SubBatchBuilderImpl> subBatchBuilders = new HashSet<SubBatchBuilderImpl>();
+    private final Map<ServiceName, BatchServiceBuilder<?>> batchServices = new HashMap<ServiceName, BatchServiceBuilder<?>>();
     private final ServiceContainerImpl container;
     private boolean done;
 
@@ -52,59 +51,45 @@ final class BatchBuilderImpl extends AbstractBatchBuilder {
             throw alreadyInstalled();
         }
         // Reconcile batch level listeners/dependencies
-        final Set<ServiceListener<Object>> batchListeners = getListeners();
-        final Set<ServiceName> batchDependencies = getDependencies();
-        for(BatchServiceBuilder<?> serviceBuilder : batchServices.values()) {
-            serviceBuilder.addListener(batchListeners);
-            serviceBuilder.addDependencies(batchDependencies);
-        }
-
-        // Reconcile sub-batch level listeners/dependencies
-        final Set<SubBatchBuilderImpl> subBatchBuilders = this.subBatchBuilders;
-        for(SubBatchBuilderImpl subBatchBuilder : subBatchBuilders) {
-            subBatchBuilder.reconcile();
-        }
+        apply(batchServices.values());
 
         done = true;
         container.install(this);
     }
 
-    public <T> BatchServiceBuilderImpl<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
-        return createServiceBuilder(name, value, false);
-    }
-
-    private <T> BatchServiceBuilderImpl<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value, final boolean ifNotExist) throws IllegalArgumentException {
-        if (done) {
-            throw alreadyInstalled();
-        }
-        final Map<ServiceName, BatchServiceBuilderImpl<?>> batchServices = this.batchServices;
-        final BatchServiceBuilderImpl<?> old = batchServices.get(name);
-        if (old != null && ! ifNotExist) {
-            throw new IllegalArgumentException("Service named " + name + " is already defined in this batch");
-        }
-        final BatchServiceBuilderImpl<T> builder = new BatchServiceBuilderImpl<T>(this, value, name, ifNotExist);
-        batchServices.put(name, builder);
-        return builder;
-    }
-
-    public <T> BatchServiceBuilder<T> addServiceValueIfNotExist(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
-        return createServiceBuilder(name, value, true);
-    }
-
-    public <T> BatchServiceBuilderImpl<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
-        return createServiceBuilder(name, new ImmediateValue<Service<T>>(service), false);
-    }
-
-    Map<ServiceName, BatchServiceBuilderImpl<?>> getBatchServices() {
-        return batchServices;
+    void install(BatchServiceBuilder<?> serviceBuilder) {
+        batchServices.put(serviceBuilder.getName(), serviceBuilder);
     }
 
     @Override
-    public BatchBuilder subBatchBuilder() {
-        final Set<SubBatchBuilderImpl> subBatches = subBatchBuilders;
-        final SubBatchBuilderImpl subBatchBuilder = new SubBatchBuilderImpl(this);
-        subBatches.add(subBatchBuilder);
-        return subBatchBuilder;
+    public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
+        return createServiceBuilder(name, value, false);
+    }
+
+    private <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value, final boolean ifNotExist) throws IllegalArgumentException {
+        if (done) {
+            throw alreadyInstalled();
+        }
+        final Map<ServiceName, BatchServiceBuilder<?>> batchServices = this.batchServices;
+        final BatchServiceBuilder<?> old = batchServices.get(name);
+        if (old != null && ! ifNotExist) {
+            throw new IllegalArgumentException("Service named " + name + " is already defined in this batch");
+        }
+        return new BatchServiceBuilder<T>(this, value, name, ifNotExist);
+    }
+
+    @Override
+    public <T> ServiceBuilder<T> addServiceValueIfNotExist(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
+        return createServiceBuilder(name, value, true);
+    }
+
+    @Override
+    public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
+        return createServiceBuilder(name, new ImmediateValue<Service<T>>(service), false);
+    }
+
+    Map<ServiceName, BatchServiceBuilder<?>> getBatchServices() {
+        return batchServices;
     }
 
     @Override

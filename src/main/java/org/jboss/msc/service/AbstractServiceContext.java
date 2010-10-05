@@ -30,15 +30,35 @@ import java.util.Set;
  * Abstract base class used for BatchBuilders
  *
  * @author John Bailey
+ * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
-abstract class AbstractBatchBuilder implements BatchBuilder {
+abstract class AbstractServiceContext implements ServiceContext {
+    private final Set<SubContext> subContexts = new HashSet<SubContext>();
     private final Set<ServiceListener<Object>> listeners = new HashSet<ServiceListener<Object>>();
     private final Set<ServiceName> dependencies = new HashSet<ServiceName>();
+
+    <S extends ServiceBuilder<?>> void apply(Collection<S> serviceBuilders) {
+        for(ServiceBuilder<?> serviceBuilder : serviceBuilders) {
+            serviceBuilder.addListener(listeners);
+            serviceBuilder.addDependencies(dependencies);
+        }
+
+        // Reconcile sub-batch level listeners/dependencies
+        final Set<SubContext> subContexts = this.subContexts;
+        for(SubContext subBatchBuilder : subContexts) {
+            subBatchBuilder.reconcile();
+        }
+    }
+
+    <S extends ServiceBuilder<?>> void apply(S serviceBuilder) {
+        serviceBuilder.addListener(listeners);
+        serviceBuilder.addDependencies(dependencies);
+    }
 
     abstract boolean isDone();
 
     @Override
-    public BatchBuilder addListener(ServiceListener<Object> listener) {
+    public ServiceContext addListener(ServiceListener<Object> listener) {
         if(isDone()) {
             throw alreadyInstalled();
         }
@@ -47,7 +67,7 @@ abstract class AbstractBatchBuilder implements BatchBuilder {
     }
 
     @Override
-    public BatchBuilder addListener(ServiceListener<Object>... listeners) {
+    public ServiceContext addListener(ServiceListener<Object>... listeners) {
         if(isDone()) {
             throw alreadyInstalled();
         }
@@ -60,7 +80,7 @@ abstract class AbstractBatchBuilder implements BatchBuilder {
     }
 
     @Override
-    public BatchBuilder addListener(Collection<ServiceListener<Object>> listeners) {
+    public ServiceContext addListener(Collection<ServiceListener<Object>> listeners) {
         if(isDone()) {
             throw alreadyInstalled();
         }
@@ -76,7 +96,7 @@ abstract class AbstractBatchBuilder implements BatchBuilder {
     }
 
     @Override
-    public BatchBuilder addDependency(ServiceName dependency) {
+    public ServiceContext addDependency(ServiceName dependency) {
         if(isDone()) {
             throw alreadyInstalled();
         }
@@ -85,7 +105,7 @@ abstract class AbstractBatchBuilder implements BatchBuilder {
     }
 
     @Override
-    public BatchBuilder addDependency(ServiceName... dependencies) {
+    public ServiceContext addDependency(ServiceName... dependencies) {
         if(isDone()) {
             throw alreadyInstalled();
         }
@@ -97,7 +117,7 @@ abstract class AbstractBatchBuilder implements BatchBuilder {
     }
 
     @Override
-    public BatchBuilder addDependency(Collection<ServiceName> dependencies) {
+    public ServiceContext addDependency(Collection<ServiceName> dependencies) {
         if(isDone()) {
             throw alreadyInstalled();
         }
@@ -119,5 +139,13 @@ abstract class AbstractBatchBuilder implements BatchBuilder {
 
     Set<ServiceName> getDependencies() {
         return dependencies;
+    }
+
+    @Override
+    public ServiceContext subContext() {
+        final Set<SubContext> subBatches = subContexts;
+        final SubContext subContext = new SubContext(this);
+        subBatches.add(subContext);
+        return subContext;
     }
 }

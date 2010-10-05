@@ -23,7 +23,7 @@
 package org.jboss.msc.bench;
 
 import org.jboss.msc.service.BatchBuilder;
-import org.jboss.msc.service.BatchServiceBuilder;
+import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
@@ -63,7 +63,7 @@ public class FiveReverseInjectionsBench {
         for (int i = 0; i < totalServiceDefinitions; i++) {
             final TestObject testObject = new TestObject("test" + i);
             final TestObjectService service = new TestObjectService(testObject);
-            final BatchServiceBuilder<TestObject> builder = batch.addService(ServiceName.of(("test" + i).intern()), service);
+            final ServiceBuilder<TestObject> builder = batch.addService(ServiceName.of(("test" + i).intern()), service);
             builder.addListener(listener);
 
             final Object injectedValue = new Object();

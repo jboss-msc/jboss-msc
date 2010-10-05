@@ -29,7 +29,7 @@ import java.util.concurrent.Executor;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface ServiceContainer {
+public interface ServiceContainer extends ServiceContext, ServiceRegistry {
 
     /**
      * Set the container executor.  If {@code null} is specified, a default single-thread executor is used.
@@ -56,10 +56,6 @@ public interface ServiceContainer {
      * @return the new batch builder
      */
     BatchBuilder batchBuilder();
-
-    ServiceController<?> getRequiredService(ServiceName serviceName) throws ServiceNotFoundException;
-
-    ServiceController<?> getService(ServiceName serviceName);
 
     /**
      * The factory class for service containers.

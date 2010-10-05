@@ -22,17 +22,17 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.util.TestServiceListener;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Field;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import org.jboss.msc.util.TestServiceListener;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * Test to verify the functionality of batch level dependencies.
@@ -71,7 +71,7 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
 
         final ServiceController<?> fourthController = fourthService.get();
 
-        List<ServiceRegistrationImpl> dependencies = getServiceDependencies(firstService.get());
+        List<ServiceInstanceImpl<?>> dependencies = getServiceDependencies(firstService.get());
         assertTrue(dependencies.contains(fourthController));
 
         dependencies = getServiceDependencies(secondService.get());
@@ -91,7 +91,7 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
         builder.addListener(listener);
 
         builder.addService(ServiceName.of("firstService"), Service.NULL);
-        final BatchBuilder subBatchBuilder = builder.subBatchBuilder();
+        final ServiceContext subBatchBuilder = builder.subContext();
         subBatchBuilder.addService(ServiceName.of("secondService"), Service.NULL);
         subBatchBuilder.addService(ServiceName.of("thirdService"), Service.NULL);
         subBatchBuilder.addService(ServiceName.of("fourthService"), Service.NULL);
@@ -109,7 +109,7 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
         final ServiceController<?> firstController = firstService.get();
         final ServiceController<?> fourthController = fourthService.get();
 
-        List<ServiceControllerImpl<?>> dependencies = getServiceDependencies(secondService.get());
+        List<ServiceInstanceImpl<?>> dependencies = getServiceDependencies(secondService.get());
         assertTrue(dependencies.contains(firstController));
         assertTrue(dependencies.contains(fourthController));
 
@@ -124,7 +124,14 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
 
 
     private List<ServiceInstanceImpl<?>> getServiceDependencies(ServiceController<?> serviceController) throws IllegalAccessException {
-        ServiceInstanceImpl<?>[] deps = ((ServiceRegistrationImpl[]) dependenciesField.get(serviceController).);
-        return Arrays.asList(deps);
+        ServiceRegistrationImpl[] deps = (ServiceRegistrationImpl[]) dependenciesField.get(serviceController);
+        List<ServiceInstanceImpl<?>> depInstances = new ArrayList<ServiceInstanceImpl<?>>(deps.length);
+        for (ServiceRegistrationImpl dep: deps) {
+            ServiceInstanceImpl<?> depInstance = (ServiceInstanceImpl<?>) dep.getInstance();
+            if (dep.getInstance() != null) {
+                depInstances.add(depInstance);
+            }
+        }
+        return depInstances;
     }
 }

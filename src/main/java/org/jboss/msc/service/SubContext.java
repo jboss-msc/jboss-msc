@@ -31,69 +31,54 @@ import org.jboss.msc.value.Value;
  * listeners/dependencies to a subset of a batch.
  *
  * @author John Bailey
+ * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
-final class SubBatchBuilderImpl extends AbstractBatchBuilder {
+final class SubContext extends AbstractServiceContext {
 
-    private final BatchBuilderImpl parentBatch;
+    private final AbstractServiceContext parent;
     // This duplicate collection sucks.  But we need some way to know what is in the sub batch.
-    private final Set<BatchServiceBuilder<?>> subBatchServiceBuilders = new HashSet<BatchServiceBuilder<?>>();
+    private final Set<ServiceBuilder<?>> subBatchServiceBuilders = new HashSet<ServiceBuilder<?>>();
     
-    SubBatchBuilderImpl(final BatchBuilderImpl parentBatch) {
-        this.parentBatch = parentBatch;
+    SubContext(final AbstractServiceContext parent) {
+        this.parent = parent;
     }
 
     @Override
-    public <T> BatchServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
+    public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
         if (isDone()) {
             throw alreadyInstalled();
         }
-        final BatchServiceBuilder<T> batchServiceBuilder = parentBatch.addServiceValue(name, value);
+        final ServiceBuilder<T> batchServiceBuilder = parent.addServiceValue(name, value);
         subBatchServiceBuilders.add(batchServiceBuilder);
         return batchServiceBuilder;  
     }
 
     @Override
-    public <T> BatchServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
+    public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
         if (isDone()) {
             throw alreadyInstalled();
         }
-        final BatchServiceBuilder<T> batchServiceBuilder = parentBatch.addService(name, service);
+        final ServiceBuilder<T> batchServiceBuilder = parent.addService(name, service);
         subBatchServiceBuilders.add(batchServiceBuilder);
         return batchServiceBuilder;
     }
 
     @Override
-    public <T> BatchServiceBuilder<T> addServiceValueIfNotExist(ServiceName name, Value<? extends Service<T>> value) throws IllegalArgumentException {
+    public <T> ServiceBuilder<T> addServiceValueIfNotExist(ServiceName name, Value<? extends Service<T>> value) throws IllegalArgumentException {
         if (isDone()) {
             throw alreadyInstalled();
         }
-        final BatchServiceBuilder<T> batchServiceBuilder = parentBatch.addServiceValueIfNotExist(name, value);
+        final ServiceBuilder<T> batchServiceBuilder = parent.addServiceValueIfNotExist(name, value);
         subBatchServiceBuilders.add(batchServiceBuilder);
         return batchServiceBuilder;  
     }
 
     void reconcile() {
-        final Set<ServiceListener<Object>> listeners = getListeners();
-        final Set<ServiceName> dependencies = getDependencies();
-        final Set<BatchServiceBuilder<?>> subBatchServiceBuilders = this.subBatchServiceBuilders;
-        for(BatchServiceBuilder<?> batchServiceBuilder : subBatchServiceBuilders) {
-            batchServiceBuilder.addListener(listeners);
-            batchServiceBuilder.addDependencies(dependencies);
-        }
+        apply(this.subBatchServiceBuilders);
     }
 
     @Override
     boolean isDone() {
-        return parentBatch.isDone();
-    }
-
-    @Override
-    public void install() throws ServiceRegistryException {
-        throw new UnsupportedOperationException("Sub-batches do not support the install operation.");
-    }
-
-    @Override
-    public BatchBuilder subBatchBuilder() {
-        throw new UnsupportedOperationException("Sub-batches do not support creating nested sub-batches.");
+        return parent.isDone();
     }
 }
