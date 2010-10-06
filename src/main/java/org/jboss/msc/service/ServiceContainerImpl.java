@@ -109,7 +109,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                             } catch (InterruptedException e) {
                             }
                         }
-                    });
+                    }, "MSC Shutdown Thread");
                     hook.setDaemon(false);
                     Runtime.getRuntime().addShutdownHook(hook);
                     return null;
