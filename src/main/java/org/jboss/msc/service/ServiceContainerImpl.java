@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import java.io.PrintStream;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashSet;
@@ -155,6 +156,22 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
 
     public void shutdown() {
         root.setMode(ServiceController.Mode.REMOVE);
+    }
+
+    public void dumpServices() {
+        dumpServices(System.out);
+    }
+
+    public void dumpServices(PrintStream out) {
+        for (Map.Entry<ServiceName, ServiceRegistrationImpl> entry : registry.entrySet()) {
+            final ServiceName name = entry.getKey();
+            final ServiceRegistrationImpl registration = entry.getValue();
+            final ServiceInstanceImpl<?> instance = registration.getInstance();
+            if (instance != null) {
+                final ServiceInstanceImpl.Substate substate = instance.getSubState();
+                out.printf("Service '%s' mode %s state=%s (%s)\n", name, instance.getMode(), substate.getState(), substate);
+            }
+        }
     }
 
     protected void finalize() throws Throwable {

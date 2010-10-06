@@ -208,7 +208,7 @@ final class ServiceRegistrationImpl {
         }
     }
 
-    ServiceController<?> getInstance() {
+    ServiceInstanceImpl<?> getInstance() {
         synchronized (this) {
             return instance;
         }

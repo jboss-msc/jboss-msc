@@ -722,6 +722,12 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
         }
     }
 
+    Substate getSubState() {
+        synchronized (this) {
+            return state;
+        }
+    }
+
     enum ContextState {
         SYNC,
         ASYNC,
