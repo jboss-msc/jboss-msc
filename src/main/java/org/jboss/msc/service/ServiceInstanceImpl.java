@@ -31,7 +31,7 @@ import org.jboss.msc.value.Value;
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class ServiceInstanceImpl<S> implements ServiceController<S> {
+final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceController<S> {
 
     private static final String ILLEGAL_CONTROLLER_STATE = "Illegal controller state";
 
@@ -46,7 +46,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
     /**
      * The dependencies of this service.
      */
-    private final ServiceRegistrationImpl[] dependencies;
+    private final AbstractDependency[] dependencies;
     /**
      * The injections of this service.
      */
@@ -58,7 +58,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
     /**
      * The set of dependents on this instance.
      */
-    private final IdentityHashSet<ServiceInstanceImpl<?>> dependents = new IdentityHashSet<ServiceInstanceImpl<?>>(0);
+    private final IdentityHashSet<AbstractDependent> dependents = new IdentityHashSet<AbstractDependent>(0);
     /**
      * The primary registration of this service.
      */
@@ -478,10 +478,11 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
         doExecute(specialTask);
     }
 
-    ServiceRegistrationImpl[] getDependencyLinks() {
+    AbstractDependency[] getDependencyLinks() {
         return dependencies;
     }
 
+    @Override
     void dependencyUp() {
         Runnable[] tasks = null;
         synchronized (this) {
@@ -494,6 +495,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
         doExecute(tasks);
     }
 
+    @Override
     void dependencyDown() {
         Runnable[] tasks = null;
         synchronized (this) {
@@ -525,15 +527,15 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
         doExecute(tasks);
     }
 
-    void addDependent(final ServiceInstanceImpl<?> dependent) {
+    void addDependent(final AbstractDependent dependent) {
         dependents.add(dependent);
     }
 
-    void removeDependent(final ServiceInstanceImpl<?> dependent) {
+    void removeDependent(final AbstractDependent dependent) {
         dependents.remove(dependent);
     }
 
-    void addDependents(final IdentityHashSet<ServiceInstanceImpl<?>> dependents) {
+    void addDependents(final IdentityHashSet<AbstractDependent> dependents) {
         this.dependents.addAll(dependents);
     }
 
@@ -543,14 +545,14 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
 
     private void doDemandParents() {
         assert ! lockHeld();
-        for (ServiceRegistrationImpl dependency : dependencies) {
+        for (AbstractDependency dependency : dependencies) {
             dependency.addDemand();
         }
     }
 
     private void doUndemandParents() {
         assert ! lockHeld();
-        for (ServiceRegistrationImpl dependency : dependencies) {
+        for (AbstractDependency dependency : dependencies) {
             dependency.removeDemand();
         }
     }
@@ -777,8 +779,8 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
 
         public void run() {
             try {
-                for (ServiceRegistrationImpl registration : dependencies) {
-                    registration.dependentStopped();
+                for (AbstractDependency dependency : dependencies) {
+                    dependency.dependentStopped();
                 }
                 final Runnable[] tasks;
                 synchronized (ServiceInstanceImpl.this) {
@@ -796,8 +798,8 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
 
         public void run() {
             try {
-                for (ServiceRegistrationImpl registration : dependencies) {
-                    registration.dependentStarted();
+                for (AbstractDependency dependency : dependencies) {
+                    dependency.dependentStarted();
                 }
                 final Runnable[] tasks;
                 synchronized (ServiceInstanceImpl.this) {
@@ -959,15 +961,15 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
 
     private class DependencyStartedTask implements Runnable {
 
-        private final ServiceInstanceImpl<?>[] dependents;
+        private final AbstractDependent[] dependents;
 
-        DependencyStartedTask(final ServiceInstanceImpl<?>[] dependents) {
+        DependencyStartedTask(final AbstractDependent[] dependents) {
             this.dependents = dependents;
         }
 
         public void run() {
             try {
-                for (ServiceInstanceImpl<?> dependent : dependents) {
+                for (AbstractDependent dependent : dependents) {
                     if (dependent != null) dependent.dependencyUp();
                 }
                 final Runnable[] tasks;
@@ -984,15 +986,15 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
 
     private class DependencyStoppedTask implements Runnable {
 
-        private final ServiceInstanceImpl<?>[] dependents;
+        private final AbstractDependent[] dependents;
 
-        DependencyStoppedTask(final ServiceInstanceImpl<?>[] dependents) {
+        DependencyStoppedTask(final AbstractDependent[] dependents) {
             this.dependents = dependents;
         }
 
         public void run() {
             try {
-                for (ServiceInstanceImpl<?> dependent : dependents) {
+                for (AbstractDependent dependent : dependents) {
                     if (dependent != null) dependent.dependencyDown();
                 }
                 final Runnable[] tasks;
@@ -1020,7 +1022,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S> {
                 for (ServiceRegistrationImpl registration : aliasRegistrations) {
                     registration.clearInstance();
                 }
-                for (ServiceRegistrationImpl dependency : dependencies) {
+                for (AbstractDependency dependency : dependencies) {
                     dependency.removeDependent(ServiceInstanceImpl.this);
                 }
                 synchronized (ServiceInstanceImpl.this) {

@@ -27,7 +27,7 @@ package org.jboss.msc.service;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class ServiceRegistrationImpl {
+final class ServiceRegistrationImpl extends AbstractDependency {
 
 
     /**
@@ -41,7 +41,7 @@ final class ServiceRegistrationImpl {
     /**
      * The set of dependents on this registration.
      */
-    private final IdentityHashSet<ServiceInstanceImpl<?>> dependents = new IdentityHashSet<ServiceInstanceImpl<?>>(0);
+    private final IdentityHashSet<AbstractDependent> dependents = new IdentityHashSet<AbstractDependent>(0);
 
     // Mutable properties
 
@@ -65,9 +65,10 @@ final class ServiceRegistrationImpl {
      *
      * @param dependent the dependent to add
      */
-    void addDependent(final ServiceInstanceImpl<?> dependent) {
+    @Override
+    void addDependent(final AbstractDependent dependent) {
         assert !lockHeld();
-        assert !dependent.lockHeld();
+        assert !lockHeldByDependent(dependent);
         final ServiceInstanceImpl<?> instance;
         final ServiceInstanceImpl.Substate state;
         synchronized (this) {
@@ -101,9 +102,10 @@ final class ServiceRegistrationImpl {
      *
      * @param dependent the dependent to remove
      */
-    void removeDependent(final ServiceInstanceImpl<?> dependent) {
+    @Override
+    void removeDependent(final AbstractDependent dependent) {
         assert !lockHeld();
-        assert !dependent.lockHeld();
+        assert !lockHeldByDependent(dependent);
         synchronized (this) {
             if (dependents.remove(dependent) && instance == null) {
                 container.remove(name, this);
@@ -165,11 +167,21 @@ final class ServiceRegistrationImpl {
     boolean lockHeld() {
         return Thread.holdsLock(this);
     }
+    
+    /**
+     * Determine whether the dependent lock is currently held.
+     *
+     * @return {@code true} if the lock is held
+     */
+    boolean lockHeldByDependent(AbstractDependent dependent) {
+        return Thread.holdsLock(dependent);
+    }
 
     ServiceContainerImpl getContainer() {
         return container;
     }
 
+    @Override
     void dependentStopped() {
         synchronized (this) {
             assert instance != null;
@@ -181,6 +193,7 @@ final class ServiceRegistrationImpl {
         return name;
     }
 
+    @Override
     void dependentStarted() {
         synchronized (this) {
             assert instance != null;
@@ -188,6 +201,7 @@ final class ServiceRegistrationImpl {
         }
     }
 
+    @Override
     void addDemand() {
         synchronized (this) {
             demandedByCount++;
@@ -198,6 +212,7 @@ final class ServiceRegistrationImpl {
         }
     }
 
+    @Override
     void removeDemand() {
         synchronized (this) {
             demandedByCount--;
