@@ -36,11 +36,11 @@ import java.util.Map;
 final class BatchBuilderImpl extends AbstractServiceTarget implements BatchBuilder {
 
     private final Map<ServiceName, ServiceBuilderImpl<?>> batchServices = new HashMap<ServiceName, ServiceBuilderImpl<?>>();
-    private final ServiceContainerImpl container;
+    private final AbstractServiceTarget parent;
     private boolean done;
 
-    BatchBuilderImpl(final ServiceContainerImpl container) {
-        this.container = container;
+    BatchBuilderImpl(final AbstractServiceTarget parent) {
+        this.parent = parent;
     }
 
     @Override
@@ -50,12 +50,19 @@ final class BatchBuilderImpl extends AbstractServiceTarget implements BatchBuild
         apply(batchServices.values());
 
         done = true;
-        container.install(this);
+        parent.install(this);
     }
 
     @Override
     void install(ServiceBuilderImpl<?> serviceBuilder) {
+        validateTargetState();
         batchServices.put(serviceBuilder.getName(), serviceBuilder);
+    }
+
+    @Override
+    void install(BatchBuilderImpl serviceBuilder) {
+        validateTargetState();
+        batchServices.entrySet().addAll(serviceBuilder.batchServices.entrySet());
     }
 
     @Override

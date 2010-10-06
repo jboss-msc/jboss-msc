@@ -147,7 +147,7 @@ abstract class AbstractServiceTarget implements ServiceTarget {
     }
 
     /**
-     * Installs {@code serviceBuilder} in this target.
+     * Install {@code serviceBuilder} in this target.
      * 
      * @param serviceBuilder            a serviceBuilder created by this ServiceTarget
      * @throws ServiceRegistryException if a service registry issue occurred during installation
@@ -155,7 +155,15 @@ abstract class AbstractServiceTarget implements ServiceTarget {
     abstract void install(ServiceBuilderImpl<?> serviceBuilder) throws ServiceRegistryException;
 
     /**
-     * Indicates whether a service with the specified name exists in this target.
+     * Install {@code batchBuilder} in this target.
+     * 
+     * @param batchBuilder              a batchBuilder created by this ServiceTarget
+     * @throws ServiceRegistryException if a service registry issue occurred during installation
+     */
+    abstract void install(BatchBuilderImpl batchBuilder) throws ServiceRegistryException;
+
+    /**
+     * Indicate whether a service with the specified name exists in this target.
      * 
      * @param name the specified name
      * @return {@code true} if the service exists in this target
@@ -163,7 +171,7 @@ abstract class AbstractServiceTarget implements ServiceTarget {
     abstract boolean hasService(ServiceName name);
 
     /**
-     * Validates whether the state of this target is valid for additions.
+     * Validate the state of this target, checking if it is valid for additions.
      * This method is invoked prior to every new addition of Services, Dependencies and ServiceListeners.
      * 
      * @throws IllegalStateException if the state is not valid for additions
@@ -181,5 +189,10 @@ abstract class AbstractServiceTarget implements ServiceTarget {
     @Override
     public ServiceTarget subTarget() {
         return new SubTarget(this);
+    }
+
+    @Override
+    public BatchBuilderImpl batchBuilder() {
+        return new BatchBuilderImpl(this);
     }
 }

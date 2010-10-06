@@ -51,13 +51,6 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
     void shutdown();
 
     /**
-     * Get a new batch builder, which is used to resolve and install described services.
-     *
-     * @return the new batch builder
-     */
-    BatchBuilder batchBuilder();
-
-    /**
      * The factory class for service containers.
      */
     class Factory {

@@ -119,7 +119,14 @@ public interface ServiceTarget {
     /**
      * Create a sub-target using this as the parent target.
      *
-     * @return a new service target
+     * @return the new service target
      */
     ServiceTarget subTarget();
+
+    /**
+     * Create a new batch builder, which is used to resolve and install described services in this target.
+     *
+     * @return the new batch builder
+     */
+    BatchBuilderImpl batchBuilder();
 }

@@ -201,10 +201,6 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
 
     private final ConcurrentMap<ServiceName, ServiceRegistrationImpl> registry = new ConcurrentHashMap<ServiceName, ServiceRegistrationImpl>();
 
-    public BatchBuilderImpl batchBuilder() {
-        return new BatchBuilderImpl(this);
-    }
-
     /**
      * Install a collection of service definitions into the registry.  Will install the services
      * in dependency order.
@@ -212,6 +208,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
      * @param serviceBatch The service batch to install
      * @throws ServiceRegistryException If any problems occur resolving the dependencies or adding to the registry.
      */
+    @Override
     void install(final BatchBuilderImpl serviceBatch) throws ServiceRegistryException {
         try {
             resolve(serviceBatch.getBatchServices());
