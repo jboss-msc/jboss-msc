@@ -128,5 +128,5 @@ public interface ServiceTarget {
      *
      * @return the new batch builder
      */
-    BatchBuilderImpl batchBuilder();
+    BatchBuilder batchBuilder();
 }
