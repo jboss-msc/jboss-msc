@@ -22,11 +22,6 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.inject.CastingInjector;
-import org.jboss.msc.inject.Injector;
-import org.jboss.msc.value.ImmediateValue;
-import org.jboss.msc.value.Value;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -35,10 +30,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.jboss.msc.service.BatchBuilderImpl.alreadyInstalled;
+import org.jboss.msc.inject.CastingInjector;
+import org.jboss.msc.inject.Injector;
+import org.jboss.msc.value.ImmediateValue;
+import org.jboss.msc.value.Value;
 
 /**
- * 
+ * {@link ServiceBuilder} implementation.
  * 
  * 
 * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -79,6 +77,7 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return this;
     }
 
+    @Override
     public ServiceBuilderImpl<T> setLocation() {
         checkAlreadyInstalled();
         final StackTraceElement element = new Throwable().getStackTrace()[1];
@@ -87,22 +86,26 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return setLocation(new Location(fileName, lineNumber, -1, null));
     }
 
+    @Override
     public ServiceBuilderImpl<T> setLocation(final Location location) {
         checkAlreadyInstalled();
         this.location = location;
         return this;
     }
 
+    @Override
     public ServiceBuilderImpl<T> setInitialMode(final ServiceController.Mode mode) {
         checkAlreadyInstalled();
         initialMode = mode;
         return this;
     }
 
+    @Override
     public ServiceBuilder<T> addDependencies(final ServiceName... newDependencies) {
         return addDependencies(false, newDependencies);
     }
 
+    @Override
     public ServiceBuilder<T> addOptionalDependencies(final ServiceName... newDependencies) {
         return addDependencies(true, newDependencies);
     }
@@ -117,10 +120,12 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return this;
     }
 
+    @Override
     public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> newDependencies) {
         return addDependencies(newDependencies, false);
     }
 
+    @Override
     public ServiceBuilder<T> addOptionalDependencies(final Iterable<ServiceName> newDependencies) {
         return addDependencies(newDependencies, true);
     }
@@ -135,10 +140,12 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return this;
     }
 
+    @Override
     public ServiceBuilder<T> addDependency(final ServiceName dependency) {
         return addDependency(dependency, false);
     }
 
+    @Override
     public ServiceBuilder<T> addOptionalDependency(final ServiceName dependency) {
         return addDependency(dependency, true);
     }
@@ -151,10 +158,12 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return this;
     }
 
+    @Override
     public ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
         return addDependency(dependency, target, false);
     }
 
+    @Override
     public ServiceBuilder<T> addOptionalDependency(final ServiceName dependency, final Injector<Object> target) {
         return addDependency(dependency, target, true);
     }
@@ -168,10 +177,12 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return this;
     }
 
+    @Override
     public <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
         return addDependency(dependency, type, target, false);
     }
 
+    @Override
     public <I> ServiceBuilder<T> addOptionalDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
         return addDependency(dependency, type, target, true);
     }
@@ -190,22 +201,26 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         dependencies.put(dependency, Boolean.valueOf(existing != null ? existing.booleanValue() && optional : optional));
     }
 
+    @Override
     public <I> ServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {
         return addInjectionValue(target, new ImmediateValue<I>(value));
     }
 
+    @Override
     public <I> ServiceBuilder<T> addInjectionValue(final Injector<? super I> target, final Value<I> value) {
         checkAlreadyInstalled();
         valueInjections.add(new ValueInjection<I>(value, target));
         return this;
     }
 
+    @Override
     public ServiceBuilderImpl<T> addListener(final ServiceListener<? super T> listener) {
         checkAlreadyInstalled();
         listeners.add(listener);
         return this;
     }
 
+    @Override
     public ServiceBuilderImpl<T> addListener(final ServiceListener<? super T>... serviceListeners) {
         checkAlreadyInstalled();
         for (ServiceListener<? super T> listener : serviceListeners) {
@@ -215,27 +230,26 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return this;
     }
 
+    @Override
     public ServiceBuilderImpl<T> addListener(final Collection<? extends ServiceListener<? super T>> serviceListeners) {
         checkAlreadyInstalled();
         listeners.addAll(serviceListeners);
         return this;
     }
 
-    public void install() throws ServiceRegistryException {
-        if (!installed) {
-            // mark it before doInstall, so we avoid ServiceRegistryException being multiple times
-            installed = true;
-            serviceTarget.install(this);
+    private void checkAlreadyInstalled() {
+        if (installed) {
+            throw new IllegalStateException("ServiceBuilder already installed");
         }
     }
 
-    ServiceTarget getTarget() {
-        return serviceTarget;
-    }
-
-    private void checkAlreadyInstalled() {
-        if (installed) {
-            throw alreadyInstalled();
+    @Override
+    public void install() throws ServiceRegistryException {
+        if (!installed) {
+            // mark it before perform the installation,
+            // so we avoid ServiceRegistryException being thrown multiple times
+            installed = true;
+            serviceTarget.install(this);
         }
     }
 
@@ -285,5 +299,9 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     boolean isIfNotExist() {
         return ifNotExist;
+    }
+
+    ServiceTarget getTarget() {
+        return serviceTarget;
     }
 }

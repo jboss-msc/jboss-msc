@@ -53,8 +53,6 @@ abstract class AbstractServiceTarget implements ServiceTarget {
         return new ServiceBuilderImpl<T>(this, value, name, ifNotExist);
     }
 
-    abstract boolean hasService(ServiceName name);
-
     @Override
     public <T> ServiceBuilder<T> addServiceValueIfNotExist(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
         return createServiceBuilder(name, value, true);
@@ -63,29 +61,6 @@ abstract class AbstractServiceTarget implements ServiceTarget {
     @Override
     public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
         return createServiceBuilder(name, new ImmediateValue<Service<T>>(service), false);
-    }
-
-    /**
-     * Apply listeners and dependencies to {@code serviceBuilders}.
-     * 
-     * @param serviceBuilders a collection of the ServiceBuilders the listeners and dependencies
-     *                        will be added to.
-     */
-    void apply(Collection<? extends ServiceBuilder<?>> serviceBuilders) {
-        for(ServiceBuilder<?> serviceBuilder : serviceBuilders) {
-            serviceBuilder.addListener(listeners);
-            serviceBuilder.addDependencies(dependencies);
-        }
-    }
-
-    /**
-     * Apply listeners and dependencies to {@code serviceBuilder}.
-     * @param <S>            the type of {@code serviceBuilder}
-     * @param serviceBuilder serviceBuilder to which listeners and dependencies will be added.
-     */
-    <S extends ServiceBuilder<?>> void apply(S serviceBuilder) {
-        serviceBuilder.addListener(listeners);
-        serviceBuilder.addDependencies(dependencies);
     }
 
     @Override
@@ -148,7 +123,44 @@ abstract class AbstractServiceTarget implements ServiceTarget {
         return this;
     }
 
+    /**
+     * Apply listeners and dependencies to {@code serviceBuilders}.
+     * 
+     * @param serviceBuilders a collection of the ServiceBuilders which the listeners and dependencies
+     *                        will be added to.
+     */
+    void apply(Collection<ServiceBuilderImpl<?>> serviceBuilders) {
+        for(ServiceBuilder<?> serviceBuilder : serviceBuilders) {
+            serviceBuilder.addListener(listeners);
+            serviceBuilder.addDependencies(dependencies);
+        }
+    }
+
+    /**
+     * Apply listeners and dependencies to {@code serviceBuilder}.
+     * 
+     * @param serviceBuilder serviceBuilder which listeners and dependencies will be added to.
+     */
+    void apply(ServiceBuilderImpl<?> serviceBuilder) {
+        serviceBuilder.addListener(listeners);
+        serviceBuilder.addDependencies(dependencies);
+    }
+
+    /**
+     * Installs {@code serviceBuilder} in this target.
+     * 
+     * @param serviceBuilder            a serviceBuilder created by this ServiceTarget
+     * @throws ServiceRegistryException if a service registry issue occurred during installation
+     */
     abstract void install(ServiceBuilderImpl<?> serviceBuilder) throws ServiceRegistryException;
+
+    /**
+     * Indicates whether a service with the specified name exists in this target.
+     * 
+     * @param name the specified name
+     * @return {@code true} if the service exists in this target
+     */
+    abstract boolean hasService(ServiceName name);
 
     /**
      * Validates whether the state of this target is valid for additions.

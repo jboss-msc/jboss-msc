@@ -25,7 +25,7 @@ package org.jboss.msc.service;
 
 /**
  * A sub-target represents a set of ServiceBuilders that will be installed in the parent target.
- * This class can be used to apply listeners/dependencies to all the ServiceBuilders of the represented set.
+ * This class can be used to add listeners/dependencies to all the ServiceBuilders of the represented set.
  *
  * @author John Bailey
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
@@ -50,12 +50,12 @@ final class SubTarget extends AbstractServiceTarget {
     }
 
     @Override
-    void validateTargetState() {
-        parent.validateTargetState();
+    boolean hasService(ServiceName name) {
+        return parent.hasService(name);
     }
 
     @Override
-    boolean hasService(ServiceName name) {
-        return parent.hasService(name);
+    void validateTargetState() {
+        parent.validateTargetState();
     }
 }

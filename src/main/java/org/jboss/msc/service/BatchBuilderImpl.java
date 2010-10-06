@@ -43,6 +43,7 @@ final class BatchBuilderImpl extends AbstractServiceTarget implements BatchBuild
         this.container = container;
     }
 
+    @Override
     public void install() throws ServiceRegistryException {
         validateTargetState();
         // Reconcile batch level listeners/dependencies
@@ -57,12 +58,9 @@ final class BatchBuilderImpl extends AbstractServiceTarget implements BatchBuild
         batchServices.put(serviceBuilder.getName(), serviceBuilder);
     }
 
+    @Override
     boolean hasService(ServiceName serviceName) {
         return batchServices.containsKey(serviceName);
-    }
-
-    Map<ServiceName, ServiceBuilderImpl<?>> getBatchServices() {
-        return batchServices;
     }
 
     @Override
@@ -70,6 +68,10 @@ final class BatchBuilderImpl extends AbstractServiceTarget implements BatchBuild
         if(done) {
             throw alreadyInstalled();
         }
+    }
+
+    Map<ServiceName, ServiceBuilderImpl<?>> getBatchServices() {
+        return batchServices;
     }
 
     static IllegalStateException alreadyInstalled() {

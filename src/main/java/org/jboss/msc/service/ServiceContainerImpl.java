@@ -230,17 +230,10 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         registry.remove(serviceName, registration);
     }
 
-    private void resolve(final Map<ServiceName, ? extends ServiceBuilderImpl<?>> serviceBuilders) throws ServiceRegistryException {
+    private void resolve(final Map<ServiceName, ServiceBuilderImpl<?>> serviceBuilders) throws ServiceRegistryException {
         for (ServiceBuilderImpl<?> serviceBuilder : serviceBuilders.values()) {
-            install(serviceBuilder);
+            doInstall(serviceBuilder);
         }
-    }
-
-    void install(final ServiceBuilderImpl<?> serviceBuilder) throws DuplicateServiceException {
-        if (serviceBuilder.getTarget() == this) {
-            apply(serviceBuilder);
-        }
-        doInstall(serviceBuilder);
     }
 
     <S> void doInstall(final ServiceBuilderImpl<S> serviceBuilder) throws DuplicateServiceException {
@@ -271,6 +264,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         return registration;
     }
 
+    @Override
     public ServiceController<?> getRequiredService(final ServiceName serviceName) throws ServiceNotFoundException {
         final ServiceController<?> controller = getService(serviceName);
         if (controller == null) {
@@ -279,18 +273,27 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         return controller;
     }
 
+    @Override
     public ServiceController<?> getService(final ServiceName serviceName) {
         final ServiceRegistrationImpl registration = registry.get(serviceName);
         return registration == null ? null : registration.getInstance();
     }
 
     @Override
-    void validateTargetState() {
+    void install(final ServiceBuilderImpl<?> serviceBuilder) throws DuplicateServiceException {
+        if (serviceBuilder.getTarget() == this) {
+            apply(serviceBuilder);
+        }
+        doInstall(serviceBuilder);
     }
 
     @Override
     boolean hasService(ServiceName name) {
         final ServiceRegistrationImpl serviceRegistration = registry.get(name);
         return serviceRegistration != null && serviceRegistration.getInstance() != null;
+    }
+
+    @Override
+    void validateTargetState() {
     }
 }
