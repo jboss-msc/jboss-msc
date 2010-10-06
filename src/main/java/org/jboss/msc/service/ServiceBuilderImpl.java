@@ -38,10 +38,14 @@ import java.util.Set;
 import static org.jboss.msc.service.BatchBuilderImpl.alreadyInstalled;
 
 /**
+ * 
+ * 
+ * 
 * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
 */
-abstract class AbstractServiceBuilder<T> implements ServiceBuilder<T> {
+class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
+    private final AbstractServiceTarget serviceTarget;
     private final Value<? extends Service<T>> serviceValue;
     private final ServiceName serviceName;
     private final boolean ifNotExist;
@@ -55,7 +59,9 @@ abstract class AbstractServiceBuilder<T> implements ServiceBuilder<T> {
     private ServiceName[] dependenciesArray;
     private boolean installed = false;
 
-    AbstractServiceBuilder(final Value<? extends Service<T>> serviceValue, final ServiceName serviceName, final boolean ifNotExist) {
+    ServiceBuilderImpl(AbstractServiceTarget serviceTarget, final Value<? extends Service<T>> serviceValue, final ServiceName serviceName, final boolean ifNotExist) {
+        if(serviceTarget == null) throw new IllegalArgumentException("ServiceTarget can not be null");
+        this.serviceTarget = serviceTarget;
         if(serviceValue == null) throw new IllegalArgumentException("ServiceValue can not be null");
         this.serviceValue = serviceValue;
         if(serviceName == null) throw new IllegalArgumentException("ServiceName can not be null");
@@ -73,7 +79,7 @@ abstract class AbstractServiceBuilder<T> implements ServiceBuilder<T> {
         return this;
     }
 
-    public AbstractServiceBuilder<T> setLocation() {
+    public ServiceBuilderImpl<T> setLocation() {
         checkAlreadyInstalled();
         final StackTraceElement element = new Throwable().getStackTrace()[1];
         final String fileName = element.getFileName();
@@ -81,13 +87,13 @@ abstract class AbstractServiceBuilder<T> implements ServiceBuilder<T> {
         return setLocation(new Location(fileName, lineNumber, -1, null));
     }
 
-    public AbstractServiceBuilder<T> setLocation(final Location location) {
+    public ServiceBuilderImpl<T> setLocation(final Location location) {
         checkAlreadyInstalled();
         this.location = location;
         return this;
     }
 
-    public AbstractServiceBuilder<T> setInitialMode(final ServiceController.Mode mode) {
+    public ServiceBuilderImpl<T> setInitialMode(final ServiceController.Mode mode) {
         checkAlreadyInstalled();
         initialMode = mode;
         return this;
@@ -194,13 +200,13 @@ abstract class AbstractServiceBuilder<T> implements ServiceBuilder<T> {
         return this;
     }
 
-    public AbstractServiceBuilder<T> addListener(final ServiceListener<? super T> listener) {
+    public ServiceBuilderImpl<T> addListener(final ServiceListener<? super T> listener) {
         checkAlreadyInstalled();
         listeners.add(listener);
         return this;
     }
 
-    public AbstractServiceBuilder<T> addListener(final ServiceListener<? super T>... serviceListeners) {
+    public ServiceBuilderImpl<T> addListener(final ServiceListener<? super T>... serviceListeners) {
         checkAlreadyInstalled();
         for (ServiceListener<? super T> listener : serviceListeners) {
             final List<ServiceListener<? super T>> listeners = this.listeners;
@@ -209,21 +215,23 @@ abstract class AbstractServiceBuilder<T> implements ServiceBuilder<T> {
         return this;
     }
 
-    public AbstractServiceBuilder<T> addListener(final Collection<? extends ServiceListener<? super T>> serviceListeners) {
+    public ServiceBuilderImpl<T> addListener(final Collection<? extends ServiceListener<? super T>> serviceListeners) {
         checkAlreadyInstalled();
         listeners.addAll(serviceListeners);
         return this;
     }
-    
+
     public void install() throws ServiceRegistryException {
         if (!installed) {
             // mark it before doInstall, so we avoid ServiceRegistryException being multiple times
             installed = true;
-            doInstall();
+            serviceTarget.install(this);
         }
     }
-    
-    protected abstract void doInstall() throws ServiceRegistryException;
+
+    ServiceTarget getTarget() {
+        return serviceTarget;
+    }
 
     private void checkAlreadyInstalled() {
         if (installed) {

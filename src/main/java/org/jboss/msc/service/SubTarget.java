@@ -22,33 +22,40 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.value.Value;
-
 
 /**
- * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
- * @param <T>
- * 
+ * A sub-target represents a set of ServiceBuilders that will be installed in the parent target.
+ * This class can be used to apply listeners/dependencies to all the ServiceBuilders of the represented set.
  *
+ * @author John Bailey
+ * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
-final class BatchServiceBuilder<T> extends AbstractServiceBuilder<T> {
+final class SubTarget extends AbstractServiceTarget {
 
-     final BatchBuilderImpl batchBuilder;
+    // the parent of this subTarget
+    private final AbstractServiceTarget parent;
+
+    SubTarget(final AbstractServiceTarget parent) {
+        this.parent = parent;
+    }
 
     /**
-     * @param batchBuilder
-     * @param serviceValue
-     * @param serviceName
-     * @param ifNotExist
+     * Applies the listeners and dependencies to the set of ServiceBuilders represented by this subTarget, before
+     * proceeding with installation of {@code serviceBuilder} into the parent target.
      */
-    BatchServiceBuilder(BatchBuilderImpl batchBuilder, Value<? extends Service<T>> serviceValue, ServiceName serviceName,
-            boolean ifNotExist) {
-        super(serviceValue, serviceName, ifNotExist);
-        this.batchBuilder = batchBuilder;
+    @Override
+    void install(ServiceBuilderImpl<?> serviceBuilder) throws ServiceRegistryException {
+        apply(serviceBuilder);
+        parent.install(serviceBuilder);
     }
 
     @Override
-    protected void doInstall() throws ServiceRegistryException {
-        batchBuilder.install(this);
+    void validateTargetState() {
+        parent.validateTargetState();
+    }
+
+    @Override
+    boolean hasService(ServiceName name) {
+        return parent.hasService(name);
     }
 }

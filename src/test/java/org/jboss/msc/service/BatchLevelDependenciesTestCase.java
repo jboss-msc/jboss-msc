@@ -91,7 +91,7 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
         builder.addListener(listener);
 
         builder.addService(ServiceName.of("firstService"), Service.NULL);
-        final ServiceContext subBatchBuilder = builder.subContext();
+        final ServiceTarget subBatchBuilder = builder.subTarget();
         subBatchBuilder.addService(ServiceName.of("secondService"), Service.NULL);
         subBatchBuilder.addService(ServiceName.of("thirdService"), Service.NULL);
         subBatchBuilder.addService(ServiceName.of("fourthService"), Service.NULL);

@@ -28,7 +28,7 @@ package org.jboss.msc.service;
  * A batch builder for installing service definitions in a single action.  Create an instance via the
  * {@link ServiceContainer#batchBuilder()} method.
  */
-public interface BatchBuilder extends ServiceContext {
+public interface BatchBuilder extends ServiceTarget {
 
     /**
      * Install all the defined services into the container.

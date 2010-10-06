@@ -29,7 +29,7 @@ import java.util.concurrent.Executor;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface ServiceContainer extends ServiceContext, ServiceRegistry {
+public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
 
     /**
      * Set the container executor.  If {@code null} is specified, a default single-thread executor is used.

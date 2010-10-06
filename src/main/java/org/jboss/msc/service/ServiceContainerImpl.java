@@ -40,13 +40,12 @@ import org.jboss.msc.ref.Reaper;
 import org.jboss.msc.ref.Reference;
 import org.jboss.msc.ref.WeakReference;
 import org.jboss.msc.value.ImmediateValue;
-import org.jboss.msc.value.Value;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
-final class ServiceContainerImpl extends AbstractServiceContext implements ServiceContainer {
+final class ServiceContainerImpl extends AbstractServiceTarget implements ServiceContainer {
     final Object lock = new Object();
     final ServiceInstanceImpl<ServiceContainer> root;
 
@@ -231,22 +230,20 @@ final class ServiceContainerImpl extends AbstractServiceContext implements Servi
         registry.remove(serviceName, registration);
     }
 
-    private void resolve(final Map<ServiceName, ? extends AbstractServiceBuilder<?>> serviceBuilders) throws ServiceRegistryException {
-        for (AbstractServiceBuilder<?> serviceBuilder : serviceBuilders.values()) {
+    private void resolve(final Map<ServiceName, ? extends ServiceBuilderImpl<?>> serviceBuilders) throws ServiceRegistryException {
+        for (ServiceBuilderImpl<?> serviceBuilder : serviceBuilders.values()) {
             install(serviceBuilder);
         }
     }
 
-    <S> void install(final ContainerServiceBuilder<S> containerServiceBuilder) throws DuplicateServiceException {
-        apply(containerServiceBuilder);
-        doInstall(containerServiceBuilder);
-    }
-
-    <S> void install(final AbstractServiceBuilder<S> serviceBuilder) throws DuplicateServiceException {
+    void install(final ServiceBuilderImpl<?> serviceBuilder) throws DuplicateServiceException {
+        if (serviceBuilder.getTarget() == this) {
+            apply(serviceBuilder);
+        }
         doInstall(serviceBuilder);
     }
 
-    <S> void doInstall(final AbstractServiceBuilder<S> serviceBuilder) throws DuplicateServiceException {
+    <S> void doInstall(final ServiceBuilderImpl<S> serviceBuilder) throws DuplicateServiceException {
         // First, create all registrations
         final ServiceName name = serviceBuilder.getName();
         ServiceRegistrationImpl primaryRegistration = getOrCreateRegistration(name);
@@ -288,29 +285,12 @@ final class ServiceContainerImpl extends AbstractServiceContext implements Servi
     }
 
     @Override
-    public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
-        return createServiceBuilder(name, value, false);
-    }
-
-    private <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value, final boolean ifNotExist) throws IllegalArgumentException {
-        if (this.registry.containsKey(name)) {
-            throw new IllegalArgumentException("Service named " + name + " is already defined in this container");
-        }
-        return new ContainerServiceBuilder<T>(this, value, name, ifNotExist);
+    void validateTargetState() {
     }
 
     @Override
-    public <T> ServiceBuilder<T> addServiceValueIfNotExist(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
-        return createServiceBuilder(name, value, true);
-    }
-
-    @Override
-    public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
-        return createServiceBuilder(name, new ImmediateValue<Service<T>>(service), false);
-    }
-
-    @Override
-    boolean isDone() {
-        return false;
+    boolean hasService(ServiceName name) {
+        final ServiceRegistrationImpl serviceRegistration = registry.get(name);
+        return serviceRegistration != null && serviceRegistration.getInstance() != null;
     }
 }

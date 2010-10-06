@@ -26,51 +26,78 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.jboss.msc.value.ImmediateValue;
+import org.jboss.msc.value.Value;
+
 /**
- * Abstract base class used for BatchBuilders
+ * Abstract base class used for ServiceTargets.
  *
  * @author John Bailey
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
-abstract class AbstractServiceContext implements ServiceContext {
-    private final Set<SubContext> subContexts = new HashSet<SubContext>();
+abstract class AbstractServiceTarget implements ServiceTarget {
+
     private final Set<ServiceListener<Object>> listeners = new HashSet<ServiceListener<Object>>();
     private final Set<ServiceName> dependencies = new HashSet<ServiceName>();
 
-    <S extends ServiceBuilder<?>> void apply(Collection<S> serviceBuilders) {
+    @Override
+    public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
+        return createServiceBuilder(name, value, false);
+    }
+
+    private <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value, final boolean ifNotExist) throws IllegalArgumentException {
+        validateTargetState();
+        if (hasService(name) && ! ifNotExist) {
+            throw new IllegalArgumentException("Service named " + name + " is already defined in this batch");
+        }
+        return new ServiceBuilderImpl<T>(this, value, name, ifNotExist);
+    }
+
+    abstract boolean hasService(ServiceName name);
+
+    @Override
+    public <T> ServiceBuilder<T> addServiceValueIfNotExist(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
+        return createServiceBuilder(name, value, true);
+    }
+
+    @Override
+    public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
+        return createServiceBuilder(name, new ImmediateValue<Service<T>>(service), false);
+    }
+
+    /**
+     * Apply listeners and dependencies to {@code serviceBuilders}.
+     * 
+     * @param serviceBuilders a collection of the ServiceBuilders the listeners and dependencies
+     *                        will be added to.
+     */
+    void apply(Collection<? extends ServiceBuilder<?>> serviceBuilders) {
         for(ServiceBuilder<?> serviceBuilder : serviceBuilders) {
             serviceBuilder.addListener(listeners);
             serviceBuilder.addDependencies(dependencies);
         }
-
-        // Reconcile sub-batch level listeners/dependencies
-        final Set<SubContext> subContexts = this.subContexts;
-        for(SubContext subBatchBuilder : subContexts) {
-            subBatchBuilder.reconcile();
-        }
     }
 
+    /**
+     * Apply listeners and dependencies to {@code serviceBuilder}.
+     * @param <S>            the type of {@code serviceBuilder}
+     * @param serviceBuilder serviceBuilder to which listeners and dependencies will be added.
+     */
     <S extends ServiceBuilder<?>> void apply(S serviceBuilder) {
         serviceBuilder.addListener(listeners);
         serviceBuilder.addDependencies(dependencies);
     }
 
-    abstract boolean isDone();
-
     @Override
-    public ServiceContext addListener(ServiceListener<Object> listener) {
-        if(isDone()) {
-            throw alreadyInstalled();
-        }
+    public ServiceTarget addListener(ServiceListener<Object> listener) {
+        validateTargetState();
         listeners.add(listener);
         return this;
     }
 
     @Override
-    public ServiceContext addListener(ServiceListener<Object>... listeners) {
-        if(isDone()) {
-            throw alreadyInstalled();
-        }
+    public ServiceTarget addListener(ServiceListener<Object>... listeners) {
+        validateTargetState();
         final Set<ServiceListener<Object>> batchListeners = this.listeners;
 
         for(ServiceListener<Object> listener : listeners) {
@@ -80,10 +107,8 @@ abstract class AbstractServiceContext implements ServiceContext {
     }
 
     @Override
-    public ServiceContext addListener(Collection<ServiceListener<Object>> listeners) {
-        if(isDone()) {
-            throw alreadyInstalled();
-        }
+    public ServiceTarget addListener(Collection<ServiceListener<Object>> listeners) {
+        validateTargetState();
         if (listeners == null)
             throw new IllegalArgumentException("Listeners can not be null");
 
@@ -96,19 +121,15 @@ abstract class AbstractServiceContext implements ServiceContext {
     }
 
     @Override
-    public ServiceContext addDependency(ServiceName dependency) {
-        if(isDone()) {
-            throw alreadyInstalled();
-        }
+    public ServiceTarget addDependency(ServiceName dependency) {
+        validateTargetState();
         dependencies.add(dependency);
         return this;
     }
 
     @Override
-    public ServiceContext addDependency(ServiceName... dependencies) {
-        if(isDone()) {
-            throw alreadyInstalled();
-        }
+    public ServiceTarget addDependency(ServiceName... dependencies) {
+        validateTargetState();
         final Set<ServiceName> batchDependencies = this.dependencies;
         for(ServiceName dependency : dependencies) {
             batchDependencies.add(dependency);
@@ -117,10 +138,8 @@ abstract class AbstractServiceContext implements ServiceContext {
     }
 
     @Override
-    public ServiceContext addDependency(Collection<ServiceName> dependencies) {
-        if(isDone()) {
-            throw alreadyInstalled();
-        }
+    public ServiceTarget addDependency(Collection<ServiceName> dependencies) {
+        validateTargetState();
         if(dependencies == null) throw new IllegalArgumentException("Dependencies can not be null");
         final Set<ServiceName> batchDependencies = this.dependencies;
         for(ServiceName dependency : dependencies) {
@@ -129,9 +148,15 @@ abstract class AbstractServiceContext implements ServiceContext {
         return this;
     }
 
-    static IllegalStateException alreadyInstalled() {
-        return new IllegalStateException("Batch already installed");
-    }
+    abstract void install(ServiceBuilderImpl<?> serviceBuilder) throws ServiceRegistryException;
+
+    /**
+     * Validates whether the state of this target is valid for additions.
+     * This method is invoked prior to every new addition of Services, Dependencies and ServiceListeners.
+     * 
+     * @throws IllegalStateException if the state is not valid for additions
+     */
+    abstract void validateTargetState() throws IllegalStateException;
 
     Set<ServiceListener<Object>> getListeners() {
         return listeners;
@@ -142,10 +167,7 @@ abstract class AbstractServiceContext implements ServiceContext {
     }
 
     @Override
-    public ServiceContext subContext() {
-        final Set<SubContext> subBatches = subContexts;
-        final SubContext subContext = new SubContext(this);
-        subBatches.add(subContext);
-        return subContext;
+    public ServiceTarget subTarget() {
+        return new SubTarget(this);
     }
 }

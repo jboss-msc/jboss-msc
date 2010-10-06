@@ -23,8 +23,9 @@
 package org.jboss.msc.service;
 
 /**
+ * 
+ * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
- *
  */
 public interface ServiceRegistry {
     ServiceController<?> getRequiredService(ServiceName serviceName) throws ServiceNotFoundException;
