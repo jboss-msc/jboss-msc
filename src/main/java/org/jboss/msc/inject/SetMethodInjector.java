@@ -35,7 +35,7 @@ import org.jboss.msc.value.Value;
  */
 public final class SetMethodInjector<T> implements Injector<T> {
 
-    private final static Object[] NULL_PARAM = new Object[] {null};
+    private static final Object[] NULL_PARAM = new Object[] {null};
 
     private final Value<?> target;
     private final Value<Method> methodValue;

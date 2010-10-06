@@ -22,8 +22,6 @@
 
 package org.jboss.msc.bench;
 
-import org.jboss.msc.inject.FieldInjector;
-import org.jboss.msc.inject.MethodInjector;
 import org.jboss.msc.service.BatchBuilder;
 import org.jboss.msc.service.BatchServiceBuilder;
 import org.jboss.msc.service.Service;
@@ -32,7 +30,6 @@ import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
-import org.jboss.msc.service.TimingServiceListener;
 import org.jboss.msc.service.util.LatchedFinishListener;
 import org.jboss.msc.value.CachedValue;
 import org.jboss.msc.value.ImmediateValue;
@@ -45,8 +42,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import org.jboss.msc.value.Values;
 
 public class FiveReverseInjectionsBench {
 
