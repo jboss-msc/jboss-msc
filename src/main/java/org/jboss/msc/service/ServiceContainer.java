@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import java.io.PrintStream;
 import java.util.concurrent.Executor;
 
 /**
@@ -60,6 +61,18 @@ public interface ServiceContainer {
     ServiceController<?> getRequiredService(ServiceName serviceName) throws ServiceNotFoundException;
 
     ServiceController<?> getService(ServiceName serviceName);
+
+    /**
+     * Dump a complete list of services to {@code System.out}.
+     */
+    void dumpServices();
+
+    /**
+     * Dump a complete list of services to the given stream.
+     *
+     * @param stream the stream to which the service list should be written
+     */
+    void dumpServices(PrintStream stream);
 
     /**
      * The factory class for service containers.

@@ -29,6 +29,7 @@ import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
 
+import java.io.PrintStream;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashSet;
@@ -131,7 +132,7 @@ final class ServiceContainerImpl implements ServiceContainer {
         synchronized (set) {
             // if the shutdown hook was triggered, then no services can ever come up in any new containers.
             final boolean down = ShutdownHookHolder.down;
-            final ServiceBuilderImpl<ServiceContainer> builder = new ServiceBuilderImpl<ServiceContainer>(this, new ImmediateValue<Service<ServiceContainer>>(new Service<ServiceContainer>() {
+            @SuppressWarnings({ "ThisEscapedInObjectConstruction" }) final ServiceBuilderImpl<ServiceContainer> builder = new ServiceBuilderImpl<ServiceContainer>(this, new ImmediateValue<Service<ServiceContainer>>(new Service<ServiceContainer>() {
                 public void start(final StartContext context) throws StartException {
                 }
 
@@ -144,6 +145,7 @@ final class ServiceContainerImpl implements ServiceContainer {
             }), ROOT);
             root = builder.setInitialMode(down ? ServiceController.Mode.REMOVE : ServiceController.Mode.ACTIVE).create();
             if (! down) {
+                //noinspection ThisEscapedInObjectConstruction
                 set.add(new WeakReference<ServiceContainerImpl, Void>(this, null, new Reaper<ServiceContainerImpl, Void>() {
                     public void reap(final Reference<ServiceContainerImpl, Void> reference) {
                         ShutdownHookHolder.containers.remove(reference);
@@ -169,6 +171,21 @@ final class ServiceContainerImpl implements ServiceContainer {
 
     public void shutdown() {
         root.setMode(ServiceController.Mode.REMOVE);
+    }
+
+    public void dumpServices() {
+        dumpServices(System.out);
+    }
+
+    public void dumpServices(PrintStream out) {
+        for (Map.Entry<ServiceName, ServiceControllerImpl<?>> entry : registry.entrySet()) {
+            final ServiceName name = entry.getKey();
+            final ServiceControllerImpl<?> controller = entry.getValue();
+            if (controller != null) {
+                final ServiceControllerImpl.Substate substate = controller.getSubState();
+                out.printf("Service '%s' mode %s state=%s (%s)\n", name, controller.getMode(), substate.getState(), substate);
+            }
+        }
     }
 
     protected void finalize() throws Throwable {
@@ -213,7 +230,7 @@ final class ServiceContainerImpl implements ServiceContainer {
         return executor != null ? executor : ExecutorHolder.VALUE;
     }
 
-    private final ConcurrentMap<ServiceName, ServiceController<?>> registry = new ConcurrentHashMap<ServiceName, ServiceController<?>>();
+    private final ConcurrentMap<ServiceName, ServiceControllerImpl<?>> registry = new ConcurrentHashMap<ServiceName, ServiceControllerImpl<?>>();
 
     public BatchBuilderImpl batchBuilder() {
         return new BatchBuilderImpl(this);
@@ -316,7 +333,7 @@ final class ServiceContainerImpl implements ServiceContainer {
 
             final ServiceController.Mode initialMode = entry.getInitialMode();
             builder.setInitialMode(ServiceController.Mode.NEVER);
-            final ServiceController<?> serviceController = builder.create();
+            final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) builder.create();
             if (registry.putIfAbsent(name, serviceController) != null) {
                 if (! entry.isIfNotExist()) {
                     throw new DuplicateServiceException("Duplicate service name provided: " + name);

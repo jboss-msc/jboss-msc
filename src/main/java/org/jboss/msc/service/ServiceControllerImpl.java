@@ -742,6 +742,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S> {
         doExecute(tasks);
     }
 
+    Substate getSubState() {
+        synchronized (this) {
+            return state;
+        }
+    }
+
     private class StartContextImpl implements StartContext {
 
         private ContextState state = ContextState.SYNC;
