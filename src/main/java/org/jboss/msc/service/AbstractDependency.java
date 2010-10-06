@@ -34,7 +34,7 @@ import org.jboss.msc.service.ServiceController.Mode;
 abstract class AbstractDependency {
     /**
      * Add a dependent to this dependency, establishing the dependency relation between this dependency and its
-     * dependent. 
+     * dependent.  This method must not be called under a lock.
      *
      * @param dependent the dependent to add
      */
@@ -42,7 +42,7 @@ abstract class AbstractDependency {
 
     /**
      * Remove a dependent from this dependency, breaking the dependency relation between this dependency and its
-     * dependent.
+     * dependent.  This method must not be called under a lock.
      *
      * @param dependent the dependent to remove
      */
@@ -50,21 +50,25 @@ abstract class AbstractDependency {
 
     /**
      * Notify that a {@link AbstractDependent dependent} entered {@link Mode#ACTIVE active mode}.
+     * This method must not be called under a lock.
      */
     abstract void addDemand();
 
     /**
      * Notify that a {@link AbstractDependent dependent} left {@link Mode#ACTIVE active mode}.
+     * This method must not be called under a lock.
      */
     abstract void removeDemand();
 
     /**
      * Notify that a {@link AbstractDependent dependent} is starting.
+     * This method must not be called under a lock.
      */
     abstract void dependentStarted();
 
     /**
      * Notify that a {@link AbstractDependent dependent} is stopping.
+     * This method must not be called under a lock.
      */
     abstract void dependentStopped();
 }

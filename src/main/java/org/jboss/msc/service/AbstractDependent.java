@@ -33,12 +33,14 @@ package org.jboss.msc.service;
 abstract class AbstractDependent {
 
     /**
-     * Notify this dependent that one of its dependencies entered {@link ServiceInstanceImpl.Substate.UP UP} state.
+     * Notify this dependent that one of its dependencies entered {@link ServiceInstanceImpl.Substate#UP UP} state.
+     * This method must not be called under a lock.
      */
     abstract void dependencyUp();
 
     /**
-     * Notify this dependent that one of its dependencies is leaving the {@link ServiceInstanceImpl.Substate.UP UP} state.
+     * Notify this dependent that one of its dependencies is leaving the {@link ServiceInstanceImpl.Substate#UP UP} state.
+     * This method must not be called under a lock.
      */
     abstract void dependencyDown();
 }
