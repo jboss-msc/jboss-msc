@@ -25,7 +25,9 @@ package org.jboss.msc.service;
 import java.io.PrintStream;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,6 +39,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.jboss.msc.inject.Injector;
 import org.jboss.msc.ref.Reaper;
 import org.jboss.msc.ref.Reference;
 import org.jboss.msc.ref.WeakReference;
@@ -129,6 +132,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         synchronized (set) {
             // if the shutdown hook was triggered, then no services can ever come up in any new containers.
             final boolean down = ShutdownHookHolder.down;
+            //noinspection ThisEscapedInObjectConstruction
             root = new ServiceInstanceImpl<ServiceContainer>(new ImmediateValue<Service<ServiceContainer>>(new Service<ServiceContainer>() {
                 public void start(final StartContext context) throws StartException {
                 }
@@ -139,8 +143,9 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                 public ServiceContainer getValue() throws IllegalStateException {
                     return ServiceContainerImpl.this;
                 }
-            }), null, new ServiceRegistrationImpl[0], new ValueInjection<?>[0], new ServiceRegistrationImpl(this, ServiceName.of("root")), new ServiceRegistrationImpl[0]);
+            }), new ServiceRegistrationImpl(this, ServiceName.of("root")));
             if (! down) {
+                //noinspection ThisEscapedInObjectConstruction
                 set.add(new WeakReference<ServiceContainerImpl, Void>(this, null, new Reaper<ServiceContainerImpl, Void>() {
                     public void reap(final Reference<ServiceContainerImpl, Void> reference) {
                         ShutdownHookHolder.containers.remove(reference);
@@ -227,11 +232,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
      */
     @Override
     void install(final BatchBuilderImpl serviceBatch) throws ServiceRegistryException {
-        try {
-            resolve(serviceBatch.getBatchServices());
-        } catch (ResolutionException e) {
-            throw new ServiceRegistryException("Failed to resolve dependencies", e);
-        }
+        resolve(serviceBatch.getBatchServices());
     }
 
     /**
@@ -251,31 +252,89 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     }
 
     <S> void doInstall(final ServiceBuilderImpl<S> serviceBuilder) throws DuplicateServiceException {
-        // First, create all registrations
+
+        // Get names & aliases
         final ServiceName name = serviceBuilder.getName();
-        ServiceRegistrationImpl primaryRegistration = getOrCreateRegistration(name);
         final ServiceName[] aliases = serviceBuilder.getAliases();
+        final int aliasCount = aliases.length;
+
+        // Create registrations
+        final ServiceRegistrationImpl primaryRegistration = getOrCreateRegistration(name);
         final ServiceRegistrationImpl[] aliasRegistrations = new ServiceRegistrationImpl[aliases.length];
-        for (int i = 0; i < aliases.length; i++) {
+
+        for (int i = 0; i < aliasCount; i++) {
             aliasRegistrations[i] = getOrCreateRegistration(aliases[i]);
         }
 
+        // Create the list of dependencies
+        final Map<ServiceName, ServiceBuilderImpl.Dependency> dependencyMap = serviceBuilder.getDependencies();
+        final int dependencyCount = dependencyMap.size();
+        final AbstractDependency[] dependencies = new AbstractDependency[dependencyCount];
+        final List<ValueInjection<?>> valueInjections = new ArrayList<ValueInjection<?>>(serviceBuilder.getValueInjections());
+
+        // Dependencies
+        int i = 0;
+        for (ServiceName serviceName : dependencyMap.keySet()) {
+            final AbstractDependency registration = getOrCreateRegistration(serviceName);
+            dependencies[i++] = registration;
+            final ServiceBuilderImpl.Dependency dependency = dependencyMap.get(name);
+            for (Injector<Object> injector : dependency.getInjectorList()) {
+                valueInjections.add(new ValueInjection<Object>(registration, injector));
+            }
+        }
+        final ValueInjection<?>[] injections = valueInjections.toArray(new ValueInjection<?>[valueInjections.size()]);
+
         // Next create the actual controller
-        final ServiceInstanceImpl<S> instance = new ServiceInstanceImpl<S>(serviceBuilder.getServiceValue(), null, null, null, primaryRegistration, aliasRegistrations);
-        // Try to install the controller in each registration
-        primaryRegistration.setInstance(instance);
+        final ServiceInstanceImpl<S> instance = new ServiceInstanceImpl<S>(serviceBuilder.getServiceValue(), serviceBuilder.getLocation(), dependencies, injections, primaryRegistration, aliasRegistrations, serviceBuilder.getListeners());
+
+        boolean ok = false;
+        try {
+            // Install the controller in each registration
+            primaryRegistration.setInstance(instance);
+
+            for (i = 0; i < aliasCount; i++) {
+                aliasRegistrations[i].setInstance(instance);
+            }
+            ok = true;
+        } finally {
+            if (! ok) {
+                // Something went wrong; undo the setInstances
+                primaryRegistration.clearInstance(instance);
+                for (ServiceRegistrationImpl registration : aliasRegistrations) {
+                    registration.clearInstance(instance);
+                }
+            }
+        }
+
+        // Add as a dependent to all dependencies
+        instance.initialize();
+
+        // Go!
+        instance.setMode(serviceBuilder.getInitialMode());
     }
 
+    /**
+     * Atomically get or create a registration.  This registration <b>must</b> be unreferenced once it is
+     * initialized (or initialization fails), since it is returned with a count of +1.
+     *
+     * @param name the service name
+     * @return the registration with a reference count of +1
+     */
     private ServiceRegistrationImpl getOrCreateRegistration(final ServiceName name) {
-        ServiceRegistrationImpl registration = registry.get(name);
+        final ConcurrentMap<ServiceName, ServiceRegistrationImpl> registry = this.registry;
+        ServiceRegistrationImpl registration;
+        registration = registry.get(name);
         if (registration == null) {
             registration = new ServiceRegistrationImpl(this, name);
             ServiceRegistrationImpl appearing = registry.putIfAbsent(name, registration);
             if (appearing != null) {
                 return appearing;
+            } else {
+                return registration;
             }
+        } else {
+            return registration;
         }
-        return registration;
     }
 
     @Override

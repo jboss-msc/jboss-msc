@@ -30,8 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.jboss.msc.inject.CastingInjector;
 import org.jboss.msc.inject.Injector;
+import org.jboss.msc.inject.Injectors;
 import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 
@@ -50,12 +50,37 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     private Location location;
     private ServiceController.Mode initialMode;
     private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
-    private final Map<ServiceName, Boolean> dependencies = new HashMap<ServiceName, Boolean>(0);
-    private final List<ServiceListener<? super T>> listeners = new ArrayList<ServiceListener<? super T>>(0);
+    private final Map<ServiceName, Dependency> dependencies = new HashMap<ServiceName, Dependency>(0);
+    private final Set<ServiceListener<? super T>> listeners = new IdentityHashSet<ServiceListener<? super T>>(0);
     private final List<ValueInjection<?>> valueInjections = new ArrayList<ValueInjection<?>>(0);
-    private final List<NamedInjection> namedInjections = new ArrayList<NamedInjection>(0);
-    private ServiceName[] dependenciesArray;
     private boolean installed = false;
+
+    static final class Dependency {
+        private final ServiceName name;
+        private boolean optional;
+        private List<Injector<Object>> injectorList = new ArrayList<Injector<Object>>(0);
+
+        Dependency(final ServiceName name, final boolean optional) {
+            this.name = name;
+            this.optional = optional;
+        }
+
+        ServiceName getName() {
+            return name;
+        }
+
+        List<Injector<Object>> getInjectorList() {
+            return injectorList;
+        }
+
+        boolean isOptional() {
+            return optional;
+        }
+
+        void setOptional(final boolean optional) {
+            this.optional = optional;
+        }
+    }
 
     ServiceBuilderImpl(AbstractServiceTarget serviceTarget, final Value<? extends Service<T>> serviceValue, final ServiceName serviceName, final boolean ifNotExist) {
         if(serviceTarget == null) throw new IllegalArgumentException("ServiceTarget can not be null");
@@ -170,10 +195,7 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     private ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target, boolean optional) {
         checkAlreadyInstalled();
-        if(!serviceName.equals(dependency)) {
-            doAddDependency(dependency, optional);
-        }
-        namedInjections.add(new NamedInjection(dependency, target));
+        doAddDependency(dependency, optional).getInjectorList().add(target);
         return this;
     }
 
@@ -189,16 +211,19 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     private <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target, final boolean optional) {
         checkAlreadyInstalled();
-        if(!serviceName.equals(dependency)) {
-            doAddDependency(dependency, optional);
-        }
-        namedInjections.add(new NamedInjection(dependency, new CastingInjector<I>(target, type)));
+        doAddDependency(dependency, optional).getInjectorList().add(Injectors.cast(target, type));
         return this;
     }
 
-    private void doAddDependency(final ServiceName dependency, final boolean optional) {
-        final Boolean existing = dependencies.get(dependency);
-        dependencies.put(dependency, Boolean.valueOf(existing != null ? existing.booleanValue() && optional : optional));
+    private Dependency doAddDependency(final ServiceName name, final boolean optional) {
+        final Dependency existing = dependencies.get(name);
+        if (existing != null) {
+            if (!optional) existing.setOptional(false);
+            return existing;
+        }
+        final Dependency newDep = new Dependency(name, optional);
+        dependencies.put(name, newDep);
+        return newDep;
     }
 
     @Override
@@ -224,7 +249,7 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     public ServiceBuilderImpl<T> addListener(final ServiceListener<? super T>... serviceListeners) {
         checkAlreadyInstalled();
         for (ServiceListener<? super T> listener : serviceListeners) {
-            final List<ServiceListener<? super T>> listeners = this.listeners;
+            final Set<ServiceListener<? super T>> listeners = this.listeners;
             listeners.add(listener);
         }
         return this;
@@ -265,24 +290,12 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return aliases.toArray(new ServiceName[aliases.size()]);
     }
 
-    ServiceName[] getDependencies() {
-        if(dependenciesArray == null) {
-            dependenciesArray = dependencies.keySet().toArray(new ServiceName[dependencies.size()]);
-        }
-        return dependenciesArray;
+    Map<ServiceName, Dependency> getDependencies() {
+        return dependencies;
     }
 
-    boolean isOptionalDependency(final ServiceName serviceName) {
-        final Boolean optional = dependencies.get(serviceName);
-        return optional != null ? optional.booleanValue() : false;
-    }
-
-    Iterable<? extends ServiceListener<? super T>> getListeners() {
+    Set<? extends ServiceListener<? super T>> getListeners() {
         return listeners;
-    }
-
-    List<NamedInjection> getNamedInjections() {
-        return namedInjections;
     }
 
     List<ValueInjection<?>> getValueInjections() {

@@ -120,41 +120,6 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
         }
     }
 
-
-    @Test
-    public void testMissingDependency() throws Exception {
-        final BatchBuilder builder = serviceContainer.batchBuilder();
-        builder.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"));
-        builder.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
-        builder.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"));
-        builder.addService(ServiceName.of("11"), Service.NULL).addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"));
-        builder.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9"));
-        builder.addService(ServiceName.of("2"), Service.NULL).addDependencies(ServiceName.of("1"));
-        builder.addService(ServiceName.of("9"), Service.NULL);
-        builder.addService(ServiceName.of("10"), Service.NULL);
-
-        try {
-            builder.install();
-            fail("Should have thrown a MissingDependencyException");
-        } catch(ServiceRegistryException expected) {
-            assertTrue(expected.getCause() instanceof MissingDependencyException);
-        }
-    }
-
-    @Test
-    public void testCircular() throws Exception {
-        final BatchBuilder builder = serviceContainer.batchBuilder();
-        builder.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("5"));
-        builder.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
-        builder.addService(ServiceName.of("11"), Service.NULL).addDependencies(ServiceName.of("7"));
-        try {
-            builder.install();
-            fail("Should have thrown circular dependency exception");
-        } catch(ServiceRegistryException expected) {
-        }
-    }
-
-
     @Test
     public void testOptionalDependency() throws Exception {
         final BatchBuilder builder = serviceContainer.batchBuilder();

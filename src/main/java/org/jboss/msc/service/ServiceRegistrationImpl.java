@@ -107,12 +107,16 @@ final class ServiceRegistrationImpl extends AbstractDependency {
         assert !lockHeld();
         assert !lockHeldByDependent(dependent);
         synchronized (this) {
-            if (dependents.remove(dependent) && instance == null) {
-                container.remove(name, this);
-            }
+            dependents.remove(dependent);
         }
     }
 
+    /**
+     * Set the instance.
+     *
+     * @param instance the new instance
+     * @throws DuplicateServiceException if there is already an instance
+     */
     void setInstance(final ServiceInstanceImpl<?> instance) throws DuplicateServiceException {
         assert instance != null;
         assert !lockHeld();
@@ -125,37 +129,18 @@ final class ServiceRegistrationImpl extends AbstractDependency {
             synchronized (instance) {
                 instance.addDependents(dependents);
             }
-            instance.addDemands(demandedByCount);
+            if (demandedByCount > 0) instance.addDemands(demandedByCount);
         }
     }
 
-    void clearInstance() {
+    void clearInstance(final ServiceInstanceImpl<?> oldInstance) {
         assert !lockHeld();
         synchronized (this) {
             final ServiceInstanceImpl<?> instance = this.instance;
-            if (instance == null) {
-                throw new IllegalStateException("Service already cleared");
+            if (instance != oldInstance) {
+                return;
             }
-            if (instance.getSubstate() != ServiceInstanceImpl.Substate.REMOVED) {
-                // todo: someday, support runtime unlinking
-                //
-                // The problem is that while we could track whether our dependents are active or not,
-                // we have no sane way to deal with the situation where they are active.  Throwing an
-                // exception doesn't quite fit because then the best you can do is a "try unlink" kind of
-                // thing.  To make it work, the reference would need its own full state machine which controls
-                // all its dependencies.  Such complexity would probably hurt performance if it weren't very
-                // carefully considered.  So, maybe later.
-                throw new IllegalStateException("Cannot remove active service link");
-            }
-            // Once runtime unlinking is supported, this code will be necessary to remove our set
-//            assert !instance.lockHeld();
-//            synchronized (instance) {
-//                instance.removeAllDependents(dependents);
-//            }
             this.instance = null;
-            if (dependents.isEmpty()) {
-                container.remove(name, this);
-            }
         }
     }
 
@@ -186,6 +171,18 @@ final class ServiceRegistrationImpl extends AbstractDependency {
         synchronized (this) {
             assert instance != null;
             instance.dependentStopped();
+        }
+    }
+
+    @Override
+    public Object getValue() throws IllegalStateException {
+        synchronized (this) {
+            final ServiceInstanceImpl<?> instance = this.instance;
+            if (instance == null) {
+                throw new IllegalStateException("Service is not installed");
+            } else {
+                return instance.getValue();
+            }
         }
     }
 

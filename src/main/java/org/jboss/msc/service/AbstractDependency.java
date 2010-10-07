@@ -23,6 +23,7 @@
 package org.jboss.msc.service;
 
 import org.jboss.msc.service.ServiceController.Mode;
+import org.jboss.msc.value.Value;
 
 /**
  * AbstractDependency represents the dependencies of a service.
@@ -31,7 +32,7 @@ import org.jboss.msc.service.ServiceController.Mode;
  * @see AbstractDependent
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
-abstract class AbstractDependency {
+abstract class AbstractDependency implements Value<Object> {
     /**
      * Add a dependent to this dependency, establishing the dependency relation between this dependency and its
      * dependent.  This method must not be called under a lock.
@@ -71,4 +72,12 @@ abstract class AbstractDependency {
      * This method must not be called under a lock.
      */
     abstract void dependentStopped();
+
+    /**
+     * Get the installed instance value, if any exists.
+     *
+     * @return the installed service value
+     * @throws IllegalStateException if an error occurs
+     */
+    public abstract Object getValue() throws IllegalStateException;
 }

@@ -23,6 +23,7 @@
 package org.jboss.msc.service;
 
 import java.util.Arrays;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
@@ -54,7 +55,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
     /**
      * The set of registered service listeners.
      */
-    private final IdentityHashSet<ServiceListener<? super S>> listeners = new IdentityHashSet<ServiceListener<? super S>>(0);
+    private final IdentityHashSet<ServiceListener<? super S>> listeners;
     /**
      * The set of dependents on this instance.
      */
@@ -106,13 +107,14 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
     private static final ServiceInstanceImpl<?>[] NO_DEPENDENTS = new ServiceInstanceImpl<?>[0];
     private static final ValueInjection<?>[] NO_INJECTIONS = new ValueInjection<?>[0];
 
-    ServiceInstanceImpl(final Value<? extends Service<? extends S>> serviceValue, final Location location, final ServiceRegistrationImpl[] dependencies, final ValueInjection<?>[] injections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations) {
+    ServiceInstanceImpl(final Value<? extends Service<? extends S>> serviceValue, final Location location, final AbstractDependency[] dependencies, final ValueInjection<?>[] injections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<? extends ServiceListener<? super S>> listeners) {
         this.serviceValue = serviceValue;
         this.location = location;
         this.dependencies = dependencies;
         this.injections = injections;
         this.primaryRegistration = primaryRegistration;
         this.aliasRegistrations = aliasRegistrations;
+        this.listeners =  new IdentityHashSet<ServiceListener<? super S>>(listeners);
     }
 
     ServiceInstanceImpl(final Value<? extends Service<? extends S>> serviceValue, final ServiceRegistrationImpl primaryRegistration) {
@@ -122,6 +124,13 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
         dependencies = NO_REGISTRATIONS;
         injections = NO_INJECTIONS;
         aliasRegistrations = NO_REGISTRATIONS;
+        listeners = new IdentityHashSet<ServiceListener<? super S>>(0);
+    }
+
+    void initialize() {
+        for (AbstractDependency dependency : dependencies) {
+            dependency.addDependent(this);
+        }
     }
 
     /**
@@ -350,27 +359,32 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
 
     public void setMode(final ServiceController.Mode newMode) {
         assert !lockHeld();
+        Runnable[] bootTasks = null;
         final Runnable[] tasks;
         Runnable specialTask = null;
         synchronized (this) {
+            final Substate oldState = state;
+            if (oldState == Substate.NEW) {
+                state = Substate.DOWN;
+                bootTasks = getListenerTasks(State.DOWN);
+                asyncTasks += bootTasks.length;
+            }
             final ServiceController.Mode oldMode = mode;
             mode = newMode;
             switch (oldMode) {
                 case REMOVE: {
                     switch (newMode) {
                         case REMOVE: {
-                            return;
+                            break;
                         }
                         default: {
                             throw new IllegalStateException("Service removed");
                         }
                     }
+                    break;
                 }
                 case NEVER: {
                     switch (newMode) {
-                        case NEVER: {
-                            return;
-                        }
                         case ON_DEMAND: {
                             if (demandedByCount > 0) {
                                 upperCount++;
@@ -398,9 +412,6 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
                                 upperCount--;
                             }
                             break;
-                        }
-                        case ON_DEMAND: {
-                            return;
                         }
                         case PASSIVE: {
                             if (demandedByCount == 0) {
@@ -432,9 +443,6 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
                             }
                             break;
                         }
-                        case PASSIVE: {
-                            return;
-                        }
                         case ACTIVE: {
                             specialTask = new DemandParentsTask();
                             asyncTasks++;
@@ -465,15 +473,13 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
                             asyncTasks++;
                             break;
                         }
-                        case ACTIVE: {
-                            return;
-                        }
                     }
                     break;
                 }
             }
-            tasks = transition();
+            tasks = (oldMode == newMode) ? null : transition();
         }
+        doExecute(bootTasks);
         doExecute(tasks);
         doExecute(specialTask);
     }
@@ -1018,9 +1024,9 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
             try {
                 assert getMode() == ServiceController.Mode.REMOVE;
                 assert getState() == ServiceController.State.REMOVED;
-                primaryRegistration.clearInstance();
+                primaryRegistration.clearInstance(ServiceInstanceImpl.this);
                 for (ServiceRegistrationImpl registration : aliasRegistrations) {
-                    registration.clearInstance();
+                    registration.clearInstance(ServiceInstanceImpl.this);
                 }
                 for (AbstractDependency dependency : dependencies) {
                     dependency.removeDependent(ServiceInstanceImpl.this);
@@ -1120,6 +1126,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
     }
 
     enum Substate {
+        NEW(ServiceController.State.DOWN),
         DOWN(ServiceController.State.DOWN),
         START_REQUESTED(ServiceController.State.DOWN),
         STARTING(ServiceController.State.STARTING),
