@@ -129,6 +129,9 @@ final class ServiceRegistrationImpl extends AbstractDependency {
             synchronized (instance) {
                 instance.addDependents(dependents);
             }
+            for (AbstractDependent dependent: dependents) {
+                dependent.dependencyInstalled();
+            }
             if (demandedByCount > 0) instance.addDemands(demandedByCount);
         }
     }
@@ -141,6 +144,9 @@ final class ServiceRegistrationImpl extends AbstractDependency {
                 return;
             }
             this.instance = null;
+            for (AbstractDependent dependent: dependents) {
+                dependent.dependencyUninstalled();
+            }
         }
     }
 

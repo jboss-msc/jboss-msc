@@ -275,9 +275,12 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         // Dependencies
         int i = 0;
         for (ServiceName serviceName : dependencyMap.keySet()) {
-            final AbstractDependency registration = getOrCreateRegistration(serviceName);
-            dependencies[i++] = registration;
+            AbstractDependency registration = getOrCreateRegistration(serviceName);
             final ServiceBuilderImpl.Dependency dependency = dependencyMap.get(name);
+            if (dependency.isOptional()) {
+                registration = new OptionalDependency(registration);
+            }
+            dependencies[i++] = registration;
             for (Injector<Object> injector : dependency.getInjectorList()) {
                 valueInjections.add(new ValueInjection<Object>(registration, injector));
             }

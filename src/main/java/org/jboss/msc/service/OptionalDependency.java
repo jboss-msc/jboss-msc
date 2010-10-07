@@ -42,7 +42,7 @@ class OptionalDependency extends AbstractDependency {
     /**
      * The real dependency.
      */
-    private final ServiceRegistrationImpl optionalDependency;
+    private final AbstractDependency optionalDependency;
 
     /**
      * Is dependency up
@@ -74,14 +74,10 @@ class OptionalDependency extends AbstractDependency {
      */
     private final OptionalDependencyToDependent dependentAdaptor;
 
-    public OptionalDependency(ServiceRegistrationImpl optionalDependency) {
+    public OptionalDependency(AbstractDependency optionalDependency) {
         this.optionalDependency = optionalDependency;
         this.dependentAdaptor = new OptionalDependencyToDependent();
         optionalDependency.addDependent(dependentAdaptor);
-        // FIXME this will be part of the dependent api and should be called by optionalDependency.addDependent
-        if (optionalDependency.getInstance() != null) {
-            dependencyInstalled();
-        }
     }
 
     @Override
@@ -97,8 +93,7 @@ class OptionalDependency extends AbstractDependency {
             isDependencyUp = isUp();
         }
         if (isDependencyUp) {
-            // FIXME
-            // dependent.dependencyInstalled();
+            dependent.dependencyInstalled();
             dependent.dependencyUp();
         }
     }
@@ -260,20 +255,19 @@ class OptionalDependency extends AbstractDependency {
 
     private boolean isUp() {
         assert lockHeld();
-        return !optionalDependencyInstalled ||
-            optionalDependency.getInstance().getSubstate() == ServiceInstanceImpl.Substate.UP;
+        return !optionalDependencyInstalled || dependencyUp;
     }
 
     private class OptionalDependencyToDependent extends AbstractDependent {
 
-        // FIXME @Override
-        synchronized void dependencyInstalled() {
-                OptionalDependency.this.dependencyInstalled();
+        @Override
+        void dependencyInstalled() {
+            OptionalDependency.this.dependencyInstalled();
         }
 
-        // FIXME @Override
-        synchronized void dependencyUninstalled() {
-                OptionalDependency.this.dependencyUninstalled();
+        @Override
+        void dependencyUninstalled() {
+            OptionalDependency.this.dependencyUninstalled();
         }
 
         @Override

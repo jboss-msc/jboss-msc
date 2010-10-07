@@ -33,6 +33,16 @@ package org.jboss.msc.service;
 abstract class AbstractDependent {
 
     /**
+     * Notify this dependent that one of its dependencies is installed.
+     */
+    abstract void dependencyInstalled();
+
+    /**
+     * Notify this dependent that one of its dependencies is uninstalled.
+     */
+    abstract void dependencyUninstalled();
+
+    /**
      * Notify this dependent that one of its dependencies entered {@link ServiceInstanceImpl.Substate#UP UP} state.
      * This method must not be called under a lock.
      */

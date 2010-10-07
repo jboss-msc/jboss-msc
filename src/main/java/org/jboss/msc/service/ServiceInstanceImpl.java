@@ -489,6 +489,16 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
     }
 
     @Override
+    void dependencyInstalled() {
+        // do nothing
+    }
+
+    @Override
+    void dependencyUninstalled() {
+        // do nothing
+    }
+
+    @Override
     void dependencyUp() {
         Runnable[] tasks = null;
         synchronized (this) {
