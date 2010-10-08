@@ -79,7 +79,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
     /**
      * The controller state.
      */
-    private Substate state = Substate.DOWN;
+    private Substate state = Substate.NEW;
     /**
      * The number of registrations which place a demand-to-start on this instance.  If this value is >0, propagate a demand
      * up to all parent dependents.  If this value is >0 and mode is ON_DEMAND, put a load of +1 on {@code upperCount}.
@@ -368,7 +368,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
             final Substate oldState = state;
             if (oldState == Substate.NEW) {
                 state = Substate.DOWN;
-                bootTasks = getListenerTasks(State.DOWN);
+                bootTasks = getListenerTasks(null);
                 asyncTasks += bootTasks.length;
             }
             final ServiceController.Mode oldMode = mode;
