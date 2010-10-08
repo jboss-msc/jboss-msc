@@ -22,15 +22,16 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.util.TestServiceListener;
-import org.junit.Test;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Future;
-
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import org.jboss.msc.service.util.LatchedFinishListener;
+import org.jboss.msc.util.TestServiceListener;
+import org.junit.Test;
 
 /**
  * Test to verify the functionality of batch level listeners.
@@ -41,9 +42,10 @@ public class BatchLevelListenersTestCase extends AbstractServiceTest {
 
     @Test
     public void testBatchLevel() throws Exception {
-        final MockListener listenerOne = new MockListener();
-        final MockListener listenerTwo = new MockListener();
-        final MockListener listenerThree = new MockListener();
+        final LatchedFinishListener latch = new LatchedFinishListener();
+        final MockListener listenerOne = new MockListener(latch);
+        final MockListener listenerTwo = new MockListener(latch);
+        final MockListener listenerThree = new MockListener(latch);
         final BatchBuilder builder = serviceContainer.batchBuilder();
         final TestServiceListener testListener = new TestServiceListener();
         builder.addListener(testListener);
@@ -56,13 +58,8 @@ public class BatchLevelListenersTestCase extends AbstractServiceTest {
 
         builder.addListener(listenerThree);
 
-        final Future<ServiceController<?>> firstService = testListener.expectServiceStart(ServiceName.of("firstService"));
-        final Future<ServiceController<?>> secondService = testListener.expectServiceStart(ServiceName.of("secondService"));
-
         builder.install();
-
-        firstService.get();
-        secondService.get();
+        latch.await();
 
         assertTrue(listenerOne.startedServices.contains(ServiceName.of("firstService")));
         assertTrue(listenerOne.startedServices.contains(ServiceName.of("secondService")));
@@ -74,8 +71,9 @@ public class BatchLevelListenersTestCase extends AbstractServiceTest {
 
     @Test
     public void testSubBatchLevel() throws Exception {
-        final MockListener batchListener = new MockListener();
-        final MockListener subBatchListener = new MockListener();
+        final LatchedFinishListener latch = new LatchedFinishListener();
+        final MockListener batchListener = new MockListener(latch);
+        final MockListener subBatchListener = new MockListener(latch);
 
         final BatchBuilder builder = serviceContainer.batchBuilder();
         final TestServiceListener testListener = new TestServiceListener();
@@ -88,13 +86,8 @@ public class BatchLevelListenersTestCase extends AbstractServiceTest {
         subBatchBuilder.addListener(subBatchListener);
         subBatchBuilder.addService(ServiceName.of("secondService"), Service.NULL);
 
-        final Future<ServiceController<?>> firstService = testListener.expectServiceStart(ServiceName.of("firstService"));
-        final Future<ServiceController<?>> secondService = testListener.expectServiceStart(ServiceName.of("secondService"));
-
         builder.install();
-
-        firstService.get();
-        secondService.get();
+        latch.await();
 
         assertTrue(batchListener.startedServices.contains(ServiceName.of("firstService")));
         assertTrue(batchListener.startedServices.contains(ServiceName.of("secondService")));
@@ -105,11 +98,22 @@ public class BatchLevelListenersTestCase extends AbstractServiceTest {
 
     private static class MockListener extends AbstractServiceListener<Object> {
 
-        private final List<ServiceName> startedServices = new ArrayList<ServiceName>();
+        private final LatchedFinishListener latch;
+        private final List<ServiceName> startedServices = Collections.synchronizedList(new ArrayList<ServiceName>());
+
+        public MockListener(LatchedFinishListener latch) {
+            this.latch = latch;
+        }
+
+        @Override
+        public void listenerAdded(ServiceController<? extends Object> serviceController) {
+            latch.listenerAdded(serviceController);
+        }
 
         @Override
         public void serviceStarted(ServiceController<? extends Object> serviceController) {
             startedServices.add(serviceController.getName());
+            latch.serviceStarted(serviceController);
         }
     }
 }
