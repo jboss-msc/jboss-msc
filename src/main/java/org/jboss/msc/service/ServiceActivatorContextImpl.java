@@ -27,7 +27,7 @@ package org.jboss.msc.service;
  *
  * @author John E. Bailey
  */
-public class ServiceActivatorContextImpl implements ServiceActivatorContext {
+class ServiceActivatorContextImpl implements ServiceActivatorContext {
     private final BatchBuilder batchBuilder;
 
     /**

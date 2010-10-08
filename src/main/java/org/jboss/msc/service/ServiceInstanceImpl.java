@@ -481,7 +481,11 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
             }
             tasks = (oldMode == newMode) ? null : transition();
         }
-        doExecute(bootTasks);
+        if (bootTasks != null) {
+            for (Runnable bootTask : bootTasks) {
+                bootTask.run();
+            }
+        }
         doExecute(tasks);
         doExecute(specialTask);
     }
