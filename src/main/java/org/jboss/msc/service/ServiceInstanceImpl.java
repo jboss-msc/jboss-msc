@@ -144,7 +144,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
         return Thread.holdsLock(this);
     }
 
-    Substate getSubstate() {
+    Substate getSubstateLocked() {
         return state;
     }
 
@@ -170,7 +170,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
         switch (state) {
             case DOWN: {
                 if (mode == ServiceController.Mode.REMOVE) {
-                    return Transition.DOWN_to_REMOVED;
+                    return Transition.DOWN_to_REMOVING;
                 } else if (mode != ServiceController.Mode.NEVER) {
                     if (upperCount > 0) {
                         return Transition.DOWN_to_START_REQUESTED;
@@ -219,6 +219,9 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
                 } else {
                     return Transition.START_REQUESTED_to_DOWN;
                 }
+            }
+            case REMOVING: {
+                return Transition.REMOVING_to_REMOVED;
             }
             case REMOVED: {
                 // no possible actions
@@ -282,8 +285,12 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
                 tasks = getListenerTasks(transition.getAfter().getState(), new StopTask(false));
                 break;
             }
-            case DOWN_to_REMOVED: {
-                tasks = getListenerTasks(transition.getAfter().getState(), new RemoveTask());
+            case DOWN_to_REMOVING: {
+                tasks = new Runnable[] { new RemoveTask() };
+                break;
+            }
+            case REMOVING_to_REMOVED: {
+                tasks = getListenerTasks(transition.getAfter().getState());
                 listeners.clear();
                 break;
             }
@@ -746,7 +753,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
         }
     }
 
-    Substate getSubState() {
+    Substate getSubstate() {
         synchronized (this) {
             return state;
         }
@@ -1039,7 +1046,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
         public void run() {
             try {
                 assert getMode() == ServiceController.Mode.REMOVE;
-                assert getState() == ServiceController.State.REMOVED;
+                assert getSubstate() == Substate.REMOVING;
                 primaryRegistration.clearInstance(ServiceInstanceImpl.this);
                 for (ServiceRegistrationImpl registration : aliasRegistrations) {
                     registration.clearInstance(ServiceInstanceImpl.this);
@@ -1047,10 +1054,13 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
                 for (AbstractDependency dependency : dependencies) {
                     dependency.removeDependent(ServiceInstanceImpl.this);
                 }
+                final Runnable[] tasks;
                 synchronized (ServiceInstanceImpl.this) {
                     Arrays.fill(dependencies, null);
                     asyncTasks--;
+                    tasks = transition();
                 }
+                doExecute(tasks);
             } catch (Throwable t) {
                 ServiceLogger.INSTANCE.internalServiceError(t, primaryRegistration.getName());
             }
@@ -1150,6 +1160,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
         UP(ServiceController.State.UP),
         STOP_REQUESTED(ServiceController.State.UP),
         STOPPING(ServiceController.State.STOPPING),
+        REMOVING(ServiceController.State.DOWN),
         REMOVED(ServiceController.State.REMOVED),
         ;
         private final ServiceController.State state;
@@ -1174,7 +1185,8 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
         STOP_REQUESTED_to_UP(Substate.STOP_REQUESTED, Substate.UP),
         STOP_REQUESTED_to_STOPPING(Substate.STOP_REQUESTED, Substate.STOPPING),
         STOPPING_to_DOWN(Substate.STOPPING, Substate.DOWN),
-        DOWN_to_REMOVED(Substate.DOWN, Substate.REMOVED),
+        REMOVING_to_REMOVED(Substate.REMOVING, Substate.REMOVED),
+        DOWN_to_REMOVING(Substate.DOWN, Substate.REMOVING),
         DOWN_to_START_REQUESTED(Substate.DOWN, Substate.START_REQUESTED),
         ;
 

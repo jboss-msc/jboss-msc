@@ -173,7 +173,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             final ServiceRegistrationImpl registration = entry.getValue();
             final ServiceInstanceImpl<?> instance = registration.getInstance();
             if (instance != null) {
-                final ServiceInstanceImpl.Substate substate = instance.getSubState();
+                final ServiceInstanceImpl.Substate substate = instance.getSubstate();
                 out.printf("Service '%s' mode %s state=%s (%s)\n", name, instance.getMode(), substate.getState(), substate);
             }
         }

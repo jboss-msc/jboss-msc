@@ -80,7 +80,7 @@ final class ServiceRegistrationImpl extends AbstractDependency {
                 return;
             }
             synchronized (instance) {
-                state = instance.getSubstate();
+                state = instance.getSubstateLocked();
                 instance.addDependent(dependent);
                 if (state != ServiceInstanceImpl.Substate.UP) return;
                 instance.addAsyncTask();
