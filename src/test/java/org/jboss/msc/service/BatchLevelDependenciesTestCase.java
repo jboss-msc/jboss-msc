@@ -132,9 +132,9 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
 
 
     private List<ServiceInstanceImpl<?>> getServiceDependencies(ServiceController<?> serviceController) throws IllegalAccessException {
-        AbstractDependency[] deps = (AbstractDependency[]) dependenciesField.get(serviceController);
+        Dependency[] deps = (Dependency[]) dependenciesField.get(serviceController);
         List<ServiceInstanceImpl<?>> depInstances = new ArrayList<ServiceInstanceImpl<?>>(deps.length);
-        for (AbstractDependency dep: deps) {
+        for (Dependency dep: deps) {
             ServiceInstanceImpl<?> depInstance = (ServiceInstanceImpl<?>) ((ServiceRegistrationImpl)dep).getInstance();
             if (depInstance != null) {
                 depInstances.add(depInstance);

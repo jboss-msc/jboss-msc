@@ -29,17 +29,17 @@ import org.jboss.msc.value.Value;
  * AbstractDependency represents the dependencies of a service.
  * The counterpart of this dependency relation is {@code AbstractDependent}.
  * 
- * @see AbstractDependent
+ * @see Dependent
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
-abstract class AbstractDependency implements Value<Object> {
+interface Dependency extends Value<Object> {
     /**
      * Add a dependent to this dependency, establishing the dependency relation between this dependency and its
      * dependent.  This method must not be called under a lock.
      *
      * @param dependent the dependent to add
      */
-    abstract void addDependent(final AbstractDependent dependent);
+    void addDependent(final Dependent dependent);
 
     /**
      * Remove a dependent from this dependency, breaking the dependency relation between this dependency and its
@@ -47,31 +47,31 @@ abstract class AbstractDependency implements Value<Object> {
      *
      * @param dependent the dependent to remove
      */
-    abstract void removeDependent(final AbstractDependent dependent);
+    void removeDependent(final Dependent dependent);
 
     /**
-     * Notify that a {@link AbstractDependent dependent} entered {@link Mode#ACTIVE active mode}.
+     * Notify that a {@link Dependent dependent} entered {@link Mode#ACTIVE active mode}.
      * This method must not be called under a lock.
      */
-    abstract void addDemand();
+    void addDemand();
 
     /**
-     * Notify that a {@link AbstractDependent dependent} left {@link Mode#ACTIVE active mode}.
+     * Notify that a {@link Dependent dependent} left {@link Mode#ACTIVE active mode}.
      * This method must not be called under a lock.
      */
-    abstract void removeDemand();
+    void removeDemand();
 
     /**
-     * Notify that a {@link AbstractDependent dependent} is starting.
+     * Notify that a {@link Dependent dependent} is starting.
      * This method must not be called under a lock.
      */
-    abstract void dependentStarted();
+    void dependentStarted();
 
     /**
-     * Notify that a {@link AbstractDependent dependent} is stopping.
+     * Notify that a {@link Dependent dependent} is stopping.
      * This method must not be called under a lock.
      */
-    abstract void dependentStopped();
+    void dependentStopped();
 
     /**
      * Get the installed instance value, if any exists.
@@ -79,5 +79,5 @@ abstract class AbstractDependency implements Value<Object> {
      * @return the installed service value
      * @throws IllegalStateException if an error occurs
      */
-    public abstract Object getValue() throws IllegalStateException;
+    Object getValue() throws IllegalStateException;
 }

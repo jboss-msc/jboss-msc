@@ -27,7 +27,7 @@ package org.jboss.msc.service;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class ServiceRegistrationImpl extends AbstractDependency {
+final class ServiceRegistrationImpl implements Dependency {
 
 
     /**
@@ -41,7 +41,7 @@ final class ServiceRegistrationImpl extends AbstractDependency {
     /**
      * The set of dependents on this registration.
      */
-    private final IdentityHashSet<AbstractDependent> dependents = new IdentityHashSet<AbstractDependent>(0);
+    private final IdentityHashSet<Dependent> dependents = new IdentityHashSet<Dependent>(0);
 
     // Mutable properties
 
@@ -66,7 +66,7 @@ final class ServiceRegistrationImpl extends AbstractDependency {
      * @param dependent the dependent to add
      */
     @Override
-    void addDependent(final AbstractDependent dependent) {
+    public void addDependent(final Dependent dependent) {
         assert !lockHeld();
         assert !lockHeldByDependent(dependent);
         final ServiceInstanceImpl<?> instance;
@@ -103,7 +103,7 @@ final class ServiceRegistrationImpl extends AbstractDependency {
      * @param dependent the dependent to remove
      */
     @Override
-    void removeDependent(final AbstractDependent dependent) {
+    public void removeDependent(final Dependent dependent) {
         assert !lockHeld();
         assert !lockHeldByDependent(dependent);
         synchronized (this) {
@@ -129,7 +129,7 @@ final class ServiceRegistrationImpl extends AbstractDependency {
             synchronized (instance) {
                 instance.addDependents(dependents);
             }
-            for (AbstractDependent dependent: dependents) {
+            for (Dependent dependent: dependents) {
                 dependent.dependencyInstalled();
             }
             if (demandedByCount > 0) instance.addDemands(demandedByCount);
@@ -144,7 +144,7 @@ final class ServiceRegistrationImpl extends AbstractDependency {
                 return;
             }
             this.instance = null;
-            for (AbstractDependent dependent: dependents) {
+            for (Dependent dependent: dependents) {
                 dependent.dependencyUninstalled();
             }
         }
@@ -164,7 +164,7 @@ final class ServiceRegistrationImpl extends AbstractDependency {
      *
      * @return {@code true} if the lock is held
      */
-    boolean lockHeldByDependent(AbstractDependent dependent) {
+    boolean lockHeldByDependent(Dependent dependent) {
         return Thread.holdsLock(dependent);
     }
 
@@ -173,7 +173,7 @@ final class ServiceRegistrationImpl extends AbstractDependency {
     }
 
     @Override
-    void dependentStopped() {
+    public void dependentStopped() {
         synchronized (this) {
             assert instance != null;
             instance.dependentStopped();
@@ -197,7 +197,7 @@ final class ServiceRegistrationImpl extends AbstractDependency {
     }
 
     @Override
-    void dependentStarted() {
+    public void dependentStarted() {
         synchronized (this) {
             assert instance != null;
             instance.dependentStarted();
@@ -205,7 +205,7 @@ final class ServiceRegistrationImpl extends AbstractDependency {
     }
 
     @Override
-    void addDemand() {
+    public void addDemand() {
         synchronized (this) {
             demandedByCount++;
             final ServiceInstanceImpl<?> instance = this.instance;
@@ -216,7 +216,7 @@ final class ServiceRegistrationImpl extends AbstractDependency {
     }
 
     @Override
-    void removeDemand() {
+    public void removeDemand() {
         synchronized (this) {
             demandedByCount--;
             final ServiceInstanceImpl<?> instance = this.instance;

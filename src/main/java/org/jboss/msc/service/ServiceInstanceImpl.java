@@ -32,7 +32,7 @@ import org.jboss.msc.value.Value;
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceController<S> {
+final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
 
     private static final String ILLEGAL_CONTROLLER_STATE = "Illegal controller state";
 
@@ -47,7 +47,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
     /**
      * The dependencies of this service.
      */
-    private final AbstractDependency[] dependencies;
+    private final Dependency[] dependencies;
     /**
      * The injections of this service.
      */
@@ -59,7 +59,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
     /**
      * The set of dependents on this instance.
      */
-    private final IdentityHashSet<AbstractDependent> dependents = new IdentityHashSet<AbstractDependent>(0);
+    private final IdentityHashSet<Dependent> dependents = new IdentityHashSet<Dependent>(0);
     /**
      * The primary registration of this service.
      */
@@ -107,7 +107,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
     private static final ServiceInstanceImpl<?>[] NO_DEPENDENTS = new ServiceInstanceImpl<?>[0];
     private static final ValueInjection<?>[] NO_INJECTIONS = new ValueInjection<?>[0];
 
-    ServiceInstanceImpl(final Value<? extends Service<? extends S>> serviceValue, final Location location, final AbstractDependency[] dependencies, final ValueInjection<?>[] injections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<? extends ServiceListener<? super S>> listeners) {
+    ServiceInstanceImpl(final Value<? extends Service<? extends S>> serviceValue, final Location location, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<? extends ServiceListener<? super S>> listeners) {
         this.serviceValue = serviceValue;
         this.location = location;
         this.dependencies = dependencies;
@@ -130,7 +130,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
     }
 
     void initialize() {
-        for (AbstractDependency dependency : dependencies) {
+        for (Dependency dependency : dependencies) {
             dependency.addDependent(this);
         }
     }
@@ -497,22 +497,22 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
         doExecute(specialTask);
     }
 
-    AbstractDependency[] getDependencyLinks() {
+    Dependency[] getDependencyLinks() {
         return dependencies;
     }
 
     @Override
-    void dependencyInstalled() {
+    public void dependencyInstalled() {
         // do nothing
     }
 
     @Override
-    void dependencyUninstalled() {
+    public void dependencyUninstalled() {
         // do nothing
     }
 
     @Override
-    void dependencyUp() {
+    public void dependencyUp() {
         Runnable[] tasks = null;
         synchronized (this) {
             if (++upperCount != 1) {
@@ -525,7 +525,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
     }
 
     @Override
-    void dependencyDown() {
+    public void dependencyDown() {
         Runnable[] tasks = null;
         synchronized (this) {
             if (--upperCount != 0) {
@@ -556,15 +556,15 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
         doExecute(tasks);
     }
 
-    void addDependent(final AbstractDependent dependent) {
+    void addDependent(final Dependent dependent) {
         dependents.add(dependent);
     }
 
-    void removeDependent(final AbstractDependent dependent) {
+    void removeDependent(final Dependent dependent) {
         dependents.remove(dependent);
     }
 
-    void addDependents(final IdentityHashSet<AbstractDependent> dependents) {
+    void addDependents(final IdentityHashSet<Dependent> dependents) {
         this.dependents.addAll(dependents);
     }
 
@@ -574,14 +574,14 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
 
     private void doDemandParents() {
         assert ! lockHeld();
-        for (AbstractDependency dependency : dependencies) {
+        for (Dependency dependency : dependencies) {
             dependency.addDemand();
         }
     }
 
     private void doUndemandParents() {
         assert ! lockHeld();
-        for (AbstractDependency dependency : dependencies) {
+        for (Dependency dependency : dependencies) {
             dependency.removeDemand();
         }
     }
@@ -808,7 +808,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
 
         public void run() {
             try {
-                for (AbstractDependency dependency : dependencies) {
+                for (Dependency dependency : dependencies) {
                     dependency.dependentStopped();
                 }
                 final Runnable[] tasks;
@@ -827,7 +827,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
 
         public void run() {
             try {
-                for (AbstractDependency dependency : dependencies) {
+                for (Dependency dependency : dependencies) {
                     dependency.dependentStarted();
                 }
                 final Runnable[] tasks;
@@ -990,15 +990,15 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
 
     private class DependencyStartedTask implements Runnable {
 
-        private final AbstractDependent[] dependents;
+        private final Dependent[] dependents;
 
-        DependencyStartedTask(final AbstractDependent[] dependents) {
+        DependencyStartedTask(final Dependent[] dependents) {
             this.dependents = dependents;
         }
 
         public void run() {
             try {
-                for (AbstractDependent dependent : dependents) {
+                for (Dependent dependent : dependents) {
                     if (dependent != null) dependent.dependencyUp();
                 }
                 final Runnable[] tasks;
@@ -1015,15 +1015,15 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
 
     private class DependencyStoppedTask implements Runnable {
 
-        private final AbstractDependent[] dependents;
+        private final Dependent[] dependents;
 
-        DependencyStoppedTask(final AbstractDependent[] dependents) {
+        DependencyStoppedTask(final Dependent[] dependents) {
             this.dependents = dependents;
         }
 
         public void run() {
             try {
-                for (AbstractDependent dependent : dependents) {
+                for (Dependent dependent : dependents) {
                     if (dependent != null) dependent.dependencyDown();
                 }
                 final Runnable[] tasks;
@@ -1051,7 +1051,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
                 for (ServiceRegistrationImpl registration : aliasRegistrations) {
                     registration.clearInstance(ServiceInstanceImpl.this);
                 }
-                for (AbstractDependency dependency : dependencies) {
+                for (Dependency dependency : dependencies) {
                     dependency.removeDependent(ServiceInstanceImpl.this);
                 }
                 final Runnable[] tasks;

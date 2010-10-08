@@ -37,12 +37,12 @@ package org.jboss.msc.service;
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
-class OptionalDependency extends AbstractDependency {
+class OptionalDependency implements Dependency, Dependent {
 
     /**
      * The real dependency.
      */
-    private final AbstractDependency optionalDependency;
+    private final Dependency optionalDependency;
 
     /**
      * Is dependency up
@@ -52,7 +52,7 @@ class OptionalDependency extends AbstractDependency {
     /**
      * The dependent on this optional dependency
      */
-    private AbstractDependent dependent;
+    private Dependent dependent;
 
     /**
      * Indicates if this dependency has been demanded by the dependent 
@@ -69,19 +69,13 @@ class OptionalDependency extends AbstractDependency {
      */
     boolean notify;
 
-    /**
-     * Adapts this dependency to be a AbstractDependent for the real dependency. 
-     */
-    private final OptionalDependencyToDependent dependentAdaptor;
-
-    public OptionalDependency(AbstractDependency optionalDependency) {
+    public OptionalDependency(Dependency optionalDependency) {
         this.optionalDependency = optionalDependency;
-        this.dependentAdaptor = new OptionalDependencyToDependent();
-        optionalDependency.addDependent(dependentAdaptor);
+        optionalDependency.addDependent(this);
     }
 
     @Override
-    void addDependent(AbstractDependent dependent) {
+    public void addDependent(Dependent dependent) {
         assert !lockHeld();
         assert !lockHeldByDependent(dependent);
         final boolean isDependencyUp;
@@ -99,7 +93,7 @@ class OptionalDependency extends AbstractDependency {
     }
 
     @Override
-    void removeDependent(AbstractDependent dependent) {
+    public void removeDependent(Dependent dependent) {
         assert !lockHeld();
         assert !lockHeldByDependent(dependent);
         final boolean notifyOptionalDependency;
@@ -108,12 +102,12 @@ class OptionalDependency extends AbstractDependency {
             dependent = null;
         }
         if (notifyOptionalDependency) {
-            optionalDependency.removeDependent(dependentAdaptor);
+            optionalDependency.removeDependent(this);
         }
     }
 
     @Override
-    void addDemand() {
+    public void addDemand() {
         assert ! lockHeld();
         final boolean notifyOptionalDependency;
         synchronized (this) {
@@ -126,7 +120,7 @@ class OptionalDependency extends AbstractDependency {
     }
 
     @Override
-    void removeDemand() {
+    public void removeDemand() {
         assert ! lockHeld();
         final boolean isDependencyUp;
         final boolean startNotifying;
@@ -151,7 +145,7 @@ class OptionalDependency extends AbstractDependency {
     }
 
     @Override
-    void dependentStarted() {
+    public void dependentStarted() {
         assert ! lockHeld();
         final boolean notifyOptionalDependency;
         synchronized (this) {
@@ -163,7 +157,7 @@ class OptionalDependency extends AbstractDependency {
     }
 
     @Override
-    void dependentStopped() {
+    public void dependentStopped() {
         assert ! lockHeld();
         final boolean notifyOptionalDependency;
         synchronized (this) {
@@ -184,7 +178,8 @@ class OptionalDependency extends AbstractDependency {
         return retrieveValue? optionalDependency.getValue(): null;
     }
 
-    void dependencyInstalled() {
+    @Override
+    public void dependencyInstalled() {
         assert ! lockHeld();
         final boolean notifyOptionalDependent;
         synchronized (this) {
@@ -198,7 +193,8 @@ class OptionalDependency extends AbstractDependency {
         }
     }
 
-    void dependencyUninstalled() {
+    @Override
+    public void dependencyUninstalled() {
         assert ! lockHeld();
         final boolean notifyOptionalDependent;
         synchronized (this) {
@@ -211,7 +207,8 @@ class OptionalDependency extends AbstractDependency {
         }
     }
 
-    void dependencyUp() {
+    @Override
+    public void dependencyUp() {
         assert ! lockHeld();
         final boolean notifyOptionalDependent;
         synchronized (this) {
@@ -223,7 +220,8 @@ class OptionalDependency extends AbstractDependency {
         }
     }
 
-    void dependencyDown() {
+    @Override
+    public void dependencyDown() {
         assert ! lockHeld();
         final boolean notifyOptionalDependent;
         synchronized (this) {
@@ -249,35 +247,12 @@ class OptionalDependency extends AbstractDependency {
      *
      * @return {@code true} if the lock is held
      */
-    boolean lockHeldByDependent(AbstractDependent dependent) {
+    boolean lockHeldByDependent(Dependent dependent) {
         return Thread.holdsLock(dependent);
     }
 
     private boolean isUp() {
         assert lockHeld();
         return !optionalDependencyInstalled || dependencyUp;
-    }
-
-    private class OptionalDependencyToDependent extends AbstractDependent {
-
-        @Override
-        void dependencyInstalled() {
-            OptionalDependency.this.dependencyInstalled();
-        }
-
-        @Override
-        void dependencyUninstalled() {
-            OptionalDependency.this.dependencyUninstalled();
-        }
-
-        @Override
-        void dependencyUp() {
-            OptionalDependency.this.dependencyUp();
-        }
-
-        @Override
-        void dependencyDown() {
-            OptionalDependency.this.dependencyDown();
-        }
     }
 }

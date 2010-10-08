@@ -142,9 +142,9 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
 
 
     private List<ServiceController<?>> getServiceDependencies(ServiceContainer serviceContainer, final ServiceController<?> serviceController) throws IllegalAccessException {
-        AbstractDependency[] deps = (AbstractDependency[]) dependenciesField.get(serviceController);
+        Dependency[] deps = (Dependency[]) dependenciesField.get(serviceController);
         List<ServiceController<?>> depInstances = new ArrayList<ServiceController<?>>(deps.length);
-        for (AbstractDependency dep: deps) {
+        for (Dependency dep: deps) {
             ServiceController<?> depInstance = (ServiceController<?>) ((ServiceRegistrationImpl)dep).getInstance();
             if (depInstance != null) {
                 depInstances.add(depInstance);

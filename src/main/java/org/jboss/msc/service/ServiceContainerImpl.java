@@ -272,13 +272,13 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         // Create the list of dependencies
         final Map<ServiceName, ServiceBuilderImpl.Dependency> dependencyMap = serviceBuilder.getDependencies();
         final int dependencyCount = dependencyMap.size();
-        final AbstractDependency[] dependencies = new AbstractDependency[dependencyCount];
+        final Dependency[] dependencies = new Dependency[dependencyCount];
         final List<ValueInjection<?>> valueInjections = new ArrayList<ValueInjection<?>>(serviceBuilder.getValueInjections());
 
         // Dependencies
         int i = 0;
         for (ServiceName serviceName : dependencyMap.keySet()) {
-            AbstractDependency registration = getOrCreateRegistration(serviceName);
+            Dependency registration = getOrCreateRegistration(serviceName);
             final ServiceBuilderImpl.Dependency dependency = dependencyMap.get(serviceName);
             if (dependency.isOptional()) {
                 registration = new OptionalDependency(registration);

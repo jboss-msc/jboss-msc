@@ -26,31 +26,31 @@ package org.jboss.msc.service;
  * Depends on one or more dependencies, represented by {@code AbstractDependency}.
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
- * @see AbstractDependency
- * @see AbstractDependency#addDependent(AbstractDependent)
- * @see AbstractDependency#removeDependent(AbstractDependent)
+ * @see Dependency
+ * @see Dependency#addDependent(AbstractDependent)
+ * @see Dependency#removeDependent(AbstractDependent)
  */
-abstract class AbstractDependent {
+interface Dependent {
 
     /**
      * Notify this dependent that one of its dependencies is installed.
      */
-    abstract void dependencyInstalled();
+    void dependencyInstalled();
 
     /**
      * Notify this dependent that one of its dependencies is uninstalled.
      */
-    abstract void dependencyUninstalled();
+    void dependencyUninstalled();
 
     /**
      * Notify this dependent that one of its dependencies entered {@link ServiceInstanceImpl.Substate#UP UP} state.
      * This method must not be called under a lock.
      */
-    abstract void dependencyUp();
+    void dependencyUp();
 
     /**
      * Notify this dependent that one of its dependencies is leaving the {@link ServiceInstanceImpl.Substate#UP UP} state.
      * This method must not be called under a lock.
      */
-    abstract void dependencyDown();
+    void dependencyDown();
 }
