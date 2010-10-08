@@ -25,13 +25,16 @@ package org.jboss.msc.service;
 import java.io.PrintStream;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -39,6 +42,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.ref.Reaper;
 import org.jboss.msc.ref.Reference;
@@ -50,7 +55,12 @@ import org.jboss.msc.value.ImmediateValue;
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
 final class ServiceContainerImpl extends AbstractServiceTarget implements ServiceContainer {
-    final Object lock = new Object();
+
+    private final Lock readLock;
+    private final Lock writeLock;
+
+    private final Map<ServiceName, ServiceRegistrationImpl> registry = new HashMap<ServiceName, ServiceRegistrationImpl>();
+
     final ServiceInstanceImpl<ServiceContainer> root;
 
     private static final class ExecutorHolder {
@@ -128,6 +138,9 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     private volatile Executor executor;
 
     ServiceContainerImpl() {
+        final ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
+        readLock = readWriteLock.readLock();
+        writeLock = readWriteLock.writeLock();
         final Set<Reference<ServiceContainerImpl, Void>> set = ShutdownHookHolder.containers;
         synchronized (set) {
             // if the shutdown hook was triggered, then no services can ever come up in any new containers.
@@ -168,17 +181,21 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     }
 
     public void dumpServices(PrintStream out) {
-        for (Map.Entry<ServiceName, ServiceRegistrationImpl> entry : registry.entrySet()) {
-            final ServiceName name = entry.getKey();
-            final ServiceRegistrationImpl registration = entry.getValue();
-            final ServiceInstanceImpl<?> instance = registration.getInstance();
-            if (instance != null) {
-                final ServiceInstanceImpl.Substate substate = instance.getSubstate();
-                out.printf("Service '%s' mode %s state=%s (%s)\n", name, instance.getMode(), substate.getState(), substate);
+        readLock.lock();
+        try {
+            if (registry.isEmpty()) {
+                out.printf("Registry is empty");
+            } else for (Map.Entry<ServiceName, ServiceRegistrationImpl> entry : registry.entrySet()) {
+                final ServiceName name = entry.getKey();
+                final ServiceRegistrationImpl registration = entry.getValue();
+                final ServiceInstanceImpl<?> instance = registration.getInstance();
+                if (instance != null) {
+                    final ServiceInstanceImpl.Substate substate = instance.getSubstate();
+                    out.printf("Service '%s' mode %s state=%s (%s)\n", name, instance.getMode(), substate.getState(), substate);
+                }
             }
-        }
-        if (registry.isEmpty()) {
-            out.printf("Registry is empty");
+        } finally {
+            readLock.unlock();
         }
     }
 
@@ -224,8 +241,6 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         return executor != null ? executor : ExecutorHolder.VALUE;
     }
 
-    private final ConcurrentMap<ServiceName, ServiceRegistrationImpl> registry = new ConcurrentHashMap<ServiceName, ServiceRegistrationImpl>();
-
     /**
      * Install a collection of service definitions into the registry.  Will install the services
      * in dependency order.
@@ -235,26 +250,47 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
      */
     @Override
     void install(final BatchBuilderImpl serviceBatch) throws ServiceRegistryException {
-        resolve(serviceBatch.getBatchServices());
+        install(serviceBatch.getBatchServices().values());
     }
 
     /**
-     * Remove an entry.
+     * Install a batch of builders.
      *
-     * @param serviceName the service name
-     * @param registration the controller
+     * @param builders the builders
+     * @throws DuplicateServiceException if a service is duplicated
      */
-    void remove(final ServiceName serviceName, final ServiceRegistrationImpl registration) {
-        registry.remove(serviceName, registration);
-    }
-
-    private void resolve(final Map<ServiceName, ServiceBuilderImpl<?>> serviceBuilders) throws ServiceRegistryException {
-        for (ServiceBuilderImpl<?> serviceBuilder : serviceBuilders.values()) {
-            doInstall(serviceBuilder);
+    void install(final Collection<ServiceBuilderImpl<?>> builders) throws DuplicateServiceException {
+        final Lock lock = writeLock;
+        lock.lock();
+        try {
+            final Deque<ServiceBuilderImpl<?>> installedBuilders = new ArrayDeque<ServiceBuilderImpl<?>>(builders.size());
+            final Deque<ServiceInstanceImpl<?>> installedInstances = new ArrayDeque<ServiceInstanceImpl<?>>(builders.size());
+            boolean ok = false;
+            try {
+                for (ServiceBuilderImpl<?> builder : builders) {
+                    installedInstances.addLast(doInstall(builder));
+                    installedBuilders.addLast(builder);
+                }
+                ok = true;
+            } finally {
+                if (! ok) {
+                    for (ServiceInstanceImpl<?> instance : installedInstances) {
+                        rollback(instance);
+                    }
+                } else {
+                    while (! installedBuilders.isEmpty()) {
+                        final ServiceBuilderImpl<?> builder = installedBuilders.removeFirst();
+                        final ServiceInstanceImpl<?> instance = installedInstances.removeFirst();
+                        commit(builder.getInitialMode(), instance);
+                    }
+                }
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
-    <S> void doInstall(final ServiceBuilderImpl<S> serviceBuilder) throws DuplicateServiceException {
+    <S> ServiceInstanceImpl<S> doInstall(final ServiceBuilderImpl<S> serviceBuilder) throws DuplicateServiceException {
 
         // Get names & aliases
         final ServiceName name = serviceBuilder.getName();
@@ -304,41 +340,50 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             ok = true;
         } finally {
             if (! ok) {
-                // Something went wrong; undo the setInstances
-                primaryRegistration.clearInstance(instance);
-                for (ServiceRegistrationImpl registration : aliasRegistrations) {
-                    registration.clearInstance(instance);
-                }
+                rollback(instance);
             }
         }
 
-        // Add as a dependent to all dependencies
-        instance.initialize();
+        return instance;
+    }
 
+    /**
+     * Commit a service install, kicking off the mode set and listener execution.
+     *
+     * @param initialMode the initial service mode
+     * @param instance the service instance
+     */
+    private void commit(final ServiceController.Mode initialMode, final ServiceInstanceImpl<?> instance) {
         // Go!
-        final ServiceController.Mode initialMode = serviceBuilder.getInitialMode();
         instance.setMode(initialMode == null ? ServiceController.Mode.ACTIVE : initialMode);
     }
 
     /**
-     * Atomically get or create a registration.  This registration <b>must</b> be unreferenced once it is
-     * initialized (or initialization fails), since it is returned with a count of +1.
+     * Roll back a service install.
+     *
+     * @param instance
+     */
+    private void rollback(final ServiceInstanceImpl<?> instance) {
+        instance.getPrimaryRegistration().clearInstance(instance);
+        for (ServiceRegistrationImpl registration : instance.getAliasRegistrations()) {
+            registration.clearInstance(instance);
+        }
+    }
+
+    /**
+     * Atomically get or create a registration.  Call with lock held.
      *
      * @param name the service name
-     * @return the registration with a reference count of +1
+     * @return the registration
      */
     private ServiceRegistrationImpl getOrCreateRegistration(final ServiceName name) {
-        final ConcurrentMap<ServiceName, ServiceRegistrationImpl> registry = this.registry;
+        final Map<ServiceName, ServiceRegistrationImpl> registry = this.registry;
         ServiceRegistrationImpl registration;
         registration = registry.get(name);
         if (registration == null) {
             registration = new ServiceRegistrationImpl(this, name);
-            ServiceRegistrationImpl appearing = registry.putIfAbsent(name, registration);
-            if (appearing != null) {
-                return appearing;
-            } else {
-                return registration;
-            }
+            registry.put(name, registration);
+            return registration;
         } else {
             return registration;
         }
@@ -355,13 +400,25 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
 
     @Override
     public ServiceController<?> getService(final ServiceName serviceName) {
-        final ServiceRegistrationImpl registration = registry.get(serviceName);
-        return registration == null ? null : registration.getInstance();
+        final Lock lock = readLock;
+        lock.lock();
+        try {
+            final ServiceRegistrationImpl registration = registry.get(serviceName);
+            return registration == null ? null : registration.getInstance();
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
     public List<ServiceName> getServiceNames() {
-        return new ArrayList<ServiceName>(registry.keySet());
+        final Lock lock = readLock;
+        lock.lock();
+        try {
+            return new ArrayList<ServiceName>(registry.keySet());
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
@@ -369,13 +426,19 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         if (serviceBuilder.getTarget() == this) {
             apply(serviceBuilder);
         }
-        doInstall(serviceBuilder);
+        install(Collections.<ServiceBuilderImpl<?>>singleton(serviceBuilder));
     }
 
     @Override
     boolean hasService(ServiceName name) {
-        final ServiceRegistrationImpl serviceRegistration = registry.get(name);
-        return serviceRegistration != null && serviceRegistration.getInstance() != null;
+        final Lock lock = readLock;
+        lock.lock();
+        try {
+            final ServiceRegistrationImpl serviceRegistration = registry.get(name);
+            return serviceRegistration != null && serviceRegistration.getInstance() != null;
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override

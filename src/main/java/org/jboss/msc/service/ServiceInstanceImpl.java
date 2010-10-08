@@ -129,12 +129,6 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         upperCount = - dependencies.length;
     }
 
-    void initialize() {
-        for (Dependency dependency : dependencies) {
-            dependency.addDependent(this);
-        }
-    }
-
     /**
      * Determine whether the lock is currently held.
      *
@@ -375,7 +369,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
             final Substate oldState = state;
             if (oldState == Substate.NEW) {
                 state = Substate.DOWN;
-                bootTasks = getListenerTasks(null);
+                bootTasks = getListenerTasks(null, new InstallTask());
                 asyncTasks += bootTasks.length;
             }
             final ServiceController.Mode oldMode = mode;
@@ -759,6 +753,14 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         }
     }
 
+    ServiceRegistrationImpl getPrimaryRegistration() {
+        return primaryRegistration;
+    }
+
+    ServiceRegistrationImpl[] getAliasRegistrations() {
+        return aliasRegistrations;
+    }
+
     enum ContextState {
         SYNC,
         ASYNC,
@@ -1025,6 +1027,28 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
             try {
                 for (Dependent dependent : dependents) {
                     if (dependent != null) dependent.dependencyDown();
+                }
+                final Runnable[] tasks;
+                synchronized (ServiceInstanceImpl.this) {
+                    asyncTasks--;
+                    tasks = transition();
+                }
+                doExecute(tasks);
+            } catch (Throwable t) {
+                ServiceLogger.INSTANCE.internalServiceError(t, primaryRegistration.getName());
+            }
+        }
+    }
+
+    private class InstallTask implements Runnable {
+
+        private InstallTask() {
+        }
+
+        public void run() {
+            try {
+                for (Dependency dependency : dependencies) {
+                    dependency.addDependent(ServiceInstanceImpl.this);
                 }
                 final Runnable[] tasks;
                 synchronized (ServiceInstanceImpl.this) {
