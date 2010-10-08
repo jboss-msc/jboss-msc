@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import java.util.Collections;
 import org.jboss.msc.util.TestServiceListener;
 import org.junit.Test;
 
@@ -105,7 +106,7 @@ public class BatchLevelListenersTestCase extends AbstractServiceTest {
 
     private static class MockListener extends AbstractServiceListener<Object> {
 
-        private final List<ServiceName> startedServices = new ArrayList<ServiceName>();
+        private final List<ServiceName> startedServices = Collections.synchronizedList(new ArrayList<ServiceName>());
 
         @Override
         public void serviceStarted(ServiceController<? extends Object> serviceController) {

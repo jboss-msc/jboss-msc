@@ -26,6 +26,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Future;
 
@@ -158,7 +159,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
 
     private static class OrderedStartListener extends AbstractServiceListener<Object> {
 
-        private final List<ServiceController<? extends Object>> startedControllers = new ArrayList<ServiceController<? extends Object>>();
+        private final List<ServiceController<? extends Object>> startedControllers = Collections.synchronizedList(new ArrayList<ServiceController<? extends Object>>());
 
         @Override
         public void serviceStarted(ServiceController<? extends Object> serviceController) {
