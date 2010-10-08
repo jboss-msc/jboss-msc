@@ -177,6 +177,9 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                 out.printf("Service '%s' mode %s state=%s (%s)\n", name, instance.getMode(), substate.getState(), substate);
             }
         }
+        if (registry.isEmpty()) {
+            out.printf("Registry is empty");
+        }
     }
 
     protected void finalize() throws Throwable {
@@ -276,7 +279,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         int i = 0;
         for (ServiceName serviceName : dependencyMap.keySet()) {
             AbstractDependency registration = getOrCreateRegistration(serviceName);
-            final ServiceBuilderImpl.Dependency dependency = dependencyMap.get(name);
+            final ServiceBuilderImpl.Dependency dependency = dependencyMap.get(serviceName);
             if (dependency.isOptional()) {
                 registration = new OptionalDependency(registration);
             }
@@ -313,7 +316,8 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         instance.initialize();
 
         // Go!
-        instance.setMode(serviceBuilder.getInitialMode());
+        final ServiceController.Mode initialMode = serviceBuilder.getInitialMode();
+        instance.setMode(initialMode == null ? ServiceController.Mode.ACTIVE : initialMode);
     }
 
     /**

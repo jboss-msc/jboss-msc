@@ -21,20 +21,18 @@
  */
 package org.jboss.msc.service;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Future;
+
 import org.jboss.msc.service.util.LatchedFinishListener;
 import org.jboss.msc.util.TestServiceListener;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.Future;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * Test case used to ensure functionality for the Resolver.
@@ -57,14 +55,18 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
         final BatchBuilder builder = serviceContainer.batchBuilder();
         final LatchedFinishListener listener = new LatchedFinishListener();
         builder.addListener(listener);
-        builder.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"));
-        builder.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
-        builder.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"));
-        builder.addService(ServiceName.of("11"), Service.NULL).addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"));
-        builder.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9"));
-        builder.addService(ServiceName.of("2"), Service.NULL);
-        builder.addService(ServiceName.of("9"), Service.NULL);
-        builder.addService(ServiceName.of("10"), Service.NULL);
+        builder.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"))
+            .install();
+        builder.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11")).install();
+        builder.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"))
+            .install();
+        builder.addService(ServiceName.of("11"), Service.NULL)
+            .addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"))
+            .install();
+        builder.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install();
+        builder.addService(ServiceName.of("2"), Service.NULL).install();
+        builder.addService(ServiceName.of("9"), Service.NULL).install();
+        builder.addService(ServiceName.of("10"), Service.NULL).install();
 
         builder.addListener(startListener);
 
@@ -73,7 +75,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
 
         assertEquals(8, startListener.startedControllers.size());
         final List<ServiceController<?>> processed = new ArrayList<ServiceController<?>>(startListener.startedControllers.size());
-        for(ServiceController serviceController : startListener.startedControllers) {
+        for(ServiceController<?> serviceController : startListener.startedControllers) {
             assertEquals(ServiceController.State.UP, serviceController.getState());
             final List<ServiceController<?>> deps = getServiceDependencies(serviceContainer, serviceController);
             for(ServiceController<?> depController : deps) {
@@ -90,17 +92,21 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
         final LatchedFinishListener finishListener = new LatchedFinishListener();
         final BatchBuilder builder1 = serviceContainer.batchBuilder();
         builder1.addListener(finishListener).addListener(startListener);
-        builder1.addService(ServiceName.of("2"), Service.NULL);
-        builder1.addService(ServiceName.of("9"), Service.NULL);
-        builder1.addService(ServiceName.of("10"), Service.NULL);
+        builder1.addService(ServiceName.of("2"), Service.NULL).install();
+        builder1.addService(ServiceName.of("9"), Service.NULL).install();
+        builder1.addService(ServiceName.of("10"), Service.NULL).install();
 
         final BatchBuilder builder2 = serviceContainer.batchBuilder();
         builder2.addListener(finishListener).addListener(startListener);
-        builder2.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"));
-        builder2.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11"));
-        builder2.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"));
-        builder2.addService(ServiceName.of("11"), Service.NULL).addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"));
-        builder2.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9"));
+        builder2.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"))
+            .install();
+        builder2.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11")).install();
+        builder2.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"))
+            .install();
+        builder2.addService(ServiceName.of("11"), Service.NULL)
+            .addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"))
+            .install();
+        builder2.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install();
 
         builder1.install();
         builder2.install();
@@ -109,7 +115,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
 
         assertEquals(8, startListener.startedControllers.size());
         final List<ServiceController<?>> processed = new ArrayList<ServiceController<?>>(startListener.startedControllers.size());
-        for(ServiceController serviceController : startListener.startedControllers) {
+        for(ServiceController<?> serviceController : startListener.startedControllers) {
             assertEquals(ServiceController.State.UP, serviceController.getState());
             final List<ServiceController<?>> deps = getServiceDependencies(serviceContainer, serviceController);
             for(ServiceController<?> depController : deps) {
@@ -126,7 +132,9 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
         final TestServiceListener listener = new TestServiceListener();
         builder.addListener(listener);
 
-        builder.addService(ServiceName.of("7"), Service.NULL).addOptionalDependencies(ServiceName.of("11"), ServiceName.of("8"));
+        builder.addService(ServiceName.of("7"), Service.NULL)
+            .addOptionalDependencies(ServiceName.of("11"), ServiceName.of("8"))
+            .install();
 
         final Future<ServiceController<?>> startFuture = listener.expectServiceStart(ServiceName.of("7"));
 
@@ -137,8 +145,15 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
 
 
     private List<ServiceController<?>> getServiceDependencies(ServiceContainer serviceContainer, final ServiceController<?> serviceController) throws IllegalAccessException {
-        ServiceController<?>[] deps = (ServiceInstanceImpl<?>[]) dependenciesField.get(serviceController);
-        return Arrays.asList(deps);
+        AbstractDependency[] deps = (AbstractDependency[]) dependenciesField.get(serviceController);
+        List<ServiceController<?>> depInstances = new ArrayList<ServiceController<?>>(deps.length);
+        for (AbstractDependency dep: deps) {
+            ServiceController<?> depInstance = (ServiceController<?>) ((ServiceRegistrationImpl)dep).getInstance();
+            if (depInstance != null) {
+                depInstances.add(depInstance);
+            }
+        }
+        return depInstances;
     }
 
     private static class OrderedStartListener extends AbstractServiceListener<Object> {

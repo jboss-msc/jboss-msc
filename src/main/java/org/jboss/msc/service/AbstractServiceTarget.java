@@ -130,9 +130,9 @@ abstract class AbstractServiceTarget implements ServiceTarget {
      *                        will be added to.
      */
     void apply(Collection<ServiceBuilderImpl<?>> serviceBuilders) {
-        for(ServiceBuilder<?> serviceBuilder : serviceBuilders) {
-            serviceBuilder.addListener(listeners);
-            serviceBuilder.addDependencies(dependencies);
+        for(ServiceBuilderImpl<?> serviceBuilder : serviceBuilders) {
+            serviceBuilder.addListenerNoCheck(listeners);
+            serviceBuilder.addDependenciesNoCheck(dependencies);
         }
     }
 
@@ -142,8 +142,8 @@ abstract class AbstractServiceTarget implements ServiceTarget {
      * @param serviceBuilder serviceBuilder which listeners and dependencies will be added to.
      */
     void apply(ServiceBuilderImpl<?> serviceBuilder) {
-        serviceBuilder.addListener(listeners);
-        serviceBuilder.addDependencies(dependencies);
+        serviceBuilder.addListenerNoCheck(listeners);
+        serviceBuilder.addDependenciesNoCheck(dependencies);
     }
 
     /**

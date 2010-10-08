@@ -49,10 +49,10 @@ public class BatchLevelListenersTestCase extends AbstractServiceTest {
         builder.addListener(testListener);
 
         builder.addListener(listenerOne);
-        builder.addService(ServiceName.of("firstService"), Service.NULL);
+        builder.addService(ServiceName.of("firstService"), Service.NULL).install();
 
         builder.addListener(listenerTwo);
-        builder.addService(ServiceName.of("secondService"), Service.NULL);
+        builder.addService(ServiceName.of("secondService"), Service.NULL).install();
 
         builder.addListener(listenerThree);
 
@@ -82,11 +82,11 @@ public class BatchLevelListenersTestCase extends AbstractServiceTest {
         builder.addListener(testListener);
 
         builder.addListener(batchListener);
-        builder.addService(ServiceName.of("firstService"), Service.NULL);
+        builder.addService(ServiceName.of("firstService"), Service.NULL).install();
 
         final ServiceTarget subBatchBuilder = builder.subTarget();
         subBatchBuilder.addListener(subBatchListener);
-        subBatchBuilder.addService(ServiceName.of("secondService"), Service.NULL);
+        subBatchBuilder.addService(ServiceName.of("secondService"), Service.NULL).install();
 
         final Future<ServiceController<?>> firstService = testListener.expectServiceStart(ServiceName.of("firstService"));
         final Future<ServiceController<?>> secondService = testListener.expectServiceStart(ServiceName.of("secondService"));

@@ -90,7 +90,7 @@ final class ServiceRegistrationImpl extends AbstractDependency {
             dependent.dependencyUp();
         }
         final Runnable[] tasks;
-        synchronized (this) {
+        synchronized (instance) {
             instance.removeAsyncTask();
             tasks = instance.transition();
         }

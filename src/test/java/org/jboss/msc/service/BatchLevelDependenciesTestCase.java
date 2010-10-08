@@ -23,6 +23,7 @@
 package org.jboss.msc.service;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Field;
@@ -55,10 +56,10 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
         final TestServiceListener listener = new TestServiceListener();
         builder.addListener(listener);
 
-        builder.addService(ServiceName.of("firstService"), Service.NULL);
-        builder.addService(ServiceName.of("secondService"), Service.NULL);
-        builder.addService(ServiceName.of("thirdService"), Service.NULL);
-        builder.addService(ServiceName.of("fourthService"), Service.NULL);
+        builder.addService(ServiceName.of("firstService"), Service.NULL).install();
+        builder.addService(ServiceName.of("secondService"), Service.NULL).install();
+        builder.addService(ServiceName.of("thirdService"), Service.NULL).install();
+        builder.addService(ServiceName.of("fourthService"), Service.NULL).install();
 
         builder.addDependency(ServiceName.of("fourthService"));
 
@@ -70,8 +71,12 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
         builder.install();
 
         final ServiceController<?> fourthController = fourthService.get();
+        assertNotNull(fourthController);
 
-        List<ServiceInstanceImpl<?>> dependencies = getServiceDependencies(firstService.get());
+        final ServiceController<?> firstController = firstService.get();
+        assertNotNull(firstController);
+
+        List<ServiceInstanceImpl<?>> dependencies = getServiceDependencies(firstController);
         assertTrue(dependencies.contains(fourthController));
 
         dependencies = getServiceDependencies(secondService.get());
@@ -90,14 +95,15 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
         final TestServiceListener listener = new TestServiceListener();
         builder.addListener(listener);
 
-        builder.addService(ServiceName.of("firstService"), Service.NULL);
+        builder.addService(ServiceName.of("firstService"), Service.NULL).install();
         final ServiceTarget subBatchBuilder = builder.subTarget();
-        subBatchBuilder.addService(ServiceName.of("secondService"), Service.NULL);
-        subBatchBuilder.addService(ServiceName.of("thirdService"), Service.NULL);
-        subBatchBuilder.addService(ServiceName.of("fourthService"), Service.NULL);
 
         subBatchBuilder.addDependency(ServiceName.of("firstService"));
         subBatchBuilder.addDependency(ServiceName.of("fourthService"));
+
+        subBatchBuilder.addService(ServiceName.of("secondService"), Service.NULL).install();
+        subBatchBuilder.addService(ServiceName.of("thirdService"), Service.NULL).install();
+        subBatchBuilder.addService(ServiceName.of("fourthService"), Service.NULL).install();
 
         final Future<ServiceController<?>> firstService = listener.expectServiceStart(ServiceName.of("firstService"));
         final Future<ServiceController<?>> secondService = listener.expectServiceStart(ServiceName.of("secondService"));
@@ -107,7 +113,9 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
         builder.install();
 
         final ServiceController<?> firstController = firstService.get();
+        assertNotNull(firstController);
         final ServiceController<?> fourthController = fourthService.get();
+        assertNotNull(fourthController);
 
         List<ServiceInstanceImpl<?>> dependencies = getServiceDependencies(secondService.get());
         assertTrue(dependencies.contains(firstController));
@@ -124,11 +132,11 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
 
 
     private List<ServiceInstanceImpl<?>> getServiceDependencies(ServiceController<?> serviceController) throws IllegalAccessException {
-        ServiceRegistrationImpl[] deps = (ServiceRegistrationImpl[]) dependenciesField.get(serviceController);
+        AbstractDependency[] deps = (AbstractDependency[]) dependenciesField.get(serviceController);
         List<ServiceInstanceImpl<?>> depInstances = new ArrayList<ServiceInstanceImpl<?>>(deps.length);
-        for (ServiceRegistrationImpl dep: deps) {
-            ServiceInstanceImpl<?> depInstance = (ServiceInstanceImpl<?>) dep.getInstance();
-            if (dep.getInstance() != null) {
+        for (AbstractDependency dep: deps) {
+            ServiceInstanceImpl<?> depInstance = (ServiceInstanceImpl<?>) ((ServiceRegistrationImpl)dep).getInstance();
+            if (depInstance != null) {
                 depInstances.add(depInstance);
             }
         }

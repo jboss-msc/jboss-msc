@@ -150,6 +150,10 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return addDependencies(newDependencies, false);
     }
 
+    ServiceBuilder<T> addDependenciesNoCheck(final Iterable<ServiceName> newDependencies) {
+        return addDependenciesNoCheck(newDependencies, false);
+    }
+
     @Override
     public ServiceBuilder<T> addOptionalDependencies(final Iterable<ServiceName> newDependencies) {
         return addDependencies(newDependencies, true);
@@ -157,6 +161,10 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     private ServiceBuilder<T> addDependencies(final Iterable<ServiceName> newDependencies, final boolean optional) {
         checkAlreadyInstalled();
+        return addDependenciesNoCheck(newDependencies, optional);
+    }
+
+    ServiceBuilder<T> addDependenciesNoCheck(final Iterable<ServiceName> newDependencies, final boolean optional) {
         for (ServiceName dependency : newDependencies) {
             if(!serviceName.equals(dependency)) {
                 doAddDependency(dependency, optional);
@@ -258,6 +266,10 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     @Override
     public ServiceBuilderImpl<T> addListener(final Collection<? extends ServiceListener<? super T>> serviceListeners) {
         checkAlreadyInstalled();
+        return addListenerNoCheck(serviceListeners);
+    }
+
+    ServiceBuilderImpl<T> addListenerNoCheck(final Collection<? extends ServiceListener<? super T>> serviceListeners) {
         listeners.addAll(serviceListeners);
         return this;
     }

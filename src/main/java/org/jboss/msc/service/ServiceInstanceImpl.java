@@ -115,6 +115,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
         this.primaryRegistration = primaryRegistration;
         this.aliasRegistrations = aliasRegistrations;
         this.listeners =  new IdentityHashSet<ServiceListener<? super S>>(listeners);
+        upperCount = - dependencies.length;
     }
 
     ServiceInstanceImpl(final Value<? extends Service<? extends S>> serviceValue, final ServiceRegistrationImpl primaryRegistration) {
@@ -125,6 +126,7 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
         injections = NO_INJECTIONS;
         aliasRegistrations = NO_REGISTRATIONS;
         listeners = new IdentityHashSet<ServiceListener<? super S>>(0);
+        upperCount = - dependencies.length;
     }
 
     void initialize() {

@@ -46,7 +46,7 @@ public class ServiceAliasTestCase extends AbstractServiceTest {
 
         builder.addService(ServiceName.of("service1"), Service.NULL)
             .addAliases(ServiceName.of("alias1"))
-            .addAliases(ServiceName.of("alias2"));
+            .addAliases(ServiceName.of("alias2")).install();
 
         final Future<ServiceController<?>> future = listener.expectServiceStart(ServiceName.of("service1"));
 
