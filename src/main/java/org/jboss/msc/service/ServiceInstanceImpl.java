@@ -361,15 +361,15 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
 
     public void setMode(final ServiceController.Mode newMode) {
         assert !lockHeld();
-        Runnable[] initialListeners = null;
+        Runnable[] bootTasks = null;
         final Runnable[] tasks;
         Runnable specialTask = null;
         synchronized (this) {
             final Substate oldState = state;
             if (oldState == Substate.NEW) {
                 state = Substate.DOWN;
-                initialListeners = getListenerTasks(null);
-                asyncTasks += initialListeners.length;
+                bootTasks = getListenerTasks(State.DOWN);
+                asyncTasks += bootTasks.length;
             }
             final ServiceController.Mode oldMode = mode;
             mode = newMode;
@@ -481,14 +481,9 @@ final class ServiceInstanceImpl<S> extends AbstractDependent implements ServiceC
             }
             tasks = (oldMode == newMode) ? null : transition();
         }
+        doExecute(bootTasks);
         doExecute(tasks);
         doExecute(specialTask);
-        // Run initial listeners in the installing thread for consistency
-        if (initialListeners != null) {
-            for (Runnable runnable : initialListeners) {
-                runnable.run();
-            }
-        }
     }
 
     AbstractDependency[] getDependencyLinks() {
