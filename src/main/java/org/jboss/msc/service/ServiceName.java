@@ -28,7 +28,10 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -147,6 +150,50 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
      */
     public String getSimpleName() {
         return name;
+    }
+
+    /**
+     * Determine whether this service name is the same as, or a parent of, the given service name.
+     *
+     * @param other the other name
+     * @return {@code true} if this service name is a parent
+     */
+    public boolean isParentOf(ServiceName other) {
+        return other != null && (equals(other) || isParentOf(other.parent));
+    }
+
+    /**
+     * Return the service name that is the nearest common ancestor of the this name and the given one.
+     *
+     * @param other the other name
+     * @return the nearest common ancestor, or {@code null} if they are unrelated
+     */
+    public ServiceName commonAncestorOf(ServiceName other) {
+        if (other == null) return null;
+        final Deque<ServiceName> myAncestry = new ArrayDeque<ServiceName>();
+        final Deque<ServiceName> otherAncestry = new ArrayDeque<ServiceName>();
+        ServiceName i = this;
+        do {
+            myAncestry.addFirst(i);
+            i = i.parent;
+        } while (i != null);
+        i = other;
+        do {
+            otherAncestry.addFirst(i);
+            i = i.parent;
+        } while (i != null);
+        final Iterator<ServiceName> mi = myAncestry.iterator();
+        final Iterator<ServiceName> oi = otherAncestry.iterator();
+        // i = null;
+        while (mi.hasNext() && oi.hasNext()) {
+            final ServiceName mn = mi.next();
+            final ServiceName on = oi.next();
+            if (! mn.equals(on)) {
+                return i;
+            }
+            i = mn;
+        }
+        return null;
     }
 
     /**
