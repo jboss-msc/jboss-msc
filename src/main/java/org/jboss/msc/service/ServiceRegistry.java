@@ -22,6 +22,8 @@
 
 package org.jboss.msc.service;
 
+import java.util.List;
+
 /**
  * 
  * 
@@ -31,4 +33,11 @@ public interface ServiceRegistry {
     ServiceController<?> getRequiredService(ServiceName serviceName) throws ServiceNotFoundException;
 
     ServiceController<?> getService(ServiceName serviceName);
+
+    /**
+     * Get a list of service names installed in this registry.
+     *
+     * @return the list
+     */
+    List<ServiceName> getServiceNames();
 }

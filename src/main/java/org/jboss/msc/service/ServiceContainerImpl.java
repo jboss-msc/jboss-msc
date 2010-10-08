@@ -360,6 +360,11 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     }
 
     @Override
+    public List<ServiceName> getServiceNames() {
+        return new ArrayList<ServiceName>(registry.keySet());
+    }
+
+    @Override
     void install(final ServiceBuilderImpl<?> serviceBuilder) throws DuplicateServiceException {
         if (serviceBuilder.getTarget() == this) {
             apply(serviceBuilder);
