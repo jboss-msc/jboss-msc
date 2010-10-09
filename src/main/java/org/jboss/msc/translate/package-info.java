@@ -19,9 +19,8 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
+
 /**
- * The modular service container base package.
- *
- * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * Classes which translate one value type to another.  See {@link Translator}.
  */
-package org.jboss.msc;
+package org.jboss.msc.translate;
