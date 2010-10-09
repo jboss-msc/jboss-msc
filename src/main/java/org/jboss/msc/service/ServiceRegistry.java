@@ -25,13 +25,28 @@ package org.jboss.msc.service;
 import java.util.List;
 
 /**
- * 
- * 
+ * A service registry.  Registries can return services by name, or get a collection of service names.
+ *
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface ServiceRegistry {
+
+    /**
+     * Get a service, throwing an exception if it is not found.
+     *
+     * @param serviceName the service name
+     * @return the service controller for the corresponding service
+     * @throws ServiceNotFoundException if the service is not present in the registry
+     */
     ServiceController<?> getRequiredService(ServiceName serviceName) throws ServiceNotFoundException;
 
+    /**
+     * Get a service, returning {@code null} if it is not found.
+     *
+     * @param serviceName the service name
+     * @return the service controller for the corresponding service, or {@code null} if it is not found
+     */
     ServiceController<?> getService(ServiceName serviceName);
 
     /**
