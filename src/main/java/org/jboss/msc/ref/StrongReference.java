@@ -22,6 +22,14 @@
 
 package org.jboss.msc.ref;
 
+/**
+ * A strong reference with an attachment.  Since strong references are always reachable, a reaper may not be used.
+ *
+ * @param <T> the reference value type
+ * @param <A> the attachment type
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public class StrongReference<T, A> implements Reference<T, A> {
 
     private volatile T value;

@@ -23,10 +23,12 @@
 package org.jboss.msc.ref;
 
 /**
- * A reference type.
+ * An enhanced reference type with a type-safe attachment.
  *
  * @param <T> the reference value type
  * @param <A> the attachment type
+ *
+ * @see java.lang.ref.Reference
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */

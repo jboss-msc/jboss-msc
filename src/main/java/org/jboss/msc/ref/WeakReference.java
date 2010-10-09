@@ -24,6 +24,17 @@ package org.jboss.msc.ref;
 
 import java.lang.ref.ReferenceQueue;
 
+/**
+ * A reapable weak reference with an attachment.  If a {@link Reaper} is given, then it will be used to asynchronously
+ * clean up the referent.
+ *
+ * @param <T> the reference value type
+ * @param <A> the attachment type
+ *
+ * @see java.lang.ref.WeakReference
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public class WeakReference<T, A> extends java.lang.ref.WeakReference<T> implements Reference<T, A>, Reapable<T, A> {
     private final A attachment;
     private final Reaper<T, A> reaper;

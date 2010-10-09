@@ -24,7 +24,11 @@ package org.jboss.msc.ref;
 
 import java.lang.ref.ReferenceQueue;
 
+/**
+ * A set of utility methods for reference types.
+ */
 public final class References {
+    @SuppressWarnings({ "RawUseOfParameterizedType" })
     private static final Reference NULL = new Reference() {
         public Object get() {
             return null;
@@ -76,6 +80,19 @@ public final class References {
         }
     }
 
+    /**
+     * Create a reference of a given type with the provided value and attachment.  If the reference type is
+     * {@link Reference.Type#STRONG} or {@link Reference.Type#NULL} then the reaper argument is ignored.  If
+     * the reference type is {@link Reference.Type#NULL} then the value and attachment arguments are ignored.
+     *
+     * @param type the reference type
+     * @param value the reference value
+     * @param attachment the attachment value
+     * @param reaper the reaper to use, if any
+     * @param <T> the reference value type
+     * @param <A> the reference attachment type
+     * @return the reference
+     */
     public static <T, A> Reference<T, A> create(Reference.Type type, T value, A attachment, Reaper<T, A> reaper) {
         switch (type) {
             case STRONG:
@@ -93,6 +110,19 @@ public final class References {
         }
     }
 
+    /**
+     * Create a reference of a given type with the provided value and attachment.  If the reference type is
+     * {@link Reference.Type#STRONG} or {@link Reference.Type#NULL} then the reference queue argument is ignored.  If
+     * the reference type is {@link Reference.Type#NULL} then the value and attachment arguments are ignored.
+     *
+     * @param type the reference type
+     * @param value the reference value
+     * @param attachment the attachment value
+     * @param referenceQueue the reference queue to use, if any
+     * @param <T> the reference value type
+     * @param <A> the reference attachment type
+     * @return the reference
+     */
     public static <T, A> Reference<T, A> create(Reference.Type type, T value, A attachment, ReferenceQueue<? super T> referenceQueue) {
         switch (type) {
             case STRONG:
@@ -110,7 +140,21 @@ public final class References {
         }
     }
 
-    public static <T, A> Reference<T, A> create(Reference.Type type, T value, A attachment) {
+    /**
+     * Create a reference of a given type with the provided value and attachment.  If the reference type is
+     * {@link Reference.Type#PHANTOM} then this method will throw an {@code IllegalArgumentException} because
+     * such references are not constructable without a queue or reaper.  If the reference type is
+     * {@link Reference.Type#NULL} then the value and attachment arguments are ignored.
+     *
+     * @param type the reference type
+     * @param value the reference value
+     * @param attachment the attachment value
+     * @param <T> the reference value type
+     * @param <A> the reference attachment type
+     * @return the reference
+     * @throws IllegalArgumentException if the reference type is {@link Reference.Type#PHANTOM}
+     */
+    public static <T, A> Reference<T, A> create(Reference.Type type, T value, A attachment) throws IllegalArgumentException {
         switch (type) {
             case STRONG:
                 return new StrongReference<T, A>(value, attachment);
@@ -127,6 +171,14 @@ public final class References {
         }
     }
 
+    /**
+     * Get a null reference.  This reference type is always cleared and does not retain an attachment; as such
+     * there is only one single instance of it.
+     *
+     * @param <T> the reference value type
+     * @param <A> the attachment value type
+     * @return the null reference
+     */
     @SuppressWarnings({ "unchecked" })
     public static <T, A> Reference<T, A> getNullReference() {
         return (Reference<T, A>) NULL;

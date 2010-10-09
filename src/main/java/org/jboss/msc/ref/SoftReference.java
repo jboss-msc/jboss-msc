@@ -24,6 +24,17 @@ package org.jboss.msc.ref;
 
 import java.lang.ref.ReferenceQueue;
 
+/**
+ * A reapable soft reference with an attachment.  If a {@link Reaper} is given, then it will be used to asynchronously
+ * clean up the referent.
+ *
+ * @param <T> the reference value type
+ * @param <A> the attachment type
+ *
+ * @see java.lang.ref.SoftReference
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public class SoftReference<T, A> extends java.lang.ref.SoftReference<T> implements Reference<T, A>, Reapable<T, A> {
     private final A attachment;
     private final Reaper<T, A> reaper;
