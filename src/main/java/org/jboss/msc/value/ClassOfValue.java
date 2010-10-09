@@ -23,6 +23,8 @@
 package org.jboss.msc.value;
 
 /**
+ * A value which returns the {@code Class} object of another value.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class ClassOfValue<T> implements Value<Class<? extends T>> {

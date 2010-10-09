@@ -22,6 +22,11 @@
 
 package org.jboss.msc.translate;
 
+/**
+ * Thrown when translation fails.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 public class TranslationException extends RuntimeException {
 
     private static final long serialVersionUID = -2090811453864157777L;
