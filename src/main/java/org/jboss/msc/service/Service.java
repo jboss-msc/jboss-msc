@@ -62,17 +62,7 @@ public interface Service<T> extends Value<T> {
     /**
      * A simple null service which performs no start or stop action.
      */
-    Service<Void> NULL = new Service<Void>() {
-        public void start(final StartContext context) {
-        }
-
-        public void stop(final StopContext context) {
-        }
-
-        public Void getValue() {
-            return null;
-        }
-    };
+    Service<Void> NULL = NullService.INSTANCE;
 
     /**
      * A value which resolves to the {@link #NULL null service}.
