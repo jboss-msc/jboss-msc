@@ -24,6 +24,8 @@ package org.jboss.msc.service;
 
 import java.io.PrintStream;
 import java.util.concurrent.Executor;
+import org.jboss.msc.inject.InjectionException;
+import org.jboss.msc.inject.Injector;
 
 /**
  * A service container which manages a set of running services.
@@ -79,6 +81,31 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
         public static ServiceContainer create() {
             final ServiceContainerImpl container = new ServiceContainerImpl();
             return container;
+        }
+    }
+
+    /**
+     * A convenience injector for the container executor.  This class makes it easier to implement
+     * a service which configures a thread pool on a container.
+     */
+    class ExecutorInjector implements Injector<Executor> {
+
+        private final ServiceContainer container;
+
+        private ExecutorInjector(final ServiceContainer container) {
+            this.container = container;
+        }
+
+        public static ExecutorInjector create(final ServiceContainer container) {
+            return new ExecutorInjector(container);
+        }
+
+        public void inject(final Executor value) throws InjectionException {
+            container.setExecutor(value);
+        }
+
+        public void uninject() {
+            container.setExecutor(null);
         }
     }
 }

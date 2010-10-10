@@ -26,12 +26,20 @@ package org.jboss.msc.service;
  * Context provided to ServiceActivator instances at execution time.
  *
  * @author John E. Bailey
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface ServiceActivatorContext {
     /**
-     * Get the BatchBuilder for this activation.
+     * Get the service target for this activation.
      *
-     * @return the batch builder
+     * @return the service target
      */
-    BatchBuilder getBatchBuilder();
+    ServiceTarget getServiceTarget();
+
+    /**
+     * Get the service registry for this activation.
+     *
+     * @return the service registry
+     */
+    ServiceRegistry getServiceRegistry();
 }

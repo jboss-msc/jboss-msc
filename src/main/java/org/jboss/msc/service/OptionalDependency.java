@@ -23,7 +23,7 @@
 package org.jboss.msc.service;
 
 /**
- * An OptionalDependency.<br>This class estabilishes a transitive dependency relationship between the
+ * An OptionalDependency.<br>This class establishes a transitive dependency relationship between the
  * dependent and the real dependency. The intermediation performed by this class adds the required optional
  * behavior to the dependency relation, by:
  * <ul>
@@ -69,7 +69,7 @@ class OptionalDependency implements Dependency, Dependent {
      */
     boolean notify;
 
-    public OptionalDependency(Dependency optionalDependency) {
+    OptionalDependency(Dependency optionalDependency) {
         this.optionalDependency = optionalDependency;
         optionalDependency.addDependent(this);
     }
