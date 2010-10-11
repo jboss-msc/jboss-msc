@@ -27,7 +27,7 @@ package org.jboss.msc.service;
  * dependent and the real dependency. The intermediation performed by this class adds the required optional
  * behavior to the dependency relation, by:
  * <ul>
- * <li> flagging itself as a dependency in the UP state when the real dependency is unresolved or uninstalled</li>
+ * <li> notifies the dependent that it is in the UP state when the real dependency is unresolved or uninstalled</li>
  * <li> once the real dependency is installed, if there is a demand previously added by the dependent, this dependency
  *      does not start forwarding the notifications to the dependent, meaning that the dependent won't even be aware
  *      that the dependency is down</li>
@@ -38,6 +38,34 @@ package org.jboss.msc.service;
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
 class OptionalDependency implements Dependency, Dependent {
+    
+    /**
+     * One of the states of a dependency from the dependent point of view (i.e., based on notifications made by the
+     * dependency).
+     *
+     */
+    private static enum DependencyState {
+        /**
+         * The dependency is missing; means the last notification received by this {@code OptionalDependency} (as a
+         * dependent of the real dependency) is {@link #dependencyUninstalled}.
+         */
+        MISSING,
+        /**
+         * The dependency is installed, but is not up. This is the initial state of the dependency. Also, if any
+         * notification has been made by the dependency, this will be the dependency state if the last notification
+         * received is {@link #dependencyInstalled}, {@link #dependencyDown}, or {@link #dependencyRetrying}.
+         */
+        INSTALLED,
+        /**
+         * The dependency failed; means the last notification received by this {@code OptionalDependency} (as a
+         * dependent of the real dependency) is {@link #dependencyFailed}.
+         */
+        FAILED,
+        /**
+         * The dependency is up; means the last notification received by this {@code OptionalDependency} (as a
+         * dependent of the real dependency) is {@link #dependencyUp}.
+         */
+        UP}
 
     /**
      * The real dependency.
@@ -45,9 +73,15 @@ class OptionalDependency implements Dependency, Dependent {
     private final Dependency optionalDependency;
 
     /**
-     * Is dependency up
+     * The {@link #optionalDependency} state, based on notifications that {@code optionalDependency} made to this 
+     * dependent.
      */
-    private boolean dependencyUp;
+    private DependencyState dependencyState;
+
+    /**
+     * Indicates whether a transitive dependency is missing.
+     */
+    private boolean transitiveDependencyMissing;
 
     /**
      * The dependent on this optional dependency
@@ -60,18 +94,13 @@ class OptionalDependency implements Dependency, Dependent {
     private boolean demandedByDependent;
 
     /**
-     * Indicates if the real optional dependency is installed
-     */
-    private boolean optionalDependencyInstalled;
-
-    /**
      * Indicates if notification should take place
      */
-    boolean notify;
+    boolean forwardNotifications;
 
     OptionalDependency(Dependency optionalDependency) {
         this.optionalDependency = optionalDependency;
-        optionalDependencyInstalled = true;
+        dependencyState = DependencyState.INSTALLED;
         optionalDependency.addDependent(this);
     }
 
@@ -79,16 +108,30 @@ class OptionalDependency implements Dependency, Dependent {
     public void addDependent(Dependent dependent) {
         assert !lockHeld();
         assert !lockHeldByDependent(dependent);
-        final boolean isDependencyUp;
+        final boolean notifyDependent;
+        final DependencyState currentDependencyState;
         synchronized (this) {
             if (this.dependent != null) {
                 throw new IllegalStateException("Optional dependent is already set");
             }
             this.dependent = dependent;
-            isDependencyUp = isUp();
+            notifyDependent = forwardNotifications = dependencyState.compareTo(DependencyState.INSTALLED) >= 0;
+            currentDependencyState = dependencyState;
         }
-        if (isDependencyUp) {
-            dependent.dependencyInstalled();
+        dependent.dependencyInstalled();
+        if (notifyDependent) {
+            switch (currentDependencyState) {
+                case FAILED:
+                    dependent.dependencyFailed();
+                    break;
+                case UP:
+                    dependent.dependencyUp();
+            }
+            if (transitiveDependencyMissing) {
+                dependent.transitiveDependencyUninstalled();
+            }
+        }
+        else {
             dependent.dependencyUp();
         }
     }
@@ -97,14 +140,11 @@ class OptionalDependency implements Dependency, Dependent {
     public void removeDependent(Dependent dependent) {
         assert !lockHeld();
         assert !lockHeldByDependent(dependent);
-        final boolean notifyOptionalDependency;
         synchronized (this) {
-            notifyOptionalDependency = notify;
             dependent = null;
+            forwardNotifications = false;
         }
-        if (notifyOptionalDependency) {
-            optionalDependency.removeDependent(this);
-        }
+        optionalDependency.removeDependent(this);
     }
 
     @Override
@@ -113,7 +153,7 @@ class OptionalDependency implements Dependency, Dependent {
         final boolean notifyOptionalDependency;
         synchronized (this) {
             demandedByDependent = true;
-            notifyOptionalDependency = notify;
+            notifyOptionalDependency = forwardNotifications;
         }
         if (notifyOptionalDependency) {
             optionalDependency.addDemand();
@@ -123,23 +163,34 @@ class OptionalDependency implements Dependency, Dependent {
     @Override
     public void removeDemand() {
         assert ! lockHeld();
-        final boolean isDependencyUp;
         final boolean startNotifying;
         final boolean notifyOptionalDependency;
+        final DependencyState currentDependencyState;
+        final boolean transitiveDependencyMissing;
         synchronized (this) {
             demandedByDependent = false;
-            if (notify) {
+            currentDependencyState = dependencyState;
+            transitiveDependencyMissing = this.transitiveDependencyMissing;
+            if (forwardNotifications) {
                 notifyOptionalDependency = true;
                 startNotifying = false;
-                isDependencyUp = false; // this boolean won't be read, so no need to calculate it
             } else {
                 notifyOptionalDependency = false;
-                startNotifying = notify = optionalDependencyInstalled;
-                isDependencyUp = isUp();
+                startNotifying = forwardNotifications = (dependencyState.compareTo(DependencyState.INSTALLED) >= 0);
             }
         }
-        if (startNotifying && !isDependencyUp) {
-            dependent.dependencyDown();
+        if (startNotifying) {
+            switch (currentDependencyState) {
+                case INSTALLED:
+                    dependent.dependencyDown();
+                    break;
+                case FAILED:
+                    dependent.dependencyFailed();
+                    break;
+            }
+            if (transitiveDependencyMissing) {
+                dependent.transitiveDependencyUninstalled();
+            }
         } else if (notifyOptionalDependency) {
             optionalDependency.removeDemand();
         }
@@ -150,7 +201,7 @@ class OptionalDependency implements Dependency, Dependent {
         assert ! lockHeld();
         final boolean notifyOptionalDependency;
         synchronized (this) {
-            notifyOptionalDependency = notify;
+            notifyOptionalDependency = forwardNotifications;
         }
         if (notifyOptionalDependency) {
             optionalDependency.dependentStarted();
@@ -162,7 +213,7 @@ class OptionalDependency implements Dependency, Dependent {
         assert ! lockHeld();
         final boolean notifyOptionalDependency;
         synchronized (this) {
-            notifyOptionalDependency = notify;
+            notifyOptionalDependency = forwardNotifications;
         }
         if (notifyOptionalDependency) {
             optionalDependency.dependentStopped();
@@ -174,7 +225,7 @@ class OptionalDependency implements Dependency, Dependent {
         assert ! lockHeld();
         final boolean retrieveValue;
         synchronized (this) {
-            retrieveValue = notify;
+            retrieveValue = forwardNotifications;
         }
         return retrieveValue? optionalDependency.getValue(): null;
     }
@@ -183,26 +234,43 @@ class OptionalDependency implements Dependency, Dependent {
     public void dependencyInstalled() {
         assert ! lockHeld();
         final boolean notifyOptionalDependent;
+        final boolean notifyTransitiveDependencyUninstalled;
         synchronized (this) {
-            optionalDependencyInstalled = true;
-            notify = notifyOptionalDependent = !demandedByDependent;
+            dependencyState = DependencyState.INSTALLED;
+            forwardNotifications = notifyOptionalDependent = !demandedByDependent;
+            notifyTransitiveDependencyUninstalled = transitiveDependencyMissing;
         }
         if (notifyOptionalDependent) {
-            // dependencyInstalled has already been invoked on dependent.What we need to do is update
-            // the dependent by telling it that the dependency is down
+            // need to update the dependent by telling it that the dependency is down
             dependent.dependencyDown();
+            if (notifyTransitiveDependencyUninstalled) {
+                dependent.transitiveDependencyUninstalled();
+            }
         }
     }
 
     @Override
     public void dependencyUninstalled() {
         assert ! lockHeld();
-        final boolean notifyOptionalDependent;
+        final boolean notificationsForwarded;
+        final DependencyState oldDependencyState;
+        final boolean notifyTransitiveDependencyInstalled;
         synchronized (this) {
-            notifyOptionalDependent = notify && !dependencyUp;
-            notify = optionalDependencyInstalled = false;
+            notificationsForwarded = forwardNotifications;
+            forwardNotifications = false;
+            oldDependencyState = dependencyState;
+            dependencyState = DependencyState.MISSING;
+            notifyTransitiveDependencyInstalled = transitiveDependencyMissing;
         }
-        if (notifyOptionalDependent) {
+        if (notificationsForwarded) {
+            // need to undo the notifications that were forwarded
+            // to the dependent point of view, from now on this dependency is up and running, without failures
+            if (notifyTransitiveDependencyInstalled) {
+                dependent.transitiveDependencyInstalled();
+            }
+            if (oldDependencyState == DependencyState.FAILED) {
+                dependent.dependencyRetrying();
+            }
             // now that the optional dependency is uninstalled, we enter automatically the up state
             dependent.dependencyUp();
         }
@@ -213,8 +281,8 @@ class OptionalDependency implements Dependency, Dependent {
         assert ! lockHeld();
         final boolean notifyOptionalDependent;
         synchronized (this) {
-            dependencyUp = true;
-            notifyOptionalDependent = notify;
+            dependencyState = DependencyState.UP;
+            notifyOptionalDependent = forwardNotifications;
         }
         if (notifyOptionalDependent) {
             dependent.dependencyUp();
@@ -226,8 +294,8 @@ class OptionalDependency implements Dependency, Dependent {
         assert ! lockHeld();
         final boolean notifyOptionalDependent;
         synchronized (this) {
-            dependencyUp = false;
-            notifyOptionalDependent = notify;
+            dependencyState = DependencyState.INSTALLED;
+            notifyOptionalDependent = forwardNotifications;
         }
         if (notifyOptionalDependent) {
             dependent.dependencyDown();
@@ -239,7 +307,8 @@ class OptionalDependency implements Dependency, Dependent {
         assert ! lockHeld();
         final boolean notifyOptionalDependent;
         synchronized (this) {
-            notifyOptionalDependent = notify;
+            dependencyState = DependencyState.FAILED;
+            notifyOptionalDependent = forwardNotifications;
         }
         if (notifyOptionalDependent) {
             dependent.dependencyFailed();
@@ -251,7 +320,8 @@ class OptionalDependency implements Dependency, Dependent {
         assert ! lockHeld();
         final boolean notifyOptionalDependent;
         synchronized (this) {
-            notifyOptionalDependent = notify;
+            dependencyState = DependencyState.INSTALLED;
+            notifyOptionalDependent = forwardNotifications;
         }
         if (notifyOptionalDependent) {
             dependent.dependencyRetrying();
@@ -263,7 +333,8 @@ class OptionalDependency implements Dependency, Dependent {
         assert ! lockHeld();
         final boolean notifyOptionalDependent;
         synchronized (this) {
-            notifyOptionalDependent = notify;
+            notifyOptionalDependent = forwardNotifications;
+            transitiveDependencyMissing = false;
         }
         if (notifyOptionalDependent) {
             dependent.transitiveDependencyInstalled();
@@ -275,7 +346,8 @@ class OptionalDependency implements Dependency, Dependent {
         assert ! lockHeld();
         final boolean notifyOptionalDependent;
         synchronized (this) {
-            notifyOptionalDependent = notify;
+            notifyOptionalDependent = forwardNotifications;
+            transitiveDependencyMissing = true;
         }
         if (notifyOptionalDependent) {
             dependent.transitiveDependencyUninstalled();
@@ -298,10 +370,5 @@ class OptionalDependency implements Dependency, Dependent {
      */
     boolean lockHeldByDependent(Dependent dependent) {
         return Thread.holdsLock(dependent);
-    }
-
-    private boolean isUp() {
-        assert lockHeld();
-        return !optionalDependencyInstalled || dependencyUp;
     }
 }
