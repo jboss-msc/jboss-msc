@@ -355,13 +355,13 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         return tasks;
     }
 
-    private Runnable[] getDependencyListenerTasks(final DependencyNotification notificationConcern, final Runnable extraTask) {
+    private Runnable[] getListenerTasks(final ListenerNotification notification, final Runnable extraTask) {
         final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
         final int size = listeners.size();
         final Runnable[] tasks = new Runnable[size + 1];
         int i = 0;
         for (ServiceListener<? super S> listener : listeners) {
-            tasks[i++] = new DependencyListenerTask(listener, notificationConcern);
+            tasks[i++] = new ListenerTask(listener, notification);
         }
         tasks[i] = extraTask;
         return tasks;
@@ -399,7 +399,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
             final Substate oldState = state;
             if (oldState == Substate.NEW) {
                 state = Substate.DOWN;
-                bootTasks = getListenerTasks(null, new InstallTask());
+                bootTasks = getListenerTasks(ListenerNotification.LISTENER_ADDED, new InstallTask());
                 asyncTasks += bootTasks.length;
             }
             final ServiceController.Mode oldMode = mode;
@@ -533,7 +533,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 return;
             }
             // we dropped it to 0
-            tasks = getDependencyListenerTasks(DependencyNotification.MISSING,
+            tasks = getListenerTasks(ListenerNotification.MISSING_DEPENDENCY,
                     new DependencyInstalledTask(dependents.toScatteredArray(NO_DEPENDENTS)));
             asyncTasks += tasks.length;
         }
@@ -548,7 +548,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 return;
             }
             // we raised it to 1
-            tasks = getDependencyListenerTasks(DependencyNotification.MISSING,
+            tasks = getListenerTasks(ListenerNotification.MISSING_DEPENDENCY,
                     new DependencyUninstalledTask(dependents.toScatteredArray(NO_DEPENDENTS)));
             asyncTasks += tasks.length;
         }
@@ -559,7 +559,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
     public void transitiveDependencyInstalled() {
         Runnable[] tasks = null;
         synchronized (this) {
-            tasks = getDependencyListenerTasks(DependencyNotification.MISSING,
+            tasks = getListenerTasks(ListenerNotification.MISSING_DEPENDENCY,
                     new DependencyInstalledTask(dependents.toScatteredArray(NO_DEPENDENTS)));
             asyncTasks += tasks.length;
         }
@@ -570,7 +570,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
     public void transitiveDependencyUninstalled() {
         Runnable[] tasks = null;
         synchronized (this) {
-            tasks = getDependencyListenerTasks(DependencyNotification.MISSING,
+            tasks = getListenerTasks(ListenerNotification.MISSING_DEPENDENCY,
                     new DependencyUninstalledTask(dependents.toScatteredArray(NO_DEPENDENTS)));
             asyncTasks += tasks.length;
         }
@@ -611,7 +611,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 return;
             }
             // we raised it to 1
-            tasks = getDependencyListenerTasks(DependencyNotification.FAILURE,
+            tasks = getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE,
                     new DependencyFailedTask(dependents.toScatteredArray(NO_DEPENDENTS)));
             asyncTasks += tasks.length;
         }
@@ -626,7 +626,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 return;
             }
             // we dropped it to 0
-            tasks = getDependencyListenerTasks(DependencyNotification.FAILURE,
+            tasks = getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE,
                     new DependencyRetryingTask(dependents.toScatteredArray(NO_DEPENDENTS)));
             asyncTasks += tasks.length;
         }
@@ -772,7 +772,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
             }
             asyncTasks++;
         }
-        invokeListener(listener, null);
+        invokeListener(listener, ListenerNotification.LISTENER_ADDED, null);
     }
 
     public void removeListener(final ServiceListener<? super S> listener) {
@@ -807,67 +807,66 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         }
     }
 
-    private void invokeListener(final ServiceListener<? super S> listener, final State state) {
-        assert !lockHeld();
-        try {
-            if (state == null) {
-                listener.listenerAdded(this);
-            } else switch (state) {
-                case DOWN: {
-                    listener.serviceStopped(this);
-                    break;
-                }
-                case STARTING: {
-                    listener.serviceStarting(this);
-                    break;
-                }
-                case START_FAILED: {
-                    listener.serviceFailed(this, startException);
-                    break;
-                }
-                case UP: {
-                    listener.serviceStarted(this);
-                    break;
-                }
-                case STOPPING: {
-                    listener.serviceStopping(this);
-                    break;
-                }
-                case REMOVED: {
-                    listener.serviceRemoved(this);
-                    break;
-                }
-            }
-        } catch (Throwable t) {
-            ServiceLogger.INSTANCE.listenerFailed(t, listener);
-        } finally {
-            final Runnable[] tasks;
-            synchronized (this) {
-                asyncTasks--;
-                tasks = transition();
-            }
-            doExecute(tasks);
-        }
-    }
-    
-    private static enum DependencyNotification {
+    private static enum ListenerNotification {
+        /** Notify the listener that is has been added. */
+        LISTENER_ADDED,
+        /** Notifications related to the current state.  */
+        STATE,
         /** Notifications related to failures. */
-        FAILURE,
+        DEPENDENCY_FAILURE,
         /** Notifications related to missing (uninstalled) dependencies. */
-        MISSING}
+        MISSING_DEPENDENCY}
 
-    private void invokeDependencyListener(final ServiceListener<? super S> listener, final DependencyNotification notificationConcern) {
+    /**
+     * Invokes the listener, performing the notification specified.
+     * 
+     * @param listener      listener to be invoked
+     * @param notification  specified notification
+     * @param state         the state to be notified, only relevant if {@code notification} is
+     *                      {@link ListenerNotification#STATE}
+     */
+    private void invokeListener(final ServiceListener<? super S> listener, final ListenerNotification notification, final State state ) {
         assert !lockHeld();
         try {
-            switch (notificationConcern) {
-                case FAILURE:
+            switch (notification) {
+                case LISTENER_ADDED:
+                    listener.listenerAdded(this);
+                    break;
+                case STATE:
+                    switch (state) {
+                        case DOWN: {
+                            listener.serviceStopped(this);
+                            break;
+                        }
+                        case STARTING: {
+                            listener.serviceStarting(this);
+                            break;
+                        }
+                        case START_FAILED: {
+                            listener.serviceFailed(this, startException);
+                            break;
+                        }
+                        case UP: {
+                            listener.serviceStarted(this);
+                            break;
+                        }
+                        case STOPPING: {
+                            listener.serviceStopping(this);
+                            break;
+                        }
+                        case REMOVED: {
+                            listener.serviceRemoved(this);
+                            break;
+                        }
+                    }
+                case DEPENDENCY_FAILURE:
                     if (failCount > 0) {
                         listener.dependencyFailed(this);
                     } else {
                         listener.dependencyRetrying(this);
                     }
-                break;
-                case MISSING:
+                    break;
+                case MISSING_DEPENDENCY:
                     if (missingDependencyCount > 0) {
                         listener.transitiveDependencyUninstalled(this);
                     } else {
@@ -1115,33 +1114,25 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
 
     private class ListenerTask implements Runnable {
 
+        private final ListenerNotification notification;
         private final ServiceListener<? super S> listener;
         private final ServiceController.State state;
 
         ListenerTask(final ServiceListener<? super S> listener, final ServiceController.State state) {
             this.listener = listener;
             this.state = state;
+            this.notification = ListenerNotification.STATE;
         }
 
-        public void run() {
-            assert !lockHeld();
-            invokeListener(listener, state);
-        }
-    }
-
-    private class DependencyListenerTask implements Runnable {
-
-        private final ServiceListener<? super S> listener;
-        private final DependencyNotification dependencyNotification;
-
-        DependencyListenerTask(final ServiceListener<? super S> listener, final DependencyNotification depNotification) {
+        ListenerTask(final ServiceListener<? super S> listener, final ListenerNotification notification) {
             this.listener = listener;
-            this.dependencyNotification = depNotification;
+            this.state = null;
+            this.notification = notification;
         }
 
         public void run() {
             assert !lockHeld();
-            invokeDependencyListener(listener, dependencyNotification);
+            invokeListener(listener, notification, state);
         }
     }
 
