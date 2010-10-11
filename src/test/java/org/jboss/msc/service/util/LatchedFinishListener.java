@@ -77,6 +77,26 @@ public class LatchedFinishListener implements ServiceListener<Object> {
         timingServiceListener.serviceRemoved(serviceController);
     }
 
+    @Override
+    public void dependencyFailed(ServiceController<? extends Object> serviceController) {
+        timingServiceListener.dependencyFailed(serviceController);
+    }
+
+    @Override
+    public void dependencyRetrying(ServiceController<? extends Object> serviceController) {
+        timingServiceListener.dependencyRetrying(serviceController);
+    }
+    
+    @Override
+    public void transitiveDependenciesInstalled(ServiceController<? extends Object> controller) {
+        timingServiceListener.transitiveDependenciesInstalled(controller);
+    }
+
+    @Override
+    public void transitiveDependencyUninstalled(ServiceController<? extends Object> controller) {
+        timingServiceListener.transitiveDependencyUninstalled(controller);
+    }
+
     public void await() throws Exception {
         timingServiceListener.finishBatch();
         latch.await(30L, TimeUnit.SECONDS);
@@ -85,5 +105,4 @@ public class LatchedFinishListener implements ServiceListener<Object> {
     public long getElapsedTime() {
         return timingServiceListener.getElapsedTime();
     }
-
 }

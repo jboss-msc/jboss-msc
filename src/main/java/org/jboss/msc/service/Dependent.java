@@ -53,4 +53,27 @@ interface Dependent {
      * This method must not be called under a lock.
      */
     void dependencyDown();
+
+    /**
+     * Notify this dependent that one of its dependencies failed to start.
+     * <br> Called after the dependency state transitions from {@code STARTING} to {@code START_FAILED}.
+     */
+    void dependencyFailed();
+
+    /**
+     * Notify this dependent that one of its dependencies is retrying to start after a failure.
+     * <br>
+     * Called after the dependency state transitions from {@code START_FAILED} to {@code STARTING}.
+     */
+    void dependencyRetrying();
+
+    /**
+     * Notify this dependent that one of its dependencies is installed.
+     */
+    void transitiveDependencyInstalled();
+
+    /**
+     * Notify this dependent that one of its dependencies is uninstalled.
+     */
+    void transitiveDependencyUninstalled();
 }

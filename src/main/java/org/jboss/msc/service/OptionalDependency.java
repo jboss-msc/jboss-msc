@@ -71,6 +71,7 @@ class OptionalDependency implements Dependency, Dependent {
 
     OptionalDependency(Dependency optionalDependency) {
         this.optionalDependency = optionalDependency;
+        optionalDependencyInstalled = true;
         optionalDependency.addDependent(this);
     }
 
@@ -230,6 +231,54 @@ class OptionalDependency implements Dependency, Dependent {
         }
         if (notifyOptionalDependent) {
             dependent.dependencyDown();
+        }
+    }
+
+    @Override
+    public void dependencyFailed() {
+        assert ! lockHeld();
+        final boolean notifyOptionalDependent;
+        synchronized (this) {
+            notifyOptionalDependent = notify;
+        }
+        if (notifyOptionalDependent) {
+            dependent.dependencyFailed();
+        }
+    }
+
+    @Override
+    public void dependencyRetrying() {
+        assert ! lockHeld();
+        final boolean notifyOptionalDependent;
+        synchronized (this) {
+            notifyOptionalDependent = notify;
+        }
+        if (notifyOptionalDependent) {
+            dependent.dependencyRetrying();
+        }
+    }
+
+    @Override
+    public void transitiveDependencyInstalled() {
+        assert ! lockHeld();
+        final boolean notifyOptionalDependent;
+        synchronized (this) {
+            notifyOptionalDependent = notify;
+        }
+        if (notifyOptionalDependent) {
+            dependent.transitiveDependencyInstalled();
+        }
+    }
+
+    @Override
+    public void transitiveDependencyUninstalled() {
+        assert ! lockHeld();
+        final boolean notifyOptionalDependent;
+        synchronized (this) {
+            notifyOptionalDependent = notify;
+        }
+        if (notifyOptionalDependent) {
+            dependent.transitiveDependencyUninstalled();
         }
     }
 

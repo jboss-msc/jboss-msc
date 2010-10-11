@@ -77,6 +77,7 @@ final class ServiceRegistrationImpl implements Dependency {
             }
             instance = this.instance;
             if (instance == null) {
+                dependent.dependencyUninstalled();
                 return;
             }
             synchronized (instance) {

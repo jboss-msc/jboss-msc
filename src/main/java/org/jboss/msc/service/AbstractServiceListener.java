@@ -26,6 +26,7 @@ package org.jboss.msc.service;
  * An abstract implementation of a service listener whose methods do nothing.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
 public abstract class AbstractServiceListener<S> implements ServiceListener<S> {
 
@@ -55,5 +56,21 @@ public abstract class AbstractServiceListener<S> implements ServiceListener<S> {
 
     /** {@inheritDoc} */
     public void serviceRemoved(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
+    public void dependencyFailed(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
+    public void dependencyRetrying(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
+    public void transitiveDependenciesInstalled(ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
+    public void transitiveDependencyUninstalled(ServiceController<? extends S> controller) {
     }
 }

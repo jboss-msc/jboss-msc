@@ -234,6 +234,18 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         public void serviceRemoved(final ServiceController<?> serviceController) {
             countDown();
         }
+
+        public void dependencyFailed(final ServiceController<?> serviceController) {
+        }
+
+        public void dependencyRetrying(final ServiceController<?> serviceController) {
+        }
+
+        public void transitiveDependenciesInstalled(final ServiceController<?> serviceController) {
+        }
+
+        public void transitiveDependencyUninstalled(final ServiceController<?> serviceController) {
+        }
     }
 
     Executor getExecutor() {

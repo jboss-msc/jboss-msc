@@ -27,6 +27,7 @@ package org.jboss.msc.service;
  * all listeners finish running.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
 public interface ServiceListener<S> {
 
@@ -80,4 +81,34 @@ public interface ServiceListener<S> {
      * @param controller the controller
      */
     void serviceRemoved(ServiceController<? extends S> controller);
+
+    /**
+     * A dependency of the service has failed. Called after the dependency state transitions from {@code STARTING} to {@code START_FAILED}.
+     *
+     * @param controller the controller
+     */
+    void dependencyFailed(ServiceController<? extends S> controller);
+
+    /**
+     * A dependency of the service is retrying to start. Called after the dependency state transitions from {@code START_FAILED} to {@code STARTING}.
+     *
+     * @param controller the controller
+     */
+    void dependencyRetrying(ServiceController<? extends S> controller);
+
+    /**
+     * A dependencies of the service is installed. Every dependency is assumed to be installed at first place, without
+     * any notification being required. This method will be invoked only after
+     * {@link #transitiveDependencyUninstalled(ServiceController)} was called.
+     *
+     * @param controller the controller
+     */
+    void transitiveDependenciesInstalled(ServiceController<? extends S> controller);
+
+    /**
+     * A dependency of the service is uninstalled.
+     *
+     * @param controller the controller
+     */
+    void transitiveDependencyUninstalled(ServiceController<? extends S> controller);
 }
