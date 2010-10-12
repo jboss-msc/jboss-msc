@@ -29,8 +29,7 @@ import org.jboss.msc.value.Value;
 /**
  * The target of ServiceBuilder installations.
  * ServicesBuilders to be installed on a target should be retrieved by calling one of the {@code addService} methods
- * ({@link #addService(ServiceName, Service)}, {@link #addServiceValue(ServiceName, Value)} or
- * {@link #addServiceValueIfNotExist(ServiceName, Value)}).
+ * ({@link #addService(ServiceName, Service)}, {@link #addServiceValue(ServiceName, Value)}.
  * Notice that installation will only take place after {@link ServiceBuilder#install()} is invoked. ServiceBuilders that
  * are not installed are ignored.
  * 
@@ -55,18 +54,6 @@ public interface ServiceTarget {
      * @return the builder for the service
      */
     <T> ServiceBuilder<T> addService(ServiceName name, Service<T> service) throws IllegalArgumentException;
-
-    /**
-     * Get a builder which can be used to add a service to this target. The returned builder will be installed only if
-     * another service with the same name does not already exist.  The provided value should return the same result
-     * every time (see {@link org.jboss.msc.value.Values#cached(Value)} for more information).  Note that any provided
-     * aliases must not exist previously if the service is installed, or an error will occur.
-     *
-     * @param name the service name
-     * @param value the service value
-     * @return the builder for the service
-     */
-    <T> ServiceBuilder<T> addServiceValueIfNotExist(ServiceName name, Value<? extends Service<T>> value) throws IllegalArgumentException;
 
     /**
      * Add a service listener that will be added to all the ServiceBuilders installed in this target.

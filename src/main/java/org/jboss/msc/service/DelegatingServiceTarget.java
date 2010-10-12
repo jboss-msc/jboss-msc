@@ -30,21 +30,16 @@ import org.jboss.msc.value.Value;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class ProtectedServiceTarget implements ServiceTarget {
+public class DelegatingServiceTarget implements ServiceTarget {
     private final ServiceTarget delegate;
-
-    private ProtectedServiceTarget(final ServiceTarget delegate) {
-        this.delegate = delegate;
-    }
 
     /**
      * Construct a new instance.
      *
-     * @param delegate the service target to delegate to
-     * @return a protected service target
+     * @param delegate the delegate service target
      */
-    public static ProtectedServiceTarget create(final ServiceTarget delegate) {
-        return delegate instanceof ProtectedServiceTarget ? (ProtectedServiceTarget) delegate : new ProtectedServiceTarget(delegate);
+    public DelegatingServiceTarget(final ServiceTarget delegate) {
+        this.delegate = delegate;
     }
 
     /** {@inheritDoc} */
@@ -55,11 +50,6 @@ public final class ProtectedServiceTarget implements ServiceTarget {
     /** {@inheritDoc} */
     public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
         return delegate.addService(name, service);
-    }
-
-    /** {@inheritDoc} */
-    public <T> ServiceBuilder<T> addServiceValueIfNotExist(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
-        return delegate.addServiceValueIfNotExist(name, value);
     }
 
     /** {@inheritDoc} */

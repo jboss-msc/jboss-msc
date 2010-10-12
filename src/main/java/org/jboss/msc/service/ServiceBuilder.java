@@ -31,7 +31,6 @@ import java.util.Collection;
  * A builder for an individual service in a {@code ServiceTarget}.  Create an instance via the
  * {@link ServiceTarget#addService(ServiceName, Service)}, 
  * {@link ServiceTarget#addServiceValue(ServiceName, Value)} or
- * {@link ServiceTarget#addServiceValueIfNotExist(ServiceName, Value)}
  * methods.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>

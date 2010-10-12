@@ -54,11 +54,6 @@ abstract class AbstractServiceTarget implements ServiceTarget {
     }
 
     @Override
-    public <T> ServiceBuilder<T> addServiceValueIfNotExist(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
-        return createServiceBuilder(name, value, true);
-    }
-
-    @Override
     public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
         return createServiceBuilder(name, new ImmediateValue<Service<T>>(service), false);
     }

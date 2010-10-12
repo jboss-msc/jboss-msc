@@ -29,21 +29,16 @@ import java.util.List;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class ProtectedServiceRegistry implements ServiceRegistry {
+public class DelegatingServiceRegistry implements ServiceRegistry {
     private final ServiceRegistry delegate;
 
-    private ProtectedServiceRegistry(final ServiceRegistry delegate) {
-        this.delegate = delegate;
-    }
-
     /**
-     * Construct a new instance
+     * Construct a new instance.
      *
-     * @param delegate the delegate service registry
-     * @return a protected service registry
+     * @param delegate the registry to delegate to
      */
-    public static ProtectedServiceRegistry create(ServiceRegistry delegate) {
-        return delegate instanceof ProtectedServiceRegistry ? (ProtectedServiceRegistry) delegate : new ProtectedServiceRegistry(delegate);
+    public DelegatingServiceRegistry(final ServiceRegistry delegate) {
+        this.delegate = delegate;
     }
 
     /** {@inheritDoc} */
