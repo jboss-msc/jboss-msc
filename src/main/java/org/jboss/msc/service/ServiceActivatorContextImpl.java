@@ -23,16 +23,32 @@
 package org.jboss.msc.service;
 
 /**
- * A service activator which contributes services to a batch.
+ * A simple service activator context implementation.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface ServiceActivator {
+public final class ServiceActivatorContextImpl implements ServiceActivatorContext {
+    private final ServiceTarget serviceTarget;
+    private final ServiceRegistry serviceRegistry;
 
     /**
-     * Activate services.
+     * Construct a new instance.
      *
-     * @param serviceActivatorContext the activation context
+     * @param serviceTarget the service target
+     * @param serviceRegistry the service registry
      */
-    void activate(ServiceActivatorContext serviceActivatorContext) throws ServiceRegistryException;
+    public ServiceActivatorContextImpl(final ServiceTarget serviceTarget, final ServiceRegistry serviceRegistry) {
+        this.serviceTarget = serviceTarget;
+        this.serviceRegistry = serviceRegistry;
+    }
+
+    /** {@inheritDoc} */
+    public ServiceTarget getServiceTarget() {
+        return serviceTarget;
+    }
+
+    /** {@inheritDoc} */
+    public ServiceRegistry getServiceRegistry() {
+        return serviceRegistry;
+    }
 }
