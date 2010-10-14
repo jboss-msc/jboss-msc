@@ -46,6 +46,10 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     private final Map<ServiceName, ServiceFuture> expectedStops = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedRemovals = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFailureFuture> expectedFailures = new HashMap<ServiceName, ServiceFailureFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedDependencyFailures = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedDependencyRetryings = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedDependencyUninstalls = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedDependencyInstalls = new HashMap<ServiceName, ServiceFuture>();
 
     public void serviceStarted(final ServiceController<? extends Object> serviceController) {
         final ServiceFuture future = expectedStarts.remove(serviceController.getName());
@@ -75,6 +79,34 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         }
     }
 
+    public void dependencyFailed(final ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedDependencyFailures.remove(serviceController.getName());
+        if(future != null) {
+            future.setServiceController(serviceController);
+        }
+    }
+
+    public void dependencyRetrying(final ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedDependencyRetryings.remove(serviceController.getName());
+        if(future != null) {
+            future.setServiceController(serviceController);
+        }
+    }
+
+    public void transitiveDependenciesInstalled(ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedDependencyInstalls.remove(serviceController.getName());
+        if(future != null) {
+            future.setServiceController(serviceController);
+        }
+    }
+
+    public void transitiveDependencyUninstalled(ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedDependencyUninstalls.remove(serviceController.getName());
+        if(future != null) {
+            future.setServiceController(serviceController);
+        }
+    }
+
     public Future<ServiceController<?>> expectServiceStart(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
         expectedStarts.put(serviceName, future);
@@ -99,9 +131,57 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         return future;
     }
 
+    public Future<ServiceController<?>> expectDependencyFailure(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedDependencyFailures.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectNoDependencyFailure(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(200);
+        expectedDependencyFailures.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectDependencyRetrying(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedDependencyRetryings.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectTransitiveDependencyInstall(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedDependencyInstalls.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectTransitiveDependencyUninstall(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedDependencyUninstalls.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectNoTransitiveDependencyUninstall(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(200);
+        expectedDependencyUninstalls.put(serviceName, future);
+        return future;
+    }
+
     private static class ServiceFuture implements Future<ServiceController<?>> {
         private ServiceController<?> serviceController;
         private final CountDownLatch countDownLatch = new CountDownLatch(1);
+        private final long delay;
+        private final TimeUnit delayTimeUnit;
+
+        ServiceFuture() {
+            delay = 30L;
+            delayTimeUnit = TimeUnit.SECONDS;
+        }
+
+        ServiceFuture(long timeInMs) {
+            delay = timeInMs;
+            delayTimeUnit = TimeUnit.MILLISECONDS;
+        }
         
         @Override
         public boolean cancel(boolean mayInterruptIfRunning) {
@@ -121,7 +201,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         @Override
         public ServiceController<?> get() throws InterruptedException, ExecutionException {
             try {
-                return get(30L, TimeUnit.SECONDS);
+                return get(delay, delayTimeUnit);
             } catch (TimeoutException e) {
                 throw new RuntimeException("Could not get start exception in 30 second timeout.");
             }

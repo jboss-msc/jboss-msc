@@ -255,12 +255,14 @@ class OptionalDependency implements Dependency, Dependent {
         final boolean notificationsForwarded;
         final DependencyState oldDependencyState;
         final boolean notifyTransitiveDependencyInstalled;
+        final boolean demandNotified;
         synchronized (this) {
             notificationsForwarded = forwardNotifications;
             forwardNotifications = false;
             oldDependencyState = dependencyState;
             dependencyState = DependencyState.MISSING;
             notifyTransitiveDependencyInstalled = transitiveDependencyMissing;
+            demandNotified = demandedByDependent;
         }
         if (notificationsForwarded) {
             // need to undo the notifications that were forwarded
@@ -273,6 +275,9 @@ class OptionalDependency implements Dependency, Dependent {
             }
             // now that the optional dependency is uninstalled, we enter automatically the up state
             dependent.dependencyUp();
+            if (demandNotified) {
+                optionalDependency.removeDemand();
+            }
         }
     }
 
