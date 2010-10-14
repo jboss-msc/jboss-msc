@@ -166,7 +166,7 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
         firstServiceDependencyFailure = testListener.expectNoDependencyFailure(firstServiceName);
         Future<ServiceController<?>> firstServiceDependencyFailureClear = testListener.expectDependencyRetrying(firstServiceName);
         // retry to start service
-        serviceContainer.getService(secondServiceName).setMode(Mode.NEVER); // FIXME
+        serviceContainer.getService(secondServiceName).setMode(Mode.NEVER);
         // dependencyFailureClear expected
         assertSame(controller, firstServiceDependencyFailureClear.get());
         
@@ -212,7 +212,7 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
         Future<ServiceController<?>> firstServiceDependencyFailureClear = testListener.expectDependencyRetrying(firstServiceName);
         Future<ServiceController<?>> secondServiceDependencyFailureClear = testListener.expectDependencyRetrying(secondServiceName);
         // retry to start service
-        serviceContainer.getService(thirdServiceName).setMode(Mode.NEVER); // FIXME
+        serviceContainer.getService(thirdServiceName).setMode(Mode.NEVER);
         // dependencyFailureClear expected from both second and first services
         assertSame(secondController, secondServiceDependencyFailureClear.get());
         assertSame(firstController , firstServiceDependencyFailureClear.get());
@@ -302,7 +302,7 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
         firstServiceStart = testListener.expectServiceStart(firstServiceName);
         Future<ServiceController<?>> firstServiceDependencyFailureCleared = testListener.expectDependencyRetrying(firstServiceName);
         secondServiceStart = testListener.expectServiceStart(secondServiceName);
-        // retry firstService start FIXME
+        // retry firstService start
         firstController.setMode(Mode.NEVER);
         firstController.setMode(Mode.ACTIVE);
         // no failures this time; firstService is expected to start now
@@ -320,7 +320,7 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
         secondController.setMode(Mode.NEVER);
         // firstService is expected to go down
         assertSame(firstController, firstServiceStop.get());
-        // FIXME move firstService to NEVER mode 
+        // move firstService to NEVER mode
         firstController.setMode(Mode.NEVER);
 
         // mark failService to fail again next time it is started
