@@ -23,7 +23,7 @@
 package org.jboss.msc.service;
 
 /**
- * A listener for service lifecycle events.  The associated controller will not leave its current state until
+ * A listener for service lifecycle events. The associated controller will not leave its current state until
  * all listeners finish running.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -84,6 +84,10 @@ public interface ServiceListener<S> {
 
     /**
      * A dependency of the service has failed. Called after the dependency state transitions from {@code STARTING} to {@code START_FAILED}.
+     * <p> Dependency failures that occur after the notified failure do not result in new {@code dependencyFailed}
+     * notifications. A new call to this method will be made to notify new failures only if the previous failures have
+     * been {@link #dependencyFailureCleared(ServiceController) cleared}.
+     * <p> This method is invoked to notify both immediate and transitive dependency failures.
      *
      * @param controller the controller
      */
@@ -94,21 +98,22 @@ public interface ServiceListener<S> {
      *
      * @param controller the controller
      */
-    void dependencyRetrying(ServiceController<? extends S> controller);
-
-    /**
-     * A dependencies of the service is installed. Every dependency is assumed to be installed at first place, without
-     * any notification being required. This method will be invoked only after
-     * {@link #transitiveDependencyUninstalled(ServiceController)} was called.
-     *
-     * @param controller the controller
-     */
-    void transitiveDependenciesInstalled(ServiceController<? extends S> controller);
+    void dependencyFailureCleared(ServiceController<? extends S> controller);
 
     /**
      * A dependency of the service is uninstalled.
-     *
+     * <p> Dependencies that are subsequently uninstalled do not result in new {@code dependencyUninstalled}
+     * notifications. A new call to this method will only be made to notify newly found uninstalled dependencies if
+     * the previously missing dependencies have been {@link #dependencyInstalled() installed}.
+     * <p> The scope of this method includes both immediate and transitive dependencies.
      * @param controller the controller
      */
-    void transitiveDependencyUninstalled(ServiceController<? extends S> controller);
+    void dependencyUninstalled(ServiceController<? extends S> controller);
+
+    /**
+     * All {@link #dependencyUninstalled(ServiceController) uninstalled} dependencies of the service are now installed.
+     * <br>This method will be invoked only after {@link #dependencyUninstalled(ServiceController)} is called.
+     * @param controller the controller
+     */
+    void dependencyInstalled(ServiceController<? extends S> controller);
 }

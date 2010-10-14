@@ -77,7 +77,7 @@ final class ServiceRegistrationImpl implements Dependency {
             }
             instance = this.instance;
             if (instance == null) {
-                dependent.dependencyUninstalled();
+                dependent.immediateDependencyUninstalled();
                 return;
             }
             synchronized (instance) {
@@ -88,7 +88,7 @@ final class ServiceRegistrationImpl implements Dependency {
             }
         }
         if (state == ServiceInstanceImpl.Substate.UP) {
-            dependent.dependencyUp();
+            dependent.immediateDependencyUp();
         }
         final Runnable[] tasks;
         synchronized (instance) {
@@ -131,7 +131,7 @@ final class ServiceRegistrationImpl implements Dependency {
                 instance.addDependents(dependents);
             }
             for (Dependent dependent: dependents) {
-                dependent.dependencyInstalled();
+                dependent.immediateDependencyInstalled();
             }
             if (demandedByCount > 0) instance.addDemands(demandedByCount);
         }
@@ -146,7 +146,7 @@ final class ServiceRegistrationImpl implements Dependency {
             }
             this.instance = null;
             for (Dependent dependent: dependents) {
-                dependent.dependencyUninstalled();
+                dependent.immediateDependencyUninstalled();
             }
         }
     }

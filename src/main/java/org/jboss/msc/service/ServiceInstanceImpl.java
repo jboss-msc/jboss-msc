@@ -541,7 +541,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
     }
 
     @Override
-    public void dependencyInstalled() {
+    public void immediateDependencyInstalled() {
         Runnable[] tasks = null;
         synchronized (this) {
             if (-- missingDependencyCount != 0) {
@@ -556,7 +556,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
     }
 
     @Override
-    public void dependencyUninstalled() {
+    public void immediateDependencyUninstalled() {
         Runnable[] tasks = null;
         synchronized (this) {
             if (++ missingDependencyCount != 1) {
@@ -571,7 +571,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
     }
 
     @Override
-    public void transitiveDependencyInstalled() {
+    public void dependencyInstalled() {
         Runnable[] tasks = null;
         synchronized (this) {
             tasks = getListenerTasks(ListenerNotification.DEPENDENCY_INSTALLED,
@@ -582,7 +582,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
     }
 
     @Override
-    public void transitiveDependencyUninstalled() {
+    public void dependencyUninstalled() {
         Runnable[] tasks = null;
         synchronized (this) {
             tasks = getListenerTasks(ListenerNotification.MISSING_DEPENDENCY,
@@ -593,7 +593,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
     }
 
     @Override
-    public void dependencyUp() {
+    public void immediateDependencyUp() {
         Runnable[] tasks = null;
         synchronized (this) {
             if (++upperCount != 1) {
@@ -606,7 +606,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
     }
 
     @Override
-    public void dependencyDown() {
+    public void immediateDependencyDown() {
         Runnable[] tasks = null;
         synchronized (this) {
             if (--upperCount != 0) {
@@ -634,7 +634,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
     }
 
     @Override
-    public void dependencyRetrying() {
+    public void dependencyFailureCleared() {
         Runnable[] tasks = null;
         synchronized (this) {
             if (--failCount != 0) {
@@ -883,13 +883,13 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                     listener.dependencyFailed(this);
                     break;
                 case DEPENDENCY_FAILURE_CLEAR:
-                    listener.dependencyRetrying(this);
+                    listener.dependencyFailureCleared(this);
                     break;
                 case MISSING_DEPENDENCY:
-                    listener.transitiveDependencyUninstalled(this);
+                    listener.dependencyUninstalled(this);
                     break;
                 case DEPENDENCY_INSTALLED:
-                    listener.transitiveDependenciesInstalled(this);
+                    listener.dependencyInstalled(this);
                     break;
             }
         } catch (Throwable t) {
@@ -1166,7 +1166,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         public void run() {
             try {
                 for (Dependent dependent : dependents) {
-                    if (dependent != null) dependent.dependencyUp();
+                    if (dependent != null) dependent.immediateDependencyUp();
                 }
                 final Runnable[] tasks;
                 synchronized (ServiceInstanceImpl.this) {
@@ -1191,7 +1191,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         public void run() {
             try {
                 for (Dependent dependent : dependents) {
-                    if (dependent != null) dependent.dependencyDown();
+                    if (dependent != null) dependent.immediateDependencyDown();
                 }
                 final Runnable[] tasks;
                 synchronized (ServiceInstanceImpl.this) {
@@ -1241,7 +1241,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         public void run() {
             try {
                 for (Dependent dependent : dependents) {
-                    if (dependent != null) dependent.dependencyRetrying();
+                    if (dependent != null) dependent.dependencyFailureCleared();
                 }
                 final Runnable[] tasks;
                 synchronized (ServiceInstanceImpl.this) {
@@ -1266,7 +1266,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         public void run() {
             try {
                 for (Dependent dependent : dependents) {
-                    if (dependent != null) dependent.transitiveDependencyInstalled();
+                    if (dependent != null) dependent.dependencyInstalled();
                 }
                 final Runnable[] tasks;
                 synchronized (ServiceInstanceImpl.this) {
@@ -1291,7 +1291,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         public void run() {
             try {
                 for (Dependent dependent : dependents) {
-                    if (dependent != null) dependent.transitiveDependencyUninstalled();
+                    if (dependent != null) dependent.dependencyUninstalled();
                 }
                 final Runnable[] tasks;
                 synchronized (ServiceInstanceImpl.this) {

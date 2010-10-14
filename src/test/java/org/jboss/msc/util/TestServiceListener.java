@@ -86,21 +86,21 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         }
     }
 
-    public void dependencyRetrying(final ServiceController<? extends Object> serviceController) {
+    public void dependencyFailureCleared(final ServiceController<? extends Object> serviceController) {
         final ServiceFuture future = expectedDependencyRetryings.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
         }
     }
 
-    public void transitiveDependenciesInstalled(ServiceController<? extends Object> serviceController) {
+    public void dependencyInstalled(ServiceController<? extends Object> serviceController) {
         final ServiceFuture future = expectedDependencyInstalls.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
         }
     }
 
-    public void transitiveDependencyUninstalled(ServiceController<? extends Object> serviceController) {
+    public void dependencyUninstalled(ServiceController<? extends Object> serviceController) {
         final ServiceFuture future = expectedDependencyUninstalls.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
@@ -149,13 +149,13 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         return future;
     }
 
-    public Future<ServiceController<?>> expectTransitiveDependencyInstall(final ServiceName serviceName) {
+    public Future<ServiceController<?>> expectDependencyInstall(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
         expectedDependencyInstalls.put(serviceName, future);
         return future;
     }
 
-    public Future<ServiceController<?>> expectTransitiveDependencyUninstall(final ServiceName serviceName) {
+    public Future<ServiceController<?>> expectDependencyUninstall(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
         expectedDependencyUninstalls.put(serviceName, future);
         return future;

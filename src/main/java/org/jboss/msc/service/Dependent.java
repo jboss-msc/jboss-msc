@@ -33,47 +33,65 @@ package org.jboss.msc.service;
 interface Dependent {
 
     /**
-     * Notify this dependent that one of its dependencies is installed.
+     * Notify this dependent that one of its immediate dependencies is installed.
+     * <p> This method must not be called under a lock.
      */
-    void dependencyInstalled();
+    void immediateDependencyInstalled();
 
     /**
-     * Notify this dependent that one of its dependencies is uninstalled.
+     * Notify this dependent that one of its immediate dependencies is uninstalled.
+     * <p> This method must not be called under a lock.
      */
-    void dependencyUninstalled();
+    void immediateDependencyUninstalled();
 
     /**
-     * Notify this dependent that one of its dependencies entered {@link ServiceInstanceImpl.Substate#UP UP} state.
-     * This method must not be called under a lock.
+     * Notify this dependent that one of its immediate dependencies entered {@link ServiceInstanceImpl.Substate#UP UP}
+     * state.
+     * <p> This method must not be called under a lock.
      */
-    void dependencyUp();
+    void immediateDependencyUp();
 
     /**
-     * Notify this dependent that one of its dependencies is leaving the {@link ServiceInstanceImpl.Substate#UP UP} state.
-     * This method must not be called under a lock.
+     * Notify this dependent that one of its immediate dependencies is leaving the {@link
+     * ServiceInstanceImpl.Substate#UP UP} state.
+     * <p> This method must not be called under a lock.
      */
-    void dependencyDown();
+    void immediateDependencyDown();
 
     /**
-     * Notify this dependent that one of its dependencies failed to start.
-     * <br> Called after the dependency state transitions from {@code STARTING} to {@code START_FAILED}.
+     * Notify this dependent that one of its dependencies (immediate or transitive) failed to start. This method is
+     * called after the dependency state transitions from {@code STARTING} to {@code START_FAILED}.
+     * <p>
+     * Dependency failures that occur after the notified failure do not result in new {@code dependencyFailed}
+     * notifications, as the dependent will never receive two or more dependencyFailed calls in a row. A {@code
+     * dependencyFailed} notification is only invoked again to notify of new failures if the previous failures have been
+     * {@link #dependencyFailureCleared cleared}. 
+     * <p> This method must not be called under a lock.
      */
     void dependencyFailed();
 
     /**
-     * Notify this dependent that one of its dependencies is retrying to start after a failure.
-     * <br>
-     * Called after the dependency state transitions from {@code START_FAILED} to {@code STARTING}.
+     * Notify this dependent that all dependency failures previously {@link #dependencyFailed() notified} are now
+     * cleared. This method is called only after all affected dependencies left {@code START_FAILED} state.
+     * <p> This method must not be called under a lock.
      */
-    void dependencyRetrying();
+    void dependencyFailureCleared();
 
     /**
-     * Notify this dependent that one of its dependencies is installed.
+     * Notify this dependent that one of its transitive dependencies is uninstalled or missing.
+     * <p>
+     * Dependencies that are uninstalled after the notified one do not result in new {@code dependencyUninstalled}
+     * notifications, as the dependent will never receive two or more dependencyUninstalled calls in a row. A {@code
+     * dependencyUninstall} notification is only invoked again to notify of newly found uninstalled dependencies if the
+     * previously missing dependencies have been {@link #dependencyInstalled() installed}.
+     * <p> This method must not be called under a lock.
      */
-    void transitiveDependencyInstalled();
+    void dependencyUninstalled();
 
     /**
-     * Notify this dependent that one of its dependencies is uninstalled.
+     * Notify this dependent that all {@link #dependencyUninstalled() uninstalled} dependencies (immediate or
+     * transitive) are now installed.
+     * <p> This method must not be called under a lock.
      */
-    void transitiveDependencyUninstalled();
+    void dependencyInstalled();
 }

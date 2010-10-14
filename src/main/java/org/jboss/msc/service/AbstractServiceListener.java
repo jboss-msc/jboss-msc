@@ -63,14 +63,14 @@ public abstract class AbstractServiceListener<S> implements ServiceListener<S> {
     }
 
     /** {@inheritDoc} */
-    public void dependencyRetrying(final ServiceController<? extends S> controller) {
+    public void dependencyFailureCleared(final ServiceController<? extends S> controller) {
     }
 
     /** {@inheritDoc} */
-    public void transitiveDependenciesInstalled(ServiceController<? extends S> controller) {
+    public void dependencyInstalled(ServiceController<? extends S> controller) {
     }
 
     /** {@inheritDoc} */
-    public void transitiveDependencyUninstalled(ServiceController<? extends S> controller) {
+    public void dependencyUninstalled(ServiceController<? extends S> controller) {
     }
 }

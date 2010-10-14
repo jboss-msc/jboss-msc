@@ -83,18 +83,18 @@ public class LatchedFinishListener implements ServiceListener<Object> {
     }
 
     @Override
-    public void dependencyRetrying(ServiceController<? extends Object> serviceController) {
-        timingServiceListener.dependencyRetrying(serviceController);
+    public void dependencyFailureCleared(ServiceController<? extends Object> serviceController) {
+        timingServiceListener.dependencyFailureCleared(serviceController);
     }
     
     @Override
-    public void transitiveDependenciesInstalled(ServiceController<? extends Object> controller) {
-        timingServiceListener.transitiveDependenciesInstalled(controller);
+    public void dependencyInstalled(ServiceController<? extends Object> controller) {
+        timingServiceListener.dependencyInstalled(controller);
     }
 
     @Override
-    public void transitiveDependencyUninstalled(ServiceController<? extends Object> controller) {
-        timingServiceListener.transitiveDependencyUninstalled(controller);
+    public void dependencyUninstalled(ServiceController<? extends Object> controller) {
+        timingServiceListener.dependencyUninstalled(controller);
     }
 
     public void await() throws Exception {
