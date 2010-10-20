@@ -172,5 +172,11 @@ public interface ServiceController<S> extends Value<S> {
          */
         ACTIVE,
         ;
+
+        @Deprecated
+        public static final Mode IMMEDIATE = ACTIVE;
+
+        @Deprecated
+        public static final Mode AUTOMATIC = PASSIVE;
     }
 }
