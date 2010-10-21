@@ -63,6 +63,10 @@ public final class ServiceNameTestCase {
 
     @Test
     public void testCanonicalization() {
+        assertEquals("OSGi regression case 1", ServiceName.JBOSS.append("osgi", "framework"), ServiceName.parse("jboss.osgi.framework"));
+        assertEquals("OSGi regression case 1 (hash code)", ServiceName.JBOSS.append("osgi", "framework").hashCode(), ServiceName.parse("jboss.osgi.framework").hashCode());
+        assertEquals("OSGi regression case 2", ServiceName.JBOSS.append("osgi").append("framework"), ServiceName.parse("jboss.osgi.framework"));
+        assertEquals("OSGi regression case 2 (hash code)", ServiceName.JBOSS.append("osgi").append("framework").hashCode(), ServiceName.parse("jboss.osgi.framework").hashCode());
         assertEquals("simple canonical (string side)", "a.b.c", ServiceName.parse("a.b.c").getCanonicalName());
         assertEquals("simple canonical", ServiceName.of("a", "b", "c"), ServiceName.parse("a.b.c"));
         assertEquals("complex canonical (string side)", "a.\"\\r\\n\".b", ServiceName.parse("\"a\".\"\\r\\n\".b").getCanonicalName());
