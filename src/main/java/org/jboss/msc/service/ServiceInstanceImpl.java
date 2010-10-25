@@ -22,6 +22,8 @@
 
 package org.jboss.msc.service;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -1012,7 +1014,9 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         public void run() {
             assert !lockHeld();
             final ServiceName serviceName = primaryRegistration.getName();
-            final StartContextImpl context = new StartContextImpl();
+            final long startMillis = System.currentTimeMillis();
+            final long startNanos = System.nanoTime();
+            final StartContextImpl context = new StartContextImpl(startNanos);
             try {
                 if (doInjection) {
                     final ValueInjection<?>[] injections = ServiceInstanceImpl.this.injections;
@@ -1045,6 +1049,9 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                     }
                     context.state = ContextState.COMPLETE;
                     asyncTasks--;
+                    if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
+                        writeProfileInfo('S', startNanos, System.nanoTime());
+                    }
                     tasks = transition();
                 }
                 doExecute(tasks);
@@ -1060,6 +1067,9 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                     context.state = ContextState.FAILED;
                     asyncTasks--;
                     startException = e;
+                    if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
+                        writeProfileInfo('F', startNanos, System.nanoTime());
+                    }
                     tasks = transition();
                 }
                 doExecute(tasks);
@@ -1074,6 +1084,9 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                     context.state = ContextState.FAILED;
                     asyncTasks--;
                     startException = new StartException("Failed to start service", t, location, serviceName);
+                    if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
+                        writeProfileInfo('F', startNanos, System.nanoTime());
+                    }
                     tasks = transition();
                 }
                 doExecute(tasks);
@@ -1360,6 +1373,12 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
 
         private ContextState state = ContextState.SYNC;
 
+        private final long startNanos;
+
+        private StartContextImpl(final long startNanos) {
+            this.startNanos = startNanos;
+        }
+
         public void failed(final StartException reason) throws IllegalStateException {
             final Runnable[] tasks;
             synchronized (ServiceInstanceImpl.this) {
@@ -1370,6 +1389,9 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 startException = reason;
                 failCount ++;
                 asyncTasks--;
+                if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
+                    writeProfileInfo('F', startNanos, System.nanoTime());
+                }
                 tasks = transition();
             }
             doExecute(tasks);
@@ -1393,6 +1415,9 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 } else {
                     state = ContextState.COMPLETE;
                     asyncTasks--;
+                    if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
+                        writeProfileInfo('S', startNanos, System.nanoTime());
+                    }
                     tasks = transition();
                 }
             }
@@ -1401,6 +1426,25 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
 
         public ServiceController<?> getController() {
             return ServiceInstanceImpl.this;
+        }
+    }
+
+    private void writeProfileInfo(final char statusChar, final long startNanos, final long endNanos) {
+        final ServiceRegistrationImpl primaryRegistration = this.primaryRegistration;
+        final ServiceName name = primaryRegistration.getName();
+        final ServiceContainerImpl container = primaryRegistration.getContainer();
+        final Writer profileOutput = container.getProfileOutput();
+        if (profileOutput != null) {
+            synchronized (profileOutput) {
+                try {
+                    final long startOffset = startNanos - container.getStart();
+                    final long duration = endNanos - startNanos;
+                    profileOutput.write(String.format("%s\t%s\t%d\t%d\n", name, Character.valueOf(statusChar), Long.valueOf(startOffset), Long.valueOf(duration)));
+                    profileOutput.flush();
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
         }
     }
 

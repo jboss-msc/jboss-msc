@@ -22,7 +22,12 @@
 
 package org.jboss.msc.service;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
+import java.io.Writer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayDeque;
@@ -59,7 +64,20 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     private final Lock readLock;
     private final Lock writeLock;
 
+    static final String PROFILE_OUTPUT;
+
+    static {
+        PROFILE_OUTPUT = AccessController.doPrivileged(new PrivilegedAction<String>() {
+            public String run() {
+                return System.getProperty("jboss.msc.profile.output");
+            }
+        });
+        System.out.println("PROFILE_OUTPUT = " + PROFILE_OUTPUT);
+    }
+
     private final Map<ServiceName, ServiceRegistrationImpl> registry = new HashMap<ServiceName, ServiceRegistrationImpl>();
+
+    private final long start = System.nanoTime();
 
     final ServiceInstanceImpl<ServiceContainer> root;
 
@@ -135,6 +153,8 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         }
     }
 
+    private final Writer profileOutput;
+
     private volatile Executor executor;
 
     ServiceContainerImpl() {
@@ -151,6 +171,14 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                 }
 
                 public void stop(final StopContext context) {
+                    final Writer profileOutput = ServiceContainerImpl.this.profileOutput;
+                    if (profileOutput != null) {
+                        try {
+                            profileOutput.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
 
                 public ServiceContainer getValue() throws IllegalStateException {
@@ -166,6 +194,23 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                 }));
             }
         }
+        Writer profileOutput = null;
+        if (PROFILE_OUTPUT != null) {
+            try {
+                profileOutput = new OutputStreamWriter(new FileOutputStream(PROFILE_OUTPUT));
+            } catch (FileNotFoundException e) {
+                // ignore
+            }
+        }
+        this.profileOutput = profileOutput;
+    }
+
+    Writer getProfileOutput() {
+        return profileOutput;
+    }
+
+    long getStart() {
+        return start;
     }
 
     public void setExecutor(final Executor executor) {

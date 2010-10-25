@@ -125,6 +125,12 @@
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <systemProperties>
+                        <property>
+                            <name>jboss.msc.profile.output</name>
+                            <value>${project.build.testOutputDirectory}/prof.txt</value>
+                        </property>
+                    </systemProperties>
                     <includes>
                         <include>**/*TestCase.java</include>
                     </includes>
