@@ -1014,7 +1014,6 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         public void run() {
             assert !lockHeld();
             final ServiceName serviceName = primaryRegistration.getName();
-            final long startMillis = System.currentTimeMillis();
             final long startNanos = System.nanoTime();
             final StartContextImpl context = new StartContextImpl(startNanos);
             try {
@@ -1104,7 +1103,8 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         public void run() {
             assert !lockHeld();
             final ServiceName serviceName = primaryRegistration.getName();
-            final StopContextImpl context = new StopContextImpl();
+            final long startNanos = System.nanoTime();
+            final StopContextImpl context = new StopContextImpl(startNanos);
             boolean ok = false;
             try {
                 if (! onlyUninject) {
@@ -1137,6 +1137,9 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 }
                 synchronized (ServiceInstanceImpl.this) {
                     asyncTasks--;
+                    if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
+                        writeProfileInfo('X', startNanos, System.nanoTime());
+                    }
                     tasks = transition();
                 }
                 doExecute(tasks);
@@ -1153,18 +1156,27 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         ListenerTask(final ServiceListener<? super S> listener, final ServiceController.State state) {
             this.listener = listener;
             this.state = state;
-            this.notification = ListenerNotification.STATE;
+            notification = ListenerNotification.STATE;
         }
 
         ListenerTask(final ServiceListener<? super S> listener, final ListenerNotification notification) {
             this.listener = listener;
-            this.state = null;
+            state = null;
             this.notification = notification;
         }
 
         public void run() {
             assert !lockHeld();
-            invokeListener(listener, notification, state);
+            if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
+                final long start = System.nanoTime();
+                try {
+                    invokeListener(listener, notification, state);
+                } finally {
+                    writeProfileInfo('L', start, System.nanoTime());
+                }
+            } else {
+                invokeListener(listener, notification, state);
+            }
         }
     }
 
@@ -1440,7 +1452,6 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                     final long startOffset = startNanos - container.getStart();
                     final long duration = endNanos - startNanos;
                     profileOutput.write(String.format("%s\t%s\t%d\t%d\n", name, Character.valueOf(statusChar), Long.valueOf(startOffset), Long.valueOf(duration)));
-                    profileOutput.flush();
                 } catch (IOException e) {
                     // ignore
                 }
@@ -1451,6 +1462,12 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
     private class StopContextImpl implements StopContext {
 
         private ContextState state = ContextState.SYNC;
+
+        private final long startNanos;
+
+        private StopContextImpl(final long startNanos) {
+            this.startNanos = startNanos;
+        }
 
         public void asynchronous() throws IllegalStateException {
             synchronized (ServiceInstanceImpl.this) {
@@ -1475,6 +1492,9 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
             final Runnable[] tasks;
             synchronized (ServiceInstanceImpl.this) {
                 asyncTasks--;
+                if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
+                    writeProfileInfo('X', startNanos, System.nanoTime());
+                }
                 tasks = transition();
             }
             doExecute(tasks);
