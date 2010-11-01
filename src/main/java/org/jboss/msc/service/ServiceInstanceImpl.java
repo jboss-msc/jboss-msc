@@ -824,6 +824,20 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         }
     }
 
+    public boolean compareAndSetMode(final Mode expected, final Mode newMode) {
+        if (newMode == null) {
+            throw new IllegalArgumentException("newMode is null");
+        }
+        synchronized (this) {
+            if (mode == expected) {
+                mode = newMode;
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+
     private static enum ListenerNotification {
         /** Notify the listener that is has been added. */
         LISTENER_ADDED,

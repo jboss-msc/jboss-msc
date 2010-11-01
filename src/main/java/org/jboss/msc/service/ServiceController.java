@@ -46,6 +46,16 @@ public interface ServiceController<S> extends Value<S> {
     Mode getMode();
 
     /**
+     * Compare the current mode against {@code expected}; if it matches, change it to {@code newMode}.  The
+     * return value is {@code true} when the mode was matched and changed.
+     *
+     * @param expected the expected mode
+     * @param newMode the new mode
+     * @return {@code true} if the mode was changed
+     */
+    boolean compareAndSetMode(Mode expected, Mode newMode);
+
+    /**
      * Change the service controller's current mode.  Might result in the service starting or stopping.  The mode
      * may only be changed if it was not already set to {@link Mode#REMOVE}.  Calling this method with the controller's
      * current mode has no effect and is always allowed.

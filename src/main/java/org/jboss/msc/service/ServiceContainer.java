@@ -108,4 +108,26 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
             container.setExecutor(null);
         }
     }
+
+    interface TerminateListener {
+        void handleTermination(Info info);
+
+        final class Info {
+            private final long shutdownInitiated;
+            private final long shutdownCompleted;
+
+            Info(final long shutdownInitiated, final long shutdownCompleted) {
+                this.shutdownInitiated = shutdownInitiated;
+                this.shutdownCompleted = shutdownCompleted;
+            }
+
+            public long getShutdownInitiated() {
+                return shutdownInitiated;
+            }
+
+            public long getShutdownCompleted() {
+                return shutdownCompleted;
+            }
+        }
+    }
 }

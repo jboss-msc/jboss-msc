@@ -79,6 +79,8 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
 
     private final long start = System.nanoTime();
 
+    private final List<TerminateListener> terminateListeners = new ArrayList<TerminateListener>(1);
+
     final ServiceInstanceImpl<ServiceContainer> root;
 
     private static final class ExecutorHolder {
@@ -218,7 +220,22 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     }
 
     public void shutdown() {
-        root.setMode(ServiceController.Mode.REMOVE);
+        if (root.compareAndSetMode(ServiceController.Mode.ACTIVE, ServiceController.Mode.REMOVE)) {
+            final long started = System.currentTimeMillis();
+            root.addListener(new AbstractServiceListener<Object>() {
+                public void serviceRemoved(final ServiceController<?> controller) {
+                    final long stopped = System.currentTimeMillis();
+                    final TerminateListener.Info info = new TerminateListener.Info(started, stopped);
+                    for (TerminateListener terminateListener : terminateListeners) {
+                        try {
+                            terminateListener.handleTermination(info);
+                        } catch (Throwable t) {
+                            // ignore
+                        }
+                    }
+                }
+            });
+        }
     }
 
     public void dumpServices() {
