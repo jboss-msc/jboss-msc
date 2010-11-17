@@ -334,7 +334,7 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
     }
 
     @SuppressWarnings("unchecked")
-    public IdentityHashSet clone() {
+    public IdentityHashSet<E> clone() {
         try {
             IdentityHashSet<E> clone = (IdentityHashSet<E>) super.clone();
             clone.table = table.clone();

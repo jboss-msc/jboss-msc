@@ -42,7 +42,7 @@ public final class ConstructedValue<T> implements Value<T> {
      * Construct a new instance.
      *
      * @param constructorValue the constructor to use
-     * @param parameters the parameters ot pass to the constructor
+     * @param parameters the parameters to pass to the constructor
      */
     public ConstructedValue(final Value<Constructor<T>> constructorValue, final List<? extends Value<?>> parameters) {
         this.constructorValue = constructorValue;

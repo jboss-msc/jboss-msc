@@ -27,23 +27,13 @@ import java.io.Serializable;
 /**
 * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
 */
-class NullService implements Service<Void>, Serializable {
+class NullService extends AbstractService<Void> implements Service<Void>, Serializable {
 
     private static final long serialVersionUID = 2463357698038752840L;
 
     static final NullService INSTANCE = new NullService();
 
     private NullService() {
-    }
-
-    public void start(final StartContext context) {
-    }
-
-    public void stop(final StopContext context) {
-    }
-
-    public Void getValue() {
-        return null;
     }
 
     public String toString() {

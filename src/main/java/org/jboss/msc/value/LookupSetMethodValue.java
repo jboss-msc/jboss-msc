@@ -82,7 +82,7 @@ public final class LookupSetMethodValue implements Value<Method> {
         try {
             final Value<Class<?>> propertyType = this.propertyType;
             if (propertyType != null) {
-                Class[] types = new Class[] { propertyType.getValue() };
+                Class<?>[] types = new Class[] { propertyType.getValue() };
                 return targetClass.getMethod(setterName, types);
             } else {
                 for (Method method : targetClass.getMethods()) {

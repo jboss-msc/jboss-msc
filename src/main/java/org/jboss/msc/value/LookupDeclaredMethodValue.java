@@ -74,7 +74,7 @@ public final class LookupDeclaredMethodValue implements Value<Method> {
 
     /** {@inheritDoc} */
     public Method getValue() throws IllegalStateException {
-        final Class[] types = new Class[parameterTypes.size()];
+        final Class<?>[] types = new Class[parameterTypes.size()];
         int i = 0;
         for (Value<Class<?>> type : parameterTypes) {
             types[i++] = type.getValue();

@@ -36,7 +36,7 @@ import java.util.List;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class LookupDeclaredConstructorValue implements Value<Constructor> {
+public final class LookupDeclaredConstructorValue implements Value<Constructor<?>> {
     private final Value<Class<?>> target;
     private final List<? extends Value<Class<?>>> parameterTypes;
     private final AccessControlContext context;
@@ -67,8 +67,8 @@ public final class LookupDeclaredConstructorValue implements Value<Constructor> 
     }
 
     /** {@inheritDoc} */
-    public Constructor getValue() throws IllegalStateException {
-        final Class[] types = new Class[parameterTypes.size()];
+    public Constructor<?> getValue() throws IllegalStateException {
+        final Class<?>[] types = new Class[parameterTypes.size()];
         int i = 0;
         for (Value<Class<?>> type : parameterTypes) {
             types[i++] = type.getValue();
@@ -76,8 +76,8 @@ public final class LookupDeclaredConstructorValue implements Value<Constructor> 
         final Class<?> targetClass = target.getValue();
         final SecurityManager sm = System.getSecurityManager();
         if (sm != null) {
-            return AccessController.doPrivileged(new PrivilegedAction<Constructor>() {
-                public Constructor run() {
+            return AccessController.doPrivileged(new PrivilegedAction<Constructor<?>>() {
+                public Constructor<?> run() {
                     try {
                         final Constructor<?> constructor = targetClass.getDeclaredConstructor(types);
                         if (makeAccessible) constructor.setAccessible(true);

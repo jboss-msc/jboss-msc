@@ -80,7 +80,7 @@ public final class LookupMethodValue implements Value<Method> {
         final List<? extends Value<Class<?>>> parameterTypes = this.parameterTypes;
         final String methodName = this.methodName;
         if (parameterTypes != null) {
-            Class[] types = new Class[parameterTypes.size()];
+            Class<?>[] types = new Class[parameterTypes.size()];
             int i = 0;
             for (Value<Class<?>> type : parameterTypes) {
                 types[i++] = type.getValue();

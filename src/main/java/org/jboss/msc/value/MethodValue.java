@@ -64,7 +64,7 @@ public final class MethodValue<T> implements Value<T> {
                 thisValue.setValue(old);
             }
         } catch (IllegalAccessException e) {
-            throw new IllegalStateException("Field is not accessible", e);
+            throw new IllegalStateException("Method is not accessible", e);
         } catch (InvocationTargetException e) {
             throw new IllegalStateException("Failed to invoke method", e);
         }
