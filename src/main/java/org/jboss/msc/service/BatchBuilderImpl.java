@@ -62,7 +62,9 @@ final class BatchBuilderImpl extends AbstractServiceTarget implements BatchBuild
     @Override
     void install(BatchBuilderImpl serviceBuilder) {
         validateTargetState();
-        batchServices.entrySet().addAll(serviceBuilder.batchServices.entrySet());
+        for (Map.Entry<ServiceName, ServiceBuilderImpl<?>> entry: serviceBuilder.batchServices.entrySet()) {
+            batchServices.put(entry.getKey(), entry.getValue());
+        }
     }
 
     @Override
