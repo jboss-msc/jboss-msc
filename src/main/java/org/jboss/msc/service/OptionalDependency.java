@@ -98,6 +98,13 @@ class OptionalDependency implements Dependency, Dependent {
      */
     boolean forwardNotifications;
 
+    /**
+     * Keeps track of whether optionalDependency has been notified of a dependent started.
+     * This field is useful for avoiding dependentStopped notifications that don't have a
+     * corresponding previous dependentStarted notification.
+     */
+    private boolean dependentStartedNotified = false;
+
     OptionalDependency(Dependency optionalDependency) {
         this.optionalDependency = optionalDependency;
         dependencyState = DependencyState.INSTALLED;
@@ -200,7 +207,7 @@ class OptionalDependency implements Dependency, Dependent {
         assert ! lockHeld();
         final boolean notifyOptionalDependency;
         synchronized (this) {
-            notifyOptionalDependency = forwardNotifications;
+            dependentStartedNotified = notifyOptionalDependency = forwardNotifications;
         }
         if (notifyOptionalDependency) {
             optionalDependency.dependentStarted();
@@ -212,7 +219,12 @@ class OptionalDependency implements Dependency, Dependent {
         assert ! lockHeld();
         final boolean notifyOptionalDependency;
         synchronized (this) {
-            notifyOptionalDependency = forwardNotifications;
+            // on some multi-thread scenarios, it can happen that forwardNotification become true as the result of a
+            // removeDemand call that is performed before dependentStopped. In this case, dependentStartedNotified
+            // will prevent us from notify the dependency of a dependentStopped without a corresponding
+            // previous dependentStarted notification
+            notifyOptionalDependency = forwardNotifications && dependentStartedNotified;
+            dependentStartedNotified = false;
         }
         if (notifyOptionalDependency) {
             optionalDependency.dependentStopped();
