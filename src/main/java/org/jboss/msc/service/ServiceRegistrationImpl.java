@@ -80,11 +80,19 @@ final class ServiceRegistrationImpl implements Dependency {
                 dependent.immediateDependencyUninstalled();
                 return;
             }
+            final Runnable[] tasks;
+            final boolean instanceUp;
             synchronized (instance) {
                 state = instance.getSubstateLocked();
-                instance.addDependent(dependent);
-                if (state != ServiceInstanceImpl.Substate.UP) return;
-                instance.addAsyncTask();
+                tasks = instance.addDependent(dependent);
+                instanceUp = state == ServiceInstanceImpl.Substate.UP;
+                if (instanceUp) {
+                    instance.addAsyncTask();
+                }
+            }
+            if (!instanceUp) {
+                instance.doExecute(tasks);
+                return;
             }
         }
         if (state == ServiceInstanceImpl.Substate.UP) {

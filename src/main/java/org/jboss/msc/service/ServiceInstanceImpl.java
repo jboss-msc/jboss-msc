@@ -669,8 +669,28 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         doExecute(tasks);
     }
 
-    void addDependent(final Dependent dependent) {
+    Runnable[] addDependent(final Dependent dependent) {
+        assert lockHeld();
         dependents.add(dependent);
+        final Runnable[] tasks;
+        if (failCount > 0) {
+            final Dependent[] dependents = new Dependent[]{dependent};
+            if (missingDependencyCount > 0) {
+                tasks = new Runnable[2];
+                tasks[1] = new DependencyUninstalledTask(dependents);
+            } else {
+                tasks = new Runnable[1];
+            }
+            tasks[0] = new DependencyFailedTask(dependents);
+            asyncTasks += tasks.length;
+            return tasks;
+        } else if (missingDependencyCount > 0) {
+            tasks = new Runnable[]{new DependencyUninstalledTask(new Dependent[]{dependent})};
+            asyncTasks ++;
+        } else {
+            tasks = null;
+        }
+        return tasks;
     }
 
     void removeDependent(final Dependent dependent) {
@@ -679,6 +699,8 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
 
     void addDependents(final IdentityHashSet<Dependent> dependents) {
         this.dependents.addAll(dependents);
+        // do not notify dependents of failures and missing dependencies because, at this point,
+        // failCount and missingDependencyCount must be 0
     }
 
     void removeAllDependents(final IdentityHashSet<ServiceInstanceImpl<?>> dependents) {
