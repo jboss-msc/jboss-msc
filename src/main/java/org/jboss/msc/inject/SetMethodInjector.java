@@ -90,7 +90,7 @@ public final class SetMethodInjector<T> implements Injector<T> {
      * @param paramType the parameter type
      * @param <C> the type of the class upon which the method may be found
      */
-    public <C> SetMethodInjector(final Value<? extends C> target, final Class<C> clazz, final String methodName, final Class<T> paramType) {
+    public <C> SetMethodInjector(final Value<? extends C> target, final Class<C> clazz, final String methodName, final Class<? extends T> paramType) {
         this(target, lookupMethod(clazz, methodName, paramType));
     }
 
@@ -103,11 +103,11 @@ public final class SetMethodInjector<T> implements Injector<T> {
      * @param paramType the parameter type
      * @param <C> the type of the class upon which the method may be found
      */
-    public <C> SetMethodInjector(final C target, final Class<C> clazz, final String methodName, final Class<T> paramType) {
+    public <C> SetMethodInjector(final C target, final Class<C> clazz, final String methodName, final Class<? extends T> paramType) {
         this(new ImmediateValue<C>(target), clazz, methodName, paramType);
     }
 
-    private static <C, T> Method lookupMethod(final Class<C> clazz, final String methodName, final Class<T> paramType) {
+    private static <C, T> Method lookupMethod(final Class<C> clazz, final String methodName, final Class<? extends T> paramType) {
         final Method method;
         try {
             method = clazz.getMethod(methodName, paramType);
