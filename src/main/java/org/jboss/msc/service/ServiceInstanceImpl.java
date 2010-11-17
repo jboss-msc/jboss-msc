@@ -288,6 +288,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
             }
             case START_FAILED_to_DOWN: {
                 startException = null;
+                failCount --;
                 tasks = getListenerTasks(transition.getAfter().getState(), new DependencyRetryingTask(dependents.toScatteredArray(NO_DEPENDENTS)), new StopTask(true), new DependentStoppedTask());
                 break;
             }
@@ -1093,6 +1094,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                     if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                         writeProfileInfo('F', startNanos, System.nanoTime());
                     }
+                    failCount++;
                     tasks = transition();
                 }
                 doExecute(tasks);
@@ -1110,6 +1112,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                     if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                         writeProfileInfo('F', startNanos, System.nanoTime());
                     }
+                    failCount ++;
                     tasks = transition();
                 }
                 doExecute(tasks);
