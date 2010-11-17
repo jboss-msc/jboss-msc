@@ -112,7 +112,8 @@ public final class SetMethodInjector<T> implements Injector<T> {
         try {
             method = clazz.getMethod(methodName, paramType);
         } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException("No such method found", e);
+            throw new IllegalArgumentException("No such method found '" +  clazz + "." + methodName + "(" +
+                    paramType + ")'", e);
         }
         return method;
     }

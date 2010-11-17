@@ -22,6 +22,8 @@
 
 package org.jboss.msc.value;
 
+import static org.jboss.msc.value.ErrorMessage.noSuchConstructor;
+
 import java.lang.reflect.Constructor;
 import java.util.List;
 
@@ -62,7 +64,7 @@ public final class LookupConstructorValue implements Value<Constructor> {
         try {
             return targetClass.getConstructor(types);
         } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("No such constructor found on " + targetClass);
+            throw new IllegalStateException(noSuchConstructor(targetClass, parameterTypes));
         }
     }
 }

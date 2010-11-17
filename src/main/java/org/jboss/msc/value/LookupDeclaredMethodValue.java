@@ -22,6 +22,8 @@
 
 package org.jboss.msc.value;
 
+import static org.jboss.msc.value.ErrorMessage.noSuchMethod;
+
 import java.lang.reflect.Method;
 import java.security.AccessControlContext;
 import java.security.AccessController;
@@ -87,7 +89,7 @@ public final class LookupDeclaredMethodValue implements Value<Method> {
                         if (makeAccessible) method.setAccessible(true);
                         return method;
                     } catch (NoSuchMethodException e) {
-                        throw new IllegalStateException("No such method '" + methodName + "' found on " + targetClass);
+                        throw new IllegalStateException(noSuchMethod(targetClass, methodName, parameterTypes));
                     }
                 }
             }, context);
@@ -97,7 +99,7 @@ public final class LookupDeclaredMethodValue implements Value<Method> {
             if (makeAccessible) method.setAccessible(true);
             return method;
         } catch (NoSuchMethodException e) {
-            throw new IllegalStateException("No such method '" + methodName + "' found on " + targetClass);
+            throw new IllegalStateException(noSuchMethod(targetClass, methodName, parameterTypes));
         }
     }
 }

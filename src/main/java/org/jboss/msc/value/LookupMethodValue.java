@@ -22,6 +22,8 @@
 
 package org.jboss.msc.value;
 
+import static org.jboss.msc.value.ErrorMessage.noSuchMethod;
+
 import java.lang.reflect.Method;
 import java.util.List;
 
@@ -86,6 +88,7 @@ public final class LookupMethodValue implements Value<Method> {
             try {
                 return targetClass.getMethod(methodName, types);
             } catch (NoSuchMethodException e) {
+                throw new IllegalStateException(noSuchMethod(targetClass, methodName, parameterTypes));
             }
         } else {
             final int paramCount = this.paramCount;
@@ -94,7 +97,7 @@ public final class LookupMethodValue implements Value<Method> {
                     return method;
                 }
             }
+            throw new IllegalStateException("No such method '" + methodName + "' found on " + targetClass);
         }
-        throw new IllegalStateException("No such method '" + methodName + "' found on " + targetClass);
     }
 }

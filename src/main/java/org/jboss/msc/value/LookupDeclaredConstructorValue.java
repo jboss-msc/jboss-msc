@@ -22,6 +22,8 @@
 
 package org.jboss.msc.value;
 
+import static org.jboss.msc.value.ErrorMessage.noSuchConstructor;
+
 import java.lang.reflect.Constructor;
 import java.security.AccessControlContext;
 import java.security.AccessController;
@@ -81,7 +83,7 @@ public final class LookupDeclaredConstructorValue implements Value<Constructor> 
                         if (makeAccessible) constructor.setAccessible(true);
                         return constructor;
                     } catch (NoSuchMethodException e) {
-                        throw new IllegalStateException("No such constructor found on " + targetClass);
+                        throw new IllegalStateException(noSuchConstructor(targetClass, parameterTypes));
                     }
                 }
             }, context);
@@ -91,7 +93,7 @@ public final class LookupDeclaredConstructorValue implements Value<Constructor> 
                 if (makeAccessible) constructor.setAccessible(true);
                 return constructor;
             } catch (NoSuchMethodException e) {
-                throw new IllegalStateException("No such constructor found on " + targetClass);
+                throw new IllegalStateException(noSuchConstructor(targetClass, parameterTypes));
             }
         }
     }
