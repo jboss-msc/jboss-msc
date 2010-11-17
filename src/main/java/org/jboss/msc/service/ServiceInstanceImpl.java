@@ -544,6 +544,16 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
 
     @Override
     public void immediateDependencyInstalled() {
+        dependencyInstalled();
+    }
+
+    @Override
+    public void immediateDependencyUninstalled() {
+        dependencyUninstalled();
+    }
+
+    @Override
+    public void dependencyInstalled() {
         Runnable[] tasks = null;
         synchronized (this) {
             if (-- missingDependencyCount != 0) {
@@ -558,35 +568,13 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
     }
 
     @Override
-    public void immediateDependencyUninstalled() {
+    public void dependencyUninstalled() {
         Runnable[] tasks = null;
         synchronized (this) {
             if (++ missingDependencyCount != 1) {
                 return;
             }
             // we raised it to 1
-            tasks = getListenerTasks(ListenerNotification.MISSING_DEPENDENCY,
-                    new DependencyUninstalledTask(dependents.toScatteredArray(NO_DEPENDENTS)));
-            asyncTasks += tasks.length;
-        }
-        doExecute(tasks);
-    }
-
-    @Override
-    public void dependencyInstalled() {
-        Runnable[] tasks = null;
-        synchronized (this) {
-            tasks = getListenerTasks(ListenerNotification.DEPENDENCY_INSTALLED,
-                    new DependencyInstalledTask(dependents.toScatteredArray(NO_DEPENDENTS)));
-            asyncTasks += tasks.length;
-        }
-        doExecute(tasks);
-    }
-
-    @Override
-    public void dependencyUninstalled() {
-        Runnable[] tasks = null;
-        synchronized (this) {
             tasks = getListenerTasks(ListenerNotification.MISSING_DEPENDENCY,
                     new DependencyUninstalledTask(dependents.toScatteredArray(NO_DEPENDENTS)));
             asyncTasks += tasks.length;

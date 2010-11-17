@@ -89,8 +89,8 @@ interface Dependent {
     void dependencyUninstalled();
 
     /**
-     * Notify this dependent that all {@link #dependencyUninstalled() uninstalled} dependencies (immediate or
-     * transitive) are now installed.
+     * Notify this dependent that all {@link #dependencyUninstalled() uninstalled} transitive dependencies are now
+     * installed.
      * <p> This method must not be called under a lock.
      */
     void dependencyInstalled();
