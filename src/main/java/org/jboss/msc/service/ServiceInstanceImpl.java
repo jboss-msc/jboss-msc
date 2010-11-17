@@ -1375,6 +1375,16 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
             try {
                 assert getMode() == ServiceController.Mode.REMOVE;
                 assert getSubstate() == Substate.REMOVING;
+                if (failCount > 0) {
+                    for (Dependent dependent: dependents) {
+                        dependent.dependencyFailureCleared();
+                    }
+                }
+                if (missingDependencyCount > 0) {
+                    for (Dependent dependent: dependents) {
+                        dependent.dependencyInstalled();
+                    }
+                }
                 primaryRegistration.clearInstance(ServiceInstanceImpl.this);
                 for (ServiceRegistrationImpl registration : aliasRegistrations) {
                     registration.clearInstance(ServiceInstanceImpl.this);
