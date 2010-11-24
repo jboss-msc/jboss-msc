@@ -490,7 +490,13 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         final Lock lock = readLock;
         lock.lock();
         try {
-            return new ArrayList<ServiceName>(registry.keySet());
+            final List<ServiceName> result = new ArrayList<ServiceName>(registry.size());
+            for (Map.Entry<ServiceName, ServiceRegistrationImpl> registryEntry: registry.entrySet()) {
+                if (registryEntry.getValue().getInstance() != null) {
+                    result.add(registryEntry.getKey());
+                }
+            }
+            return result;
         } finally {
             lock.unlock();
         }
