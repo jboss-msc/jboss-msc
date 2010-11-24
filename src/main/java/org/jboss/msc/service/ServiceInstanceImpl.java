@@ -786,6 +786,10 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         return names;
     }
 
+    public Location getLocation() {
+        return this.location;
+    }
+
     public void addListener(final ServiceListener<? super S> listener) {
         assert !lockHeld();
         final Substate state;
