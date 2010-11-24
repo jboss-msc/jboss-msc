@@ -34,10 +34,13 @@ public final class ClassOfValue<T> implements Value<Class<? extends T>> {
         this.value = value;
     }
 
+    /**
+     * @return the {@code Class} of the value, or {@code null} if value.getValue() is {@code null}.
+     */
     @SuppressWarnings({ "unchecked" })
     public Class<? extends T> getValue() throws IllegalStateException {
         final Value<? extends T> value = this.value;
         final T actualValue = value.getValue();
-        return (Class<? extends T>) actualValue.getClass();
+        return actualValue == null? null: (Class<? extends T>) actualValue.getClass();
     }
 }
