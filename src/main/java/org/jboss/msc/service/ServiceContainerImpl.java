@@ -49,6 +49,7 @@ import java.util.concurrent.TimeUnit;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.jboss.msc.Version;
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.ref.Reaper;
 import org.jboss.msc.ref.Reference;
@@ -72,7 +73,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                 return System.getProperty("jboss.msc.profile.output");
             }
         });
-        System.out.println("PROFILE_OUTPUT = " + PROFILE_OUTPUT);
+        ServiceLogger.INSTANCE.greeting(Version.getVersionString());
     }
 
     private final Map<ServiceName, ServiceRegistrationImpl> registry = new HashMap<ServiceName, ServiceRegistrationImpl>();
