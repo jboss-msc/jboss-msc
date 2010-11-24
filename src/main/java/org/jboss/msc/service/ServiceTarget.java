@@ -23,6 +23,7 @@
 package org.jboss.msc.service;
 
 import java.util.Collection;
+import java.util.Set;
 
 import org.jboss.msc.value.Value;
 
@@ -80,6 +81,13 @@ public interface ServiceTarget {
     ServiceTarget addListener(Collection<ServiceListener<Object>> listeners);
 
     /**
+     * Returns a set of the listeners added to this target.
+     * 
+     * @return the listeners added to this target
+     */
+    Set<ServiceListener<Object>> getListeners();
+
+    /**
      * Add a dependency that will be added to the all ServiceBuilders installed in this target.
      *
      * @param dependency the dependency to add to the target
@@ -102,6 +110,13 @@ public interface ServiceTarget {
      * @return this target
      */
     ServiceTarget addDependency(Collection<ServiceName> dependencies);
+
+    /**
+     * Returns a set of all dependencies added to this target.
+     * 
+     * @return all dependencies of this target
+     */
+    Set<ServiceName> getDependencies();
 
     /**
      * Create a sub-target using this as the parent target.

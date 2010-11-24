@@ -91,6 +91,11 @@ abstract class AbstractServiceTarget implements ServiceTarget {
     }
 
     @Override
+    public Set<ServiceListener<Object>> getListeners() {
+        return listeners;
+    }
+
+    @Override
     public ServiceTarget addDependency(ServiceName dependency) {
         validateTargetState();
         dependencies.add(dependency);
@@ -116,6 +121,11 @@ abstract class AbstractServiceTarget implements ServiceTarget {
             batchDependencies.add(dependency);
         }
         return this;
+    }
+
+    @Override
+    public Set<ServiceName> getDependencies() {
+        return dependencies;
     }
 
     /**
@@ -172,14 +182,6 @@ abstract class AbstractServiceTarget implements ServiceTarget {
      * @throws IllegalStateException if the state is not valid for additions
      */
     abstract void validateTargetState() throws IllegalStateException;
-
-    Set<ServiceListener<Object>> getListeners() {
-        return listeners;
-    }
-
-    Set<ServiceName> getDependencies() {
-        return dependencies;
-    }
 
     @Override
     public ServiceTarget subTarget() {

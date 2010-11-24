@@ -25,6 +25,8 @@ package org.jboss.msc.service;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+
 import org.jboss.msc.value.Value;
 
 /**
@@ -78,6 +80,11 @@ public final class TrackingServiceTarget implements ServiceTarget {
     }
 
     /** {@inheritDoc} */
+    public Set<ServiceListener<Object>> getListeners() {
+        return delegate.getListeners();
+    }
+
+    /** {@inheritDoc} */
     public ServiceTarget addDependency(final ServiceName dependency) {
         return delegate.addDependency(dependency);
     }
@@ -90,6 +97,11 @@ public final class TrackingServiceTarget implements ServiceTarget {
     /** {@inheritDoc} */
     public ServiceTarget addDependency(final Collection<ServiceName> dependencies) {
         return delegate.addDependency(dependencies);
+    }
+
+    /** {@inheritDoc} */
+    public Set<ServiceName> getDependencies() {
+        return delegate.getDependencies();
     }
 
     /** {@inheritDoc} */

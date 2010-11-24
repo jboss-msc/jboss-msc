@@ -23,6 +23,8 @@
 package org.jboss.msc.service;
 
 import java.util.Collection;
+import java.util.Set;
+
 import org.jboss.msc.value.Value;
 
 /**
@@ -68,6 +70,11 @@ public class DelegatingServiceTarget implements ServiceTarget {
     }
 
     /** {@inheritDoc} */
+    public Set<ServiceListener<Object>> getListeners() {
+        return delegate.getListeners();
+    }
+
+    /** {@inheritDoc} */
     public ServiceTarget addDependency(final ServiceName dependency) {
         return delegate.addDependency(dependency);
     }
@@ -80,6 +87,11 @@ public class DelegatingServiceTarget implements ServiceTarget {
     /** {@inheritDoc} */
     public ServiceTarget addDependency(final Collection<ServiceName> dependencies) {
         return delegate.addDependency(dependencies);
+    }
+
+    /** {@inheritDoc} */
+    public Set<ServiceName> getDependencies() {
+        return delegate.getDependencies();
     }
 
     /** {@inheritDoc} */
