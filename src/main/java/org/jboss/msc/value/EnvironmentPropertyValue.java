@@ -89,7 +89,7 @@ public final class EnvironmentPropertyValue implements Value<String>, Privileged
     }
 
     /** {@inheritDoc} */
-    public String getValue() throws IllegalStateException {
+    public String getValue() throws IllegalStateException, IllegalArgumentException {
         final SecurityManager sm = System.getSecurityManager();
         final String result;
         if (sm == null) {
@@ -108,6 +108,9 @@ public final class EnvironmentPropertyValue implements Value<String>, Privileged
      * @return the property value
      */
     public String run() {
+        if ("".equals(propertyName)) {
+            throw new IllegalArgumentException("propertyName can't be empty");
+        }
         return System.getenv(propertyName);
     }
 }
