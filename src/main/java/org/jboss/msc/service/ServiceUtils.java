@@ -54,7 +54,7 @@ public final class ServiceUtils {
      * @param controllers the controllers to undeploy
      */
     public static void undeployAll(final Runnable completeTask, final List<ServiceController<?>> controllers) {
-        final AtomicInteger cnt = new AtomicInteger(controllers.size());
+        final AtomicInteger cnt = new AtomicInteger(controllers.size() + 1);
         final AbstractServiceListener<Object> listener = new AbstractServiceListener<Object>() {
             public void listenerAdded(final ServiceController<? extends Object> serviceController) {
                 serviceController.setMode(ServiceController.Mode.REMOVE);
@@ -69,5 +69,8 @@ public final class ServiceUtils {
         for (ServiceController<?> controller : controllers) {
             controller.addListener(listener);
         }
+        if (cnt.decrementAndGet() == 0) {
+            completeTask.run();
+        } 
     }
 }
