@@ -42,6 +42,7 @@ public final class LookupDeclaredMethodValue implements Value<Method> {
     private final List<? extends Value<Class<?>>> parameterTypes;
     private final AccessControlContext context;
     private final boolean makeAccessible;
+    private final int paramCount;
 
     /**
      * Construct a new instance.
@@ -68,38 +69,71 @@ public final class LookupDeclaredMethodValue implements Value<Method> {
         this.target = target;
         this.methodName = methodName;
         this.parameterTypes = parameterTypes;
+        this.paramCount = parameterTypes.size();
+        this.context = context;
+        this.makeAccessible = makeAccessible;
+    }
+
+    public LookupDeclaredMethodValue(final Value<Class<?>> target, final String methodName, final int paramCount,  final AccessControlContext context, final boolean makeAccessible) {
+        if (target == null) {
+            throw new IllegalArgumentException("target is null");
+        }
+        if (methodName == null) {
+            throw new IllegalArgumentException("methodName is null");
+        }
+        if (context == null) {
+            throw new IllegalArgumentException("context is null");
+        }
+        this.target = target;
+        this.methodName = methodName;
+        parameterTypes = null;
+        this.paramCount = paramCount;
         this.context = context;
         this.makeAccessible = makeAccessible;
     }
 
     /** {@inheritDoc} */
     public Method getValue() throws IllegalStateException {
-        final Class<?>[] types = new Class[parameterTypes.size()];
-        int i = 0;
-        for (Value<Class<?>> type : parameterTypes) {
-            types[i++] = type.getValue();
+        final Class<?>[] types = parameterTypes == null? null: new Class[parameterTypes.size()];
+        if (types != null) {
+            int i = 0;
+            for (Value<Class<?>> type : parameterTypes) {
+                types[i++] = type.getValue();
+            }
         }
         final Class<?> targetClass = target.getValue();
         final SecurityManager sm = System.getSecurityManager();
         if (sm != null) {
             return AccessController.doPrivileged(new PrivilegedAction<Method>() {
                 public Method run() {
-                    try {
-                        final Method method = targetClass.getDeclaredMethod(methodName, types);
-                        if (makeAccessible) method.setAccessible(true);
-                        return method;
-                    } catch (NoSuchMethodException e) {
-                        throw new IllegalStateException(noSuchMethod(targetClass, methodName, parameterTypes));
-                    }
+                    return getMethod(targetClass, types);
                 }
             }, context);
         }
-        try {
-            final Method method = targetClass.getDeclaredMethod(methodName, types);
-            if (makeAccessible) method.setAccessible(true);
-            return method;
-        } catch (NoSuchMethodException e) {
-            throw new IllegalStateException(noSuchMethod(targetClass, methodName, parameterTypes));
+        return getMethod(targetClass, types);
+    }
+
+    private Method getMethod(Class<?> targetClass, Class<?>[] types) {
+        Method method = null;
+        if (types != null) {
+            try {
+                method = targetClass.getDeclaredMethod(methodName, types);
+            } catch (NoSuchMethodException e) {
+                throw new IllegalStateException(noSuchMethod(targetClass, methodName, parameterTypes));
+            }
+        } else {
+            final int paramCount = this.paramCount;
+            for (Method declaredMethod : targetClass.getDeclaredMethods()) {
+                if (declaredMethod.getName().equals(methodName) && declaredMethod.getParameterTypes().length == paramCount) {
+                    method = declaredMethod;
+                    break;
+                }
+            }
+            if (method == null) {
+                throw new IllegalStateException("No such method '" + methodName + "' found on " + targetClass);
+            }
         }
+        if (makeAccessible) method.setAccessible(true);
+        return method;
     }
 }
