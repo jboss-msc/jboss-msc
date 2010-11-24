@@ -22,7 +22,9 @@
 package org.jboss.msc.service;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -30,6 +32,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Future;
 
+import org.jboss.msc.service.ServiceController.Mode;
 import org.jboss.msc.service.util.LatchedFinishListener;
 import org.jboss.msc.util.TestServiceListener;
 import org.junit.BeforeClass;
@@ -104,6 +107,10 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
             .addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"))
             .install();
         builder2.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install();
+        try {
+            builder2.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install();
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e) {}
 
         builder1.install();
         builder2.install();
@@ -133,10 +140,29 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
             .addOptionalDependencies(ServiceName.of("11"), ServiceName.of("8"))
             .install();
 
-        final Future<ServiceController<?>> startFuture = listener.expectServiceStart(ServiceName.of("7"));
+        Future<ServiceController<?>> startFuture = listener.expectServiceStart(ServiceName.of("7"));
 
         builder.install();
+        ServiceController<?> service7Controller = startFuture.get();
+        assertEquals(ServiceController.State.UP, service7Controller.getState());
 
+        final Future<ServiceController<?>> startFuture11 = listener.expectServiceStart(ServiceName.of("11"));
+        serviceContainer.addService(ServiceName.of("11"), Service.NULL).addListener(listener).install();
+        assertSame(ServiceController.State.UP, startFuture11.get().getState());
+
+        final Future<ServiceController<?>> startFuture8 = listener.expectServiceStart(ServiceName.of("8"));
+        serviceContainer.addService(ServiceName.of("8"), Service.NULL).addListener(listener).install();
+        assertSame(ServiceController.State.UP, startFuture8.get().getState());
+
+        final Future<ServiceController<?>> removalFuture = listener.expectServiceRemoval(ServiceName.of("7"));
+        service7Controller.setMode(Mode.REMOVE);
+        assertSame(service7Controller, removalFuture.get());
+
+        startFuture = listener.expectServiceStart(ServiceName.of("7"));
+        serviceContainer.addService(ServiceName.of("7"), Service.NULL)
+            .addOptionalDependencies(ServiceName.of("11"), ServiceName.of("8"))
+            .addListener(listener)
+            .install();
         assertEquals(ServiceController.State.UP, startFuture.get().getState());
     }
 

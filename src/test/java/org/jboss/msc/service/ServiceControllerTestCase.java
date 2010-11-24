@@ -53,12 +53,9 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
         batch.install();
 
-        final ServiceController<?> automaticServiceController = automaticServiceFuture.get();
-        assertNotNull(automaticServiceController);
-        
-        final ServiceController<?> immediateServiceController = immediateServiceFuture.get();
-        assertNotNull(immediateServiceController);
-        
+        final ServiceController<?> automaticServiceController = assertController(ServiceName.of("automatic"), automaticServiceFuture);
+        final ServiceController<?> immediateServiceController = assertController(ServiceName.of("immediate"), immediateServiceFuture);
+
         assertEquals(ServiceController.State.UP, automaticServiceController.getState());
         assertEquals(ServiceController.State.UP, immediateServiceController.getState());
 
@@ -87,8 +84,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
         serviceContainer.getService(ServiceName.of("serviceTwo")).setMode(ServiceController.Mode.ACTIVE);
 
-        final ServiceController<?> serviceOneController = serviceOneFuture.get();
-        assertNotNull(serviceOneController);
+        final ServiceController<?> serviceOneController = assertController(ServiceName.of("serviceTwo"), serviceOneFuture);
 
         assertEquals(ServiceController.State.UP, serviceOneController.getState());
         assertState(serviceContainer, ServiceName.of("serviceTwo"), ServiceController.State.UP);
@@ -129,8 +125,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
         yetAnotherBatch.install();
 
-        final ServiceController<?> serviceController = serviceFuture.get();
-        assertNotNull(serviceController);
+        final ServiceController<?> serviceController = assertController(ServiceName.of("serviceThree"), serviceFuture);
 
         assertEquals(ServiceController.State.UP, serviceController.getState());
         assertState(serviceContainer, ServiceName.of("serviceTwo"), ServiceController.State.UP);
@@ -164,8 +159,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
         batch.install();
 
-        final ServiceController<?> connectorController = connectorFuture.get();
-        assertNotNull(connectorController);
+        final ServiceController<?> connectorController = assertController(ServiceName.of("connector"), connectorFuture);
 
         assertEquals(ServiceController.State.UP, connectorController.getState());
         assertState(serviceContainer, ServiceName.of("sbm"), ServiceController.State.UP);
@@ -179,7 +173,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
         final BatchBuilder batch = serviceContainer.batchBuilder();
         final TestServiceListener listener = new TestServiceListener();
         batch.addListener(listener);
-        
+
         batch.addService(ServiceName.of("serviceOne"), Service.NULL)
             .addDependencies(ServiceName.of("serviceTwo"))
             .install();
@@ -189,8 +183,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
         batch.install();
 
-        final ServiceController<?> serviceStartController = serviceStartFuture.get();
-        assertNotNull(serviceStartController);
+        final ServiceController<?> serviceStartController = assertController(ServiceName.of("serviceOne"), serviceStartFuture);
 
         assertEquals(ServiceController.State.UP, serviceStartController.getState());
         assertState(serviceContainer, ServiceName.of("serviceTwo"), ServiceController.State.UP);
@@ -199,13 +192,13 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
         serviceContainer.getService(ServiceName.of("serviceTwo")).setMode(ServiceController.Mode.NEVER);
 
-        final ServiceController<?> serviceStopController = serviceStopFuture.get();
-        assertNotNull(serviceStopController);
+        final ServiceController<?> serviceStopController = assertController(ServiceName.of("serviceTwo"), serviceStopFuture);
 
         assertEquals(ServiceController.State.DOWN, serviceStopController.getState());
         assertState(serviceContainer, ServiceName.of("serviceOne"), ServiceController.State.DOWN);
     }
 
+    @Test
     public void testRemove() throws Exception {
         final BatchBuilder batch = serviceContainer.batchBuilder();
         final TestServiceListener listener = new TestServiceListener();
@@ -221,18 +214,22 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
         batch.install();
 
-        final ServiceController<?> startController = startFuture.get();
-        assertNotNull(startController);
+        final ServiceController<?> startController = assertController(ServiceName.of("serviceOne"), startFuture);
 
         assertEquals(ServiceController.State.UP, startController.getState());
         assertState(serviceContainer, ServiceName.of("serviceTwo"), ServiceController.State.UP);
 
-        final Future<ServiceController<?>> removeFuture = listener.expectServiceRemoval(ServiceName.of("serviceOne"));
+        final Future<ServiceController<?>> removeFutureOne = listener.expectNoServiceRemoval(ServiceName.of("serviceOne"));
+        final Future<ServiceController<?>> removeFutureTwo = listener.expectServiceRemoval(ServiceName.of("serviceTwo"));
 
         serviceContainer.getService(ServiceName.of("serviceTwo")).setMode(ServiceController.Mode.REMOVE);
 
-        final ServiceController<?> removeController = removeFuture.get();
+        ServiceController<?> removeController = removeFutureOne.get();
         assertNull(removeController);
+
+        removeController = removeFutureTwo.get();
+        assertNotNull(removeController);
+        removeController.addListener(listener); // no errors should occur; the operation is ignored
 
         assertNull(serviceContainer.getService(ServiceName.of("serviceTwo")));
         assertNotNull(serviceContainer.getService(ServiceName.of("serviceOne")));

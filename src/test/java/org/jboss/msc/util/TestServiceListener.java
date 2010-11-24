@@ -44,13 +44,22 @@ import java.util.concurrent.TimeoutException;
 public class TestServiceListener extends AbstractServiceListener<Object> {
     private final Map<ServiceName, ServiceFuture> expectedStarts = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedStops = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFutureWithValidation> expectedStopsOnly = new HashMap<ServiceName, ServiceFutureWithValidation>();
     private final Map<ServiceName, ServiceFuture> expectedRemovals = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFailureFuture> expectedFailures = new HashMap<ServiceName, ServiceFailureFuture>();
     private final Map<ServiceName, ServiceFuture> expectedDependencyFailures = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedDependencyRetryings = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedDependencyUninstalls = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedDependencyInstalls = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedListenerAddeds = new HashMap<ServiceName, ServiceFuture>();
 
+    public void listenerAdded(final ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedListenerAddeds.remove(serviceController.getName());
+        if(future != null) {
+            future.setServiceController(serviceController);
+        }
+    }
+    
     public void serviceStarted(final ServiceController<? extends Object> serviceController) {
         final ServiceFuture future = expectedStarts.remove(serviceController.getName());
         if(future != null) {
@@ -60,8 +69,16 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
 
     public void serviceStopped(ServiceController<? extends Object> serviceController) {
         final ServiceFuture future = expectedStops.remove(serviceController.getName());
+        expectedStopsOnly.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
+        }
+    }
+
+    public void serviceStopping(ServiceController<? extends Object> serviceController) {
+        final ServiceFutureWithValidation future = expectedStopsOnly.remove(serviceController.getName());
+        if(future != null) {
+            future.invalidate();
         }
     }
 
@@ -107,6 +124,18 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         }
     }
 
+    public Future<ServiceController<?>> expectListenerAdded(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedListenerAddeds.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectNoListenerAdded(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(200);
+        expectedListenerAddeds.put(serviceName, future);
+        return future;
+    }
+
     public Future<ServiceController<?>> expectServiceStart(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
         expectedStarts.put(serviceName, future);
@@ -119,8 +148,21 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         return future;
     }
 
+    public Future<ServiceController<?>> expectServiceStoppedOnly(final ServiceName serviceName) {
+        final ServiceFutureWithValidation future = new ServiceFutureWithValidation();
+        expectedStops.put(serviceName, future);
+        expectedStopsOnly.put(serviceName, future);
+        return future;
+    }
+
     public Future<ServiceController<?>> expectServiceRemoval(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
+        expectedRemovals.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectNoServiceRemoval(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(200);
         expectedRemovals.put(serviceName, future);
         return future;
     }
@@ -143,7 +185,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         return future;
     }
 
-    public Future<ServiceController<?>> expectDependencyRetrying(final ServiceName serviceName) {
+    public Future<ServiceController<?>> expectDependencyFailureCleared(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
         expectedDependencyRetryings.put(serviceName, future);
         return future;
@@ -161,7 +203,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         return future;
     }
 
-    public Future<ServiceController<?>> expectNoTransitiveDependencyUninstall(final ServiceName serviceName) {
+    public Future<ServiceController<?>> expectNoDependencyUninstall(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture(200);
         expectedDependencyUninstalls.put(serviceName, future);
         return future;
@@ -203,7 +245,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
             try {
                 return get(delay, delayTimeUnit);
             } catch (TimeoutException e) {
-                throw new RuntimeException("Could not get start exception in 30 second timeout.");
+                throw new RuntimeException("Could not get start exception in " + delay + " " + delayTimeUnit + " timeout.");
             }
         }
 
@@ -216,6 +258,24 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         private void setServiceController(final ServiceController<?> serviceController) {
             this.serviceController = serviceController;
             countDownLatch.countDown();
+        }
+    }
+
+    private static class ServiceFutureWithValidation extends ServiceFuture {
+        private boolean valid = true;
+
+        ServiceFutureWithValidation() {
+            super();
+        }
+
+        public void invalidate() {
+            valid = false;
+        }
+
+        @Override
+        public ServiceController<?> get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+            ServiceController<?> result = super.get(timeout, unit);
+            return valid? result: null;
         }
     }
 
