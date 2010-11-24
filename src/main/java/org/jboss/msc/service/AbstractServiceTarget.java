@@ -42,20 +42,20 @@ abstract class AbstractServiceTarget implements ServiceTarget {
 
     @Override
     public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
-        return createServiceBuilder(name, value, false);
+        return createServiceBuilder(name, value);
     }
 
-    private <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value, final boolean ifNotExist) throws IllegalArgumentException {
+    private <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
         validateTargetState();
-        if (hasService(name) && ! ifNotExist) {
+        if (hasService(name)) {
             throw new IllegalArgumentException("Service named " + name + " is already defined in this batch");
         }
-        return new ServiceBuilderImpl<T>(this, value, name, ifNotExist);
+        return new ServiceBuilderImpl<T>(this, value, name);
     }
 
     @Override
     public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
-        return createServiceBuilder(name, new ImmediateValue<Service<T>>(service), false);
+        return createServiceBuilder(name, new ImmediateValue<Service<T>>(service));
     }
 
     @Override

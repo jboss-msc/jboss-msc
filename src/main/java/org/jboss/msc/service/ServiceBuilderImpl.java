@@ -46,7 +46,6 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     private final AbstractServiceTarget serviceTarget;
     private final Value<? extends Service<T>> serviceValue;
     private final ServiceName serviceName;
-    private final boolean ifNotExist;
     private Location location;
     private ServiceController.Mode initialMode;
     private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
@@ -82,14 +81,13 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         }
     }
 
-    ServiceBuilderImpl(AbstractServiceTarget serviceTarget, final Value<? extends Service<T>> serviceValue, final ServiceName serviceName, final boolean ifNotExist) {
+    ServiceBuilderImpl(AbstractServiceTarget serviceTarget, final Value<? extends Service<T>> serviceValue, final ServiceName serviceName) {
         if(serviceTarget == null) throw new IllegalArgumentException("ServiceTarget can not be null");
         this.serviceTarget = serviceTarget;
         if(serviceValue == null) throw new IllegalArgumentException("ServiceValue can not be null");
         this.serviceValue = serviceValue;
         if(serviceName == null) throw new IllegalArgumentException("ServiceName can not be null");
         this.serviceName = serviceName;
-        this.ifNotExist = ifNotExist;
     }
 
     @Override
@@ -320,10 +318,6 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     Location getLocation() {
         return location;
-    }
-
-    boolean isIfNotExist() {
-        return ifNotExist;
     }
 
     ServiceTarget getTarget() {
