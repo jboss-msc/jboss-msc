@@ -33,6 +33,7 @@ import java.util.concurrent.Future;
 import org.jboss.msc.inject.FieldInjector;
 import org.jboss.msc.inject.SetMethodInjector;
 import org.jboss.msc.service.ServiceController.Mode;
+import org.jboss.msc.service.ServiceController.State;
 import org.jboss.msc.util.TestServiceListener;
 import org.jboss.msc.value.LookupFieldValue;
 import org.jboss.msc.value.Value;
@@ -96,6 +97,11 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         assertSame(serviceB, serviceA.serviceB);
         assertSame(serviceC, serviceA.serviceC);
 
+        final Future<ServiceController<?>> fooStart = testListener.expectServiceStart(fooServiceName);
+        serviceContainer.addService(fooServiceName, Service.NULL).addDependency(serviceNameB)
+            .addListener(testListener).install();
+        ServiceController<?> fooController = assertController(fooServiceName, fooStart);
+
         final Future<ServiceController<?>> serviceAStop = testListener.expectServiceStop(serviceNameA);
         serviceAController.setMode(Mode.NEVER);
         assertController(serviceAController, serviceAStop);
@@ -105,8 +111,15 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         assertNull(serviceA.serviceB);
         assertNull(serviceA.serviceC);
 
-        final Future<ServiceController<?>> serviceBStop = testListener.expectServiceStop(serviceNameB);
         serviceBController.setMode(Mode.ON_DEMAND);
+        // b doesn't go down, as there is still a dependent running (foo service)
+        assertSame(State.UP, serviceBController.getState());
+
+        final Future<ServiceController<?>> fooServiceStop = testListener.expectServiceStop(fooServiceName);
+        final Future<ServiceController<?>> serviceBStop = testListener.expectServiceStop(serviceNameB);
+        // now b can go down
+        fooController.setMode(Mode.NEVER);
+        assertController(fooController, fooServiceStop);
         assertController(serviceBController, serviceBStop);
         try {
             serviceBController.getValue();
@@ -130,7 +143,7 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
             .addInjection(new SetMethodInjector<SomeService>(Values.immediateValue(serviceD), ServiceD.class,"setSomeService", SomeService.class), serviceC)
             .addListener(testListener)
             .install();
-        assertNotNull(serviceDStart.get());
+        assertController(serviceNameD, serviceDStart);
         assertSame(serviceC, serviceD.service);
 
         // install serviceE as foo service, with service D injected in it, and with the listener below
@@ -299,6 +312,78 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         assertNull(serviceE.serviceD);
     }
 
+    @Test
+    public void test4() throws Exception {
+        final TestServiceListener testListener = new TestServiceListener();
+        final ServiceA serviceA = new ServiceA();
+        final ServiceB serviceB = new ServiceB();
+        final ServiceBWrapper serviceBWrapper = new ServiceBWrapper();
+        final ServiceC serviceC = new ServiceC();
+        final ServiceD serviceD = new ServiceD();
+
+        final Future<ServiceController<?>> serviceDStart = testListener.expectServiceStart(serviceNameD);
+        serviceContainer.addService(serviceNameD, serviceD)
+            .addInjection(new SetMethodInjector<SomeService>(Values.immediateValue(serviceD), ServiceD.class,"setSomeService", SomeService.class), serviceC)
+            .addListener(testListener)
+            .install();
+        final ServiceController<?> serviceDController = assertController(serviceNameD, serviceDStart);
+        assertSame(serviceD, serviceDController.getValue());
+        assertSame(serviceC, serviceD.service);
+
+        final Future<ServiceController<?>> serviceBStart = testListener.expectServiceStart(serviceNameB);
+        serviceContainer.addService(serviceNameB, serviceBWrapper)
+        .addInjection(
+                new SetMethodInjector<ServiceB>(serviceBWrapper, ServiceBWrapper.class, "setValue", ServiceB.class), serviceB)
+                .addListener(testListener)
+        .install();
+        final ServiceController<?> serviceBController = assertController(serviceNameB, serviceBStart);
+        assertSame(serviceB, serviceBController.getValue());
+
+        final Value<ServiceA> serviceAValue = Values.immediateValue(serviceA);
+        final Future<StartException> serviceAFailure = testListener.expectServiceFailure(serviceNameA);
+        serviceContainer.addService(serviceNameA, serviceA).addInjection(new FieldInjector<String>(serviceAValue,
+                new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "description")), "serviceA")
+                .addInjection(new FieldInjector<Integer>(serviceAValue,
+                        new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "initialParameter")), 2215)
+                .addDependency(serviceNameB,
+                        new FieldInjector<Object>(serviceAValue, new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "serviceB")))
+                .addDependency(serviceNameD, 
+                new SetMethodInjector<Object>(Values.immediateValue(serviceA), ServiceA.class, "setServiceD", ServiceD.class))
+                // wrong field!
+                .addInjection(new FieldInjector<Integer>(serviceAValue,
+                        new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "initialParametER")), 2215)
+                .addListener(testListener)
+                        .install();
+        final ServiceController<?> serviceAController = assertFailure(serviceNameA, serviceAFailure);
+        assertSame(serviceA, serviceAController.getValue()); 
+        assertNull(serviceA.description);
+        assertEquals(2215, serviceA.initialParameter);
+        assertNull(serviceA.serviceB);
+        assertNull(serviceA.serviceC);
+    }
+
+    @Test
+    public void test5() throws Exception {
+        final TestServiceListener testListener = new TestServiceListener();
+        final ServiceC serviceC = new ServiceC();
+        final ServiceD serviceD = new ServiceD(true);
+
+        // install service D, with service C injected
+        final Future<ServiceController<?>> serviceDStart = testListener.expectServiceStart(serviceNameD);
+        serviceContainer.addService(serviceNameD, serviceD)
+            .addInjection(new SetMethodInjector<SomeService>(Values.immediateValue(serviceD), ServiceD.class,"setSomeService", SomeService.class), serviceC)
+            .addListener(testListener)
+            .install();
+        ServiceController<?> serviceDController = assertController(serviceNameD, serviceDStart);
+        assertSame(serviceC, serviceD.service);
+
+        // serviceD stop will fail, but this will be ignored
+        final Future<ServiceController<?>> serviceDStop = testListener.expectServiceStop(serviceNameD);
+        serviceDController.setMode(Mode.NEVER);
+        assertController(serviceDController, serviceDStop);
+        assertNull(serviceD.service);
+    }
+
     public static class ServiceA implements Service<ServiceA> {
         public String description;
         public int initialParameter;
@@ -376,6 +461,13 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
 
     public static class ServiceD implements Service<ServiceD> {
         private SomeService service;
+        private boolean failToStop = false;
+
+        public ServiceD() {}
+
+        public ServiceD(boolean failToStop) {
+            this.failToStop = failToStop;
+        }
 
         /**
          * @param serviceC the serviceC to set
@@ -400,7 +492,11 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         public void start(StartContext context) throws StartException {}
 
         @Override
-        public void stop(StopContext context) {}
+        public void stop(StopContext context) {
+            if (failToStop) {
+                throw new RuntimeException();
+            }
+        }
     }
 
     public static class ServiceE implements Service<Void> {

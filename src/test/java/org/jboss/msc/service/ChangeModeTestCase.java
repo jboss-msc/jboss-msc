@@ -22,7 +22,9 @@
 
 package org.jboss.msc.service;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.concurrent.Future;
@@ -51,13 +53,13 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     private ServiceController<?> getRemovedFirstController() throws Exception {
         final ServiceController<?> firstController = getNeverModeFirstController();
         final Future<ServiceController<?>> firstServiceRemoval = testListener.expectServiceRemoval(firstServiceName);
-        firstController.setMode(Mode.REMOVE);
+        assertTrue(firstController.compareAndSetMode(Mode.NEVER, Mode.REMOVE));
         assertController(firstController, firstServiceRemoval);
         return firstController;
     }
 
     /**
-     * changes the mode of {@code serviceController} to {@code newMode} and asserts that it fails with an
+     * Changes the mode of {@code serviceController} to {@code newMode} and asserts that it fails with an
      * {@code IllegalStateException}.
      * 
      * @param serviceController the serviceController whose mode will be changed
@@ -67,8 +69,45 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         try
         {
             serviceController.setMode(newMode);
-            fail("Exception should be thrown by setMode(Mode.NEVER)");
+            fail("Exception should be thrown by setMode(" + newMode + ")");
         } catch (IllegalStateException e) {}
+    }
+
+    /**
+     * Changes the mode of {@code serviceController} to {@code null} and asserts that it fails with an
+     * {@code IllegalArgumentException}. The change of mode is made in two ways: first with a call to
+     * {@link ServiceController#setMode(Mode) setMode}, then with a call to
+     * {@link ServiceController#compareAndSetMode(Mode, Mode) compareAndSetMode}. Next, the test is performed with a
+     * an {@link Mode#ACTIVE ACTIVE} new mode, but a {@code null} expected mode, which should also throw {@code IllegalArgumentException}. 
+     * Finally, the change is performed with both expected and new modes {@code null}.
+     * 
+     * @param serviceController the serviceController whose mode will be changed
+     */
+    private final void assertChangeModeToNullFails(ServiceController<?> serviceController) throws Exception {
+        try
+        {
+            serviceController.setMode(null);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e) {}
+
+        final Mode currentMode = serviceController.getMode();
+        try
+        {
+            serviceController.compareAndSetMode(currentMode, null);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e) {}
+
+        try
+        {
+            serviceController.compareAndSetMode(null, Mode.ACTIVE);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e) {}
+
+        try
+        {
+            serviceController.compareAndSetMode(null, null);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e) {}
     }
 
     @Test
@@ -106,6 +145,12 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         assertSame(State.REMOVED, firstController.getState());
     }
 
+    @Test
+    public void changeRemoveToNull() throws Exception {
+        final ServiceController<?> firstController = getRemovedFirstController();
+        assertChangeModeToNullFails(firstController);
+    }
+
     /**
      * Installs and returns the controller of a service named {@code firstServiceName}, with initial mode
      * {@link Mode#NEVER NEVER}
@@ -130,7 +175,7 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     @Test
     public void changeNeverToNever() throws Exception {
         final ServiceController<?> firstController = getNeverModeFirstController();
-        firstController.setMode(Mode.NEVER);
+        assertTrue(firstController.compareAndSetMode(Mode.NEVER, Mode.NEVER));
         assertSame(State.DOWN, firstController.getState());
     }
 
@@ -155,6 +200,12 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
         firstController.setMode(Mode.ACTIVE);
         assertController(firstController, firstServiceStart);
+    }
+
+    @Test
+    public void changeNeverToNull() throws Exception {
+        final ServiceController<?> firstController = getNeverModeFirstController();
+        assertChangeModeToNullFails(firstController);
     }
 
     /**
@@ -367,6 +418,24 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         assertSame(State.START_FAILED, secondController.getState());
     }
 
+    @Test
+    public void changeUpOnDemandToNull() throws Exception {
+        final ServiceController<?> secondController = getUpOnDemandSecondController();
+        assertChangeModeToNullFails(secondController);
+    }
+
+    @Test
+    public void changeDownOnDemandToNull() throws Exception {
+        final ServiceController<?> firstController = getDownOnDemandFirstController();
+        assertChangeModeToNullFails(firstController);
+    }
+
+    @Test
+    public void changeFailedToStartOnDemandToNull() throws Exception {
+        final ServiceController<?> secondController = getFailedToStartOnDemandSecondController();
+        assertChangeModeToNullFails(secondController);
+    }
+
     /**
      * Installs and returns the controller of a service named {@code firstServiceName} with initial mode
      * {@link Mode#PASSIVE PASSIVE}, in the {@code State#UP UP} state.
@@ -553,6 +622,24 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         assertSame(State.START_FAILED, secondController.getState());
     }
 
+    @Test
+    public void changeUpPassiveToNull() throws Exception {
+        final ServiceController<?> firstController = getUpPassiveFirstController();
+        assertChangeModeToNullFails(firstController);
+    }
+
+    @Test
+    public void changeDownPassiveToNull() throws Exception {
+        final ServiceController<?> firstController = getDownPassiveFirstController();
+        assertChangeModeToNullFails(firstController);
+    }
+
+    @Test
+    public void changeFailedToStartPassiveToNull() throws Exception {
+        final ServiceController<?> secondController = getFailedToStartPassiveSecondController();
+        assertChangeModeToNullFails(secondController);
+    }
+
     /**
      * Installs and returns the controller of a service named {@code firstServiceName} with initial mode
      * {@link Mode#ACTIVE ACTIVE}, in the {@code State#UP UP} state, as it has
@@ -664,8 +751,9 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     @Test
     public void changeUpActiveToNever() throws Exception {
         final ServiceController<?> firstController = getUpActiveFirstController();
+        assertFalse(firstController.compareAndSetMode(Mode.ON_DEMAND, Mode.NEVER));
         final Future<ServiceController<?>> firstServiceStop = testListener.expectServiceStop(firstServiceName);
-        firstController.setMode(Mode.NEVER);
+        assertTrue(firstController.compareAndSetMode(Mode.ACTIVE, Mode.NEVER));
         assertController(firstController, firstServiceStop);
     }
 
@@ -712,6 +800,8 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     @Test
     public void changeUpActiveToPassive() throws Exception {
         final ServiceController<?> firstController = getUpActiveFirstController();
+        assertFalse(firstController.compareAndSetMode(Mode.PASSIVE, Mode.PASSIVE));
+        assertTrue(firstController.compareAndSetMode(Mode.ACTIVE, Mode.PASSIVE));
         firstController.setMode(Mode.PASSIVE);
         assertSame(State.UP, firstController.getState());
     }
@@ -751,4 +841,21 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         assertSame(State.START_FAILED, secondController.getState());
     }
 
+    @Test
+    public void changeUpActiveToNull() throws Exception {
+        final ServiceController<?> firstController = getUpActiveFirstController();
+        assertChangeModeToNullFails(firstController);
+    }
+
+    @Test
+    public void changeDownActiveToNull() throws Exception {
+        final ServiceController<?> firstController = getDownActiveFirstController();
+        assertChangeModeToNullFails(firstController);
+    }
+
+    @Test
+    public void changeFailedToStartActiveToNull() throws Exception {
+        final ServiceController<?> secondController = getFailedToStartActiveSecondController();
+        assertChangeModeToNullFails(secondController);
+    }
 }

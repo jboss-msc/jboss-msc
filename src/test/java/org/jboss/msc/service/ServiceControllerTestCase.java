@@ -22,14 +22,18 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.util.TestServiceListener;
-import org.junit.Test;
-
-import java.util.concurrent.Future;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+
+import java.util.concurrent.Future;
+
+import org.jboss.msc.service.ServiceController.Mode;
+import org.jboss.msc.service.ServiceController.State;
+import org.jboss.msc.service.util.FailToStartService;
+import org.jboss.msc.util.TestServiceListener;
+import org.junit.Test;
 
 /**
  * Test to verify ServiceController behavior.
@@ -265,6 +269,44 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
         assertEquals(startException, exceptionFuture.get());
         assertState(serviceContainer, ServiceName.of("serviceOne"), ServiceController.State.START_FAILED);
 
+    }
+
+    @Test
+    public void testRetryFailure() throws Exception {
+        final TestServiceListener listener = new TestServiceListener();
+        final Future<StartException> exceptionFuture = listener.expectServiceFailure(ServiceName.of("service", "one"));
+        serviceContainer.addService(ServiceName.of("service", "one"), new FailToStartService(true))
+            .addListener(listener).install();
+        ServiceController<?> serviceController = assertFailure(ServiceName.of("service", "one"), exceptionFuture);
+        ServiceInstanceImpl<?> serviceInstance = (ServiceInstanceImpl<?>) serviceController;
+        
+        final Future<ServiceController<?>> serviceStartFuture = listener.expectServiceStart(ServiceName.of("service", "one"));
+        serviceInstance.retry();
+        assertController(serviceController, serviceStartFuture);
+    }
+
+    @Test
+    public void testRetryNoFailure() throws Exception {
+        final TestServiceListener listener = new TestServiceListener();
+        final Future<ServiceController<?>> serviceStartFuture = listener.expectServiceStart(ServiceName.of("service", "one"));
+        serviceContainer.addService(ServiceName.of("service", "one"), Service.NULL)
+            .addListener(listener).install();
+        ServiceController<?> serviceController = assertController(ServiceName.of("service", "one"), serviceStartFuture);
+        ServiceInstanceImpl<?> serviceInstance = (ServiceInstanceImpl<?>) serviceController;
+        assertSame(State.UP, serviceController.getState());
+
+        // retry request should be ignored should be ignored
+        serviceInstance.retry();
+        assertSame(State.UP, serviceController.getState());
+
+        final Future<ServiceController<?>> serviceStopFuture = listener.expectServiceStop(ServiceName.of("service", "one"));
+        serviceController.setMode(Mode.NEVER);
+        assertController(serviceController, serviceStopFuture);
+        assertSame(State.DOWN, serviceController.getState());
+
+        // again, retry request should be ignored
+        serviceInstance.retry();
+        assertSame(State.DOWN, serviceController.getState());
     }
 
     private static void assertState(final ServiceContainer serviceContainer, final ServiceName serviceName, final ServiceController.State state) {

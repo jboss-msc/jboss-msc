@@ -22,6 +22,8 @@
 
 package org.jboss.msc.service;
 
+import static org.junit.Assert.fail;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.Future;
@@ -65,6 +67,14 @@ public abstract class AbstractDelegatingServiceTargetTest extends AbstractServic
         serviceTarget.addListener(testListener);
         serviceTarget.addServiceValue(serviceName, Values.immediateValue(Service.NULL)).install();
         assertController(serviceName, serviceStart);
+    }
+
+    @Test
+    public void addNullServiceValue() throws Exception {
+        try {
+            serviceTarget.addServiceValue(serviceName, null);
+            fail ("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e) {}
     }
 
     @Test

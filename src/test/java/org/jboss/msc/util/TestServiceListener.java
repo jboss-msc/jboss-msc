@@ -44,6 +44,7 @@ import java.util.concurrent.TimeoutException;
 public class TestServiceListener extends AbstractServiceListener<Object> {
     private final Map<ServiceName, ServiceFuture> expectedStarts = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedStops = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedStoppings = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFutureWithValidation> expectedStopsOnly = new HashMap<ServiceName, ServiceFutureWithValidation>();
     private final Map<ServiceName, ServiceFuture> expectedRemovals = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFailureFuture> expectedFailures = new HashMap<ServiceName, ServiceFailureFuture>();
@@ -76,9 +77,15 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     }
 
     public void serviceStopping(ServiceController<? extends Object> serviceController) {
-        final ServiceFutureWithValidation future = expectedStopsOnly.remove(serviceController.getName());
-        if(future != null) {
-            future.invalidate();
+        final ServiceFutureWithValidation invalidFuture = expectedStopsOnly.remove(serviceController.getName());
+        if(invalidFuture != null) {
+            invalidFuture.invalidate();
+        }
+        else {
+            final ServiceFuture future = expectedStoppings.remove(serviceController.getName());
+            if (future != null) {
+                future.setServiceController(serviceController);
+            }
         }
     }
 
@@ -142,8 +149,20 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         return future;
     }
 
+    public Future<ServiceController<?>> expectNoServiceStart(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(200);
+        expectedStarts.put(serviceName, future);
+        return future;
+    }
+
     public Future<ServiceController<?>> expectServiceStop(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
+        expectedStops.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectNoServiceStop(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(200);
         expectedStops.put(serviceName, future);
         return future;
     }
@@ -152,6 +171,18 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         final ServiceFutureWithValidation future = new ServiceFutureWithValidation();
         expectedStops.put(serviceName, future);
         expectedStopsOnly.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectServiceStopping(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedStoppings.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectNoServiceStopping(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(200);
+        expectedStoppings.put(serviceName, future);
         return future;
     }
 
