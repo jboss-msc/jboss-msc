@@ -59,10 +59,51 @@ public final class FieldInjector<T> implements Injector<T> {
 
     /** {@inheritDoc} */
     public void uninject() {
+         
         try {
-            fieldValue.getValue().set(target.getValue(), null);
+            Field field = fieldValue.getValue();
+            Class<?> fieldType = field.getType();
+            Object targetValue = target.getValue();
+            if (fieldType.isPrimitive()) {
+                uninjectPrimitive(field, fieldType, targetValue);
+            }
+            fieldValue.getValue().set(targetValue, null);
         } catch (Throwable throwable) {
             InjectorLogger.INSTANCE.uninjectFailed(throwable, fieldValue);
+        }
+    }
+
+    private final void uninjectPrimitive(Field field, Class<?> fieldType, Object targetValue)
+        throws IllegalArgumentException, IllegalAccessException {
+        
+        switch(fieldType.getName().toString().charAt(0)) {
+            case 'b':
+                if (fieldType == byte.class) {
+                    field.setByte(targetValue, (byte) 0);
+                } else { // fieldType is boolean.class
+                    field.setBoolean(targetValue, false);
+                }
+                break;
+            case 'c': // char
+                field.setChar(targetValue, '\u0000');
+                break;
+            case 'd':// double
+                field.setDouble(targetValue, 0.0);
+                break;
+            case 'f':// float
+                field.setFloat(targetValue, 0.0f);
+                break;
+            case 'i':// int
+                field.setInt(targetValue, 0);
+                break;
+            case 'l':// long
+                field.setLong(targetValue, 0l);
+                break;
+            case 's':// short
+                field.setShort(targetValue, (short) 0);
+                break;
+            default:
+                throw new IllegalStateException("Unexpected field primitive type " + fieldType.getName());
         }
     }
 }

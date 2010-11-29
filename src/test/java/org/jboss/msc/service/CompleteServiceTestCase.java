@@ -107,7 +107,7 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         assertController(serviceAController, serviceAStop);
         assertSame(serviceA, serviceAController.getValue());
         assertNull(serviceA.description);
-        assertEquals(2215, serviceA.initialParameter);;
+        assertEquals(0, serviceA.initialParameter);;
         assertNull(serviceA.serviceB);
         assertNull(serviceA.serviceC);
 
@@ -289,7 +289,7 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         assertController(serviceControllerB, serviceBStop);
         assertSame(serviceA, serviceControllerA.getValue());
         assertNull(serviceA.description);
-        assertEquals(137, serviceA.initialParameter);
+        assertEquals(0, serviceA.initialParameter);
         assertNull(serviceA.serviceB);
         assertNull(serviceA.serviceC);
 
@@ -357,7 +357,7 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         final ServiceController<?> serviceAController = assertFailure(serviceNameA, serviceAFailure);
         assertSame(serviceA, serviceAController.getValue()); 
         assertNull(serviceA.description);
-        assertEquals(2215, serviceA.initialParameter);
+        assertEquals(0, serviceA.initialParameter);
         assertNull(serviceA.serviceB);
         assertNull(serviceA.serviceC);
     }

@@ -24,6 +24,7 @@ package org.jboss.msc.inject;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -61,7 +62,55 @@ public class FieldInjectorTestCase {
     }
 
     @Test
-    public void primitiveFieldInjection() throws Exception {
+    public void byteFieldInjection() throws Exception {
+        final Field field = AnyService.class.getField("byteCount");
+        final AnyService anyService = new AnyService();
+        final Injector<Byte> injector = new FieldInjector<Byte>(Values.immediateValue(anyService),
+                Values.immediateValue(field));
+        assertEquals(0, anyService.byteCount);
+        injector.inject((byte) 9);
+        assertEquals((byte) 9, anyService.byteCount);
+        injector.inject((byte) 21);
+        assertEquals(21, anyService.byteCount);
+        injector.uninject();
+        assertEquals(0, anyService.byteCount);
+        injector.inject((byte) 56);
+        assertEquals(56, anyService.byteCount);
+        injector.inject((byte) 0);
+        assertEquals(0, anyService.byteCount);
+        try {
+            injector.inject(null);
+            fail("Injection Exception expected");
+        } catch (InjectionException e) {}
+        assertEquals(0, anyService.byteCount);
+    }
+
+    @Test
+    public void shortFieldInjection() throws Exception {
+        final Field field = AnyService.class.getField("shortCount");
+        final AnyService anyService = new AnyService();
+        final Injector<Short> injector = new FieldInjector<Short>(Values.immediateValue(anyService),
+                Values.immediateValue(field));
+        assertEquals(0, anyService.shortCount);
+        injector.inject((short) 5);
+        assertEquals((short) 5, anyService.shortCount);
+        injector.inject((short) 275);
+        assertEquals(275, anyService.shortCount);
+        injector.uninject();
+        assertEquals(0, anyService.shortCount);
+        injector.inject((short) 54);
+        assertEquals(54, anyService.shortCount);
+        injector.inject((short) 0);
+        assertEquals(0, anyService.shortCount);
+        try {
+            injector.inject(null);
+            fail("Injection Exception expected");
+        } catch (InjectionException e) {}
+        assertEquals(0, anyService.shortCount);
+    }
+
+    @Test
+    public void intFieldInjection() throws Exception {
         final Field field = AnyService.class.getField("count");
         final AnyService anyService = new AnyService();
         final Injector<Integer> injector = new FieldInjector<Integer>(Values.immediateValue(anyService),
@@ -72,7 +121,7 @@ public class FieldInjectorTestCase {
         injector.inject(27506);
         assertEquals(27506, anyService.count);
         injector.uninject();
-        assertEquals(27506, anyService.count);
+        assertEquals(0, anyService.count);
         injector.inject(54112);
         assertEquals(54112, anyService.count);
         injector.inject(0);
@@ -82,6 +131,133 @@ public class FieldInjectorTestCase {
             fail("Injection Exception expected");
         } catch (InjectionException e) {}
         assertEquals(0, anyService.count);
+    }
+
+    @Test
+    public void longFieldInjection() throws Exception {
+        final Field field = AnyService.class.getField("longCount");
+        final AnyService anyService = new AnyService();
+        final Injector<Long> injector = new FieldInjector<Long>(Values.immediateValue(anyService),
+                Values.immediateValue(field));
+        assertEquals(0, anyService.longCount);
+        injector.inject(5411301345l);
+        assertEquals(5411301345l, anyService.longCount);
+        injector.inject(27506l);
+        assertEquals(27506l, anyService.longCount);
+        injector.uninject();
+        assertEquals(0, anyService.longCount);
+        injector.inject(1000354112l);
+        assertEquals(1000354112l, anyService.longCount);
+        injector.inject(0l);
+        assertEquals(0l, anyService.longCount);
+        try {
+            injector.inject(null);
+            fail("Injection Exception expected");
+        } catch (InjectionException e) {}
+        assertEquals(0, anyService.longCount);
+    }
+
+    @Test
+    public void floatFieldInjection() throws Exception {
+        final Field field = AnyService.class.getField("floatStatus");
+        final AnyService anyService = new AnyService();
+        final Injector<Float> injector = new FieldInjector<Float>(Values.immediateValue(anyService),
+                Values.immediateValue(field));
+        assertTrue(anyService.floatStatus < 0.0001 && anyService.floatStatus > -0.0001);
+        injector.inject(54113.0f);
+        float diff = 54113.0f -anyService.floatStatus;
+        assertTrue(diff < 0.0001 && diff > -0.0001);
+        injector.inject(275.06f);
+        diff = 275.06f - anyService.floatStatus;
+        assertTrue(diff < 0.0001 && diff > -0.0001);
+        injector.uninject();
+        assertTrue(anyService.floatStatus < 0.0001 && anyService.floatStatus > -0.0001);
+        injector.inject(54.112f);
+        diff = 54.112f - anyService.floatStatus;
+        assertTrue(diff < 0.0001 && diff > -0.0001);
+        injector.inject(0f);
+        assertTrue(anyService.floatStatus < 0.0001 && anyService.floatStatus > -0.0001);
+        try {
+            injector.inject(null);
+            fail("Injection Exception expected");
+        } catch (InjectionException e) {}
+        assertTrue(anyService.floatStatus < 0.0001 && anyService.floatStatus > -0.0001);
+    }
+
+    @Test
+    public void doubleFieldInjection() throws Exception {
+        final Field field = AnyService.class.getField("doubleStatus");
+        final AnyService anyService = new AnyService();
+        final Injector<Double> injector = new FieldInjector<Double>(Values.immediateValue(anyService),
+                Values.immediateValue(field));
+        assertTrue(anyService.doubleStatus < 0.0001 && anyService.doubleStatus > -0.0001);
+        injector.inject(54113.01345);
+        double diff = 54113.01345 - anyService.doubleStatus;
+        assertTrue(diff < 0.0001 && diff > -0.0001);
+        injector.inject(27506.0);
+        diff = 27506 - anyService.doubleStatus;
+        assertTrue(diff < 0.0001 && diff > -0.0001);
+        injector.uninject();
+        assertTrue(anyService.doubleStatus < 0.0001 && anyService.doubleStatus > -0.0001);
+        injector.inject(10000000354.112);
+        diff = 10000000354.112 - anyService.doubleStatus;
+        assertTrue(diff < 0.0001 && diff > -0.0001);
+        injector.inject(0.0);
+        assertTrue(anyService.doubleStatus < 0.0001 && anyService.doubleStatus > -0.0001);
+        try {
+            injector.inject(null);
+            fail("Injection Exception expected");
+        } catch (InjectionException e) {}
+        assertTrue(anyService.doubleStatus < 0.0001 && anyService.doubleStatus > -0.0001);
+    }
+
+    @Test
+    public void charFieldInjection() throws Exception {
+        final Field field = AnyService.class.getField("charStatus");
+        final AnyService anyService = new AnyService();
+        final Injector<Character> injector = new FieldInjector<Character>(Values.immediateValue(anyService),
+                Values.immediateValue(field));
+        assertEquals('\u0000', anyService.charStatus);
+        injector.inject('m');
+        assertEquals('m', anyService.charStatus);
+        injector.inject('s');
+        assertEquals('s', anyService.charStatus);
+        injector.uninject();
+        assertEquals('\u0000', anyService.charStatus);
+        injector.inject('c');
+        assertEquals('c', anyService.charStatus);
+        injector.inject('\u0000');
+        assertEquals('\u0000', anyService.charStatus);
+        try {
+            injector.inject(null);
+            fail("Injection Exception expected");
+        } catch (InjectionException e) {}
+        assertEquals('\u0000', anyService.charStatus);
+    }
+
+    @Test
+    public void arrayFieldInjection() throws Exception {
+        final Field field = AnyService.class.getField("allCounts");
+        final AnyService anyService = new AnyService();
+        final Injector<byte[]> injector = new FieldInjector<byte[]>(Values.immediateValue(anyService),
+                Values.immediateValue(field));
+        assertNull(anyService.allCounts);
+        injector.inject(new byte[0]);
+        assertNotNull(anyService.allCounts);
+        assertEquals(0, anyService.allCounts.length);
+        injector.inject(new byte[] { (byte) 1, (byte) 2, (byte) 3});
+        assertNotNull(anyService.allCounts);
+        assertEquals((byte)1, anyService.allCounts[0]);
+        assertEquals((byte)2, anyService.allCounts[1]);
+        assertEquals((byte)3, anyService.allCounts[2]);
+        injector.uninject();
+        assertNull(anyService.allCounts);
+        injector.inject(new byte[] { (byte) 2, (byte) 3});
+        assertNotNull(anyService.allCounts);
+        assertEquals((byte)2, anyService.allCounts[0]);
+        assertEquals((byte)3, anyService.allCounts[1]);
+        injector.inject(null);
+        assertNull(anyService.allCounts);
     }
 
     @Test
@@ -99,7 +275,7 @@ public class FieldInjectorTestCase {
         injector.inject(true);
         assertTrue(AnyService.disableAll);
         injector.uninject();
-        assertTrue(AnyService.disableAll);
+        assertFalse(AnyService.disableAll);
         injector.inject(false);
         assertFalse(AnyService.disableAll);
     }
@@ -121,7 +297,7 @@ public class FieldInjectorTestCase {
         injector.inject(75);
         assertEquals(75, field.get(anyService));
         injector.uninject();
-        assertEquals(75, field.get(anyService));
+        assertEquals(0, field.get(anyService));
         injector.inject(77);
         assertEquals(77, field.get(anyService));
     }

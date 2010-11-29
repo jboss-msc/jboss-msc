@@ -32,7 +32,15 @@ public class AnyService {
     public enum TaskType {MAIN, SECONDARY, NON_IMPORTANT, PRIVATE_DAEMON, PRIVATE};
 
     public static boolean disableAll;
+    public byte[] allCounts;
     public int count;
+    public byte byteCount;
+    public long longCount;
+    public short shortCount;
+    public double doubleStatus;
+    public float floatStatus;
+    public char charStatus;
+
     public String description;
     @SuppressWarnings("unused")
     private int sum;
