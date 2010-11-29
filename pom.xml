@@ -41,6 +41,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.target>1.6</maven.compiler.target>
         <maven.compiler.source>1.6</maven.compiler.source>
+        <byteman-version>1.4.1</byteman-version>
     </properties>
 
     <dependencies>
@@ -98,6 +99,18 @@
             <version>4.7</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.jboss.test</groupId>
+            <artifactId>jboss-test</artifactId>
+            <version>1.1.9.GA</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.byteman</groupId>
+            <artifactId>byteman</artifactId>
+            <version>1.4.1</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -137,6 +150,7 @@
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <skip>true</skip>
                     <systemProperties>
                         <property>
                             <name>jboss.msc.profile.output</name>
@@ -147,13 +161,34 @@
                             <value>org.jboss.logmanager.LogManager</value>
                         </property>
                     </systemProperties>
-                    <includes>
-                        <include>**/*TestCase.java</include>
-                    </includes>
-                    <excludes>
-                        <exclude>org/jboss/msc/bench/*.java</exclude>
-                    </excludes>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>all</id>
+                        <goals><goal>test</goal></goals>
+                        <configuration>
+                            <skip>false</skip>
+                            <includes>
+                                <include>**/*TestCase.java</include>
+                            </includes>
+                            <excludes>
+                                <exclude>org/jboss/msc/bench/*.java</exclude>
+                                <exclude>org/jboss/msc/racecondition/*.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>race-condition-tests</id>
+                        <goals><goal>test</goal></goals>
+                        <configuration>
+                            <skip>false</skip>
+                            <argLine>-javaagent:${settings.localRepository}/org/jboss/byteman/byteman/${byteman-version}/byteman-${byteman-version}.jar=script:${project.build.testOutputDirectory}/org/jboss/msc/racecondition/StopRequestedToUpTransitionTestCase.txt</argLine>
+                            <includes>
+                                <include>org/jboss/msc/racecondition/StopRequestedToUpTransitionTestCase.java</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <artifactId>maven-javadoc-plugin</artifactId>
