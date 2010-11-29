@@ -409,11 +409,21 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
     }
 
     public void setMode(final ServiceController.Mode newMode) {
+        internalSetMode(null, newMode);
+    }
+
+    private final boolean internalSetMode(final ServiceController.Mode expectedMode, final ServiceController.Mode newMode) {
         assert !lockHeld();
+        if (newMode == null) {
+            throw new IllegalArgumentException("newMode is null");
+        }
         Runnable[] bootTasks = null;
         final Runnable[] tasks;
         Runnable specialTask = null;
         synchronized (this) {
+            if (expectedMode != null && expectedMode != mode) {
+                return false;
+            }
             final Substate oldState = state;
             if (oldState == Substate.NEW) {
                 state = Substate.DOWN;
@@ -537,6 +547,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         }
         doExecute(tasks);
         doExecute(specialTask);
+        return true;
     }
 
     Dependency[] getDependencyLinks() {
@@ -839,18 +850,11 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         }
     }
 
-    public boolean compareAndSetMode(final Mode expected, final Mode newMode) {
-        if (newMode == null) {
-            throw new IllegalArgumentException("newMode is null");
+    public boolean compareAndSetMode(final Mode expectedMode, final Mode newMode) {
+        if (expectedMode == null) {
+            throw new IllegalArgumentException("expectedMode is null");
         }
-        synchronized (this) {
-            if (mode == expected) {
-                mode = newMode;
-                return true;
-            } else {
-                return false;
-            }
-        }
+        return internalSetMode(expectedMode, newMode);
     }
 
     private static enum ListenerNotification {
