@@ -56,12 +56,12 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     static final class Dependency {
         private final ServiceName name;
-        private boolean optional;
+        private DependencyType dependencyType;
         private List<Injector<Object>> injectorList = new ArrayList<Injector<Object>>(0);
 
-        Dependency(final ServiceName name, final boolean optional) {
+        Dependency(final ServiceName name, final DependencyType dependencyType) {
             this.name = name;
-            this.optional = optional;
+            this.dependencyType = dependencyType;
         }
 
         ServiceName getName() {
@@ -72,12 +72,12 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
             return injectorList;
         }
 
-        boolean isOptional() {
-            return optional;
+        DependencyType getDependencyType() {
+            return dependencyType;
         }
 
-        void setOptional(final boolean optional) {
-            this.optional = optional;
+        void setDependencyType(final DependencyType dependencyType) {
+            this.dependencyType = dependencyType;
         }
     }
 
@@ -125,47 +125,51 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     @Override
     public ServiceBuilder<T> addDependencies(final ServiceName... newDependencies) {
-        return addDependencies(false, newDependencies);
+        return addDependencies(DependencyType.REQUIRED, newDependencies);
     }
 
     @Override
-    public ServiceBuilder<T> addOptionalDependencies(final ServiceName... newDependencies) {
-        return addDependencies(true, newDependencies);
-    }
-
-    private ServiceBuilder<T> addDependencies(final boolean optional, final ServiceName... newDependencies) {
+    public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final ServiceName... newDependencies) {
         checkAlreadyInstalled();
         for (ServiceName dependency : newDependencies) {
             if(!serviceName.equals(dependency)) {
-                doAddDependency(dependency, optional);
+                doAddDependency(dependency, dependencyType);
             }
         }
         return this;
     }
 
     @Override
-    public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> newDependencies) {
-        return addDependencies(newDependencies, false);
-    }
-
-    ServiceBuilder<T> addDependenciesNoCheck(final Iterable<ServiceName> newDependencies) {
-        return addDependenciesNoCheck(newDependencies, false);
+    @Deprecated
+    public ServiceBuilder<T> addOptionalDependencies(final ServiceName... newDependencies) {
+        return addDependencies(DependencyType.OPTIONAL, newDependencies);
     }
 
     @Override
+    public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> newDependencies) {
+        return addDependencies(DependencyType.REQUIRED, newDependencies);
+    }
+
+    ServiceBuilder<T> addDependenciesNoCheck(final Iterable<ServiceName> newDependencies) {
+        return addDependenciesNoCheck(newDependencies, DependencyType.REQUIRED);
+    }
+
+    @Override
+    @Deprecated
     public ServiceBuilder<T> addOptionalDependencies(final Iterable<ServiceName> newDependencies) {
-        return addDependencies(newDependencies, true);
+        return addDependencies(DependencyType.OPTIONAL, newDependencies);
     }
 
-    private ServiceBuilder<T> addDependencies(final Iterable<ServiceName> newDependencies, final boolean optional) {
+    @Override
+    public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final Iterable<ServiceName> newDependencies) {
         checkAlreadyInstalled();
-        return addDependenciesNoCheck(newDependencies, optional);
+        return addDependenciesNoCheck(newDependencies, dependencyType);
     }
 
-    ServiceBuilder<T> addDependenciesNoCheck(final Iterable<ServiceName> newDependencies, final boolean optional) {
+    ServiceBuilder<T> addDependenciesNoCheck(final Iterable<ServiceName> newDependencies, final DependencyType dependencyType) {
         for (ServiceName dependency : newDependencies) {
             if(!serviceName.equals(dependency)) {
-                doAddDependency(dependency, optional);
+                doAddDependency(dependency, dependencyType);
             }
         }
         return this;
@@ -173,61 +177,67 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     @Override
     public ServiceBuilder<T> addDependency(final ServiceName dependency) {
-        return addDependency(dependency, false);
+        return addDependency(DependencyType.REQUIRED, dependency);
     }
 
     @Override
+    @Deprecated
     public ServiceBuilder<T> addOptionalDependency(final ServiceName dependency) {
-        return addDependency(dependency, true);
+        return addDependency(DependencyType.OPTIONAL, dependency);
     }
 
-    private ServiceBuilder<T> addDependency(final ServiceName dependency, final boolean optional) {
+    @Override
+    public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency) {
         checkAlreadyInstalled();
         if(!serviceName.equals(dependency)) {
-            doAddDependency(dependency, optional);
+            doAddDependency(dependency, dependencyType);
         }
         return this;
     }
 
     @Override
     public ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
-        return addDependency(dependency, target, false);
+        return addDependency(DependencyType.REQUIRED, dependency, target);
     }
 
     @Override
+    @Deprecated
     public ServiceBuilder<T> addOptionalDependency(final ServiceName dependency, final Injector<Object> target) {
-        return addDependency(dependency, target, true);
+        return addDependency(DependencyType.OPTIONAL, dependency, target);
     }
 
-    private ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target, boolean optional) {
+    @Override
+    public ServiceBuilder<T> addDependency(DependencyType dependencyType, final ServiceName dependency, final Injector<Object> target) {
         checkAlreadyInstalled();
-        doAddDependency(dependency, optional).getInjectorList().add(target);
+        doAddDependency(dependency, dependencyType).getInjectorList().add(target);
         return this;
     }
 
     @Override
     public <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
-        return addDependency(dependency, type, target, false);
+        return addDependency(DependencyType.REQUIRED, dependency, type, target);
     }
 
     @Override
+    @Deprecated
     public <I> ServiceBuilder<T> addOptionalDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
-        return addDependency(dependency, type, target, true);
+        return addDependency(DependencyType.OPTIONAL, dependency, type, target);
     }
 
-    private <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target, final boolean optional) {
+    @Override
+    public <I> ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Class<I> type, final Injector<I> target) {
         checkAlreadyInstalled();
-        doAddDependency(dependency, optional).getInjectorList().add(Injectors.cast(target, type));
+        doAddDependency(dependency, dependencyType).getInjectorList().add(Injectors.cast(target, type));
         return this;
     }
 
-    private Dependency doAddDependency(final ServiceName name, final boolean optional) {
+    private Dependency doAddDependency(final ServiceName name, final DependencyType type) {
         final Dependency existing = dependencies.get(name);
         if (existing != null) {
-            if (!optional) existing.setOptional(false);
+            if (type == DependencyType.REQUIRED) existing.setDependencyType(DependencyType.REQUIRED);
             return existing;
         }
-        final Dependency newDep = new Dependency(name, optional);
+        final Dependency newDep = new Dependency(name, type);
         dependencies.put(name, newDep);
         return newDep;
     }
