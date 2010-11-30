@@ -26,7 +26,7 @@ package org.jboss.msc.service;
  * 
  * @author John Bailey
  */
-public class ServiceRegistryException extends Exception {
+public class ServiceRegistryException extends RuntimeException {
 
     private static final long serialVersionUID = -8431095020967798064L;
 
