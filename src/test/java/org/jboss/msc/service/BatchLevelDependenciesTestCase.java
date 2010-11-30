@@ -37,6 +37,7 @@ import java.util.concurrent.Future;
 
 import org.jboss.msc.util.TestServiceListener;
 import org.jboss.msc.value.Values;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -53,7 +54,12 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
     private static final ServiceName secondServiceName = ServiceName.of("secondService");
     private static final ServiceName thirdServiceName = ServiceName.of("thirdService");
     private static final ServiceName fourthServiceName = ServiceName.of("fourthService");
-    private static final TestServiceListener listener = new TestServiceListener();
+    private TestServiceListener listener;
+
+    @Before
+    public void setUpTestListener() {
+        listener = new TestServiceListener();
+    }
 
     @BeforeClass
     public static void initDependenciesField() throws Exception {

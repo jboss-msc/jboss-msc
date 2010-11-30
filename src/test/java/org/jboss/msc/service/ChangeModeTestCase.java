@@ -33,6 +33,7 @@ import org.jboss.msc.service.ServiceController.Mode;
 import org.jboss.msc.service.ServiceController.State;
 import org.jboss.msc.service.util.FailToStartService;
 import org.jboss.msc.util.TestServiceListener;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -44,7 +45,12 @@ public class ChangeModeTestCase extends AbstractServiceTest {
 
     private static final ServiceName firstServiceName = ServiceName.of("firstService");
     private static final ServiceName secondServiceName = ServiceName.of("secondService");
-    private static final TestServiceListener testListener = new TestServiceListener();
+    private TestServiceListener testListener;
+
+    @Before
+    public void setUpTestListener() {
+        testListener = new TestServiceListener();
+    }
 
     /**
      * Installs and removes the controller of a service named {@code firstServiceName}.

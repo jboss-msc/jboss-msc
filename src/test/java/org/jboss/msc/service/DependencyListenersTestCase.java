@@ -31,6 +31,7 @@ import org.jboss.msc.service.ServiceController.Mode;
 import org.jboss.msc.service.ServiceController.State;
 import org.jboss.msc.service.util.FailToStartService;
 import org.jboss.msc.util.TestServiceListener;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -44,13 +45,19 @@ import org.junit.Test;
  */
 public class DependencyListenersTestCase extends AbstractServiceTest {
 
-    private static final TestServiceListener testListener = new TestServiceListener();
     private static final ServiceName firstServiceName = ServiceName.of("firstService");
     private static final ServiceName secondServiceName = ServiceName.of("secondService");
     private static final ServiceName thirdServiceName = ServiceName.of("thirdService");
     private static final ServiceName fourthServiceName = ServiceName.of("fourthService");
     private static final ServiceName fifthServiceName = ServiceName.of("fifthService");
     private static final ServiceName sixthServiceName = ServiceName.of("sixthService");
+
+    private TestServiceListener testListener;
+
+    @Before
+    public void setUpTestListener() {
+        testListener = new TestServiceListener();
+    }
 
     @Test
     public void testMissingDependencies() throws Exception {
