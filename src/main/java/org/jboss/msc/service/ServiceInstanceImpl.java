@@ -412,7 +412,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         internalSetMode(null, newMode);
     }
 
-    private final boolean internalSetMode(final ServiceController.Mode expectedMode, final ServiceController.Mode newMode) {
+    private boolean internalSetMode(final ServiceController.Mode expectedMode, final ServiceController.Mode newMode) {
         assert !lockHeld();
         if (newMode == null) {
             throw new IllegalArgumentException("newMode is null");
@@ -798,7 +798,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
     }
 
     public Location getLocation() {
-        return this.location;
+        return location;
     }
 
     public void addListener(final ServiceListener<? super S> listener) {
