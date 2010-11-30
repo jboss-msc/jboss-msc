@@ -41,7 +41,7 @@ import org.junit.Before;
  */
 public class AbstractServiceTest {
 
-    protected ServiceContainer serviceContainer;
+    protected volatile ServiceContainer serviceContainer;
 
     @Before
     public void setUp() throws Exception {
@@ -51,6 +51,7 @@ public class AbstractServiceTest {
     @After
     public void tearDown() throws Exception {
         serviceContainer.shutdown();
+        serviceContainer = null;
     }
 
     /**

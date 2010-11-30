@@ -964,6 +964,11 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         injection.getTarget().inject(injection.getSource().getValue());
     }
 
+    @Override
+    public String toString() {
+        return String.format("Controller for %s@%x", getName(), Integer.valueOf(hashCode()));
+    }
+
     private class DemandParentsTask implements Runnable {
 
         public void run() {

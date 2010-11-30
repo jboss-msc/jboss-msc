@@ -54,7 +54,6 @@ import org.jboss.msc.inject.Injector;
 import org.jboss.msc.ref.Reaper;
 import org.jboss.msc.ref.Reference;
 import org.jboss.msc.ref.WeakReference;
-import org.jboss.msc.value.ImmediateValue;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -64,6 +63,8 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
 
     private final Lock readLock;
     private final Lock writeLock;
+
+    private static final ServiceName ROOT_NAME = ServiceName.of("root");
 
     static final String PROFILE_OUTPUT;
 
@@ -81,8 +82,6 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     private final long start = System.nanoTime();
 
     private final List<TerminateListener> terminateListeners = new ArrayList<TerminateListener>(1);
-
-    final ServiceInstanceImpl<ServiceContainer> root;
 
     private static final class ExecutorHolder {
         private static final Executor VALUE;
@@ -131,9 +130,14 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                                         listener.countDown();
                                         continue;
                                     }
-                                    final ServiceInstanceImpl<ServiceContainer> root = container.root;
-                                    root.setMode(ServiceController.Mode.REMOVE);
-                                    root.addListener(listener);
+                                    final ServiceInstanceImpl<ServiceContainer> root = (ServiceInstanceImpl<ServiceContainer>) container.getService(ROOT_NAME);
+                                    if (root != null) {
+                                        root.setMode(ServiceController.Mode.REMOVE);
+                                        root.addListener(listener);
+                                    } else {
+                                        listener.countDown();
+                                        continue;
+                                    }
                                 }
                                 set.clear();
                             }
@@ -165,38 +169,6 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         readLock = readWriteLock.readLock();
         writeLock = readWriteLock.writeLock();
         final Set<Reference<ServiceContainerImpl, Void>> set = ShutdownHookHolder.containers;
-        synchronized (set) {
-            // if the shutdown hook was triggered, then no services can ever come up in any new containers.
-            final boolean down = ShutdownHookHolder.down;
-            //noinspection ThisEscapedInObjectConstruction
-            root = new ServiceInstanceImpl<ServiceContainer>(new ImmediateValue<Service<ServiceContainer>>(new Service<ServiceContainer>() {
-                public void start(final StartContext context) throws StartException {
-                }
-
-                public void stop(final StopContext context) {
-                    final Writer profileOutput = ServiceContainerImpl.this.profileOutput;
-                    if (profileOutput != null) {
-                        try {
-                            profileOutput.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-
-                public ServiceContainer getValue() throws IllegalStateException {
-                    return ServiceContainerImpl.this;
-                }
-            }), new ServiceRegistrationImpl(this, ServiceName.of("root")));
-            if (! down) {
-                //noinspection ThisEscapedInObjectConstruction
-                set.add(new WeakReference<ServiceContainerImpl, Void>(this, null, new Reaper<ServiceContainerImpl, Void>() {
-                    public void reap(final Reference<ServiceContainerImpl, Void> reference) {
-                        ShutdownHookHolder.containers.remove(reference);
-                    }
-                }));
-            }
-        }
         Writer profileOutput = null;
         if (PROFILE_OUTPUT != null) {
             try {
@@ -206,6 +178,40 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             }
         }
         this.profileOutput = profileOutput;
+        final boolean down;
+        synchronized (set) {
+            // if the shutdown hook was triggered, then no services can ever come up in any new containers.
+            down = ShutdownHookHolder.down;
+            //noinspection ThisEscapedInObjectConstruction
+            if (! down) {
+                //noinspection ThisEscapedInObjectConstruction
+                set.add(new WeakReference<ServiceContainerImpl, Void>(this, null, new Reaper<ServiceContainerImpl, Void>() {
+                    public void reap(final Reference<ServiceContainerImpl, Void> reference) {
+                        ShutdownHookHolder.containers.remove(reference);
+                    }
+                }));
+            }
+        }
+        if (! down) addService(ROOT_NAME, new Service<ServiceContainer>() {
+            public void start(final StartContext context) throws StartException {
+            }
+
+            public void stop(final StopContext context) {
+                final Writer profileOutput = ServiceContainerImpl.this.profileOutput;
+                if (profileOutput != null) {
+                    try {
+                        profileOutput.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+            public ServiceContainer getValue() throws IllegalStateException {
+                return ServiceContainerImpl.this;
+            }
+        }).install();
+        addDependency(ROOT_NAME);
     }
 
     Writer getProfileOutput() {
@@ -221,7 +227,8 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     }
 
     public void shutdown() {
-        if (root.compareAndSetMode(ServiceController.Mode.ACTIVE, ServiceController.Mode.REMOVE)) {
+        final ServiceController<?> root = getService(ROOT_NAME);
+        if (root != null && root.compareAndSetMode(ServiceController.Mode.ACTIVE, ServiceController.Mode.REMOVE)) {
             final long started = System.currentTimeMillis();
             root.addListener(new AbstractServiceListener<Object>() {
                 public void serviceRemoved(final ServiceController<?> controller) {
@@ -263,7 +270,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     }
 
     protected void finalize() throws Throwable {
-        root.setMode(ServiceController.Mode.REMOVE);
+        shutdown();
     }
 
     static final class LatchListener extends CountDownLatch implements ServiceListener<Object> {
