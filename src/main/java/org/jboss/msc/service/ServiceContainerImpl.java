@@ -342,6 +342,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
      * @throws DuplicateServiceException if a service is duplicated
      */
     void install(final Collection<ServiceBuilderImpl<?>> builders) throws DuplicateServiceException {
+        apply(builders);
         final Lock lock = writeLock;
         lock.lock();
         try {
