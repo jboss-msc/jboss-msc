@@ -342,7 +342,6 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
      * @throws DuplicateServiceException if a service is duplicated
      */
     void install(final Collection<ServiceBuilderImpl<?>> builders) throws DuplicateServiceException {
-        apply(builders);
         final Lock lock = writeLock;
         lock.lock();
         try {
@@ -374,6 +373,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     }
 
     <S> ServiceInstanceImpl<S> doInstall(final ServiceBuilderImpl<S> serviceBuilder) throws DuplicateServiceException {
+        apply(serviceBuilder);
 
         // Get names & aliases
         final ServiceName name = serviceBuilder.getName();
@@ -512,9 +512,6 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
 
     @Override
     void install(final ServiceBuilderImpl<?> serviceBuilder) throws DuplicateServiceException {
-        if (serviceBuilder.getTarget() == this) {
-            apply(serviceBuilder);
-        }
         install(Collections.<ServiceBuilderImpl<?>>singleton(serviceBuilder));
     }
 
