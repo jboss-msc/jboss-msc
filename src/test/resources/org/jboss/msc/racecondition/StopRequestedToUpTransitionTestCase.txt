@@ -3,7 +3,7 @@ CLASS org.jboss.msc.service.ServiceInstanceImpl$DependencyStoppedTask
 METHOD run
 AT ENTRY
 BIND NOTHING
-IF TRUE
+IF incrementCounter("run rule only once") == 1
 DO
    # DependencyStoppedTask will be able of acquiring the ServiceInstanceImpl lock only after
    # upperCount is incremented to 1
