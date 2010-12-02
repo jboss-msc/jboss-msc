@@ -557,10 +557,6 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         return true;
     }
 
-    Dependency[] getDependencyLinks() {
-        return dependencies;
-    }
-
     @Override
     public void immediateDependencyInstalled() {
         dependencyInstalled();
@@ -700,18 +696,10 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         return tasks;
     }
 
-    void removeDependent(final Dependent dependent) {
-        dependents.remove(dependent);
-    }
-
     void addDependents(final IdentityHashSet<Dependent> dependents) {
         this.dependents.addAll(dependents);
         // do not notify dependents of failures and missing dependencies because, at this point,
         // failCount and missingDependencyCount must be 0
-    }
-
-    void removeAllDependents(final IdentityHashSet<ServiceInstanceImpl<?>> dependents) {
-        this.dependents.removeAll(dependents);
     }
 
     private void doDemandParents() {
