@@ -39,7 +39,8 @@
  * <ul>
  * <li><em>A</em>: The number of currently running asynchronous tasks.</li>
  * <li><em>R</em>: The number of running children (dependents).</li>
- * <li><em>D</em>: The number of "demands" from children, used to trigger the start of {@code ON_DEMAND} services.</li>
+ * <li><em>D</em>: The number of "demands" from children, used to trigger the start of {@code ON_DEMAND} services.  If greater than zero,
+ * a single "demand" is propagated to the dependency set (parents) of this service.</li>
  * <li><em>U</em>: The count, from zero, representing the desire of the service to be "up".  Only services with a positive "up" count will start.</li>
  * <li><em>X</em>: The exception produced by the service {@code start()} method, if any.</li>
  * <li><em>MODE</em>: The controller start mode.  Values can be one of:<ul>
@@ -47,8 +48,10 @@
  * their "demand" count (<em>D</em>).  Puts a load of {@code +1} on <em>U</em> always.</li>
  * <li>{@code PASSIVE} - attempt to start immediately <b>if</b> all dependencies are up.    Puts a load of {@code +1} on <em>U</em> always.</li>
  * <li>{@code ON_DEMAND} - only start a service if demanded.  Puts a load of {@code +1} on <em>U</em> <b>only</b> if <em>D</em> is greater than zero.</li>
- * <li>{@code NEVER} - never start.  The value of <em>U</em> is not affected and not considered.</li>
- * <li>{@code REMOVE} - never start; in addition, remove the service as soon as it is down.</li>
+ * <li>{@code NEVER} - never start.  The value of <em>U</em> is not affected and not considered.  The value of <em>D</em> is disregarded; if <em>D</em> was
+ * greater than zero, then the existing "demand" on the dependency set (parents) is revoked and further "demands" are suppressed until this mode is left.</li>
+ * <li>{@code REMOVE} - the same as {@code NEVER}; in addition, remove the service as soon as it is down. The mode may not be changed again after setting
+ * this mode.</li>
  * </ul></li>
  * </ul>
  */
