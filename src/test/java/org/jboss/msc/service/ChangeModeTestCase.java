@@ -23,6 +23,7 @@
 package org.jboss.msc.service;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -33,6 +34,7 @@ import org.jboss.msc.service.ServiceController.Mode;
 import org.jboss.msc.service.ServiceController.State;
 import org.jboss.msc.service.util.FailToStartService;
 import org.jboss.msc.util.TestServiceListener;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -198,6 +200,48 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
         firstController.setMode(Mode.PASSIVE);
         assertController(firstController, firstServiceStart);
+    }
+
+    @Test
+    public void changeDemandedNeverToPassive() throws Exception {
+        final ServiceController<?> firstController = getNeverModeFirstController();
+        final Future<ServiceController<?>> secondServiceListenerAdded = testListener.expectListenerAdded(secondServiceName);
+        serviceContainer.addService(secondServiceName, Service.NULL).addDependency(firstServiceName).addListener(testListener).install();
+        ServiceController<?> secondController = assertController(secondServiceName, secondServiceListenerAdded);
+        final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
+        final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
+        firstController.setMode(Mode.PASSIVE);
+        assertController(firstController, firstServiceStart);
+        assertController(secondController, secondServiceStart);
+    }
+
+    @Test
+    public void changeDemandedNeverWithDependenciesToPassive() throws Exception {
+        // ** prepare scenario: dependent service on active mode depends on first service, on never mode,
+        // that depends on second service, an on_demand service
+        // second controller is ON_DEMAND and depends on first service, an active service in UP state
+        ServiceController<?> secondController = getUpOnDemandSecondController();
+        ServiceController<?> firstController = serviceContainer.getService(firstServiceName);
+        assertNotNull(firstController);
+        Future<ServiceController<?>> firstServiceStop = testListener.expectServiceStop(firstServiceName);
+        Future<ServiceController<?>> secondServiceStop = testListener.expectServiceStop(secondServiceName);
+        firstController.setMode(Mode.NEVER);
+        assertController(firstController, firstServiceStop);
+        assertController(secondController, secondServiceStop);
+        final ServiceName dependentServiceName = ServiceName.of("dependent");
+        final Future<ServiceController<?>> dependentServiceListenerAdded = testListener.expectListenerAdded(dependentServiceName);
+        serviceContainer.addService(dependentServiceName, Service.NULL).addDependency(firstServiceName).addListener(testListener).install();
+        ServiceController<?> dependentController = assertController(dependentServiceName, dependentServiceListenerAdded);
+
+        //** now change mode, from never to passive
+        final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
+        final Future<ServiceController<?>> dependentServiceStart = testListener.expectServiceStart(dependentServiceName);
+        final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
+        firstController.setMode(Mode.PASSIVE);
+        // notice that it is the demand from dependent that will trigger second service startup
+        assertController(firstController, firstServiceStart);
+        assertController(dependentController, dependentServiceStart);
+        assertController(secondController, secondServiceStart);
     }
 
     @Test

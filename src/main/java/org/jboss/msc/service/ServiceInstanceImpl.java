@@ -458,11 +458,17 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                         case ON_DEMAND: {
                             if (demandedByCount > 0) {
                                 upperCount++;
+                                specialTask = new DemandParentsTask();
+                                asyncTasks++;
                             }
                             break;
                         }
                         case PASSIVE: {
                             upperCount++;
+                            if (demandedByCount > 0) {
+                                specialTask = new DemandParentsTask();
+                                asyncTasks++;
+                            }
                             break;
                         }
                         case ACTIVE: {
@@ -480,6 +486,8 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                         case NEVER: {
                             if (demandedByCount > 0) {
                                 upperCount--;
+                                specialTask = new UndemandParentsTask();
+                                asyncTasks++;
                             }
                             break;
                         }
@@ -504,6 +512,10 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                     switch (newMode) {
                         case REMOVE:
                         case NEVER: {
+                            if (demandedByCount > 0) {
+                                specialTask = new UndemandParentsTask();
+                                asyncTasks++;
+                            }
                             upperCount--;
                             break;
                         }
@@ -531,16 +543,18 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                             break;
                         }
                         case ON_DEMAND: {
-                            specialTask = new UndemandParentsTask();
-                            asyncTasks++;
                             if (demandedByCount == 0) {
                                 upperCount--;
+                                specialTask = new UndemandParentsTask();
+                                asyncTasks++;
                             }
                             break;
                         }
                         case PASSIVE: {
-                            specialTask = new UndemandParentsTask();
-                            asyncTasks++;
+                            if (demandedByCount == 0) {
+                                specialTask = new UndemandParentsTask();
+                                asyncTasks++;
+                            }
                             break;
                         }
                     }
@@ -729,7 +743,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         synchronized (this) {
             final int cnt = this.demandedByCount;
             this.demandedByCount += demandedByCount;
-            propagate = cnt == 0;
+            propagate = cnt == 0 && mode.compareTo(Mode.NEVER) > 0;
             if (cnt == 0 && mode == Mode.ON_DEMAND) {
                 upperCount++;
                 tasks = transition();
@@ -749,7 +763,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         final boolean propagate;
         synchronized (this) {
             final int cnt = --demandedByCount;
-            propagate = cnt == 0;
+            propagate = cnt == 0 && (mode == Mode.ON_DEMAND || mode == Mode.PASSIVE);
             if (cnt == 0 && mode == Mode.ON_DEMAND) {
                 upperCount--;
                 tasks = transition();
