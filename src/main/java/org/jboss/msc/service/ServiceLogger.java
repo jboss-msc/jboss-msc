@@ -71,9 +71,9 @@ interface ServiceLogger {
     @Message(id = 9, value = "A worker thread threw an uncaught exception")
     void uncaughtException(@Cause Throwable cause);
 
-    ServiceLogger INSTANCE = Logger.getMessageLogger(ServiceLogger.class, "org.jboss.msc");
-
     @LogMessage(level = WARN)
     @Message(id = 10, value = "An error occurred while trying to close the profile output file: %s")
     void profileOutputCloseFailed(/* ! @Cause */ IOException cause);
+
+    ServiceLogger INSTANCE = Logger.getMessageLogger(ServiceLogger.class, "org.jboss.msc");
 }
