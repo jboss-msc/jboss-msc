@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import java.io.IOException;
 import org.jboss.logging.Cause;
 import org.jboss.logging.LogMessage;
 import org.jboss.logging.Logger;
@@ -66,5 +67,13 @@ interface ServiceLogger {
     @Message(id = 8, value = "An internal service error has occurred while processing an operation on service \"%s\"")
     void internalServiceError(@Cause Throwable cause, ServiceName serviceName);
 
+    @LogMessage(level = ERROR)
+    @Message(id = 9, value = "A worker thread threw an uncaught exception")
+    void uncaughtException(@Cause Throwable cause);
+
     ServiceLogger INSTANCE = Logger.getMessageLogger(ServiceLogger.class, "org.jboss.msc");
+
+    @LogMessage(level = WARN)
+    @Message(id = 10, value = "An error occurred while trying to close the profile output file: %s")
+    void profileOutputCloseFailed(/* ! @Cause */ IOException cause);
 }

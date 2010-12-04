@@ -93,7 +93,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                     thread.setDaemon(true);
                     thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
                         public void uncaughtException(final Thread t, final Throwable e) {
-                            e.printStackTrace(System.err);
+                            ServiceLogger.INSTANCE.uncaughtException(e);
                         }
                     });
                     return thread;
@@ -202,7 +202,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                     try {
                         profileOutput.close();
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        ServiceLogger.INSTANCE.profileOutputCloseFailed(e);
                     }
                 }
             }
