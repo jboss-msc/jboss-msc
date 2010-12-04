@@ -158,10 +158,10 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
         assertController(secondController, secondService2);
 
         List<ServiceInstanceImpl<?>> dependencies = getServiceDependencies(firstController);
-        assertEquals(1, dependencies.size());
+        assertEquals(0, dependencies.size());
 
         dependencies = getServiceDependencies(secondController);
-        assertEquals(1, dependencies.size());
+        assertEquals(0, dependencies.size());
 
         builder = serviceContainer.batchBuilder();
         builder.addServiceValue(thirdServiceName, Values.immediateValue(Service.NULL)).install();
@@ -191,13 +191,13 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
 
         dependencies = getServiceDependencies(thirdController);
         assertNotNull(dependencies);
-        assertEquals(3, dependencies.size());
+        assertEquals(2, dependencies.size());
         assertTrue(dependencies.contains(firstController));
         assertTrue(dependencies.contains(secondController));
 
         dependencies = getServiceDependencies(fourthController);
         assertNotNull(dependencies);
-        assertEquals(4, dependencies.size());
+        assertEquals(3, dependencies.size());
         assertTrue(dependencies.contains(firstController));
         assertTrue(dependencies.contains(secondController));
         assertTrue(dependencies.contains(thirdController));

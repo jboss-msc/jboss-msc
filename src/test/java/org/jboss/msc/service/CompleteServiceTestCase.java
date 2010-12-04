@@ -43,6 +43,9 @@ import org.junit.Test;
 
 /**
  * Tests scenarios involving services with non-null values, optional dependencies, and injections.
+ * <p>
+ * Plus, in this test case the container is not shutdown on tear down. This enables the automatic shutdown process
+ * triggered by a shutdown hook defined in {@link ServiceContainerImpl}. 
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
@@ -52,6 +55,11 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
     private static final ServiceName serviceNameD = ServiceName.of("service", "D");
     private static final ServiceName fooServiceName = ServiceName.of("foo", "service");
 
+    @Override
+    public void tearDown() {
+        // do not shutdown the container
+    }
+    
     @Test
     public void test1() throws Exception {
         final TestServiceListener testListener = new TestServiceListener();

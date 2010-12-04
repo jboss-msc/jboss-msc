@@ -24,7 +24,6 @@ package org.jboss.msc.service;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.Writer;
@@ -46,14 +45,15 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.jboss.msc.Version;
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.ref.Reaper;
 import org.jboss.msc.ref.Reference;
 import org.jboss.msc.ref.WeakReference;
+import org.jboss.msc.service.ServiceController.Mode;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -63,8 +63,6 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
 
     private final Lock readLock;
     private final Lock writeLock;
-
-    private static final ServiceName ROOT_NAME = ServiceName.of("root");
 
     static final String PROFILE_OUTPUT;
 
@@ -130,14 +128,8 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                                         listener.countDown();
                                         continue;
                                     }
-                                    final ServiceInstanceImpl<ServiceContainer> root = (ServiceInstanceImpl<ServiceContainer>) container.getService(ROOT_NAME);
-                                    if (root != null) {
-                                        root.setMode(ServiceController.Mode.REMOVE);
-                                        root.addListener(listener);
-                                    } else {
-                                        listener.countDown();
-                                        continue;
-                                    }
+                                    container.shutdown();
+                                    container.addTerminateListener(listener);
                                 }
                                 set.clear();
                             }
@@ -162,6 +154,10 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
 
     private final Writer profileOutput;
 
+    private TerminateListener.Info terminateInfo = null;
+
+    private volatile boolean down = false;
+
     private volatile Executor executor;
 
     ServiceContainerImpl() {
@@ -178,12 +174,13 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             }
         }
         this.profileOutput = profileOutput;
-        final boolean down;
         synchronized (set) {
             // if the shutdown hook was triggered, then no services can ever come up in any new containers.
-            down = ShutdownHookHolder.down;
+            if (ShutdownHookHolder.down) {
+                down = true;
+            }
             //noinspection ThisEscapedInObjectConstruction
-            if (! down) {
+            else {
                 //noinspection ThisEscapedInObjectConstruction
                 set.add(new WeakReference<ServiceContainerImpl, Void>(this, null, new Reaper<ServiceContainerImpl, Void>() {
                     public void reap(final Reference<ServiceContainerImpl, Void> reference) {
@@ -192,26 +189,6 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                 }));
             }
         }
-        if (! down) addService(ROOT_NAME, new Service<ServiceContainer>() {
-            public void start(final StartContext context) throws StartException {
-            }
-
-            public void stop(final StopContext context) {
-                final Writer profileOutput = ServiceContainerImpl.this.profileOutput;
-                if (profileOutput != null) {
-                    try {
-                        profileOutput.close();
-                    } catch (IOException e) {
-                        ServiceLogger.INSTANCE.profileOutputCloseFailed(e);
-                    }
-                }
-            }
-
-            public ServiceContainer getValue() throws IllegalStateException {
-                return ServiceContainerImpl.this;
-            }
-        }).install();
-        addDependency(ROOT_NAME);
     }
 
     Writer getProfileOutput() {
@@ -226,23 +203,45 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         this.executor = executor;
     }
 
+    synchronized void addTerminateListener(TerminateListener listener) {
+        if (terminateInfo != null) { // if shutdown is already performed 
+            listener.handleTermination(null); // invoke handleTermination immediately
+        }
+        else {
+            terminateListeners.add(listener);
+        }
+    }
+
+    boolean isShutdown() {
+        return down;
+    }
+
     public void shutdown() {
-        final ServiceController<?> root = getService(ROOT_NAME);
-        if (root != null && root.compareAndSetMode(ServiceController.Mode.ACTIVE, ServiceController.Mode.REMOVE)) {
-            final long started = System.currentTimeMillis();
-            root.addListener(new AbstractServiceListener<Object>() {
-                public void serviceRemoved(final ServiceController<?> controller) {
-                    final long stopped = System.currentTimeMillis();
-                    final TerminateListener.Info info = new TerminateListener.Info(started, stopped);
-                    for (TerminateListener terminateListener : terminateListeners) {
-                        try {
-                            terminateListener.handleTermination(info);
-                        } catch (Throwable t) {
-                            // ignore
-                        }
-                    }
+        final ShutdownListener shutdownListener;
+        final long started;
+        synchronized(this) {
+            if (down){
+                return;
+            }
+            down = true;
+            started =  System.nanoTime();
+            shutdownListener = new ShutdownListener(started);
+        }
+        boolean emptyContainer = true;
+        for (ServiceRegistrationImpl registration: this.registry.values()) {
+            ServiceInstanceImpl<?> serviceInstance = registration.getInstance();
+            if (serviceInstance != null) {
+                emptyContainer = false;
+                try {
+                    serviceInstance.addListener(shutdownListener);
+                } catch (IllegalArgumentException e) {
+                    continue;
                 }
-            });
+                serviceInstance.setMode(Mode.REMOVE);
+            }
+        }
+        if (emptyContainer) {
+            shutdownComplete(started);
         }
     }
 
@@ -273,48 +272,51 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         shutdown();
     }
 
-    static final class LatchListener extends CountDownLatch implements ServiceListener<Object> {
+    private final class ShutdownListener extends AbstractServiceListener<Object> {
+        private volatile long installedServices = 0;
+        private final long started;
+
+        public ShutdownListener(long started) {
+            this.started = started;
+        }
+
+        public synchronized void listenerAdded(final ServiceController<?> controller) {
+            if (controller.getState() != ServiceController.State.REMOVED) {
+                installedServices ++;
+            }
+        }
+
+        public synchronized void serviceRemoved(final ServiceController<?> controller) {
+            final boolean allServicesRemoved;
+            synchronized (this) {
+                allServicesRemoved = -- installedServices == 0;
+            }
+            if (allServicesRemoved) {
+                shutdownComplete(started);
+            }
+        }
+    }
+
+    private synchronized void shutdownComplete(long started) {
+        terminateInfo = new TerminateListener.Info(started, System.nanoTime());
+        for (TerminateListener terminateListener : terminateListeners) {
+            try {
+                terminateListener.handleTermination(terminateInfo);
+            } catch (Throwable t) {
+                // ignore
+            }
+        }
+    }
+
+    static final class LatchListener extends CountDownLatch implements TerminateListener {
 
         public LatchListener(int count) {
             super(count);
         }
 
-        public void listenerAdded(final ServiceController<?> serviceController) {
-            final ServiceController.State state = serviceController.getState();
-            if (state == ServiceController.State.REMOVED) {
-                countDown();
-            }
-        }
-
-        public void serviceStarting(final ServiceController<?> serviceController) {
-        }
-
-        public void serviceStarted(final ServiceController<?> serviceController) {
-        }
-
-        public void serviceFailed(final ServiceController<?> serviceController, final StartException reason) {
-        }
-
-        public void serviceStopping(final ServiceController<?> serviceController) {
-        }
-
-        public void serviceStopped(final ServiceController<?> serviceController) {
-        }
-
-        public void serviceRemoved(final ServiceController<?> serviceController) {
+        @Override
+        public void handleTermination(Info info) {
             countDown();
-        }
-
-        public void dependencyFailed(final ServiceController<?> serviceController) {
-        }
-
-        public void dependencyFailureCleared(final ServiceController<?> serviceController) {
-        }
-
-        public void dependencyInstalled(final ServiceController<?> serviceController) {
-        }
-
-        public void dependencyUninstalled(final ServiceController<?> serviceController) {
         }
     }
 
@@ -332,6 +334,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
      */
     @Override
     void install(final BatchBuilderImpl serviceBatch) throws ServiceRegistryException {
+        validateTargetState();
         install(serviceBatch.getBatchServices().values());
     }
 
@@ -341,7 +344,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
      * @param builders the builders
      * @throws DuplicateServiceException if a service is duplicated
      */
-    void install(final Collection<ServiceBuilderImpl<?>> builders) throws DuplicateServiceException {
+    private void install(final Collection<ServiceBuilderImpl<?>> builders) throws DuplicateServiceException {
         final Lock lock = writeLock;
         lock.lock();
         try {
@@ -372,7 +375,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         }
     }
 
-    <S> ServiceInstanceImpl<S> doInstall(final ServiceBuilderImpl<S> serviceBuilder) throws DuplicateServiceException {
+    private <S> ServiceInstanceImpl<S> doInstall(final ServiceBuilderImpl<S> serviceBuilder) throws DuplicateServiceException {
         apply(serviceBuilder);
 
         // Get names & aliases
@@ -512,6 +515,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
 
     @Override
     void install(final ServiceBuilderImpl<?> serviceBuilder) throws DuplicateServiceException {
+        validateTargetState();
         install(Collections.<ServiceBuilderImpl<?>>singleton(serviceBuilder));
     }
 
@@ -529,5 +533,8 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
 
     @Override
     void validateTargetState() {
+        if (down) {
+            throw new IllegalStateException ("Container is down");
+        }
     }
 }

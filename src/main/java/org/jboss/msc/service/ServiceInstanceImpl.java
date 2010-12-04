@@ -24,7 +24,6 @@ package org.jboss.msc.service;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -423,6 +422,9 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         assert !lockHeld();
         if (newMode == null) {
             throw new IllegalArgumentException("newMode is null");
+        }
+        if (newMode != Mode.REMOVE && primaryRegistration.getContainer().isShutdown()) {
+            throw new IllegalArgumentException("Container is shutting down");
         }
         Runnable[] bootTasks = null;
         final Runnable[] tasks;
@@ -1416,7 +1418,6 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 }
                 final Runnable[] tasks;
                 synchronized (ServiceInstanceImpl.this) {
-                    Arrays.fill(dependencies, null);
                     asyncTasks--;
                     tasks = transition();
                 }

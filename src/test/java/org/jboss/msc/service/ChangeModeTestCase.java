@@ -864,4 +864,33 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         final ServiceController<?> secondController = getFailedToStartActiveSecondController();
         assertChangeModeToNullFails(secondController);
     }
+
+    @Test
+    public void changeModeAfterShutdown1() throws Exception {
+        final ServiceController<?> controller = getUpActiveFirstController();
+        serviceContainer.shutdown();
+        try {
+            controller.setMode(Mode.ACTIVE);
+            fail ("IllegalArgument expected");
+        } catch (IllegalArgumentException e) {}    }
+
+    @Test
+    public void changeModeAfterShutdown2() throws Exception {
+        ServiceController<?> controller = getDownPassiveFirstController();
+        serviceContainer.shutdown();
+        try {
+            controller.setMode(Mode.NEVER);
+            fail ("IllegalArgument expected");
+        } catch (IllegalArgumentException e) {}
+    }
+
+    @Test
+    public void changeModeAfterShutdown3() throws Exception {
+        ServiceController<?> controller = getUpOnDemandSecondController();
+        serviceContainer.shutdown();
+        try {
+            controller.setMode(Mode.ACTIVE);
+            fail ("IllegalArgument expected");
+        } catch (IllegalArgumentException e) {}
+    }
 }

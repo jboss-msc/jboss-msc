@@ -105,17 +105,17 @@ public class DelegatingServiceRegistryTestCase extends AbstractServiceTest {
     public void getServiceNamesAfterRemoval() throws Exception {
         List<ServiceName> serviceNames = registry.getServiceNames();
         assertNotNull(serviceNames);
-        assertEquals(3, serviceNames.size());
+        assertEquals(2, serviceNames.size());
         assertTrue(serviceNames.contains(oneTwoThree));
         assertTrue(serviceNames.contains(oneTwoFive));
         removeService(oneTwoFive);
         serviceNames = registry.getServiceNames();
         assertNotNull(serviceNames);
-        assertEquals(2, serviceNames.size());
+        assertEquals(1, serviceNames.size());
         assertTrue(serviceNames.contains(oneTwoThree));
         removeService(oneTwoThree);
         serviceNames = registry.getServiceNames();
-        assertEquals(1, serviceNames.size());
+        assertEquals(0, serviceNames.size());
     }
 
     @Test
@@ -130,7 +130,7 @@ public class DelegatingServiceRegistryTestCase extends AbstractServiceTest {
         serviceContainer.addService(twoThreeTen, Service.NULL).install();
         final List<ServiceName> serviceNames = serviceContainer.getServiceNames();
         assertNotNull(serviceNames);
-        assertEquals(7, serviceNames.size());
+        assertEquals(6, serviceNames.size());
         assertTrue(serviceNames.contains(twoThreeFour));
         assertTrue(serviceNames.contains(twoThreeSix));
         assertTrue(serviceNames.contains(twoThreeEight));

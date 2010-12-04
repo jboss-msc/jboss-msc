@@ -162,6 +162,18 @@ public abstract class AbstractDelegatingServiceTargetTest extends AbstractServic
         assertController(extraServiceController, extraServiceStart3);
     }
 
+    // TODO MSC-46 this test requires adding a terminate listener to serviceContainer, 
+    // so we can wait for the container to shutdown before checking no operations can be performed on containerTarget
+    public void addServicesAfterShutdown() {
+        final ServiceTarget containerTarget = getDelegatingServiceTarget(serviceContainer);
+        final ServiceTarget builderTarget = getDelegatingServiceTarget(serviceContainer.batchBuilder());
+        final TestServiceListener testListener = new TestServiceListener();
+        
+        containerTarget.addListener(testListener);
+        containerTarget.addDependency(serviceName);
+        serviceContainer.shutdown();
+    }
+
     /**
      * Returns the delegating ServiceTarget that should be tested.
      * 
