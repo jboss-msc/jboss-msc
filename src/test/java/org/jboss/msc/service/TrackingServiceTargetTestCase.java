@@ -22,11 +22,9 @@
 
 package org.jboss.msc.service;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
-import java.util.List;
+import java.util.Set;
 
 import org.junit.Test;
 
@@ -49,49 +47,49 @@ public class TrackingServiceTargetTestCase extends AbstractDelegatingServiceTarg
     @Test
     public void addService() throws Exception {
         super.addService();
-        final List<ServiceName> serviceList = trackingServiceTarget.getList();
-        assertNotNull(serviceList);
-        assertEquals(1, serviceList.size());
-        assertEquals(ServiceName.of("service", "name"), serviceList.get(0));
+        final Set<ServiceName> services = trackingServiceTarget.getSet();
+        assertNotNull(services);
+        assertEquals(1, services.size());
+        assertTrue(services.contains(ServiceName.of("service", "name")));
     }
 
     @Test
     public void addServiceValue() throws Exception {
         super.addServiceValue();
-        final List<ServiceName> serviceList = trackingServiceTarget.getList();
-        assertNotNull(serviceList);
-        assertEquals(1, serviceList.size());
-        assertEquals(ServiceName.of("service", "name"), serviceList.get(0));
+        final Set<ServiceName> services = trackingServiceTarget.getSet();
+        assertNotNull(services);
+        assertEquals(1, services.size());
+        assertTrue(services.contains(ServiceName.of("service", "name")));
     }
 
     @Test
     public void addServiceWithDependencyToBatchBuilder() throws Exception {
         super.addServiceWithDependencyToBatchBuilder();
-        final List<ServiceName> serviceList = trackingServiceTarget.getList();
-        assertNotNull(serviceList);
-        assertEquals(2, serviceList.size());
-        assertTrue((ServiceName.of("service", "name").equals(serviceList.get(0)) && ServiceName.of("service", "another", "name").equals(serviceList.get(1)))
-                || (ServiceName.of("service", "name").equals(serviceList.get(1)) && ServiceName.of("service", "another", "name").equals(serviceList.get(0))));
+        final Set<ServiceName> services = trackingServiceTarget.getSet();
+        assertNotNull(services);
+        assertEquals(2, services.size());
+        assertTrue(services.contains(ServiceName.of("service", "name")));
+        assertTrue(services.contains(ServiceName.of("service", "another", "name")));
     }
 
     @Test
     public void addServiceWithDependenciesToBatchBuilder() throws Exception {
         super.addServiceWithDependenciesToBatchBuilder();
-        final List<ServiceName> serviceList = trackingServiceTarget.getList();
-        assertNotNull(serviceList);
-        assertEquals(2, serviceList.size());
-        assertTrue((ServiceName.of("service", "name").equals(serviceList.get(0)) && ServiceName.of("service", "extra", "name").equals(serviceList.get(1)))
-                || (ServiceName.of("service", "name").equals(serviceList.get(1)) && ServiceName.of("service", "extra", "name").equals(serviceList.get(0))));
+        final Set<ServiceName> services = trackingServiceTarget.getSet();
+        assertNotNull(services);
+        assertEquals(2, services.size());
+        assertTrue(services.contains(ServiceName.of("service", "name")));
+        assertTrue(services.contains(ServiceName.of("service", "extra", "name")));
     }
 
     @Test
     public void addServiceWithDependencyCollection() throws Exception {
         super.addServiceWithDependencyCollection();
-        final List<ServiceName> serviceList = trackingServiceTarget.getList();
-        assertNotNull(serviceList);
-        assertEquals(3, serviceList.size());
-        assertTrue(serviceList.contains(ServiceName.of("service", "name")));
-        assertTrue(serviceList.contains(ServiceName.of("service", "extra", "name")));
-        assertTrue(serviceList.contains(ServiceName.of("service", "another", "name")));
+        final Set<ServiceName> services = trackingServiceTarget.getSet();
+        assertNotNull(services);
+        assertEquals(3, services.size());
+        assertTrue(services.contains(ServiceName.of("service", "name")));
+        assertTrue(services.contains(ServiceName.of("service", "extra", "name")));
+        assertTrue(services.contains(ServiceName.of("service", "another", "name")));
     }
 }

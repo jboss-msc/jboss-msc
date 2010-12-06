@@ -22,11 +22,12 @@
 
 package org.jboss.msc.service;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.Collections;
+import java.util.HashSet;
 
+import java.util.Set;
+import org.jboss.msc.inject.Injector;
 import org.jboss.msc.value.Value;
 
 /**
@@ -34,13 +35,12 @@ import org.jboss.msc.value.Value;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class TrackingServiceTarget implements ServiceTarget {
-    private final ServiceTarget delegate;
-    private final List<ServiceName> list;
+public class TrackingServiceTarget extends DelegatingServiceTarget {
+    private final Set<ServiceName> set;
 
-    private TrackingServiceTarget(final ServiceTarget delegate, final List<ServiceName> list) {
-        this.delegate = delegate;
-        this.list = list;
+    private TrackingServiceTarget(final ServiceTarget delegate, final Set<ServiceName> set) {
+        super(delegate);
+        this.set = set;
     }
 
     /**
@@ -49,77 +49,152 @@ public final class TrackingServiceTarget implements ServiceTarget {
      * @param delegate the delegate instance
      */
     public TrackingServiceTarget(final ServiceTarget delegate) {
-        this(delegate, new ArrayList<ServiceName>());
+        this(delegate, Collections.synchronizedSet(new HashSet<ServiceName>()));
     }
 
     /** {@inheritDoc} */
     public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
-        list.add(name);
-        return delegate.addServiceValue(name, value);
+        return new Builder<T>(name, super.addServiceValue(name, value));
     }
 
     /** {@inheritDoc} */
     public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
-        list.add(name);
-        return delegate.addService(name, service);
-    }
-
-    /** {@inheritDoc} */
-    public ServiceTarget addListener(final ServiceListener<Object> listener) {
-        return delegate.addListener(listener);
-    }
-
-    /** {@inheritDoc} */
-    public ServiceTarget addListener(final ServiceListener<Object>... listeners) {
-        return delegate.addListener(listeners);
-    }
-
-    /** {@inheritDoc} */
-    public ServiceTarget addListener(final Collection<ServiceListener<Object>> listeners) {
-        return delegate.addListener(listeners);
-    }
-
-    /** {@inheritDoc} */
-    public Set<ServiceListener<Object>> getListeners() {
-        return delegate.getListeners();
-    }
-
-    /** {@inheritDoc} */
-    public ServiceTarget addDependency(final ServiceName dependency) {
-        return delegate.addDependency(dependency);
-    }
-
-    /** {@inheritDoc} */
-    public ServiceTarget addDependency(final ServiceName... dependencies) {
-        return delegate.addDependency(dependencies);
-    }
-
-    /** {@inheritDoc} */
-    public ServiceTarget addDependency(final Collection<ServiceName> dependencies) {
-        return delegate.addDependency(dependencies);
-    }
-
-    /** {@inheritDoc} */
-    public Set<ServiceName> getDependencies() {
-        return delegate.getDependencies();
+        return new Builder<T>(name, super.addService(name, service));
     }
 
     /** {@inheritDoc} */
     public ServiceTarget subTarget() {
-        return new TrackingServiceTarget(delegate.subTarget(), list);
+        return new TrackingServiceTarget(super.subTarget(), set);
     }
 
     /** {@inheritDoc} */
     public BatchBuilder batchBuilder() {
-        return delegate.batchBuilder();
+        return new TrackingBatchBuilder(super.batchBuilder(), set);
     }
 
     /**
-     * Get the list of service names.
+     * Get the set of service names.
      *
-     * @return the list of service names
+     * @return the set of service names
      */
-    public List<ServiceName> getList() {
-        return list;
+    public Set<ServiceName> getSet() {
+        return set;
+    }
+
+    private class Builder<T> implements ServiceBuilder<T> {
+
+        private final ServiceName name;
+        private final ServiceBuilder<T> builder;
+
+        Builder(final ServiceName name, final ServiceBuilder<T> builder) {
+            this.name = name;
+            this.builder = builder;
+        }
+
+        public ServiceBuilder<T> addAliases(final ServiceName... aliases) {
+            return builder.addAliases(aliases);
+        }
+
+        public ServiceBuilder<T> setLocation() {
+            return builder.setLocation();
+        }
+
+        public ServiceBuilder<T> setLocation(final Location location) {
+            return builder.setLocation(location);
+        }
+
+        public ServiceBuilder<T> setInitialMode(final ServiceController.Mode mode) {
+            return builder.setInitialMode(mode);
+        }
+
+        public ServiceBuilder<T> addDependencies(final ServiceName... dependencies) {
+            return builder.addDependencies(dependencies);
+        }
+
+        public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final ServiceName... dependencies) {
+            return builder.addDependencies(dependencyType, dependencies);
+        }
+
+        @SuppressWarnings({ "deprecation" })
+        public ServiceBuilder<T> addOptionalDependencies(final ServiceName... dependencies) {
+            return builder.addOptionalDependencies(dependencies);
+        }
+
+        public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> dependencies) {
+            return builder.addDependencies(dependencies);
+        }
+
+        public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final Iterable<ServiceName> dependencies) {
+            return builder.addDependencies(dependencyType, dependencies);
+        }
+
+        @SuppressWarnings({ "deprecation" })
+        public ServiceBuilder<T> addOptionalDependencies(final Iterable<ServiceName> dependencies) {
+            return builder.addOptionalDependencies(dependencies);
+        }
+
+        public ServiceBuilder<T> addDependency(final ServiceName dependency) {
+            return builder.addDependency(dependency);
+        }
+
+        public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency) {
+            return builder.addDependency(dependencyType, dependency);
+        }
+
+        @SuppressWarnings({ "deprecation" })
+        public ServiceBuilder<T> addOptionalDependency(final ServiceName dependency) {
+            return builder.addOptionalDependency(dependency);
+        }
+
+        public ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
+            return builder.addDependency(dependency, target);
+        }
+
+        public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Injector<Object> target) {
+            return builder.addDependency(dependencyType, dependency, target);
+        }
+
+        @SuppressWarnings({ "deprecation" })
+        public ServiceBuilder<T> addOptionalDependency(final ServiceName dependency, final Injector<Object> target) {
+            return builder.addOptionalDependency(dependency, target);
+        }
+
+        public <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
+            return builder.addDependency(dependency, type, target);
+        }
+
+        public <I> ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Class<I> type, final Injector<I> target) {
+            return builder.addDependency(dependencyType, dependency, type, target);
+        }
+
+        @SuppressWarnings({ "deprecation" })
+        public <I> ServiceBuilder<T> addOptionalDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
+            return builder.addOptionalDependency(dependency, type, target);
+        }
+
+        public <I> ServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {
+            return builder.addInjection(target, value);
+        }
+
+        public <I> ServiceBuilder<T> addInjectionValue(final Injector<? super I> target, final Value<I> value) {
+            return builder.addInjectionValue(target, value);
+        }
+
+        public ServiceBuilder<T> addListener(final ServiceListener<? super T> listener) {
+            return builder.addListener(listener);
+        }
+
+        public ServiceBuilder<T> addListener(final ServiceListener<? super T>... listeners) {
+            return builder.addListener(listeners);
+        }
+
+        public ServiceBuilder<T> addListener(final Collection<? extends ServiceListener<? super T>> listeners) {
+            return builder.addListener(listeners);
+        }
+
+        public void install() throws ServiceRegistryException {
+            set.add(name);
+            builder.install();
+        }
     }
 }
