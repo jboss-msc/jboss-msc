@@ -75,5 +75,9 @@ interface ServiceLogger {
     @Message(id = 10, value = "An error occurred while trying to close the profile output file: %s")
     void profileOutputCloseFailed(/* ! @Cause */ IOException cause);
 
+    @LogMessage(level = ERROR)
+    @Message(id = 11, value = "Service \"%s\" failed to start")
+    void startFailed(@Cause StartException cause, ServiceName serviceName);
+
     ServiceLogger INSTANCE = Logger.getMessageLogger(ServiceLogger.class, "org.jboss.msc");
 }

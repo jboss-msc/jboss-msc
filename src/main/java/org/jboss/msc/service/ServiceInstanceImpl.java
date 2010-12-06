@@ -1094,6 +1094,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 doExecute(tasks);
             } catch (StartException e) {
                 e.setServiceName(serviceName);
+                ServiceLogger.INSTANCE.startFailed(e, serviceName);
                 final Runnable[] tasks;
                 synchronized (ServiceInstanceImpl.this) {
                     final ContextState oldState = context.state;
@@ -1121,7 +1122,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                     }
                     context.state = ContextState.FAILED;
                     asyncTasks--;
-                    startException = new StartException("Failed to start service", t, location, serviceName);
+                    ServiceLogger.INSTANCE.startFailed(startException = new StartException("Failed to start service", t, location, serviceName), serviceName);
                     if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                         writeProfileInfo('F', startNanos, System.nanoTime());
                     }
@@ -1448,6 +1449,9 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
                 state = ContextState.FAILED;
+                final ServiceName serviceName = getName();
+                reason.setServiceName(serviceName);
+                ServiceLogger.INSTANCE.startFailed(reason, serviceName);
                 startException = reason;
                 failCount ++;
                 asyncTasks--;
