@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import static junit.framework.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -396,10 +397,14 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         }
 
         @Override
-        public void start(StartContext context) throws StartException {}
+        public void start(StartContext context) throws StartException {
+            assertTrue(context.getElapsedTime() > 0L);
+        }
 
         @Override
-        public void stop(StopContext context) {}
+        public void stop(StopContext context) {
+            assertTrue(context.getElapsedTime() > 0L);
+        }
 
         public void setServiceD(ServiceD serviceD) {
             if (serviceD == null) {
@@ -446,12 +451,14 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         @Override
         public void start(StartContext context) throws StartException {
             serviceB.start();
+            assertTrue(context.getElapsedTime() > 0L);
         }
 
         @Override
         public void stop(StopContext context) {
             serviceB.stop();
-        } 
+            assertTrue(context.getElapsedTime() > 0L);
+        }
         
     }
 
@@ -489,13 +496,16 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         }
 
         @Override
-        public void start(StartContext context) throws StartException {}
+        public void start(StartContext context) throws StartException {
+            assertTrue(context.getElapsedTime() > 0L);
+        }
 
         @Override
         public void stop(StopContext context) {
             if (failToStop) {
                 throw new RuntimeException();
             }
+            assertTrue(context.getElapsedTime() > 0L);
         }
     }
 
@@ -512,9 +522,13 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         }
 
         @Override
-        public void start(StartContext context) throws StartException {}
+        public void start(StartContext context) throws StartException {
+            assertTrue(context.getElapsedTime() > 0L);
+        }
 
         @Override
-        public void stop(StopContext context) {}
+        public void stop(StopContext context) {
+            assertTrue(context.getElapsedTime() > 0L);
+        }
     }
 }

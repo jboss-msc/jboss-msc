@@ -46,6 +46,13 @@ public interface LifecycleContext {
     void complete() throws IllegalStateException;
 
     /**
+     * Get the amount of time elapsed since the start or stop was initiated, in nanoseconds.
+     *
+     * @return the elapsed time
+     */
+    long getElapsedTime();
+
+    /**
      * Get the associated service controller.
      *
      * @return the service controller

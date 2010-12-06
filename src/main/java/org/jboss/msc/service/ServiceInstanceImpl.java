@@ -123,6 +123,11 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
      */
     private int asyncTasks;
 
+    /**
+     * The system nanotime of the moment in which the last lifecycle change was initiated.
+     */
+    private volatile long lifecycleTime;
+
     private static final ServiceRegistrationImpl[] NO_REGISTRATIONS = new ServiceRegistrationImpl[0];
     private static final Dependent[] NO_DEPENDENTS = new Dependent[0];
     private static final ValueInjection<?>[] NO_INJECTIONS = new ValueInjection<?>[0];
@@ -271,6 +276,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 break;
             }
             case UP_to_STOP_REQUESTED: {
+                lifecycleTime = System.nanoTime();
                 tasks = new Runnable[] { new DependencyStoppedTask(dependents.toScatteredArray(NO_DEPENDENTS)) };
                 break;
             }
@@ -310,6 +316,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 break;
             }
             case DOWN_to_START_REQUESTED: {
+                lifecycleTime = System.nanoTime();
                 tasks = new Runnable[] { new DependentStartedTask() };
                 break;
             }
@@ -1490,6 +1497,10 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
             doExecute(tasks);
         }
 
+        public long getElapsedTime() {
+            return System.nanoTime() - lifecycleTime;
+        }
+
         public ServiceController<?> getController() {
             return ServiceInstanceImpl.this;
         }
@@ -1556,6 +1567,10 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
 
         public ServiceController<?> getController() {
             return ServiceInstanceImpl.this;
+        }
+
+        public long getElapsedTime() {
+            return System.nanoTime() - lifecycleTime;
         }
     }
 
