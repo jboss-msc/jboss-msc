@@ -138,6 +138,11 @@ public class DelegatingServiceContainer implements ServiceContainer {
     }
 
     /** {@inheritDoc} */
+    public boolean isShutdownComplete() {
+        throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
     public void dumpServices() {
         throw new UnsupportedOperationException();
     }

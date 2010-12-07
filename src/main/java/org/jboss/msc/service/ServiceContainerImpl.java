@@ -256,6 +256,12 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         shutdownListener.listenerAddedToAllServices();
     }
 
+    public boolean isShutdownComplete() {
+        synchronized (this) {
+            return terminateInfo != null;
+        }
+    }
+
     public void dumpServices() {
         dumpServices(System.out);
     }

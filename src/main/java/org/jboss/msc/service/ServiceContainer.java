@@ -56,6 +56,13 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
     void shutdown();
 
     /**
+     * Determine whether the container is completely shut down.
+     *
+     * @return {@code true} if shutdown is complete
+     */
+    boolean isShutdownComplete();
+
+    /**
      * Add a terminate listener to this container.
      * The added {@code listener} will be invoked when this container shutdown process is complete.
      *  
