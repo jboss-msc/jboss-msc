@@ -203,13 +203,28 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         this.executor = executor;
     }
 
-    synchronized void addTerminateListener(TerminateListener listener) {
+    @Override
+    public synchronized void addTerminateListener(TerminateListener listener) {
         if (terminateInfo != null) { // if shutdown is already performed 
-            listener.handleTermination(null); // invoke handleTermination immediately
+            listener.handleTermination(terminateInfo); // invoke handleTermination immediately
         }
         else {
             terminateListeners.add(listener);
         }
+    }
+
+    @Override
+    public void awaitTermination() throws InterruptedException {
+        final LatchListener listener = new LatchListener(1);
+        addTerminateListener(listener);
+        listener.await();
+    }
+
+    @Override
+    public void awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+        final LatchListener listener = new LatchListener(1);
+        addTerminateListener(listener);
+        listener.await(timeout, unit);
     }
 
     boolean isShutdown() {
@@ -227,11 +242,9 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             started =  System.nanoTime();
             shutdownListener = new ShutdownListener(started);
         }
-        boolean emptyContainer = true;
         for (ServiceRegistrationImpl registration: this.registry.values()) {
             ServiceInstanceImpl<?> serviceInstance = registration.getInstance();
             if (serviceInstance != null) {
-                emptyContainer = false;
                 try {
                     serviceInstance.addListener(shutdownListener);
                 } catch (IllegalArgumentException e) {
@@ -240,9 +253,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                 serviceInstance.setMode(Mode.REMOVE);
             }
         }
-        if (emptyContainer) {
-            shutdownComplete(started);
-        }
+        shutdownListener.listenerAddedToAllServices();
     }
 
     public void dumpServices() {
@@ -273,7 +284,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     }
 
     private final class ShutdownListener extends AbstractServiceListener<Object> {
-        private volatile long installedServices = 0;
+        private long count = 1;
         private final long started;
 
         public ShutdownListener(long started) {
@@ -282,14 +293,22 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
 
         public synchronized void listenerAdded(final ServiceController<?> controller) {
             if (controller.getState() != ServiceController.State.REMOVED) {
-                installedServices ++;
+                count ++;
             }
         }
 
-        public synchronized void serviceRemoved(final ServiceController<?> controller) {
+        public void serviceRemoved(final ServiceController<?> controller) {
+            decrementCount();
+        }
+
+        public void listenerAddedToAllServices() {
+            decrementCount();
+        }
+
+        private void decrementCount() {
             final boolean allServicesRemoved;
             synchronized (this) {
-                allServicesRemoved = -- installedServices == 0;
+                allServicesRemoved = -- count == 0;
             }
             if (allServicesRemoved) {
                 shutdownComplete(started);

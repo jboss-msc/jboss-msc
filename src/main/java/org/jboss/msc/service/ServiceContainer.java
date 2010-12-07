@@ -24,6 +24,8 @@ package org.jboss.msc.service;
 
 import java.io.PrintStream;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+
 import org.jboss.msc.inject.InjectionException;
 import org.jboss.msc.inject.Injector;
 
@@ -52,6 +54,32 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
      * Stop all services within this container.
      */
     void shutdown();
+
+    /**
+     * Add a terminate listener to this container.
+     * The added {@code listener} will be invoked when this container shutdown process is complete.
+     *  
+     * @param listener the listener
+     */
+    void addTerminateListener(TerminateListener listener);
+
+    /**
+     * Causes the current thread to wait until the container is shutdown.
+     * 
+     * @throws InterruptedException if the current thread is interrupted
+     *         while waiting
+     */
+    void awaitTermination() throws InterruptedException;
+
+    /**
+     * Causes the current thread to wait until the container is shutdown.
+     *
+     * @param timeout the maximum time to wait
+     * @param unit the time unit of the {@code timeout} argument
+     * @throws InterruptedException if the current thread is interrupted
+     *         while waiting
+     */
+    void awaitTermination(long timeout, TimeUnit unit) throws InterruptedException;
 
     /**
      * Dump a complete list of services to {@code System.out}.
@@ -109,9 +137,24 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
         }
     }
 
+    /**
+     * A listener for notification of container shutdown.
+     * 
+     * @see ServiceContainer#addTerminateListener(TerminateListener)
+     * @see ServiceContainer#shutdown()
+     */
     interface TerminateListener {
+        /**
+         * Notifies this listener that the container is shutdown.<br> At the moment this listener is
+         * requested to handle termination, all services in the container are stopped and removed.
+         * 
+         * @param info information regarding the container shutdown process
+         */
         void handleTermination(Info info);
 
+        /**
+         * Container shutdown information.
+         */
         final class Info {
             private final long shutdownInitiated;
             private final long shutdownCompleted;
@@ -121,10 +164,20 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
                 this.shutdownCompleted = shutdownCompleted;
             }
 
+            /**
+             * Returns the time the shutdown process was initiated, in nanoseconds.
+             * 
+             * @return the shutdown initiated time
+             */
             public long getShutdownInitiated() {
                 return shutdownInitiated;
             }
 
+            /**
+             * Returns the time the shutdown process was completed, in nanoseconds.
+             * 
+             * @return the shutdown completed time
+             */
             public long getShutdownCompleted() {
                 return shutdownCompleted;
             }

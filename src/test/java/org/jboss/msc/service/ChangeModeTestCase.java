@@ -912,7 +912,7 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     @Test
     public void changeModeAfterShutdown1() throws Exception {
         final ServiceController<?> controller = getUpActiveFirstController();
-        serviceContainer.shutdown();
+        shutdownContainer();
         try {
             controller.setMode(Mode.ACTIVE);
             fail ("IllegalArgument expected");
@@ -921,7 +921,7 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     @Test
     public void changeModeAfterShutdown2() throws Exception {
         ServiceController<?> controller = getDownPassiveFirstController();
-        serviceContainer.shutdown();
+        shutdownContainer();
         try {
             controller.setMode(Mode.NEVER);
             fail ("IllegalArgument expected");
@@ -931,7 +931,7 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     @Test
     public void changeModeAfterShutdown3() throws Exception {
         ServiceController<?> controller = getUpOnDemandSecondController();
-        serviceContainer.shutdown();
+        shutdownContainer();
         try {
             controller.setMode(Mode.ACTIVE);
             fail ("IllegalArgument expected");

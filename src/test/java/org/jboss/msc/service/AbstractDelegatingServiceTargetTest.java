@@ -22,10 +22,14 @@
 
 package org.jboss.msc.service;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Set;
 import java.util.concurrent.Future;
 
 import org.jboss.msc.util.TestServiceListener;
@@ -162,16 +166,79 @@ public abstract class AbstractDelegatingServiceTargetTest extends AbstractServic
         assertController(extraServiceController, extraServiceStart3);
     }
 
-    // TODO MSC-46 this test requires adding a terminate listener to serviceContainer, 
-    // so we can wait for the container to shutdown before checking no operations can be performed on containerTarget
+    @SuppressWarnings("unchecked")
     public void addServicesAfterShutdown() {
         final ServiceTarget containerTarget = getDelegatingServiceTarget(serviceContainer);
-        final ServiceTarget builderTarget = getDelegatingServiceTarget(serviceContainer.batchBuilder());
+        final BatchBuilder batchBuilder = serviceContainer.batchBuilder();
+        final ServiceTarget batchBuilderTarget = getDelegatingServiceTarget(batchBuilder);
+        final ServiceBuilder<?> builderFromContainer = containerTarget.addService(anotherServiceName, Service.NULL);
+        final ServiceBuilder<?> builderfromBatch = batchBuilderTarget.addService(extraServiceName, Service.NULL);
         final TestServiceListener testListener = new TestServiceListener();
-        
+
         containerTarget.addListener(testListener);
         containerTarget.addDependency(serviceName);
-        serviceContainer.shutdown();
+        shutdownContainer();
+
+        try {
+            containerTarget.addDependency(new ArrayList<ServiceName>());
+            fail ("IllegalStateException expected");
+        } catch (IllegalStateException e) {}
+
+        try {
+            containerTarget.addDependency(oneMoreServiceName);
+            fail ("IllegalStateException expected");
+        } catch (IllegalStateException e) {}
+
+        try {
+            containerTarget.addDependency(serviceName, anotherServiceName);
+            fail ("IllegalStateException expected");
+        } catch (IllegalStateException e) {}
+
+        try {
+            containerTarget.addListener(new ArrayList<ServiceListener<Object>>());
+            fail ("IllegalStateException expected");
+        } catch (IllegalStateException e) {}
+
+        try {
+            containerTarget.addListener(new TestServiceListener());
+            fail ("IllegalStateException expected");
+        } catch (IllegalStateException e) {}
+
+        try {
+            containerTarget.addListener(new TestServiceListener(), new TestServiceListener());
+            fail ("IllegalStateException expected");
+        } catch (IllegalStateException e) {}
+        
+        try {
+            containerTarget.addService(extraServiceName, Service.NULL);
+            fail ("IllegalStateException expected");
+        } catch (IllegalStateException e) {}
+
+        Set<ServiceListener<Object>> listeners = containerTarget.getListeners();
+        assertNotNull(listeners);
+        assertEquals(1, listeners.size());
+        assertSame(testListener, listeners.iterator().next());
+
+        Set<ServiceName> dependencies = containerTarget.getDependencies();
+        assertNotNull(dependencies);
+        assertEquals(1, dependencies.size());
+        assertSame(serviceName, listeners.iterator().next());
+
+        batchBuilderTarget.addService(extraServiceName, Service.NULL);
+        try {
+            batchBuilder.install();
+            fail ("IllegalStateException expected");
+        } catch (IllegalStateException e) {}
+
+        try {
+            builderFromContainer.install();
+            fail ("IllegalStateException expected");
+        } catch (IllegalStateException e) {}
+
+        try {
+            builderfromBatch.install();
+            fail ("IllegalStateException expected");
+        } catch (IllegalStateException e) {}
     }
 
     /**

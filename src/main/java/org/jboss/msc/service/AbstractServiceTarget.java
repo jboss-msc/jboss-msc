@@ -185,11 +185,13 @@ abstract class AbstractServiceTarget implements ServiceTarget {
 
     @Override
     public ServiceTarget subTarget() {
+        validateTargetState();
         return new SubTarget(this);
     }
 
     @Override
     public BatchBuilderImpl batchBuilder() {
+        validateTargetState();
         return new BatchBuilderImpl(this);
     }
 }

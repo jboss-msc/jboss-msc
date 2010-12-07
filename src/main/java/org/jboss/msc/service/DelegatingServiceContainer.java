@@ -27,6 +27,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+
 import org.jboss.msc.value.Value;
 
 /**
@@ -142,6 +144,23 @@ public class DelegatingServiceContainer implements ServiceContainer {
 
     /** {@inheritDoc} */
     public void dumpServices(final PrintStream stream) {
+        throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
+    public void addTerminateListener(TerminateListener listener) {
+        throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void awaitTermination() {
+        throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
         throw new UnsupportedOperationException();
     }
 }

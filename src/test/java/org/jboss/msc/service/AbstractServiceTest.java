@@ -42,16 +42,28 @@ import org.junit.Before;
 public class AbstractServiceTest {
 
     protected volatile ServiceContainer serviceContainer;
+    private boolean shutdownOnTearDown;
 
     @Before
     public void setUp() throws Exception {
         serviceContainer = ServiceContainer.Factory.create();
+        shutdownOnTearDown = true;
     }
 
     @After
     public void tearDown() throws Exception {
-        serviceContainer.shutdown();
+        if (shutdownOnTearDown) {
+            serviceContainer.shutdown();
+        }
         serviceContainer = null;
+    }
+
+    /**
+     * Shutdowns the container.
+     */
+    public void shutdownContainer() {
+        serviceContainer.shutdown();
+        shutdownOnTearDown = false;
     }
 
     /**
