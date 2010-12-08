@@ -132,7 +132,7 @@ final class ServiceRegistrationImpl implements Dependency {
         assert !instance.lockHeld();
         synchronized (this) {
             if (this.instance != null) {
-                throw new DuplicateServiceException("Service '" + name.getSimpleName() + "' already registered");
+                throw new DuplicateServiceException(String.format("Service '%s' already registered", name));
             }
             this.instance = instance;
             synchronized (instance) {
