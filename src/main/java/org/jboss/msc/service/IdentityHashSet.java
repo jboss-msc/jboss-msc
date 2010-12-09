@@ -346,7 +346,7 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
     }
     
     /**
-     * Advanced method that returns a copy of the internal table. The resuling
+     * Advanced method that returns a copy of the internal table. The resulting
      * array will contain nulls at random places that must be skipped. In
      * addition, it will not operate correctly if a null was inserted into the
      * set. Use at your own risk....

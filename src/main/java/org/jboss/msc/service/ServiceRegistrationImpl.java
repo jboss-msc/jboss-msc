@@ -61,6 +61,32 @@ final class ServiceRegistrationImpl implements Dependency {
     }
 
     /**
+     * Returns the dependents lock.<p>
+     * This lock must be used to synchronize calls to {@link getDependents}, and any operations on the 
+     * returned set. The lock should be released only after the dependents set reference is released
+     * by the caller.
+     *  
+     * @return the dependents set lock
+     * @see #getDependents()
+     */
+    final Object getDependentsLock() {
+        return dependents;
+    }
+
+    /**
+     * Returns the dependents set.<p>
+     * This method must be called only by threads that hold the {@link #getDependentsLock() dependents lock},
+     * and any operations on the returned set, including iteration, should synchronize on the same lock.
+     * 
+     * @return the dependents set
+     * @see #getDependentsLock()
+     */
+    final IdentityHashSet<Dependent> getDependents() {
+        assert lockHeldBy(dependents);
+        return dependents;
+    }
+
+    /**
      * Add a dependent to this controller.
      *
      * @param dependent the dependent to add
@@ -70,38 +96,26 @@ final class ServiceRegistrationImpl implements Dependency {
         assert !lockHeld();
         assert !lockHeldByDependent(dependent);
         final ServiceInstanceImpl<?> instance;
-        final ServiceInstanceImpl.Substate state;
-        synchronized (this) {
+        synchronized (dependents) {
             if (! dependents.add(dependent)) {
                 throw new IllegalStateException("Dependent already exists on this registration");
             }
+        }
+        final Runnable[] tasks;
+        synchronized (this) {
             instance = this.instance;
             if (instance == null) {
                 dependent.immediateDependencyUninstalled();
                 return;
             }
-            final Runnable[] tasks;
-            final boolean instanceUp;
             synchronized (instance) {
-                state = instance.getSubstateLocked();
-                tasks = instance.addDependent(dependent);
-                instanceUp = state == ServiceInstanceImpl.Substate.UP;
-                if (instanceUp) {
-                    instance.addAsyncTask();
-                }
+                instance.addAsyncTask();
             }
-            if (!instanceUp) {
-                instance.doExecute(tasks);
-                return;
+            instance.newDependent(dependent);
+            synchronized (instance) {
+                instance.removeAsyncTask();
+                tasks = instance.transition();
             }
-        }
-        if (state == ServiceInstanceImpl.Substate.UP) {
-            dependent.immediateDependencyUp();
-        }
-        final Runnable[] tasks;
-        synchronized (instance) {
-            instance.removeAsyncTask();
-            tasks = instance.transition();
         }
         instance.doExecute(tasks);
     }
@@ -115,7 +129,7 @@ final class ServiceRegistrationImpl implements Dependency {
     public void removeDependent(final Dependent dependent) {
         assert !lockHeld();
         assert !lockHeldByDependent(dependent);
-        synchronized (this) {
+        synchronized (dependents) {
             dependents.remove(dependent);
         }
     }
@@ -135,13 +149,12 @@ final class ServiceRegistrationImpl implements Dependency {
                 throw new DuplicateServiceException(String.format("Service %s is already registered", name.getCanonicalName()));
             }
             this.instance = instance;
-            synchronized (instance) {
-                instance.addDependents(dependents);
-            }
+            if (demandedByCount > 0) instance.addDemands(demandedByCount);
+        }
+        synchronized (dependents) {
             for (Dependent dependent: dependents) {
                 dependent.immediateDependencyInstalled();
             }
-            if (demandedByCount > 0) instance.addDemands(demandedByCount);
         }
     }
 
@@ -153,6 +166,8 @@ final class ServiceRegistrationImpl implements Dependency {
                 return;
             }
             this.instance = null;
+        }
+        synchronized (dependents) {
             for (Dependent dependent: dependents) {
                 dependent.immediateDependencyUninstalled();
             }
@@ -175,6 +190,10 @@ final class ServiceRegistrationImpl implements Dependency {
      */
     boolean lockHeldByDependent(Dependent dependent) {
         return Thread.holdsLock(dependent);
+    }
+
+    boolean lockHeldBy(Object object) {
+        return Thread.holdsLock(object);
     }
 
     ServiceContainerImpl getContainer() {

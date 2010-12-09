@@ -34,7 +34,6 @@ import org.jboss.msc.service.ServiceController.Mode;
 import org.jboss.msc.service.ServiceController.State;
 import org.jboss.msc.service.util.FailToStartService;
 import org.jboss.msc.util.TestServiceListener;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 

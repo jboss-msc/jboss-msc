@@ -27,7 +27,7 @@ package org.jboss.msc.service;
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  * @see Dependency
- * @see Dependency#addDependent(AbstractDependent)
+ * @see Dependency#newDependent(AbstractDependent)
  * @see Dependency#removeDependent(AbstractDependent)
  */
 interface Dependent {
