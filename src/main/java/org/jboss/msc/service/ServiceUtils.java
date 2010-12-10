@@ -24,7 +24,6 @@ package org.jboss.msc.service;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A utility class for service actions.
@@ -54,23 +53,16 @@ public final class ServiceUtils {
      * @param controllers the controllers to undeploy
      */
     public static void undeployAll(final Runnable completeTask, final List<ServiceController<?>> controllers) {
-        final AtomicInteger cnt = new AtomicInteger(controllers.size() + 1);
-        final AbstractServiceListener<Object> listener = new AbstractServiceListener<Object>() {
-            public void listenerAdded(final ServiceController<? extends Object> serviceController) {
-                serviceController.setMode(ServiceController.Mode.REMOVE);
-            }
-
-            public void serviceRemoved(final ServiceController<? extends Object> serviceController) {
-                if (cnt.decrementAndGet() == 0) {
-                    completeTask.run();
-                }
-            }
-        };
+        if (completeTask == null) {
+            throw new IllegalArgumentException("completeTask is null");
+        }
+        if (controllers == null) {
+            throw new IllegalArgumentException("controllers is null");
+        }
+        final MultipleRemoveListener<Runnable> listener = MultipleRemoveListener.create(completeTask);
         for (ServiceController<?> controller : controllers) {
             controller.addListener(listener);
         }
-        if (cnt.decrementAndGet() == 0) {
-            completeTask.run();
-        } 
+        listener.done();
     }
 }

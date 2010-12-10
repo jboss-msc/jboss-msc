@@ -57,6 +57,20 @@ public final class MultipleRemoveListener<T> extends AbstractServiceListener<Obj
     }
 
     /**
+     * Construct a new instance.
+     *
+     * @param task the task to call upon completion
+     * @return the remove listener
+     */
+    public static MultipleRemoveListener<Runnable> create(final Runnable task) {
+        return new MultipleRemoveListener<Runnable>(new Callback<Runnable>() {
+            public void handleDone(final Runnable parameter) {
+                parameter.run();
+            }
+        }, task);
+    }
+
+    /**
      * Construct a new instance which calls the lifecycle {@code complete()} method when done.
      *
      * @param lifecycleContext the context to notify
