@@ -65,7 +65,7 @@ public final class MultipleRemoveListener<T> extends AbstractServiceListener<Obj
     public static MultipleRemoveListener<Runnable> create(final Runnable task) {
         return new MultipleRemoveListener<Runnable>(new Callback<Runnable>() {
             public void handleDone(final Runnable parameter) {
-                parameter.run();
+                if (parameter != null) parameter.run();
             }
         }, task);
     }
@@ -105,7 +105,7 @@ public final class MultipleRemoveListener<T> extends AbstractServiceListener<Obj
     }
 
     private void tick() {
-        if (countUpdater.getAndDecrement(this) == 0) {
+        if (countUpdater.decrementAndGet(this) == 0) {
             callback.handleDone(attachment);
         }
     }

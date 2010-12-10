@@ -23,6 +23,7 @@
 package org.jboss.msc.service;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -42,7 +43,7 @@ public final class ServiceUtils {
      * @param controllers the controllers to undeploy
      */
     public static void undeployAll(Runnable completeTask, ServiceController<?>... controllers) {
-        undeployAll(completeTask, Arrays.asList(controllers));
+        undeployAll(completeTask, controllers == null ? Collections.<ServiceController<?>>emptyList(): Arrays.asList(controllers));
     }
 
     /**
@@ -53,15 +54,12 @@ public final class ServiceUtils {
      * @param controllers the controllers to undeploy
      */
     public static void undeployAll(final Runnable completeTask, final List<ServiceController<?>> controllers) {
-        if (completeTask == null) {
-            throw new IllegalArgumentException("completeTask is null");
-        }
-        if (controllers == null) {
-            throw new IllegalArgumentException("controllers is null");
-        }
         final MultipleRemoveListener<Runnable> listener = MultipleRemoveListener.create(completeTask);
-        for (ServiceController<?> controller : controllers) {
-            controller.addListener(listener);
+        for (ServiceController<?> controller : controllers == null ? Collections.<ServiceController<?>>emptyList() : controllers) {
+            if (controller != null) {
+                controller.setMode(ServiceController.Mode.REMOVE);
+                controller.addListener(listener);
+            }
         }
         listener.done();
     }

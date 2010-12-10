@@ -117,10 +117,7 @@ public class ServiceUtilsTestCase extends AbstractServiceTest {
 
         // try to undeploy a null service... NPE is expected
         final TestTask completeTask = new TestTask();
-        try {
-            ServiceUtils.undeployAll(completeTask, (ServiceController<?>) null);
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
+        ServiceUtils.undeployAll(completeTask, (ServiceController<?>) null);
 
         // now remove the service with a null complete task
         Future<ServiceController<?>> serviceRemoval = testListener.expectServiceRemoval(serviceName);
@@ -132,17 +129,11 @@ public class ServiceUtilsTestCase extends AbstractServiceTest {
         serviceContainer.addService(serviceName, Service.NULL).addListener(testListener).install();
         serviceController = assertController(serviceName, serviceStart);
 
-        // try to remove null service with null complete task... NPE is expected
-        try {
-            ServiceUtils.undeployAll(null, (ServiceController<?>) null);
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
+        // try to remove null service with null complete task... no NPE is expected
+        ServiceUtils.undeployAll(null, (ServiceController<?>) null);
 
-        // try to remove a null list of services with non-null complete task... NPE is expected
-        try {
-            ServiceUtils.undeployAll(completeTask, (List<ServiceController<?>>) null);
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
+        // try to remove a null list of services with non-null complete task... no NPE is expected
+        ServiceUtils.undeployAll(completeTask, (List<ServiceController<?>>) null);
 
         // remove service again
         serviceRemoval = testListener.expectServiceRemoval(serviceName);
@@ -157,9 +148,6 @@ public class ServiceUtilsTestCase extends AbstractServiceTest {
         serviceController = assertController(serviceName, serviceStart);
 
         // remove null list of services with a null complete task... NPE is expected
-        try {
-            ServiceUtils.undeployAll(null, (List<ServiceController<?>>) null);
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
+        ServiceUtils.undeployAll(null, (List<ServiceController<?>>) null);
     }
 }
