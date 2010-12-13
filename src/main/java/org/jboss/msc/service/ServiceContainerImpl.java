@@ -232,19 +232,24 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     }
 
     public void shutdown() {
-        final ShutdownListener shutdownListener;
+        final MultipleRemoveListener<Runnable> shutdownListener;
         final long started;
         synchronized(this) {
             if (down){
                 return;
             }
             down = true;
-            started =  System.nanoTime();
-            shutdownListener = new ShutdownListener(started);
         }
-        for (ServiceRegistrationImpl registration: this.registry.values()) {
+        started =  System.nanoTime();
+        shutdownListener = MultipleRemoveListener.create(new Runnable() {
+            public void run() {
+                shutdownComplete(started);
+            }
+        });
+        final HashSet<ServiceInstanceImpl<?>> done = new HashSet<ServiceInstanceImpl<?>>();
+        for (ServiceRegistrationImpl registration : registry.values()) {
             ServiceInstanceImpl<?> serviceInstance = registration.getInstance();
-            if (serviceInstance != null) {
+            if (serviceInstance != null && done.add(serviceInstance)) {
                 try {
                     serviceInstance.addListener(shutdownListener);
                 } catch (IllegalArgumentException e) {
@@ -253,7 +258,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                 serviceInstance.setMode(Mode.REMOVE);
             }
         }
-        shutdownListener.listenerAddedToAllServices();
+        shutdownListener.done();
     }
 
     public boolean isShutdownComplete() {
@@ -287,39 +292,6 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
 
     protected void finalize() throws Throwable {
         shutdown();
-    }
-
-    private final class ShutdownListener extends AbstractServiceListener<Object> {
-        private long count = 1;
-        private final long started;
-
-        public ShutdownListener(long started) {
-            this.started = started;
-        }
-
-        public synchronized void listenerAdded(final ServiceController<?> controller) {
-            if (controller.getState() != ServiceController.State.REMOVED) {
-                count ++;
-            }
-        }
-
-        public void serviceRemoved(final ServiceController<?> controller) {
-            decrementCount();
-        }
-
-        public void listenerAddedToAllServices() {
-            decrementCount();
-        }
-
-        private void decrementCount() {
-            final boolean allServicesRemoved;
-            synchronized (this) {
-                allServicesRemoved = -- count == 0;
-            }
-            if (allServicesRemoved) {
-                shutdownComplete(started);
-            }
-        }
     }
 
     private synchronized void shutdownComplete(long started) {
