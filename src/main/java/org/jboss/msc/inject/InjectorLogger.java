@@ -37,7 +37,7 @@ import org.jboss.logging.MessageLogger;
 interface InjectorLogger {
 
     @LogMessage(level = Logger.Level.WARN)
-    @Message(id = 2, value = "Unexpected failure to uninject %s")
+    @Message(id = 100, value = "Unexpected failure to uninject %s")
     void uninjectFailed(@Cause Throwable cause, Object target);
 
     InjectorLogger INSTANCE = Logger.getMessageLogger(InjectorLogger.class, "org.jboss.msc.inject");

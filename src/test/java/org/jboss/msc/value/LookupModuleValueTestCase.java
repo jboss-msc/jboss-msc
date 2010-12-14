@@ -25,6 +25,7 @@ package org.jboss.msc.value;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
 
+import org.jboss.modules.Module;
 import org.jboss.modules.ModuleIdentifier;
 import org.jboss.msc.value.util.AnotherService;
 import org.jboss.msc.value.util.AnyService;
@@ -39,7 +40,7 @@ public class LookupModuleValueTestCase {
 
     @Test
     public void lookupAnotherServiceClassValue() {
-        final Value<Class<?>> value = new LookupModuleClassValue(AnotherService.class.getName(), ModuleIdentifier.SYSTEM);
+        final Value<Class<?>> value = new LookupModuleClassValue(AnotherService.class.getName(), ModuleIdentifier.SYSTEM, Module.getDefaultModuleLoader());
         assertSame(AnotherService.class, value.getValue());
         assertSame(AnotherService.class, value.getValue());
         assertSame(AnotherService.class, value.getValue());
@@ -47,7 +48,7 @@ public class LookupModuleValueTestCase {
 
     @Test
     public void lookupAnyServiceClassValue() {
-        final Value<Class<?>> value = new LookupModuleClassValue(AnyService.class.getName(), ModuleIdentifier.SYSTEM);
+        final Value<Class<?>> value = new LookupModuleClassValue(AnyService.class.getName(), ModuleIdentifier.SYSTEM, Module.getDefaultModuleLoader());
         assertSame(AnyService.class, value.getValue());
         assertSame(AnyService.class, value.getValue());
         assertSame(AnyService.class, value.getValue());
@@ -55,7 +56,7 @@ public class LookupModuleValueTestCase {
 
     @Test
     public void lookupNonExistentModuleClassValue() {
-        final Value<Class<?>> value = new LookupModuleClassValue(AnotherService.class.getName(), ModuleIdentifier.fromString("non:existent"));
+        final Value<Class<?>> value = new LookupModuleClassValue(AnotherService.class.getName(), ModuleIdentifier.fromString("non:existent"), Module.getDefaultModuleLoader());
         try {
             value.getValue();
             fail("IllegalStateException expected");
@@ -64,7 +65,7 @@ public class LookupModuleValueTestCase {
 
     @Test
     public void lookupModuleNonExistentClassValue() {
-        Value<Class<?>> value = new LookupModuleClassValue("NonExistentClass", ModuleIdentifier.SYSTEM);
+        Value<Class<?>> value = new LookupModuleClassValue("NonExistentClass", ModuleIdentifier.SYSTEM, Module.getDefaultModuleLoader());
         try {
             value.getValue();
             fail("IllegalStateException expected");
@@ -74,17 +75,17 @@ public class LookupModuleValueTestCase {
     @Test
     public void illegalLookupModuleClassValue() {
         try {
-            new LookupModuleClassValue(null, ModuleIdentifier.SYSTEM);
+            new LookupModuleClassValue(null, ModuleIdentifier.SYSTEM, Module.getDefaultModuleLoader());
             fail("IllegalArgumentException expected");
         } catch (IllegalArgumentException e) {}
 
         try {
-            new LookupModuleClassValue(AnyService.class.getName(), null);
+            new LookupModuleClassValue(AnyService.class.getName(), null, Module.getDefaultModuleLoader());
             fail("IllegalArgumentException expected");
         } catch (IllegalArgumentException e) {}
 
         try {
-            new LookupModuleClassValue(null, null);
+            new LookupModuleClassValue(null, null, Module.getDefaultModuleLoader());
             fail("IllegalArgumentException expected");
         } catch (IllegalArgumentException e) {}
     }

@@ -46,6 +46,10 @@ interface ServiceLogger {
     void greeting(String version);
 
     @LogMessage(level = ERROR)
+    @Message(id = 2, value = "Service \"%s\" failed to start")
+    void startFailed(@Cause StartException cause, ServiceName serviceName);
+
+    @LogMessage(level = ERROR)
     @Message(id = 3, value = "Invocation of listener '%s' failed")
     void listenerFailed(@Cause Throwable cause, ServiceListener<?> listener);
 
@@ -76,10 +80,6 @@ interface ServiceLogger {
     @LogMessage(level = WARN)
     @Message(id = 10, value = "An error occurred while trying to close the profile output file: %s")
     void profileOutputCloseFailed(/* ! @Cause */ IOException cause);
-
-    @LogMessage(level = ERROR)
-    @Message(id = 11, value = "Service \"%s\" failed to start")
-    void startFailed(@Cause StartException cause, ServiceName serviceName);
 
     @LogMessage(level = ERROR)
     @Message(id = 12, value = "Failed to register MBean with MBeanServer")

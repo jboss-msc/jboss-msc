@@ -22,9 +22,9 @@
 
 package org.jboss.msc.value;
 
-import org.jboss.modules.ModuleClassLoader;
 import org.jboss.modules.ModuleIdentifier;
 import org.jboss.modules.ModuleLoadException;
+import org.jboss.modules.ModuleLoader;
 
 /**
  * A value which looks up a class by name from a module.
@@ -34,6 +34,7 @@ import org.jboss.modules.ModuleLoadException;
 public final class LookupModuleClassValue implements Value<Class<?>> {
     private final String className;
     private final ModuleIdentifier moduleIdentifier;
+    private final ModuleLoader moduleLoader;
     private volatile Class<?> result;
 
     /**
@@ -41,16 +42,21 @@ public final class LookupModuleClassValue implements Value<Class<?>> {
      *
      * @param className the name of the class
      * @param moduleIdentifier the module identifier
+     * @param moduleLoader the module loader to use
      */
-    public LookupModuleClassValue(final String className, final ModuleIdentifier moduleIdentifier) {
+    public LookupModuleClassValue(final String className, final ModuleIdentifier moduleIdentifier, final ModuleLoader moduleLoader) {
         if (className == null) {
             throw new IllegalArgumentException("className is null");
         }
         if (moduleIdentifier == null) {
             throw new IllegalArgumentException("moduleIdentifier is null");
         }
+        if (moduleLoader == null) {
+            throw new IllegalArgumentException("moduleLoader is null");
+        }
         this.className = className;
         this.moduleIdentifier = moduleIdentifier;
+        this.moduleLoader = moduleLoader;
     }
 
     /** {@inheritDoc} */
@@ -66,7 +72,7 @@ public final class LookupModuleClassValue implements Value<Class<?>> {
             }
             final ClassLoader classLoader;
             try {
-                classLoader = ModuleClassLoader.forModule(moduleIdentifier);
+                classLoader = moduleLoader.loadModule(moduleIdentifier).getClassLoader();
             } catch (ModuleLoadException e) {
                 throw new IllegalStateException("No module available with name '" + moduleIdentifier + "'");
             }
