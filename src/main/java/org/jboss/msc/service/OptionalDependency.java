@@ -242,6 +242,11 @@ class OptionalDependency implements Dependency, Dependent {
     }
 
     @Override
+    public ServiceName getName() {
+        return optionalDependency.getName();
+    }
+
+    @Override
     public void immediateDependencyInstalled() {
         assert ! lockHeld();
         final boolean notifyOptionalDependent;

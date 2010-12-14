@@ -201,7 +201,8 @@ final class ServiceRegistrationImpl implements Dependency {
         }
     }
 
-    ServiceName getName() {
+    @Override
+    public ServiceName getName() {
         return name;
     }
 

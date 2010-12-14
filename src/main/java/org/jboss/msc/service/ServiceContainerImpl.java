@@ -27,6 +27,7 @@ import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.Writer;
+import java.lang.management.ManagementFactory;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayDeque;
@@ -36,7 +37,9 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -45,6 +48,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -54,12 +58,19 @@ import org.jboss.msc.ref.Reaper;
 import org.jboss.msc.ref.Reference;
 import org.jboss.msc.ref.WeakReference;
 import org.jboss.msc.service.ServiceController.Mode;
+import org.jboss.msc.service.management.ServiceContainerMXBean;
+import org.jboss.msc.service.management.ServiceStatus;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
 final class ServiceContainerImpl extends AbstractServiceTarget implements ServiceContainer {
+
+    private static final AtomicInteger SERIAL = new AtomicInteger(1);
 
     private final Lock readLock;
     private final Lock writeLock;
@@ -160,7 +171,83 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
 
     private volatile Executor executor;
 
-    ServiceContainerImpl() {
+    private final String name;
+    private final MBeanServer mBeanServer;
+    private final ObjectName objectName;
+
+    private final ServiceContainerMXBean containerMXBean = new ServiceContainerMXBean() {
+        public ServiceStatus getServiceStatus(final String name) {
+            final ServiceRegistrationImpl registration = registry.get(ServiceName.parse(name));
+            if (registration != null) {
+                final ServiceInstanceImpl<?> instance = registration.getInstance();
+                if (instance != null) {
+                    return instance.getStatus();
+                }
+            }
+            return null;
+        }
+
+        public List<String> getServiceNames() {
+            readLock.lock();
+            try {
+                final Set<ServiceName> names = registry.keySet();
+                final ArrayList<String> list = new ArrayList<String>(names.size());
+                for (ServiceName serviceName : names) {
+                    list.add(serviceName.getCanonicalName());
+                }
+                return list;
+            } finally {
+                readLock.unlock();
+            }
+        }
+
+        public List<ServiceStatus> getServiceStatuses() {
+            readLock.lock();
+            try {
+                final Collection<ServiceRegistrationImpl> registrations = registry.values();
+                final ArrayList<ServiceStatus> list = new ArrayList<ServiceStatus>(registrations.size());
+                for (ServiceRegistrationImpl registration : registrations) {
+                    final ServiceInstanceImpl<?> instance = registration.getInstance();
+                    if (instance != null) list.add(instance.getStatus());
+                }
+                return list;
+            } finally {
+                readLock.unlock();
+            }
+        }
+
+        public void setServiceMode(final String name, final String mode) {
+            final ServiceRegistrationImpl registration = registry.get(ServiceName.parse(name));
+            if (registration != null) {
+                final ServiceInstanceImpl<?> instance = registration.getInstance();
+                if (instance != null) {
+                    instance.setMode(Mode.valueOf(mode.toUpperCase(Locale.US)));
+                }
+            }
+        }
+
+        public void dumpServices() {
+            ServiceContainerImpl.this.dumpServices();
+        }
+    };
+
+    ServiceContainerImpl(String name) {
+        final int serialNo = SERIAL.getAndIncrement();
+        if (name == null) {
+            name = String.format("anonymous-%d", Integer.valueOf(serialNo));
+        }
+        this.name = name;
+        ObjectName objectName = null;
+        MBeanServer mBeanServer = null;
+        try {
+            objectName = new ObjectName("jboss.msc", hashTable("name", name, "type", "container"));
+            mBeanServer = ManagementFactory.getPlatformMBeanServer();
+            mBeanServer.registerMBean(containerMXBean, objectName);
+        } catch (Exception e) {
+            ServiceLogger.INSTANCE.mbeanFailed(e);
+        }
+        this.mBeanServer = mBeanServer;
+        this.objectName = objectName;
         final ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
         readLock = readWriteLock.readLock();
         writeLock = readWriteLock.writeLock();
@@ -189,6 +276,33 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                 }));
             }
         }
+        if (objectName != null && mBeanServer != null) {
+            addTerminateListener(new TerminateListener() {
+                public void handleTermination(final Info info) {
+                    try {
+                        ServiceContainerImpl.this.mBeanServer.unregisterMBean(ServiceContainerImpl.this.objectName);
+                    } catch (Exception ignored) {
+                    }
+                }
+            });
+        }
+    }
+
+    private static Hashtable<String, String> hashTable(String... strings) {
+        if ((strings.length & 1) != 0) {
+            throw new IllegalArgumentException();
+        }
+        final Hashtable<String, String> table = new Hashtable<String, String>();
+        for (int i = 0; i < strings.length; i+=2) {
+            String key = strings[i];
+            String value = strings[i+1];
+            table.put(key, value);
+        }
+        return table;
+    }
+
+    public String getName() {
+        return name;
     }
 
     Writer getProfileOutput() {
@@ -277,12 +391,10 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             if (registry.isEmpty()) {
                 out.printf("Registry is empty");
             } else for (Map.Entry<ServiceName, ServiceRegistrationImpl> entry : registry.entrySet()) {
-                final ServiceName name = entry.getKey();
                 final ServiceRegistrationImpl registration = entry.getValue();
                 final ServiceInstanceImpl<?> instance = registration.getInstance();
                 if (instance != null) {
-                    final ServiceInstanceImpl.Substate substate = instance.getSubstate();
-                    out.printf("Service '%s' mode %s state=%s (%s)\n", name, instance.getMode(), substate.getState(), substate);
+                    out.printf("%s\n", instance.getStatus());
                 }
             }
         } finally {

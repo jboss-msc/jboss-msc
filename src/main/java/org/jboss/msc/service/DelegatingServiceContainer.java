@@ -128,6 +128,11 @@ public class DelegatingServiceContainer implements ServiceContainer {
     }
 
     /** {@inheritDoc} */
+    public String getName() {
+        throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
     public void setExecutor(final Executor executor) {
         throw new UnsupportedOperationException();
     }

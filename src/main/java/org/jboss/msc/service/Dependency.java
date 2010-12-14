@@ -80,4 +80,11 @@ interface Dependency extends Value<Object> {
      * @throws IllegalStateException if an error occurs
      */
     Object getValue() throws IllegalStateException;
+
+    /**
+     * Get the name of this dependency.
+     *
+     * @return the name
+     */
+    ServiceName getName();
 }

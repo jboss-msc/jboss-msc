@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
+import org.jboss.msc.service.management.ServiceStatus;
 import org.jboss.msc.value.Value;
 
 /**
@@ -130,6 +131,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
     private static final ServiceRegistrationImpl[] NO_REGISTRATIONS = new ServiceRegistrationImpl[0];
     private static final Dependent[] NO_DEPENDENTS = new Dependent[0];
     private static final ValueInjection<?>[] NO_INJECTIONS = new ValueInjection<?>[0];
+    private static final String[] NO_STRINGS = new String[0];
 
     ServiceInstanceImpl(final Value<? extends Service<? extends S>> serviceValue, final Location location, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<? extends ServiceListener<? super S>> listeners) {
         this.serviceValue = serviceValue;
@@ -866,6 +868,53 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
             throw new IllegalArgumentException("expectedMode is null");
         }
         return internalSetMode(expectedMode, newMode);
+    }
+
+    ServiceStatus getStatus() {
+        synchronized (this) {
+            final String name = primaryRegistration.getName().getCanonicalName();
+            final ServiceRegistrationImpl[] aliasRegistrations = this.aliasRegistrations;
+            final int aliasLength = aliasRegistrations.length;
+            final String[] aliases;
+            if (aliasLength == 0) {
+                aliases = NO_STRINGS;
+            } else {
+                aliases = new String[aliasLength];
+                for (int i = 0; i < aliasLength; i++) {
+                    aliases[i] = aliasRegistrations[i].getName().getCanonicalName();
+                }
+            }
+            String serviceClass = "<unknown>";
+            try {
+                final Service<? extends S> value = serviceValue.getValue();
+                if (value != null) {
+                    serviceClass = value.getClass().getName();
+                }
+            } catch (RuntimeException ignored) {
+            }
+            final Dependency[] dependencies = this.dependencies;
+            final int dependenciesLength = dependencies.length;
+            final String[] dependencyNames;
+            if (dependenciesLength == 0) {
+                dependencyNames = NO_STRINGS;
+            } else {
+                dependencyNames = new String[dependenciesLength];
+                for (int i = 0; i < dependenciesLength; i++) {
+                    dependencyNames[i] = dependencies[i].getName().getCanonicalName();
+                }
+            }
+            return new ServiceStatus(
+                    name,
+                    aliases,
+                    serviceClass,
+                    mode.name(),
+                    state.getState().name(),
+                    state.name(),
+                    dependencyNames,
+                    failCount > 0,
+                    missingDependencyCount > 0
+            );
+        }
     }
 
     private static enum ListenerNotification {

@@ -39,6 +39,8 @@ import static org.jboss.logging.Logger.Level.*;
 @MessageLogger(projectCode = "MSC")
 interface ServiceLogger {
 
+    ServiceLogger INSTANCE = Logger.getMessageLogger(ServiceLogger.class, "org.jboss.msc");
+
     @LogMessage(level = INFO)
     @Message(id = 1, value = "JBoss MSC version %s")
     void greeting(String version);
@@ -79,5 +81,7 @@ interface ServiceLogger {
     @Message(id = 11, value = "Service \"%s\" failed to start")
     void startFailed(@Cause StartException cause, ServiceName serviceName);
 
-    ServiceLogger INSTANCE = Logger.getMessageLogger(ServiceLogger.class, "org.jboss.msc");
+    @LogMessage(level = ERROR)
+    @Message(id = 12, value = "Failed to register MBean with MBeanServer")
+    void mbeanFailed(@Cause Exception e);
 }

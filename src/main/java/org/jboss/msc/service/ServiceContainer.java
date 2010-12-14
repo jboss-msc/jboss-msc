@@ -101,6 +101,13 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
     void dumpServices(PrintStream stream);
 
     /**
+     * Get the name of this service container.
+     *
+     * @return the container name
+     */
+    String getName();
+
+    /**
      * The factory class for service containers.
      */
     class Factory {
@@ -109,13 +116,22 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
         }
 
         /**
-         * Create a new instance.
+         * Create a new instance with a generated name.
          *
          * @return a new service container instance
          */
         public static ServiceContainer create() {
-            final ServiceContainerImpl container = new ServiceContainerImpl();
-            return container;
+            return new ServiceContainerImpl(null);
+        }
+
+        /**
+         * Create a new instance with a given name.
+         *
+         * @param name the name of the new container
+         * @return a new service container instance
+         */
+        public static ServiceContainer create(String name) {
+            return new ServiceContainerImpl(name);
         }
     }
 
