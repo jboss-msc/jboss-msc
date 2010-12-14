@@ -40,7 +40,7 @@ public class LookupModuleValueTestCase {
 
     @Test
     public void lookupAnotherServiceClassValue() {
-        final Value<Class<?>> value = new LookupModuleClassValue(AnotherService.class.getName(), ModuleIdentifier.SYSTEM, Module.getDefaultModuleLoader());
+        final Value<Class<?>> value = new LookupModuleClassValue(AnotherService.class.getName(), ModuleIdentifier.SYSTEM, Module.getSystemModuleLoader());
         assertSame(AnotherService.class, value.getValue());
         assertSame(AnotherService.class, value.getValue());
         assertSame(AnotherService.class, value.getValue());
@@ -48,7 +48,7 @@ public class LookupModuleValueTestCase {
 
     @Test
     public void lookupAnyServiceClassValue() {
-        final Value<Class<?>> value = new LookupModuleClassValue(AnyService.class.getName(), ModuleIdentifier.SYSTEM, Module.getDefaultModuleLoader());
+        final Value<Class<?>> value = new LookupModuleClassValue(AnyService.class.getName(), ModuleIdentifier.SYSTEM, Module.getSystemModuleLoader());
         assertSame(AnyService.class, value.getValue());
         assertSame(AnyService.class, value.getValue());
         assertSame(AnyService.class, value.getValue());
@@ -56,7 +56,7 @@ public class LookupModuleValueTestCase {
 
     @Test
     public void lookupNonExistentModuleClassValue() {
-        final Value<Class<?>> value = new LookupModuleClassValue(AnotherService.class.getName(), ModuleIdentifier.fromString("non:existent"), Module.getDefaultModuleLoader());
+        final Value<Class<?>> value = new LookupModuleClassValue(AnotherService.class.getName(), ModuleIdentifier.fromString("non:existent"), Module.getSystemModuleLoader());
         try {
             value.getValue();
             fail("IllegalStateException expected");
@@ -65,7 +65,7 @@ public class LookupModuleValueTestCase {
 
     @Test
     public void lookupModuleNonExistentClassValue() {
-        Value<Class<?>> value = new LookupModuleClassValue("NonExistentClass", ModuleIdentifier.SYSTEM, Module.getDefaultModuleLoader());
+        Value<Class<?>> value = new LookupModuleClassValue("NonExistentClass", ModuleIdentifier.SYSTEM, Module.getSystemModuleLoader());
         try {
             value.getValue();
             fail("IllegalStateException expected");
@@ -75,17 +75,17 @@ public class LookupModuleValueTestCase {
     @Test
     public void illegalLookupModuleClassValue() {
         try {
-            new LookupModuleClassValue(null, ModuleIdentifier.SYSTEM, Module.getDefaultModuleLoader());
+            new LookupModuleClassValue(null, ModuleIdentifier.SYSTEM, Module.getSystemModuleLoader());
             fail("IllegalArgumentException expected");
         } catch (IllegalArgumentException e) {}
 
         try {
-            new LookupModuleClassValue(AnyService.class.getName(), null, Module.getDefaultModuleLoader());
+            new LookupModuleClassValue(AnyService.class.getName(), null, Module.getSystemModuleLoader());
             fail("IllegalArgumentException expected");
         } catch (IllegalArgumentException e) {}
 
         try {
-            new LookupModuleClassValue(null, null, Module.getDefaultModuleLoader());
+            new LookupModuleClassValue(null, null, Module.getSystemModuleLoader());
             fail("IllegalArgumentException expected");
         } catch (IllegalArgumentException e) {}
     }

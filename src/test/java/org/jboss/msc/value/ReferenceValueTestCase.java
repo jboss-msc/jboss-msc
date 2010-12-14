@@ -32,9 +32,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.jboss.msc.ref.Reference;
-import org.jboss.msc.ref.Reference.Type;
-import org.jboss.msc.ref.References;
+import org.jboss.modules.ref.Reference;
+import org.jboss.modules.ref.Reference.Type;
+import org.jboss.modules.ref.References;
 import org.junit.Test;
 
 /**

@@ -22,7 +22,7 @@
 
 package org.jboss.msc.value;
 
-import org.jboss.msc.ref.Reference;
+import org.jboss.modules.ref.Reference;
 
 /**
  * A value which reads a reference.
