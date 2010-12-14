@@ -825,10 +825,15 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                     // Duplicates not allowed
                     throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + primaryRegistration.getName());
                 }
+                asyncTasks ++;
+            } else {
+                asyncTasks += 2;
             }
-            asyncTasks++;
         }
         invokeListener(listener, ListenerNotification.LISTENER_ADDED, null);
+        if (state == Substate.REMOVED) {
+            invokeListener(listener, ListenerNotification.STATE, State.REMOVED);
+        }
     }
 
     public void removeListener(final ServiceListener<? super S> listener) {
