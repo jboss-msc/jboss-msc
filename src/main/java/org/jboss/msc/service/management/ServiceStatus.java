@@ -23,13 +23,17 @@
 package org.jboss.msc.service.management;
 
 import java.beans.ConstructorProperties;
+import java.io.Serializable;
 
 /**
  * A representation of the current status of some service.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public class ServiceStatus {
+public class ServiceStatus implements Serializable {
+
+    private static final long serialVersionUID = 6538576441150451665L;
+
     private final String serviceName;
     private final String[] aliases;
     private final String serviceClassName;

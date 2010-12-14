@@ -23,6 +23,7 @@
 package org.jboss.msc.service;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -37,8 +38,8 @@ import org.jboss.msc.value.Value;
  */
 abstract class AbstractServiceTarget implements ServiceTarget {
 
-    private final Set<ServiceListener<Object>> listeners = new HashSet<ServiceListener<Object>>();
-    private final Set<ServiceName> dependencies = new HashSet<ServiceName>();
+    private final Set<ServiceListener<Object>> listeners = Collections.synchronizedSet(new HashSet<ServiceListener<Object>>());
+    private final Set<ServiceName> dependencies = Collections.synchronizedSet(new HashSet<ServiceName>());
 
     @Override
     public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
