@@ -42,46 +42,46 @@ interface ServiceLogger {
     ServiceLogger INSTANCE = Logger.getMessageLogger(ServiceLogger.class, "org.jboss.msc");
 
     @LogMessage(level = INFO)
-    @Message(id = 1, value = "JBoss MSC version %s")
+    @Message(value = "JBoss MSC version %s")
     void greeting(String version);
 
     @LogMessage(level = ERROR)
-    @Message(id = 2, value = "Service \"%s\" failed to start")
+    @Message(id = 1, value = "Failed to start %s")
     void startFailed(@Cause StartException cause, ServiceName serviceName);
 
     @LogMessage(level = ERROR)
-    @Message(id = 3, value = "Invocation of listener '%s' failed")
+    @Message(id = 2, value = "Invocation of listener \"%s\" failed")
     void listenerFailed(@Cause Throwable cause, ServiceListener<?> listener);
 
     @LogMessage(level = WARN)
-    @Message(id = 4, value = "Exception thrown after start was already completed for service \"%s\"")
+    @Message(id = 3, value = "Exception thrown after start was already completed in %s")
     void exceptionAfterComplete(@Cause Throwable cause, ServiceName serviceName);
 
     @LogMessage(level = WARN)
-    @Message(id = 5, value = "Stop of service \"%s\" failed")
+    @Message(id = 4, value = "Failure during stop of %s")
     void stopFailed(@Cause Throwable cause, ServiceName serviceName);
 
     @LogMessage(level = WARN)
-    @Message(id = 6, value = "Service \"%s\" disappeared before stop")
+    @Message(id = 5, value = "Unexpected disappearance of %s during stop")
     void stopServiceMissing(ServiceName serviceName);
 
     @LogMessage(level = WARN)
-    @Message(id = 7, value = "Uninjection \"%2$s\" of service \"%1$s\" failed unexpectedly")
+    @Message(id = 6, value = "Uninjection \"%2$s\" of %1$s failed unexpectedly")
     void uninjectFailed(@Cause Throwable cause, ServiceName serviceName, ValueInjection<?> valueInjection);
 
     @LogMessage(level = WARN)
-    @Message(id = 8, value = "An internal service error has occurred while processing an operation on service \"%s\"")
+    @Message(id = 7, value = "An internal service error has occurred while processing an operation on %s")
     void internalServiceError(@Cause Throwable cause, ServiceName serviceName);
 
     @LogMessage(level = ERROR)
-    @Message(id = 9, value = "A worker thread threw an uncaught exception")
+    @Message(id = 8, value = "A worker thread threw an uncaught exception")
     void uncaughtException(@Cause Throwable cause);
 
     @LogMessage(level = WARN)
-    @Message(id = 10, value = "An error occurred while trying to close the profile output file: %s")
+    @Message(id = 9, value = "An error occurred while trying to close the profile output file: %s")
     void profileOutputCloseFailed(/* ! @Cause */ IOException cause);
 
     @LogMessage(level = ERROR)
-    @Message(id = 12, value = "Failed to register MBean with MBeanServer")
+    @Message(id = 10, value = "Failed to register MBean with MBeanServer")
     void mbeanFailed(@Cause Exception e);
 }
