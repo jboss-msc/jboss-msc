@@ -29,6 +29,7 @@ import static org.junit.Assert.fail;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.jboss.msc.translate.util.TargetWrapper;
@@ -81,7 +82,7 @@ public class MethodInjectorTestCase {
     @Test
     public void publicStaticMethod() throws Exception {
         final Value<Method> method = Values.immediateValue(AnotherService.class.getMethod("discoverDefinedBy"));
-        final Injector<Void> injector = new MethodInjector<Void>(method, target, null, arguments);
+        final Injector<Void> injector = new MethodInjector<Void>(method, target, Values.<Object>nullValue(), arguments);
         Values.thisValue().setValue(Values.immediateValue(this));
         Values.injectedValue().setValue(Values.immediateValue("injected"));
         injector.inject(null);
@@ -135,7 +136,7 @@ public class MethodInjectorTestCase {
     @Test
     public void unaccessibleMethod() throws Exception {
         final Value<Method> unaccessibleMethod = new ImmediateValue<Method>(AnotherService.class.getDeclaredMethod("getDefinedBy"));
-        final Injector<String> injector = new MethodInjector<String>(unaccessibleMethod, target, Values.immediateValue(false), arguments);
+        final Injector<String> injector = new MethodInjector<String>(unaccessibleMethod, target, Values.immediateValue(Boolean.FALSE), arguments);
         try {
             injector.inject("should throw exception");
             fail("InjectionExcpetion expected");
@@ -144,7 +145,7 @@ public class MethodInjectorTestCase {
 
     @Test
     public void methodWithException() throws Exception {
-        arguments.add(new ImmediateValue<Boolean>(true));
+        arguments.add(new ImmediateValue<Boolean>(Boolean.TRUE));
         final Injector<String> injector = new MethodInjector<String>(method, target, Values.immediateValue(10), arguments);
         try {
             injector.inject("should throw exception again");
@@ -154,70 +155,70 @@ public class MethodInjectorTestCase {
 
     @Test
     public void nullMethod() throws Exception {
-        arguments.add(new ImmediateValue<Boolean>(false));
+        arguments.add(new ImmediateValue<Boolean>(Boolean.FALSE));
         final Value<?> injected = Values.immediateValue(new Object());
 
-        Injector<String> injector = new MethodInjector<String>(null, target, injected, arguments);
+        Injector<String> injector = new MethodInjector<String>(Values.<Method>nullValue(), target, injected, arguments);
         try {
             injector.inject("exception expected");
             fail("InjectionException expected");
         } catch (InjectionException e) {}
 
-        injector = new MethodInjector<String>(method, null, injected, arguments);
+        injector = new MethodInjector<String>(method, Values.nullValue(), injected, arguments);
         try {
             injector.inject("exception expected");
             fail("InjectionException expected");
         } catch (InjectionException e) {}
 
-        injector = new MethodInjector<String>(method, target, injected, null);
+        injector = new MethodInjector<String>(method, target, injected, Collections.<Value<?>>emptyList());
         try {
             injector.inject("exception expected");
             fail("InjectionException expected");
         } catch (InjectionException e) {}
 
-        injector = new MethodInjector<String>(null, null, injected, arguments);
+        injector = new MethodInjector<String>(Values.<Method>nullValue(), Values.nullValue(), injected, arguments);
         try {
             injector.inject("exception expected");
             fail("InjectionException expected");
         } catch (InjectionException e) {}
 
-        injector = new MethodInjector<String>(null, target, null, arguments);
+        injector = new MethodInjector<String>(Values.<Method>nullValue(), target, Values.nullValue(), arguments);
         try {
             injector.inject("exception expected");
             fail("InjectionException expected");
         } catch (InjectionException e) {}
 
-        injector = new MethodInjector<String>(null, target, injected, null);
+        injector = new MethodInjector<String>(Values.<Method>nullValue(), target, injected, Collections.<Value<?>>emptyList());
         try {
             injector.inject("exception expected");
             fail("InjectionException expected");
         } catch (InjectionException e) {}
 
-        injector = new MethodInjector<String>(method, null, null, arguments);
+        injector = new MethodInjector<String>(method, Values.nullValue(), Values.nullValue(), arguments);
         try {
             injector.inject("exception expected");
             fail("InjectionException expected");
         } catch (InjectionException e) {}
 
-        injector = new MethodInjector<String>(method, null, injected, null);
+        injector = new MethodInjector<String>(method, Values.nullValue(), injected, Collections.<Value<?>>emptyList());
         try {
             injector.inject("exception expected");
             fail("InjectionException expected");
         } catch (InjectionException e) {}
 
-        injector = new MethodInjector<String>(null, null, null, arguments);
+        injector = new MethodInjector<String>(Values.<Method>nullValue(), Values.nullValue(), Values.nullValue(), arguments);
         try {
             injector.inject("exception expected");
             fail("InjectionException expected");
         } catch (InjectionException e) {}
 
-        injector = new MethodInjector<String>(null, null, injected, null);
+        injector = new MethodInjector<String>(Values.<Method>nullValue(), Values.nullValue(), injected, Collections.<Value<?>>emptyList());
         try {
             injector.inject("exception expected");
             fail("InjectionException expected");
         } catch (InjectionException e) {}
 
-        injector = new MethodInjector<String>(null, null, null, null);
+        injector = new MethodInjector<String>(Values.<Method>nullValue(), Values.nullValue(), Values.nullValue(), Collections.<Value<?>>emptyList());
         try {
             injector.inject("exception expected");
             fail("InjectionException expected");
