@@ -66,8 +66,9 @@ public final class FieldInjector<T> implements Injector<T> {
             Object targetValue = target.getValue();
             if (fieldType.isPrimitive()) {
                 uninjectPrimitive(field, fieldType, targetValue);
+            } else {
+                fieldValue.getValue().set(targetValue, null);
             }
-            fieldValue.getValue().set(targetValue, null);
         } catch (Throwable throwable) {
             InjectorLogger.INSTANCE.uninjectFailed(throwable, fieldValue);
         }
