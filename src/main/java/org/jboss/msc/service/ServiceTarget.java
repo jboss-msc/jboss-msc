@@ -81,6 +81,14 @@ public interface ServiceTarget {
     ServiceTarget addListener(Collection<ServiceListener<Object>> listeners);
 
     /**
+     * Remove a listener from this target, if it exists.
+     *
+     * @param listener the listener to remove
+     * @return this target
+     */
+    ServiceTarget removeListener(ServiceListener<Object> listener);
+
+    /**
      * Returns a set of the listeners added to this target.
      * 
      * @return the listeners added to this target
@@ -110,6 +118,14 @@ public interface ServiceTarget {
      * @return this target
      */
     ServiceTarget addDependency(Collection<ServiceName> dependencies);
+
+    /**
+     * Remove a dependency from this target.  Subsequently defined services will not have this dependency.
+     *
+     * @param dependency the dependency
+     * @return this target
+     */
+    ServiceTarget removeDependency(ServiceName dependency);
 
     /**
      * Returns a set of all dependencies added to this target.

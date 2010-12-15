@@ -92,8 +92,14 @@ abstract class AbstractServiceTarget implements ServiceTarget {
     }
 
     @Override
+    public ServiceTarget removeListener(final ServiceListener<Object> listener) {
+        listeners.remove(listener);
+        return this;
+    }
+
+    @Override
     public Set<ServiceListener<Object>> getListeners() {
-        return listeners;
+        return Collections.unmodifiableSet(listeners);
     }
 
     @Override
@@ -125,8 +131,14 @@ abstract class AbstractServiceTarget implements ServiceTarget {
     }
 
     @Override
+    public ServiceTarget removeDependency(final ServiceName dependency) {
+        dependencies.remove(dependency);
+        return this;
+    }
+
+    @Override
     public Set<ServiceName> getDependencies() {
-        return dependencies;
+        return Collections.unmodifiableSet(dependencies);
     }
 
     /**

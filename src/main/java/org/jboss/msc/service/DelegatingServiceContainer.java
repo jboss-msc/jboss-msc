@@ -78,6 +78,11 @@ public class DelegatingServiceContainer implements ServiceContainer {
     }
 
     /** {@inheritDoc} */
+    public ServiceTarget removeListener(final ServiceListener<Object> listener) {
+        return delegateTarget.removeListener(listener);
+    }
+
+    /** {@inheritDoc} */
     public Set<ServiceListener<Object>> getListeners() {
         return delegateTarget.getListeners();
     }
@@ -95,6 +100,11 @@ public class DelegatingServiceContainer implements ServiceContainer {
     /** {@inheritDoc} */
     public ServiceTarget addDependency(final Collection<ServiceName> dependencies) {
         return delegateTarget.addDependency(dependencies);
+    }
+
+    /** {@inheritDoc} */
+    public ServiceTarget removeDependency(final ServiceName dependency) {
+        return delegateTarget.removeDependency(dependency);
     }
 
     /** {@inheritDoc} */
