@@ -120,7 +120,7 @@ public class StartException extends Exception {
     public String toString() {
         final StringBuilder b = new StringBuilder(getClass().getName());
         if (serviceName != null) {
-            b.append(" in service ").append(serviceName);
+            b.append(" in ").append(serviceName);
         } else {
             b.append(" in anonymous service");
         }
