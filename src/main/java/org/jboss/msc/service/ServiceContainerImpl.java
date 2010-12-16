@@ -22,10 +22,12 @@
 
 package org.jboss.msc.service;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.lang.management.ManagementFactory;
 import java.security.AccessController;
@@ -34,6 +36,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.Hashtable;
@@ -181,22 +184,28 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             return null;
         }
 
-        public List<String> getServiceNames() {
+        public List<String> queryServiceNames() {
             final Set<ServiceName> names = registry.keySet();
             final ArrayList<String> list = new ArrayList<String>(names.size());
             for (ServiceName serviceName : names) {
                 list.add(serviceName.getCanonicalName());
             }
+            Collections.sort(list);
             return list;
         }
 
-        public List<ServiceStatus> getServiceStatuses() {
+        public List<ServiceStatus> queryServiceStatuses() {
             final Collection<ServiceRegistrationImpl> registrations = registry.values();
             final ArrayList<ServiceStatus> list = new ArrayList<ServiceStatus>(registrations.size());
             for (ServiceRegistrationImpl registration : registrations) {
                 final ServiceInstanceImpl<?> instance = registration.getInstance();
                 if (instance != null) list.add(instance.getStatus());
             }
+            Collections.sort(list, new Comparator<ServiceStatus>() {
+                public int compare(final ServiceStatus o1, final ServiceStatus o2) {
+                    return o1.getServiceName().compareTo(o2.getServiceName());
+                }
+            });
             return list;
         }
 
@@ -212,6 +221,23 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
 
         public void dumpServices() {
             ServiceContainerImpl.this.dumpServices();
+        }
+
+        public String dumpServicesToString() {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PrintStream ps = null;
+            try {
+                ps = new PrintStream(baos, false, "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                throw new IllegalStateException(e);
+            }
+            ServiceContainerImpl.this.dumpServices(ps);
+            ps.flush();
+            try {
+                return new String(baos.toByteArray(), "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                throw new IllegalStateException(e);
+            }
         }
     };
 

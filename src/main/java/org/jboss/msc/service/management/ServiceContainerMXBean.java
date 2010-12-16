@@ -44,14 +44,14 @@ public interface ServiceContainerMXBean {
      *
      * @return the list of names
      */
-    List<String> getServiceNames();
+    List<String> queryServiceNames();
 
     /**
      * Get a list of service statuses in this container.
      *
      * @return the list of statuses
      */
-    List<ServiceStatus> getServiceStatuses();
+    List<ServiceStatus> queryServiceStatuses();
 
     /**
      * Change the mode of a service.
@@ -65,4 +65,12 @@ public interface ServiceContainerMXBean {
      * Dump the container state to the console.
      */
     void dumpServices();
+
+    /**
+     * Dump the container state to a big string.  The string has no particular standard format and may
+     * change over time; this method is simply a convenience.
+     *
+     * @return the container state, as a string
+     */
+    String dumpServicesToString();
 }
