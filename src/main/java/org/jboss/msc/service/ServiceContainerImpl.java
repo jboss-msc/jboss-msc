@@ -39,7 +39,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashSet;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -52,6 +51,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jboss.modules.management.ObjectProperties;
 import org.jboss.msc.Version;
 import org.jboss.msc.inject.Injector;
 import org.jboss.modules.ref.Reaper;
@@ -63,6 +63,8 @@ import org.jboss.msc.service.management.ServiceStatus;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
+
+import static org.jboss.modules.management.ObjectProperties.property;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -250,7 +252,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         ObjectName objectName = null;
         MBeanServer mBeanServer = null;
         try {
-            objectName = new ObjectName("jboss.msc", hashTable("name", name, "type", "container"));
+            objectName = new ObjectName("jboss.msc", ObjectProperties.properties(property("type", "container"), property("name", name)));
             mBeanServer = ManagementFactory.getPlatformMBeanServer();
             mBeanServer.registerMBean(containerMXBean, objectName);
         } catch (Exception e) {
@@ -293,19 +295,6 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                 }
             });
         }
-    }
-
-    private static Hashtable<String, String> hashTable(String... strings) {
-        if ((strings.length & 1) != 0) {
-            throw new IllegalArgumentException();
-        }
-        final Hashtable<String, String> table = new Hashtable<String, String>();
-        for (int i = 0; i < strings.length; i+=2) {
-            String key = strings[i];
-            String value = strings[i+1];
-            table.put(key, value);
-        }
-        return table;
     }
 
     public String getName() {
