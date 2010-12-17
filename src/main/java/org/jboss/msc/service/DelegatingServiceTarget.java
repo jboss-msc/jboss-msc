@@ -56,22 +56,26 @@ public class DelegatingServiceTarget implements ServiceTarget {
 
     /** {@inheritDoc} */
     public ServiceTarget addListener(final ServiceListener<Object> listener) {
-        return delegate.addListener(listener);
+        delegate.addListener(listener);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceTarget addListener(final ServiceListener<Object>... listeners) {
-        return delegate.addListener(listeners);
+        delegate.addListener(listeners);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceTarget addListener(final Collection<ServiceListener<Object>> listeners) {
-        return delegate.addListener(listeners);
+        delegate.addListener(listeners);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceTarget removeListener(final ServiceListener<Object> listener) {
-        return delegate.removeListener(listener);
+        delegate.removeListener(listener);
+        return this;
     }
 
     /** {@inheritDoc} */
@@ -81,22 +85,26 @@ public class DelegatingServiceTarget implements ServiceTarget {
 
     /** {@inheritDoc} */
     public ServiceTarget addDependency(final ServiceName dependency) {
-        return delegate.addDependency(dependency);
+        delegate.addDependency(dependency);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceTarget addDependency(final ServiceName... dependencies) {
-        return delegate.addDependency(dependencies);
+        delegate.addDependency(dependencies);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceTarget addDependency(final Collection<ServiceName> dependencies) {
-        return delegate.addDependency(dependencies);
+        delegate.addDependency(dependencies);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceTarget removeDependency(final ServiceName dependency) {
-        return delegate.removeDependency(dependency);
+        delegate.removeDependency(dependency);
+        return this;
     }
 
     /** {@inheritDoc} */
