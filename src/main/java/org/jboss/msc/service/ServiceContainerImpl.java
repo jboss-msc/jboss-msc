@@ -382,14 +382,21 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     }
 
     public void dumpServices(PrintStream out) {
+        out.printf("Services for %s:\n", getName());
         if (registry.isEmpty()) {
-            out.printf("Registry is empty");
-        } else for (Map.Entry<ServiceName, ServiceRegistrationImpl> entry : registry.entrySet()) {
-            final ServiceRegistrationImpl registration = entry.getValue();
-            final ServiceInstanceImpl<?> instance = registration.getInstance();
-            if (instance != null) {
-                out.printf("%s\n", instance.getStatus());
+            out.printf("(Registry is empty)\n");
+        } else {
+            int i = 0;
+            Set<ServiceInstanceImpl<?>> set = new HashSet<ServiceInstanceImpl<?>>();
+            for (Map.Entry<ServiceName, ServiceRegistrationImpl> entry : registry.entrySet()) {
+                final ServiceRegistrationImpl registration = entry.getValue();
+                final ServiceInstanceImpl<?> instance = registration.getInstance();
+                if (instance != null && set.add(instance)) {
+                    i++;
+                    out.printf("%s\n", instance.getStatus());
+                }
             }
+            out.printf("%s services displayed\n", Integer.valueOf(i));
         }
     }
 
