@@ -1606,7 +1606,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 try {
                     final long startOffset = startNanos - container.getStart();
                     final long duration = endNanos - startNanos;
-                    profileOutput.write(String.format("%s\t%s\t%d\t%d\n", name, Character.valueOf(statusChar), Long.valueOf(startOffset), Long.valueOf(duration)));
+                    profileOutput.write(String.format("%s\t%s\t%d\t%d\n", name.getCanonicalName(), Character.valueOf(statusChar), Long.valueOf(startOffset), Long.valueOf(duration)));
                 } catch (IOException e) {
                     // ignore
                 }
