@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -383,17 +384,20 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
 
     public void dumpServices(PrintStream out) {
         out.printf("Services for %s:\n", getName());
+        final Map<ServiceName, ServiceRegistrationImpl> registry = this.registry;
         if (registry.isEmpty()) {
             out.printf("(Registry is empty)\n");
         } else {
             int i = 0;
             Set<ServiceInstanceImpl<?>> set = new HashSet<ServiceInstanceImpl<?>>();
-            for (Map.Entry<ServiceName, ServiceRegistrationImpl> entry : registry.entrySet()) {
-                final ServiceRegistrationImpl registration = entry.getValue();
-                final ServiceInstanceImpl<?> instance = registration.getInstance();
-                if (instance != null && set.add(instance)) {
-                    i++;
-                    out.printf("%s\n", instance.getStatus());
+            for (ServiceName name : new TreeSet<ServiceName>(registry.keySet())) {
+                final ServiceRegistrationImpl registration = registry.get(name);
+                if (registration != null) {
+                    final ServiceInstanceImpl<?> instance = registration.getInstance();
+                    if (instance != null && set.add(instance)) {
+                        i++;
+                        out.printf("%s\n", instance.getStatus());
+                    }
                 }
             }
             out.printf("%s services displayed\n", Integer.valueOf(i));
