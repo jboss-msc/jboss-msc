@@ -96,22 +96,31 @@ final class ServiceRegistrationImpl implements Dependency {
         assert !lockHeld();
         assert !lockHeldByDependent(dependent);
         final ServiceInstanceImpl<?> instance;
-        synchronized (dependents) {
-            if (! dependents.add(dependent)) {
-                throw new IllegalStateException("Dependent already exists on this registration");
-            }
-        }
-        final Runnable[] tasks;
+        Runnable[] tasks;
         synchronized (this) {
+            synchronized (dependents) {
+                if (dependents.contains(dependent)) {
+                    throw new IllegalStateException("Dependent already exists on this registration");
+                }
+            }
             instance = this.instance;
             if (instance == null) {
                 dependent.immediateDependencyUninstalled();
+                synchronized (dependents) {
+                    dependents.add(dependent);
+                }
                 return;
             }
             synchronized (instance) {
                 instance.addAsyncTask();
+                tasks = instance.newDependent(dependent);
+                synchronized (dependents) {
+                    dependents.add(dependent);
+                }
             }
-            instance.newDependent(dependent);
+        }
+        instance.doExecute(tasks);
+        synchronized(this) {
             synchronized (instance) {
                 instance.removeAsyncTask();
                 tasks = instance.transition();
