@@ -115,7 +115,7 @@ public class AbstractServiceTest {
             if (expectedServiceController.getStartException() != null) {
                 throw new RuntimeException("Container obtained from futureController is null. ", expectedServiceController.getStartException());
             }
-            fail("Controller obtained from futureController is null");
+            fail("Controller obtained from futureController is null. State of expectedServiceController is " + expectedServiceController);
         }
         assertSame(expectedServiceController, serviceController);
     }
@@ -148,6 +148,7 @@ public class AbstractServiceTest {
      */
     protected final void assertFailure(ServiceController<?> serviceController, Future<StartException> serviceFailure) throws InterruptedException, ExecutionException {
         StartException exception = serviceFailure.get();
+        assertNotNull("Exception is null, current service state is "  + serviceController.getState(), exception);
         assertSame(serviceController.getStartException(), exception);
     }
 
