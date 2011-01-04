@@ -24,9 +24,12 @@ package org.jboss.msc.service;
 
 import java.lang.reflect.Array;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -48,6 +51,8 @@ import java.util.Set;
 final class DependentNotifier implements Visitor<boolean[]> {
     // services selected as dependents (direct or not) of services that have a specific property
     private final HashSet<ServiceInstanceImpl<?>>[] selectedServices;
+    // cycles detected during visit
+    private final Collection<List<ServiceName>> cycles;
     // all dependents of services having these properties will be selected (each one in the corresponding
     // element of selectedServices array)
     private final ServiceProperty[] properties;
@@ -67,10 +72,24 @@ final class DependentNotifier implements Visitor<boolean[]> {
         for (int i = 0; i < properties.length; i++) {
             selectedServices[i] = new HashSet<ServiceInstanceImpl<?>>();
         }
+        cycles = new ArrayList<List<ServiceName>>();
         visitPath = new ArrayDeque<ServiceVisitInfo>();
         visited = new HashSet<ServiceInstanceImpl<?>>();
         beingVisited = new HashSet<ServiceInstanceImpl<?>>();
         falseForAllProps = new boolean[properties.length];
+    }
+
+    /**
+     * Returns a collection of all cycles detected during dependencies visit.<p>
+     * Every cycle is represented by a list of the service names involved in the cycle. The names
+     * are contained in dependency order, whereas the first and last element are always the same, to
+     * indicate a dependency link that closes the cycle.<p>
+     * An example of result: {{A, B, C, A}, {A, B, A}}
+     * 
+     * @return a collection containing the cycles detected during the dependency graph traversal.
+     */
+    Collection<List<ServiceName>> getDetectedCycles() {
+        return cycles;
     }
 
     @Override
@@ -154,11 +173,15 @@ final class DependentNotifier implements Visitor<boolean[]> {
     }
 
     private void recordCycle(ServiceInstanceImpl<?> service) {
+        final List<ServiceName> cycleServiceNames = new ArrayList<ServiceName>();
         // iterate through cycle recursively, recording the service names and updating visitPath information on the way
-        recordCycle(service, visitPath.descendingIterator());
+        recordCycle(service, cycleServiceNames, visitPath.descendingIterator());
+        // add the service name to end of cycle, so we can have something like A, B, C, A instead of A, B, C only
+        cycleServiceNames.add(service.getPrimaryRegistration().getName());
+        cycles.add(cycleServiceNames);
     }
 
-    private CycleInfo recordCycle(ServiceInstanceImpl<?> currentService, Iterator<ServiceVisitInfo> pathIterator) {
+    private CycleInfo recordCycle(ServiceInstanceImpl<?> currentService, List<ServiceName> cycleServiceNames, Iterator<ServiceVisitInfo> pathIterator) {
         assert pathIterator.hasNext();
         final ServiceVisitInfo visitInfo = pathIterator.next();
         final ServiceInstanceImpl<?> serviceInstance = visitInfo.getService();
@@ -168,8 +191,10 @@ final class DependentNotifier implements Visitor<boolean[]> {
             cycleInfo = new CycleInfo(visitInfo);
         } else {
             // recursively iterate until we find the cycle head
-            cycleInfo = recordCycle(currentService, pathIterator);
+            cycleInfo = recordCycle(currentService, cycleServiceNames, pathIterator);
         }
+        // record service name
+        cycleServiceNames.add(serviceInstance.getName());
         // update cycle info for visitInfo
         return visitInfo.joinCycle(cycleInfo);
     }

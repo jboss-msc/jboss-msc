@@ -22,8 +22,16 @@
 
 package org.jboss.msc.service;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.Future;
 
 import org.jboss.msc.service.ServiceBuilder.DependencyType;
@@ -35,7 +43,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Tests scenarios with dependency cycles.
+ * Tests scenarios with dependency cycles
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
@@ -73,6 +81,12 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
     }
 
     @Test
+    public void emptyContainer() {
+        final Collection<List<ServiceName>> cycles = serviceContainer.detectCircularity();
+        assertTrue(cycles == null || cycles.isEmpty());
+    }
+
+    @Test
     public void simpleCycle() throws Exception {
         final BatchBuilder builder = serviceContainer.batchBuilder();
         builder.addService(serviceAName, Service.NULL).addDependency(serviceBName).install();
@@ -89,6 +103,11 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         assertSame(State.DOWN, serviceBController.getState());
         final ServiceController<?> serviceCController = assertController(serviceCName, serviceCListenerAdded);
         assertSame(State.DOWN, serviceCController.getState());
+
+        final Collection<List<ServiceName>> cycles = serviceContainer.detectCircularity();
+        assertNotNull(cycles);
+        assertEquals(1, cycles.size());
+        assertCycle(cycles.iterator().next(), serviceAName, serviceBName, serviceCName);
     }
 
     @Test
@@ -103,6 +122,10 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         final ServiceController<?> serviceAController = assertController(serviceAName, serviceADepMissing);
         final ServiceController<?> serviceBController = assertController(serviceBName, serviceBDepMissing);
 
+        Collection<List<ServiceName>> cycles = serviceContainer.detectCircularity();
+        assertNotNull(cycles);
+        assertTrue(cycles.isEmpty());
+
         final Future<ServiceController<?>> serviceCListenerAdded = testListener.expectListenerAdded(serviceCName);
         final Future<ServiceController<?>> serviceADepInstall = testListener.expectDependencyInstall(serviceAName);
         final Future<ServiceController<?>> serviceBDepInstall = testListener.expectDependencyInstall(serviceBName);
@@ -112,6 +135,11 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         assertController(serviceBController, serviceBDepInstall);
         final ServiceController<?> serviceCController = assertController(serviceCName, serviceCListenerAdded);
         assertSame(State.DOWN, serviceCController.getState());
+
+        cycles = serviceContainer.detectCircularity();
+        assertNotNull(cycles);
+        assertEquals(1, cycles.size());
+        assertCycle(cycles.iterator().next(), serviceAName, serviceBName, serviceCName);
     }
 
     // full scenario:
@@ -148,10 +176,19 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         final ServiceController<?> serviceMController = assertController(serviceMName, serviceMDepMissing);
         final ServiceController<?> serviceOController = assertController(serviceOName, serviceODepMissing);
 
+        Collection<List<ServiceName>> cycles = serviceContainer.detectCircularity();
+        assertNotNull(cycles);
+        assertTrue(cycles.isEmpty());
+
         // install service N
         final Future<ServiceController<?>> serviceNDepMissing = testListener.expectDependencyUninstall(serviceNName);
         serviceContainer.addService(serviceNName, Service.NULL).addDependencies(serviceHName, serviceOName).install();
         final ServiceController<?> serviceNController = assertController(serviceNName, serviceNDepMissing);
+
+        cycles = serviceContainer.detectCircularity();
+        assertNotNull(cycles);
+        assertEquals(1, cycles.size());
+        assertCycle(cycles.iterator().next(), serviceLName, serviceMName, serviceNName, serviceOName);
 
         // install E, F, G, H, I, V
         builder = serviceContainer.batchBuilder();
@@ -190,6 +227,11 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         assertSame(State.DOWN, serviceFController.getState());
         assertController(serviceVName, serviceVStart);
 
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceCName, serviceDName, serviceEName},  
+                new ServiceName[] {serviceLName, serviceMName, serviceNName, serviceOName},
+                new ServiceName[] { serviceHName, serviceIName});
+
         // install J, P, Q, R, S, T, U
         builder = serviceContainer.batchBuilder();
         builder.addService(serviceJName, Service.NULL).addDependency(serviceKName).install();
@@ -219,6 +261,12 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         final ServiceController<?> serviceTController = assertController(serviceTName, serviceTListenerAdded);
         assertSame(State.DOWN, serviceTController.getState());
         assertController(serviceUName, serviceUStart);
+
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceCName, serviceDName, serviceEName},  
+                new ServiceName[] {serviceLName, serviceMName, serviceNName, serviceOName},
+                new ServiceName[] {serviceHName, serviceIName},
+                new ServiceName[] {servicePName, serviceQName, serviceRName, serviceSName, serviceTName});
 
         // install service K
         final Future<ServiceController<?>> serviceKDepMissing = testListener.expectDependencyUninstall(serviceKName);
@@ -262,6 +310,14 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         assertSame(State.DOWN, serviceMController.getState());
         assertSame(State.DOWN, serviceNController.getState());
         assertSame(State.DOWN, serviceOController.getState());
+
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceCName, serviceDName, serviceEName},
+                new ServiceName[] {serviceGName, serviceHName, serviceIName, serviceJName, serviceKName},
+                new ServiceName[] {serviceHName, serviceIName, serviceJName, serviceKName},
+                new ServiceName[] {serviceHName, serviceIName},
+                new ServiceName[] {serviceLName, serviceMName, serviceNName, serviceOName},
+                new ServiceName[] {servicePName, serviceQName, serviceRName, serviceSName, serviceTName});
     }
 
     // full scenario:
@@ -273,6 +329,10 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         Future<ServiceController<?>> serviceGMissingDep = testListener.expectDependencyUninstall(serviceGName);
         serviceContainer.addService(serviceGName, Service.NULL).addDependencies(serviceDName, serviceEName).install();
         final ServiceController<?> serviceGController = assertController(serviceGName, serviceGMissingDep);
+
+        Collection<List<ServiceName>> cycles = serviceContainer.detectCircularity();
+        assertNotNull(cycles);
+        assertTrue(cycles.isEmpty());
 
         // install L
         final FailToStartService serviceL = new FailToStartService(true);
@@ -330,10 +390,20 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         ServiceController<?> serviceOController = assertController(serviceOName, serviceOMissingDep);
         assertController(serviceOController, serviceOFailedDep);
 
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceAName, serviceBName, serviceCName, serviceDName, serviceEName},
+                new ServiceName[] {serviceDName, serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceEName, serviceFName, serviceGName}, new ServiceName[] {serviceMName, serviceOName});
+
         // install N
         final Future<StartException> serviceNFailed = testListener.expectServiceFailure(serviceNName);
         serviceContainer.addService(serviceNName, new FailToStartService(true)).install();
         final ServiceController<?> serviceNController = assertFailure(serviceNName, serviceNFailed);
+
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceAName, serviceBName, serviceCName, serviceDName, serviceEName},
+                new ServiceName[] {serviceDName, serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceEName, serviceFName, serviceGName}, new ServiceName[] {serviceMName, serviceOName});
 
         // install H, I, J
         final Future<ServiceController<?>> serviceHStart = testListener.expectServiceStart(serviceHName);
@@ -347,6 +417,13 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         assertController(serviceHName, serviceHStart);
         final ServiceController<?> serviceIController = assertController(serviceIName, serviceIFailedDep);
         final ServiceController<?> serviceJController = assertController(serviceJName, serviceJFailedDep);
+
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceAName, serviceBName, serviceCName, serviceDName, serviceEName},
+                new ServiceName[] {serviceDName, serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceAName, serviceIName, serviceJName},
+                new ServiceName[] {serviceMName, serviceOName});
 
         // install K
         final Future<StartException> serviceKFailure = testListener.expectServiceFailure(serviceKName);
@@ -370,6 +447,13 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         assertController(serviceGController, serviceGDepInstalled);
         assertController(serviceMController, serviceMDepInstalled);
         assertController(serviceOController, serviceODepInstalled);
+
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceAName, serviceBName, serviceCName, serviceDName, serviceEName},
+                new ServiceName[] {serviceDName, serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceAName, serviceIName, serviceJName},
+                new ServiceName[] {serviceMName, serviceOName});
 
         // remove service L
         final Future<ServiceController<?>> serviceLRemoval = testListener.expectServiceRemoval(serviceLName);
@@ -401,28 +485,70 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         serviceKController.setMode(Mode.ACTIVE);
         assertController(serviceKController, serviceKStart);
 
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceAName, serviceBName, serviceCName, serviceDName, serviceEName},
+                new ServiceName[] {serviceDName, serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceAName, serviceIName, serviceJName},
+                new ServiceName[] {serviceMName, serviceOName});
+
         final Future<ServiceController<?>> serviceMDepFailureCleared = testListener.expectDependencyFailureCleared(serviceMName);
         final Future<ServiceController<?>> serviceODepFailureCleared = testListener.expectDependencyFailureCleared(serviceOName);
         serviceNController.setMode(Mode.NEVER);
         assertController(serviceMController, serviceMDepFailureCleared);
         assertController(serviceOController, serviceODepFailureCleared);
 
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceAName, serviceBName, serviceCName, serviceDName, serviceEName},
+                new ServiceName[] {serviceDName, serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceAName, serviceIName, serviceJName},
+                new ServiceName[] {serviceMName, serviceOName});
+
         final Future<ServiceController<?>> serviceNStart = testListener.expectServiceStart(serviceNName);
         serviceNController.setMode(Mode.ACTIVE);
         assertController(serviceNController, serviceNStart);
+
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceAName, serviceBName, serviceCName, serviceDName, serviceEName},
+                new ServiceName[] {serviceDName, serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceAName, serviceIName, serviceJName},
+                new ServiceName[] {serviceMName, serviceOName});
 
         final Future<ServiceController<?>> serviceLStart = testListener.expectServiceStart(serviceLName);
         serviceContainer.addService(serviceLName, serviceL).setInitialMode(Mode.ACTIVE).install();
         serviceLController = assertController(serviceLName, serviceLStart);
 
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceAName, serviceBName, serviceCName, serviceDName, serviceEName},
+                new ServiceName[] {serviceDName, serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceAName, serviceIName, serviceJName},
+                new ServiceName[] {serviceMName, serviceOName});
+
         final Future<ServiceController<?>> serviceLStop = testListener.expectServiceStop(serviceLName);
         serviceLController.setMode(Mode.NEVER);
         assertController(serviceLController, serviceLStop);
+
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceAName, serviceBName, serviceCName, serviceDName, serviceEName},
+                new ServiceName[] {serviceDName, serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceAName, serviceIName, serviceJName},
+                new ServiceName[] {serviceMName, serviceOName});
 
         serviceLFailure = testListener.expectServiceFailure(serviceLName);
         serviceL.failNextTime();
         serviceLController.setMode(Mode.PASSIVE);
         assertFailure(serviceLController, serviceLFailure);
+
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceAName, serviceBName, serviceCName, serviceDName, serviceEName},
+                new ServiceName[] {serviceDName, serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceAName, serviceIName, serviceJName},
+                new ServiceName[] {serviceMName, serviceOName});
 
         final Future<ServiceController<?>> serviceARemoval = testListener.expectServiceRemoval(serviceAName);
         serviceBMissingDep = testListener.expectDependencyUninstall(serviceBName);
@@ -447,6 +573,11 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         assertController(serviceJController, serviceJMissingDep);
         assertController(serviceMController, serviceMMissingDep);
         assertController(serviceOController, serviceOMissingDep);
+
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceDName, serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceEName, serviceFName, serviceGName},
+                new ServiceName[] {serviceMName, serviceOName});
     }
 
     // cycle involving aliases
@@ -473,6 +604,9 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         final ServiceController<?> serviceCController = assertController(serviceCName, serviceCMissingDep);
         final ServiceController<?> serviceEController = assertController(serviceEName, serviceEStart);
 
+        Collection<List<ServiceName>> cycles = serviceContainer.detectCircularity();
+        assertTrue(cycles == null || cycles.isEmpty());
+
         // install service A
         Future<ServiceController<?>> serviceAListenerAdded = testListener.expectListenerAdded(serviceAName);
         Future<ServiceController<?>> serviceBInstalledDep = testListener.expectDependencyInstall(serviceBName);
@@ -482,21 +616,43 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         assertController(serviceBController, serviceBInstalledDep);
         assertController(serviceCController, serviceCInstalledDep);
 
+        cycles = serviceContainer.detectCircularity();
+        assertNotNull(cycles);
+        assertEquals(1, cycles.size());
+        assertCycle(cycles.iterator().next(), serviceAName, serviceBName, serviceCName);
+
         // install service F
         final Future<ServiceController<?>> serviceFListenerAdded = testListener.expectListenerAdded(serviceFName);
         serviceContainer.addService(serviceFName, Service.NULL).addAliases(serviceGName).addDependencies(serviceIName, serviceJName).install();
         ServiceController<?> serviceFController = assertController(serviceFName, serviceFListenerAdded);
+
+        cycles = serviceContainer.detectCircularity();
+        assertNotNull(cycles);
+        assertEquals(1, cycles.size());
+        assertCycle(cycles.iterator().next(), serviceAName, serviceBName, serviceCName);
 
         // stop service E
         final Future<ServiceController<?>> serviceEStop = testListener.expectServiceStop(serviceEName);
         serviceEController.setMode(Mode.NEVER);
         assertController(serviceEController, serviceEStop);
 
-        // reactive E
+        cycles = serviceContainer.detectCircularity();
+        // the cycle B, E, F is found two times, because service F depends twice on service B 
+        // (by depending both on I and J)
+        assertCycles(cycles, new ServiceName[] {serviceAName, serviceBName, serviceCName},
+                new ServiceName[] {serviceBName, serviceEName, serviceFName},
+                new ServiceName[] {serviceBName, serviceEName, serviceFName});
+
+        // reactivate E
         serviceEController.setMode(Mode.ACTIVE);
         // serviceE cannot start now that it is connected to its optional dependency G, creating a 
         // circularity in the dependencies
         assertSame(State.DOWN, serviceEController.getState());
+
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceAName, serviceBName, serviceCName},
+                new ServiceName[] {serviceBName, serviceEName, serviceFName},
+                new ServiceName[] {serviceBName, serviceEName, serviceFName});
 
         Future<ServiceController<?>> serviceARemoval = testListener.expectServiceRemoval(serviceAName);
         serviceBMissingDep = testListener.expectDependencyUninstall(serviceBName);
@@ -509,6 +665,10 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         assertController(serviceCName, serviceCMissingDep);
         assertController(serviceEName, serviceEMissingDep);
         assertController(serviceFName, serviceFMissingDep);
+
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceBName, serviceEName, serviceFName},
+                new ServiceName[] {serviceBName, serviceEName, serviceFName});
 
         // install service D, without aliases
         final FailToStartService serviceD = new FailToStartService(true);
@@ -532,6 +692,10 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         assertController(serviceEController, serviceEFailedDep);
         assertController(serviceFController, serviceFFailedDep);
 
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceBName, serviceEName, serviceFName},
+                new ServiceName[] {serviceBName, serviceEName, serviceFName});
+
         final Future<ServiceController<?>> serviceBClearedDepFailure = testListener.expectDependencyFailureCleared(serviceBName);
         final Future<ServiceController<?>> serviceCClearedDepFailure = testListener.expectDependencyFailureCleared(serviceCName);
         final Future<ServiceController<?>> serviceEClearedDepFailure = testListener.expectDependencyFailureCleared(serviceEName);
@@ -542,11 +706,20 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         assertController(serviceEController, serviceEClearedDepFailure);
         assertController(serviceFController, serviceFClearedDepFailure);
 
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceBName, serviceEName, serviceFName},
+                new ServiceName[] {serviceBName, serviceEName, serviceFName});
+
         final Future<ServiceController<?>> serviceDStart = testListener.expectServiceStart(serviceDName);
         final Future<ServiceController<?>> serviceCStart = testListener.expectServiceStart(serviceCName);
         serviceDController.setMode(Mode.ACTIVE);
         assertController(serviceDController, serviceDStart);
         assertController(serviceCController, serviceCStart);
+
+        cycles = serviceContainer.detectCircularity();
+        assertCycles(cycles, new ServiceName[] {serviceBName, serviceEName, serviceFName},
+                new ServiceName[] {serviceBName, serviceEName, serviceFName});
+
 
         final Future<ServiceController<?>> serviceBRemoval = testListener.expectServiceRemoval(serviceBName);
         serviceFMissingDep = testListener.expectDependencyUninstall(serviceFName);
@@ -555,6 +728,9 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         assertController(serviceBController, serviceBRemoval);
         assertController(serviceFController, serviceFMissingDep);
         assertController(serviceEController, serviceEMissingDep);
+
+        cycles = serviceContainer.detectCircularity();
+        assertTrue(cycles == null || cycles.isEmpty());
 
         // install services I and J
         serviceEStart = testListener.expectServiceStart(serviceEName);
@@ -569,8 +745,70 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         assertController(serviceFController, serviceFStart);
         assertController(serviceIName, serviceIStart);
         assertController(serviceJName, serviceJStart);
-        // services C and D alse remain in UP state
+        // services C and D else remain in UP state
         assertSame(State.UP, serviceCController.getState());
         assertSame(State.UP, serviceDController.getState());
+
+        cycles = serviceContainer.detectCircularity();
+        assertTrue(cycles == null || cycles.isEmpty());
+    }
+
+    private final void assertCycle(List<ServiceName> cycle, ServiceName... expectedCycle) {
+        String matchError = matchCycle(cycle, expectedCycle);
+        if (matchError != null) {
+            fail(matchError);
+        }
+    }
+
+    private final String matchCycle(List<ServiceName> cycle, ServiceName... expectedCycle) {
+        assertNotNull("Cycle is null", cycle);
+        Iterator<ServiceName> cycleIterator = cycle.iterator();
+        assertTrue("Cycle is empty", cycleIterator.hasNext());
+        ServiceName firstServiceName = cycleIterator.next();
+        int cycleStart = -1;
+        for (int i = 0; i < expectedCycle.length; i++) {
+            if (firstServiceName.equals(expectedCycle[i])) {
+                cycleStart = i;
+                break;
+            }
+        }
+        if (cycleStart == -1) {
+            return "First element of cycle unexpected: "+ firstServiceName;
+        }
+        for (int i = cycleStart + 1; i < expectedCycle.length; i++) {
+            assertTrue("Cycle is shorter than expected", cycleIterator.hasNext());
+            ServiceName serviceName = cycleIterator.next();
+            if (!serviceName.equals(expectedCycle[i])) {
+                return "Unexpected serviceName in cycle: " + serviceName;
+            }
+        }
+        for (int i = 0; i <= cycleStart; i++) {
+            assertTrue("Cycle is shorter than expected", cycleIterator.hasNext());
+            ServiceName serviceName = cycleIterator.next();
+            if (!serviceName.equals(expectedCycle[i])) {
+                return "Unexpected serviceName in cycle: " + serviceName;
+            }
+        }
+        assertFalse("Cycle is longer than expected", cycleIterator.hasNext());
+        return null;
+    }
+
+    private void assertCycles(Collection<List<ServiceName>> cycles, ServiceName[]... expectedCycles) {
+        assertNotNull(cycles);
+        assertEquals(expectedCycles.length, cycles.size());
+        boolean[] matchedCycles = new boolean[expectedCycles.length];
+        for (List<ServiceName> cycle: cycles) {
+            for (int i = 0; i < expectedCycles.length; i++) {
+                ServiceName[] expectedCycle = expectedCycles[i];
+                if (!matchedCycles[i] && expectedCycle.length == cycle.size() - 1 &&
+                        matchCycle(cycle, expectedCycle) == null) {
+                    matchedCycles[i] = true;
+                    break;
+                }
+            }
+        }
+        for (int i = 0; i < matchedCycles.length; i++) {
+            assertTrue("Cycle with index " + i + " did not find a match", matchedCycles[i]);
+        }
     }
 }

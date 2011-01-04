@@ -183,4 +183,10 @@ public class DelegatingServiceContainer implements ServiceContainer {
     public void awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
         throw new UnsupportedOperationException();
     }
+
+    /** {@inheritDoc} */
+    @Override
+    public Collection<List<ServiceName>> detectCircularity() {
+        throw new UnsupportedOperationException();
+    }
 }

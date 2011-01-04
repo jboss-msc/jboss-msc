@@ -178,6 +178,10 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     private final MBeanServer mBeanServer;
     private final ObjectName objectName;
 
+    // list of cycles that have been detected
+    private volatile Collection<List<ServiceName>> cycles;
+    // latch to avoid that cycles are returned before they are detected
+    private CountDownLatch cycleDetectionLatch;
     // indicates when a notifier task is postponed
     private boolean scheduleNotifierTaskPostponed = false;
     // dependent notification task that has been scheduled
@@ -484,7 +488,8 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                     final ServiceInstanceImpl<?> instance = installedInstances.removeFirst();
                     commit(builder.getInitialMode(), instance);
                 }
-                checkMissingDependencies(); // verify if there are new missing dependencies to notify after service installation
+                checkMissingDependencies(); // verify if there are new missing dependencies or
+                // new cycles to notify after service installation
             }
         }
     }
@@ -501,6 +506,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             switch(this.notificationScheduled) {
                 case NOT_SCHEDULED:
                     notificationScheduled = DependentNotifierSchedule.MISSING_DEPENDENCY_CHECK;
+                    cycleDetectionLatch = new CountDownLatch(1);
                     scheduleRunnable = true;
                     break;
                 case CYCLE_VISIT_CHECK:
@@ -546,6 +552,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                 case NOT_SCHEDULED:
                     notificationScheduled = DependentNotifierSchedule.FAILED_DEPENDENCY_CHECK;
                     scheduleRunnable = !postponeExecution;
+                    cycleDetectionLatch = new CountDownLatch(1);
                     break;
                 case CYCLE_VISIT_CHECK:
                     notificationScheduled = DependentNotifierSchedule.FAILED_DEPENDENCY_CHECK;
@@ -712,10 +719,28 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         }
     }
 
+    @Override
+    public Collection<List<ServiceName>> detectCircularity() {
+        final CountDownLatch cycleCountDown;
+        synchronized(this) {
+            cycleCountDown = cycleDetectionLatch;
+        }
+        if (cycleCountDown != null)
+        try {
+            cycleCountDown.await();
+        } catch (InterruptedException e) {}
+        return cycles;
+    }
+
     private static enum DependentNotifierSchedule {
         NOT_SCHEDULED() {
             DependentNotifier createDependentNotifier() {
                 return null;
+            }
+        },
+        CYCLE_VISIT_CHECK () {
+            DependentNotifier createDependentNotifier() {
+                return new DependentNotifier();
             }
         },
         MISSING_DEPENDENCY_CHECK () {
@@ -741,10 +766,12 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         @Override
         public void run() {
             final DependentNotifierSchedule scheduleToExecute;
+            final CountDownLatch cycleCountDown;
             synchronized(ServiceContainerImpl.this) {
                 if (down) {
                     return;
                 }
+                cycleCountDown = cycleDetectionLatch;
                 scheduleToExecute = notificationScheduled;
                 notificationScheduled = DependentNotifierSchedule.NOT_SCHEDULED;
             }
@@ -752,6 +779,13 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             for (ServiceRegistrationImpl service: registry.values()) {
                 service.accept(visitor);
             }
+            synchronized(ServiceContainerImpl.this) {
+                if (cycleDetectionLatch == cycleCountDown) {
+                    cycleDetectionLatch = null;
+                }
+                cycles = visitor.getDetectedCycles();
+            }
+            cycleCountDown.countDown();
             visitor.finish();
         }
     }

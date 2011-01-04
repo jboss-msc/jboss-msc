@@ -23,6 +23,8 @@
 package org.jboss.msc.service;
 
 import java.io.PrintStream;
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -87,6 +89,15 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
      *         while waiting
      */
     void awaitTermination(long timeout, TimeUnit unit) throws InterruptedException;
+
+    /**
+     * Detects dependency cycles.
+     * 
+     * @return a collection of cycles, where each cycle is represented by a list of the service names involved in the
+     *         cycle. The names are contained in dependency order, with the first and last element being equal, to
+     *         indicate a dependency link that closes the cycle. <br>An example of result: {{A, B, C, A}, {A, B, A}}.
+     */
+    Collection<List<ServiceName>> detectCircularity();
 
     /**
      * Dump a complete list of services to {@code System.out}.
