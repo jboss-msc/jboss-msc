@@ -181,6 +181,7 @@ final class ServiceRegistrationImpl implements Dependency {
                 dependent.immediateDependencyUninstalled();
             }
         }
+        container.checkMissingDependencies();
     }
 
     /**
@@ -191,7 +192,7 @@ final class ServiceRegistrationImpl implements Dependency {
     boolean lockHeld() {
         return Thread.holdsLock(this);
     }
-    
+
     /**
      * Determine whether the dependent lock is currently held.
      *
@@ -268,5 +269,10 @@ final class ServiceRegistrationImpl implements Dependency {
         synchronized (this) {
             return instance;
         }
+    }
+
+    @Override
+    public <T> T accept(Visitor<T> visitor) {
+        return visitor.visit(this);
     }
 }

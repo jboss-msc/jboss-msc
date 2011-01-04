@@ -47,6 +47,7 @@ import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -66,6 +67,8 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
 import static org.jboss.modules.management.ObjectProperties.property;
+import static org.jboss.msc.service.ServiceProperty.FAILED_TO_START;
+import static org.jboss.msc.service.ServiceProperty.UNINSTALLED;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -174,6 +177,11 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     private final String name;
     private final MBeanServer mBeanServer;
     private final ObjectName objectName;
+
+    // indicates when a notifier task is postponed
+    private boolean scheduleNotifierTaskPostponed = false;
+    // dependent notification task that has been scheduled
+    private DependentNotifierSchedule notificationScheduled = DependentNotifierSchedule.NOT_SCHEDULED;
 
     private final ServiceContainerMXBean containerMXBean = new ServiceContainerMXBean() {
         public ServiceStatus getServiceStatus(final String name) {
@@ -476,6 +484,85 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                     final ServiceInstanceImpl<?> instance = installedInstances.removeFirst();
                     commit(builder.getInitialMode(), instance);
                 }
+                checkMissingDependencies(); // verify if there are new missing dependencies to notify after service installation
+            }
+        }
+    }
+
+    /**
+     * Checks the dependency graph structure formed by installed services, detecting missing dependencies.
+     * All affected dependents are notified.
+     * <p>
+     * This method should be called when the dependency graph structure is changed.
+     */
+    void checkMissingDependencies() {
+        boolean scheduleRunnable;
+        synchronized (this) {
+            switch(this.notificationScheduled) {
+                case NOT_SCHEDULED:
+                    notificationScheduled = DependentNotifierSchedule.MISSING_DEPENDENCY_CHECK;
+                    scheduleRunnable = true;
+                    break;
+                case CYCLE_VISIT_CHECK:
+                    notificationScheduled = DependentNotifierSchedule.MISSING_DEPENDENCY_CHECK;
+                    scheduleRunnable = false;
+                    break;
+                case FAILED_DEPENDENCY_CHECK:
+                    notificationScheduled = DependentNotifierSchedule.MISSING_AND_FAILED_DEPENDENCIES_CHECK;
+                default:
+                    scheduleRunnable = false;
+            }
+            scheduleRunnable = scheduleRunnable || scheduleNotifierTaskPostponed;
+            scheduleNotifierTaskPostponed = false;
+        }
+        if (scheduleRunnable) {
+            Runnable structureChecker = new DependentNotiferTask();
+            try {
+                getExecutor().execute(structureChecker);
+            } catch (RejectedExecutionException e) {
+                structureChecker.run();
+            }
+        }
+    }
+
+    /**
+     * Notifies dependents affected by dependency failures.<p>
+     * This method should be called whenever a dependent should be notified of a dependency failure or of
+     * a dependency failure that has been cleared. This will happen every time a service failure occurs, when a service
+     * failure is cleared, and when a new dependent is added to a failed service.
+     * 
+     * @param postponeExecution indicates if this request will be followed by a request to check for missing
+     *                          dependencies. When this value is {@code true}, the task to check dependencies will be
+     *                          scheduled only when the next call to {@link #checkMissingDependencies()} is made.
+     */
+    void checkFailedDependencies(boolean postponeExecution) {
+        final boolean scheduleRunnable;
+        synchronized (this) {
+            // the installation of services is always followed by a dependency availability check
+            // for that reason, any request to check for failures on installation should be postponed
+            // to the moment when installation is complete, avoiding multiple traversals 
+            scheduleNotifierTaskPostponed = postponeExecution;
+            switch(this.notificationScheduled) {
+                case NOT_SCHEDULED:
+                    notificationScheduled = DependentNotifierSchedule.FAILED_DEPENDENCY_CHECK;
+                    scheduleRunnable = !postponeExecution;
+                    break;
+                case CYCLE_VISIT_CHECK:
+                    notificationScheduled = DependentNotifierSchedule.FAILED_DEPENDENCY_CHECK;
+                    scheduleRunnable = false;
+                    break;
+                case MISSING_DEPENDENCY_CHECK:
+                    notificationScheduled = DependentNotifierSchedule.MISSING_AND_FAILED_DEPENDENCIES_CHECK;
+                default:
+                    scheduleRunnable = false;
+            }
+        }
+        if (scheduleRunnable) {
+            Runnable structureChecker = new DependentNotiferTask();
+            try {
+                getExecutor().execute(structureChecker);
+            } catch (RejectedExecutionException e) {
+                structureChecker.run();
             }
         }
     }
@@ -508,7 +595,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             Dependency registration = getOrCreateRegistration(serviceName);
             final ServiceBuilderImpl.Dependency dependency = dependencyMap.get(serviceName);
             if (dependency.getDependencyType() == ServiceBuilder.DependencyType.OPTIONAL) {
-                registration = new OptionalDependency(registration);
+                registration = new OptionalDependency(this, registration);
             }
             dependencies[i++] = registration;
             for (Injector<Object> injector : dependency.getInjectorList()) {
@@ -622,6 +709,50 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     void validateTargetState() {
         if (down) {
             throw new IllegalStateException ("Container is down");
+        }
+    }
+
+    private static enum DependentNotifierSchedule {
+        NOT_SCHEDULED() {
+            DependentNotifier createDependentNotifier() {
+                return null;
+            }
+        },
+        MISSING_DEPENDENCY_CHECK () {
+            DependentNotifier createDependentNotifier() {
+                return new DependentNotifier(UNINSTALLED);
+            }
+        },
+        FAILED_DEPENDENCY_CHECK () {
+            DependentNotifier createDependentNotifier() {
+                return new DependentNotifier(FAILED_TO_START);
+            }
+        },
+        MISSING_AND_FAILED_DEPENDENCIES_CHECK () {
+            DependentNotifier createDependentNotifier() {
+                return new DependentNotifier(UNINSTALLED, FAILED_TO_START);
+            }
+        };
+        
+        abstract DependentNotifier createDependentNotifier();
+    }
+
+    private class DependentNotiferTask implements Runnable {
+        @Override
+        public void run() {
+            final DependentNotifierSchedule scheduleToExecute;
+            synchronized(ServiceContainerImpl.this) {
+                if (down) {
+                    return;
+                }
+                scheduleToExecute = notificationScheduled;
+                notificationScheduled = DependentNotifierSchedule.NOT_SCHEDULED;
+            }
+            final DependentNotifier visitor = scheduleToExecute.createDependentNotifier();
+            for (ServiceRegistrationImpl service: registry.values()) {
+                service.accept(visitor);
+            }
+            visitor.finish();
         }
     }
 }

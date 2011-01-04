@@ -687,8 +687,8 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertSame(State.UP, firstController.getState());
         assertSame(State.UP, secondController.getState());
 
-        thirdServiceDependencyInstall = testListener.expectDependencyInstall(thirdServiceName);
-        thirdServiceDependencyMissing = testListener.expectDependencyUninstall(thirdServiceName);
+        thirdServiceDependencyInstall = testListener.expectNoDependencyInstall(thirdServiceName);
+        thirdServiceDependencyMissing = testListener.expectNoDependencyUninstall(thirdServiceName);
         final Future<ServiceController<?>> fifthServiceRemoved = testListener.expectServiceRemoval(fifthServiceName);
         // remove fifth service
         fifthController.setMode(Mode.REMOVE);
@@ -843,12 +843,12 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         // .. that is successful this time
         assertController(fourthController, fourthServiceStart);
 
-        thirdServiceDependencyInstall = testListener.expectDependencyInstall(thirdServiceName);
-        secondServiceDependencyInstall = testListener.expectDependencyInstall(secondServiceName);
-        firstServiceDependencyInstall = testListener.expectDependencyInstall(firstServiceName);
-        thirdServiceDependencyMissing = testListener.expectDependencyUninstall(thirdServiceName);
-        secondServiceDependencyMissing = testListener.expectDependencyUninstall(secondServiceName);
-        firstServiceDependencyMissing = testListener.expectDependencyUninstall(firstServiceName);
+        thirdServiceDependencyInstall = testListener.expectNoDependencyInstall(thirdServiceName);
+        secondServiceDependencyInstall = testListener.expectNoDependencyInstall(secondServiceName);
+        firstServiceDependencyInstall = testListener.expectNoDependencyInstall(firstServiceName);
+        thirdServiceDependencyMissing = testListener.expectNoDependencyUninstall(thirdServiceName);
+        secondServiceDependencyMissing = testListener.expectNoDependencyUninstall(secondServiceName);
+        firstServiceDependencyMissing = testListener.expectNoDependencyUninstall(firstServiceName);
         final Future<ServiceController<?>> fifthServiceRemoved = testListener.expectServiceRemoval(fifthServiceName);
         // remove fifth service
         fifthController.setMode(Mode.REMOVE);

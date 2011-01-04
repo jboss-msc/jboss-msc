@@ -105,10 +105,15 @@ class OptionalDependency implements Dependency, Dependent {
      */
     private boolean dependentStartedNotified = false;
 
-    OptionalDependency(Dependency optionalDependency) {
+    /**
+     * The container to which this dependency belongs.
+     */
+    private final ServiceContainerImpl container;
+
+    OptionalDependency(ServiceContainerImpl container, Dependency optionalDependency) {
         this.optionalDependency = optionalDependency;
         dependencyState = DependencyState.INSTALLED;
-        optionalDependency.addDependent(this);
+        this.container = container;
     }
 
     @Override
@@ -125,10 +130,11 @@ class OptionalDependency implements Dependency, Dependent {
             notifyDependent = forwardNotifications = dependencyState.compareTo(DependencyState.INSTALLED) >= 0;
             currentDependencyState = dependencyState;
         }
+        optionalDependency.addDependent(this);
         if (notifyDependent) {
             switch (currentDependencyState) {
                 case FAILED:
-                    dependent.dependencyFailed();
+                    container.checkFailedDependencies(true);
                     break;
                 case UP:
                     dependent.immediateDependencyUp();
@@ -194,6 +200,10 @@ class OptionalDependency implements Dependency, Dependent {
                     dependent.dependencyFailed();
                     break;
             }
+            // the status of missing and failed dependencies is changed now
+            // that this optional dep is connected with the dependent
+            container.checkFailedDependencies(true);
+            container.checkMissingDependencies();
             if (transitiveDependencyMissing) {
                 dependent.dependencyUninstalled();
             }
@@ -356,6 +366,19 @@ class OptionalDependency implements Dependency, Dependent {
         if (notifyOptionalDependent) {
             dependent.dependencyUninstalled();
         }
+    }
+
+    @Override
+    public <T> T accept(Visitor<T> visitor) {
+        assert ! lockHeld();
+        final boolean acceptRealDependency;
+        synchronized (this) {
+            acceptRealDependency = forwardNotifications;
+        }
+        if (acceptRealDependency) {
+            return optionalDependency.accept(visitor);
+        }
+        return visitor.visit(null);
     }
 
     /**
