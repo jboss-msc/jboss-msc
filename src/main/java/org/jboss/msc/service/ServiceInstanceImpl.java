@@ -1016,7 +1016,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
      * 
      * @return an array of dependents
      */
-    private final Dependent[][] getDependents() {
+    private Dependent[][] getDependents() {
         if (aliasRegistrations.length == 0) {
             synchronized (primaryRegistration.getDependentsLock()) {
                 return new Dependent[][] {primaryRegistration.getDependents().toScatteredArray(NO_DEPENDENTS)};
