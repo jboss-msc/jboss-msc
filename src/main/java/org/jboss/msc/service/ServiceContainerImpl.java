@@ -191,7 +191,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         public ServiceStatus getServiceStatus(final String name) {
             final ServiceRegistrationImpl registration = registry.get(ServiceName.parse(name));
             if (registration != null) {
-                final ServiceInstanceImpl<?> instance = registration.getInstance();
+                final ServiceControllerImpl<?> instance = registration.getInstance();
                 if (instance != null) {
                     return instance.getStatus();
                 }
@@ -213,7 +213,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             final Collection<ServiceRegistrationImpl> registrations = registry.values();
             final ArrayList<ServiceStatus> list = new ArrayList<ServiceStatus>(registrations.size());
             for (ServiceRegistrationImpl registration : registrations) {
-                final ServiceInstanceImpl<?> instance = registration.getInstance();
+                final ServiceControllerImpl<?> instance = registration.getInstance();
                 if (instance != null) list.add(instance.getStatus());
             }
             Collections.sort(list, new Comparator<ServiceStatus>() {
@@ -227,7 +227,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         public void setServiceMode(final String name, final String mode) {
             final ServiceRegistrationImpl registration = registry.get(ServiceName.parse(name));
             if (registration != null) {
-                final ServiceInstanceImpl<?> instance = registration.getInstance();
+                final ServiceControllerImpl<?> instance = registration.getInstance();
                 if (instance != null) {
                     instance.setMode(Mode.valueOf(mode.toUpperCase(Locale.US)));
                 }
@@ -369,9 +369,9 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                 shutdownComplete(started);
             }
         });
-        final HashSet<ServiceInstanceImpl<?>> done = new HashSet<ServiceInstanceImpl<?>>();
+        final HashSet<ServiceControllerImpl<?>> done = new HashSet<ServiceControllerImpl<?>>();
         for (ServiceRegistrationImpl registration : registry.values()) {
-            ServiceInstanceImpl<?> serviceInstance = registration.getInstance();
+            ServiceControllerImpl<?> serviceInstance = registration.getInstance();
             if (serviceInstance != null && done.add(serviceInstance)) {
                 try {
                     serviceInstance.addListener(shutdownListener);
@@ -401,11 +401,11 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             out.printf("(Registry is empty)\n");
         } else {
             int i = 0;
-            Set<ServiceInstanceImpl<?>> set = new HashSet<ServiceInstanceImpl<?>>();
+            Set<ServiceControllerImpl<?>> set = new HashSet<ServiceControllerImpl<?>>();
             for (ServiceName name : new TreeSet<ServiceName>(registry.keySet())) {
                 final ServiceRegistrationImpl registration = registry.get(name);
                 if (registration != null) {
-                    final ServiceInstanceImpl<?> instance = registration.getInstance();
+                    final ServiceControllerImpl<?> instance = registration.getInstance();
                     if (instance != null && set.add(instance)) {
                         i++;
                         out.printf("%s\n", instance.getStatus());
@@ -469,7 +469,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
      */
     private void install(final Collection<ServiceBuilderImpl<?>> builders) throws DuplicateServiceException {
         final Deque<ServiceBuilderImpl<?>> installedBuilders = new ArrayDeque<ServiceBuilderImpl<?>>(builders.size());
-        final Deque<ServiceInstanceImpl<?>> installedInstances = new ArrayDeque<ServiceInstanceImpl<?>>(builders.size());
+        final Deque<ServiceControllerImpl<?>> installedInstances = new ArrayDeque<ServiceControllerImpl<?>>(builders.size());
         boolean ok = false;
         try {
             for (ServiceBuilderImpl<?> builder : builders) {
@@ -479,13 +479,13 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             ok = true;
         } finally {
             if (! ok) {
-                for (ServiceInstanceImpl<?> instance : installedInstances) {
+                for (ServiceControllerImpl<?> instance : installedInstances) {
                     rollback(instance);
                 }
             } else {
                 while (! installedBuilders.isEmpty()) {
                     final ServiceBuilderImpl<?> builder = installedBuilders.removeFirst();
-                    final ServiceInstanceImpl<?> instance = installedInstances.removeFirst();
+                    final ServiceControllerImpl<?> instance = installedInstances.removeFirst();
                     commit(builder.getInitialMode(), instance);
                 }
                 checkMissingDependencies(); // verify if there are new missing dependencies or
@@ -574,7 +574,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         }
     }
 
-    private <S> ServiceInstanceImpl<S> doInstall(final ServiceBuilderImpl<S> serviceBuilder) throws DuplicateServiceException {
+    private <S> ServiceControllerImpl<S> doInstall(final ServiceBuilderImpl<S> serviceBuilder) throws DuplicateServiceException {
         apply(serviceBuilder);
 
         // Get names & aliases
@@ -612,7 +612,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         final ValueInjection<?>[] injections = valueInjections.toArray(new ValueInjection<?>[valueInjections.size()]);
 
         // Next create the actual controller
-        final ServiceInstanceImpl<S> instance = new ServiceInstanceImpl<S>(serviceBuilder.getServiceValue(), serviceBuilder.getLocation(), dependencies, injections, primaryRegistration, aliasRegistrations, serviceBuilder.getListeners());
+        final ServiceControllerImpl<S> instance = new ServiceControllerImpl<S>(serviceBuilder.getServiceValue(), serviceBuilder.getLocation(), dependencies, injections, primaryRegistration, aliasRegistrations, serviceBuilder.getListeners());
 
         boolean ok = false;
         try {
@@ -638,7 +638,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
      * @param initialMode the initial service mode
      * @param instance the service instance
      */
-    private void commit(final ServiceController.Mode initialMode, final ServiceInstanceImpl<?> instance) {
+    private void commit(final ServiceController.Mode initialMode, final ServiceControllerImpl<?> instance) {
         // Go!
         instance.setMode(initialMode == null ? ServiceController.Mode.ACTIVE : initialMode);
     }
@@ -648,7 +648,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
      *
      * @param instance
      */
-    private void rollback(final ServiceInstanceImpl<?> instance) {
+    private void rollback(final ServiceControllerImpl<?> instance) {
         instance.getPrimaryRegistration().clearInstance(instance);
         for (ServiceRegistrationImpl registration : instance.getAliasRegistrations()) {
             registration.clearInstance(instance);

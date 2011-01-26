@@ -48,7 +48,7 @@ final class ServiceRegistrationImpl implements Dependency {
     /**
      * The current instance.
      */
-    private ServiceInstanceImpl<?> instance;
+    private ServiceControllerImpl<?> instance;
     /**
      * The number of dependent instances which place a demand-to-start on this registration.  If this value is >0,
      * propagate a demand to the instance, if any.
@@ -95,7 +95,7 @@ final class ServiceRegistrationImpl implements Dependency {
     public void addDependent(final Dependent dependent) {
         assert !lockHeld();
         assert !lockHeldByDependent(dependent);
-        final ServiceInstanceImpl<?> instance;
+        final ServiceControllerImpl<?> instance;
         Runnable[] tasks;
         synchronized (this) {
             synchronized (dependents) {
@@ -149,7 +149,7 @@ final class ServiceRegistrationImpl implements Dependency {
      * @param instance the new instance
      * @throws DuplicateServiceException if there is already an instance
      */
-    void setInstance(final ServiceInstanceImpl<?> instance) throws DuplicateServiceException {
+    void setInstance(final ServiceControllerImpl<?> instance) throws DuplicateServiceException {
         assert instance != null;
         assert !lockHeld();
         assert !instance.lockHeld();
@@ -167,10 +167,10 @@ final class ServiceRegistrationImpl implements Dependency {
         }
     }
 
-    void clearInstance(final ServiceInstanceImpl<?> oldInstance) {
+    void clearInstance(final ServiceControllerImpl<?> oldInstance) {
         assert !lockHeld();
         synchronized (this) {
-            final ServiceInstanceImpl<?> instance = this.instance;
+            final ServiceControllerImpl<?> instance = this.instance;
             if (instance != oldInstance) {
                 return;
             }
@@ -221,7 +221,7 @@ final class ServiceRegistrationImpl implements Dependency {
     @Override
     public Object getValue() throws IllegalStateException {
         synchronized (this) {
-            final ServiceInstanceImpl<?> instance = this.instance;
+            final ServiceControllerImpl<?> instance = this.instance;
             if (instance == null) {
                 throw new IllegalStateException("Service is not installed");
             } else {
@@ -247,7 +247,7 @@ final class ServiceRegistrationImpl implements Dependency {
     public void addDemand() {
         synchronized (this) {
             demandedByCount++;
-            final ServiceInstanceImpl<?> instance = this.instance;
+            final ServiceControllerImpl<?> instance = this.instance;
             if (instance != null) {
                 instance.addDemand();
             }
@@ -258,14 +258,14 @@ final class ServiceRegistrationImpl implements Dependency {
     public void removeDemand() {
         synchronized (this) {
             demandedByCount--;
-            final ServiceInstanceImpl<?> instance = this.instance;
+            final ServiceControllerImpl<?> instance = this.instance;
             if (instance != null) {
                 instance.removeDemand();
             }
         }
     }
 
-    ServiceInstanceImpl<?> getInstance() {
+    ServiceControllerImpl<?> getInstance() {
         synchronized (this) {
             return instance;
         }

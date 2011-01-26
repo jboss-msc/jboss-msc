@@ -35,18 +35,18 @@ enum ServiceProperty {
      */
     FAILED_TO_START() {
         boolean holdsFor(ServiceRegistrationImpl service) {
-            ServiceInstanceImpl<?> instance = service.getInstance();
+            ServiceControllerImpl<?> instance = service.getInstance();
             return instance != null && instance.getState() == State.START_FAILED;
         }
 
-        void notifyAffectedDependents(Iterable<ServiceInstanceImpl<?>> dependents) {
-            for (ServiceInstanceImpl<?> dependent: dependents) {
+        void notifyAffectedDependents(Iterable<ServiceControllerImpl<?>> dependents) {
+            for (ServiceControllerImpl<?> dependent: dependents) {
                 dependent.dependencyFailed();
             }
         }
 
-        void notifyClearedDependents(Iterable<ServiceInstanceImpl<?>> dependents) {
-            for (ServiceInstanceImpl<?> dependent: dependents) {
+        void notifyClearedDependents(Iterable<ServiceControllerImpl<?>> dependents) {
+            for (ServiceControllerImpl<?> dependent: dependents) {
                 dependent.dependencyFailureCleared();
             }
         }
@@ -59,14 +59,14 @@ enum ServiceProperty {
             return service.getInstance() == null;
         }
 
-        void notifyAffectedDependents(Iterable<ServiceInstanceImpl<?>> dependents) {
-            for (ServiceInstanceImpl<?> dependent: dependents) {
+        void notifyAffectedDependents(Iterable<ServiceControllerImpl<?>> dependents) {
+            for (ServiceControllerImpl<?> dependent: dependents) {
                 dependent.dependencyUninstalled();
             }
         }
 
-        void notifyClearedDependents(Iterable<ServiceInstanceImpl<?>> dependents) {
-            for (ServiceInstanceImpl<?> dependent: dependents) {
+        void notifyClearedDependents(Iterable<ServiceControllerImpl<?>> dependents) {
+            for (ServiceControllerImpl<?> dependent: dependents) {
                 dependent.dependencyInstalled();
             }
         }
@@ -86,12 +86,12 @@ enum ServiceProperty {
      *  
      * @param dependents the dependents to be notified
      */
-    abstract void notifyAffectedDependents(Iterable<ServiceInstanceImpl<?>> dependents);
+    abstract void notifyAffectedDependents(Iterable<ServiceControllerImpl<?>> dependents);
 
     /**
      * Notify dependents that none of its dependencies has this property.
      * 
      * @param dependents the dependents to be notified.
      */
-    abstract void notifyClearedDependents(Iterable<ServiceInstanceImpl<?>> dependents);
+    abstract void notifyClearedDependents(Iterable<ServiceControllerImpl<?>> dependents);
 }

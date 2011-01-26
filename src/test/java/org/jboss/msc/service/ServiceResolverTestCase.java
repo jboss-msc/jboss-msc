@@ -49,7 +49,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
 
     @BeforeClass
     public static void initDependenciesField() throws Exception {
-        dependenciesField = ServiceInstanceImpl.class.getDeclaredField("dependencies");
+        dependenciesField = ServiceControllerImpl.class.getDeclaredField("dependencies");
         dependenciesField.setAccessible(true);
     }
 

@@ -63,7 +63,7 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
 
     @BeforeClass
     public static void initDependenciesField() throws Exception {
-        dependenciesField = ServiceInstanceImpl.class.getDeclaredField("dependencies");
+        dependenciesField = ServiceControllerImpl.class.getDeclaredField("dependencies");
         dependenciesField.setAccessible(true);
     }
 
@@ -99,7 +99,7 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
         final ServiceController<?> fourthController = assertController(fourthServiceName, fourthService);
         final ServiceController<?> firstController = assertController(firstServiceName, firstService);
 
-        List<ServiceInstanceImpl<?>> dependencies = getServiceDependencies(firstController);
+        List<ServiceControllerImpl<?>> dependencies = getServiceDependencies(firstController);
         assertTrue(dependencies.contains(fourthController));
 
         dependencies = getServiceDependencies(secondService.get());
@@ -157,7 +157,7 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
         final ServiceController<?> secondController = assertController(secondServiceName, secondService1);
         assertController(secondController, secondService2);
 
-        List<ServiceInstanceImpl<?>> dependencies = getServiceDependencies(firstController);
+        List<ServiceControllerImpl<?>> dependencies = getServiceDependencies(firstController);
         assertEquals(0, dependencies.size());
 
         dependencies = getServiceDependencies(secondController);
@@ -247,7 +247,7 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
         final ServiceController<?> firstController = assertController(firstServiceName, firstService);
         final ServiceController<?> fourthController = assertController(fourthServiceName, fourthService);
 
-        List<ServiceInstanceImpl<?>> dependencies = getServiceDependencies(secondService.get());
+        List<ServiceControllerImpl<?>> dependencies = getServiceDependencies(secondService.get());
         assertTrue(dependencies.contains(firstController));
         assertTrue(dependencies.contains(fourthController));
 
@@ -335,7 +335,7 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
 
         final ServiceController<?> secondController = assertController(secondServiceName, secondService1);
         assertController(secondController, secondService2);
-        List<ServiceInstanceImpl<?>> serviceDependencies = getServiceDependencies(secondController);
+        List<ServiceControllerImpl<?>> serviceDependencies = getServiceDependencies(secondController);
         assertTrue(serviceDependencies.contains(firstController));
         assertTrue(serviceDependencies.contains(fourthController));
 
@@ -409,11 +409,11 @@ public class BatchLevelDependenciesTestCase extends AbstractServiceTest {
         } catch (IllegalArgumentException e) {}
     }
 
-    private List<ServiceInstanceImpl<?>> getServiceDependencies(ServiceController<?> serviceController) throws IllegalAccessException {
+    private List<ServiceControllerImpl<?>> getServiceDependencies(ServiceController<?> serviceController) throws IllegalAccessException {
         Dependency[] deps = (Dependency[]) dependenciesField.get(serviceController);
-        List<ServiceInstanceImpl<?>> depInstances = new ArrayList<ServiceInstanceImpl<?>>(deps.length);
+        List<ServiceControllerImpl<?>> depInstances = new ArrayList<ServiceControllerImpl<?>>(deps.length);
         for (Dependency dep: deps) {
-            ServiceInstanceImpl<?> depInstance = (ServiceInstanceImpl<?>) ((ServiceRegistrationImpl)dep).getInstance();
+            ServiceControllerImpl<?> depInstance = (ServiceControllerImpl<?>) ((ServiceRegistrationImpl)dep).getInstance();
             if (depInstance != null) {
                 depInstances.add(depInstance);
             }

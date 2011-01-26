@@ -278,7 +278,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
         serviceContainer.addService(ServiceName.of("service", "one"), new FailToStartService(true))
             .addListener(listener).install();
         ServiceController<?> serviceController = assertFailure(ServiceName.of("service", "one"), exceptionFuture);
-        ServiceInstanceImpl<?> serviceInstance = (ServiceInstanceImpl<?>) serviceController;
+        ServiceControllerImpl<?> serviceInstance = (ServiceControllerImpl<?>) serviceController;
         
         final Future<ServiceController<?>> serviceStartFuture = listener.expectServiceStart(ServiceName.of("service", "one"));
         serviceInstance.retry();
@@ -292,7 +292,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
         serviceContainer.addService(ServiceName.of("service", "one"), Service.NULL)
             .addListener(listener).install();
         ServiceController<?> serviceController = assertController(ServiceName.of("service", "one"), serviceStartFuture);
-        ServiceInstanceImpl<?> serviceInstance = (ServiceInstanceImpl<?>) serviceController;
+        ServiceControllerImpl<?> serviceInstance = (ServiceControllerImpl<?>) serviceController;
         assertSame(State.UP, serviceController.getState());
 
         // retry request should be ignored should be ignored

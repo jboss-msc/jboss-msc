@@ -45,7 +45,7 @@ interface Dependent {
     void immediateDependencyUninstalled();
 
     /**
-     * Notify this dependent that one of its immediate dependencies entered {@link ServiceInstanceImpl.Substate#UP UP}
+     * Notify this dependent that one of its immediate dependencies entered {@link ServiceControllerImpl.Substate#UP UP}
      * state.
      * <p> This method must not be called under a lock.
      */
@@ -53,7 +53,7 @@ interface Dependent {
 
     /**
      * Notify this dependent that one of its immediate dependencies is leaving the {@link
-     * ServiceInstanceImpl.Substate#UP UP} state.
+     * ServiceControllerImpl.Substate#UP UP} state.
      * <p> This method must not be called under a lock.
      */
     void immediateDependencyDown();

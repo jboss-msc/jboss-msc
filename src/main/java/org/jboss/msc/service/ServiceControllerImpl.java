@@ -35,7 +35,7 @@ import org.jboss.msc.value.Value;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
-final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
+final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent {
 
     private static final String ILLEGAL_CONTROLLER_STATE = "Illegal controller state";
 
@@ -124,7 +124,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
     private static final ValueInjection<?>[] NO_INJECTIONS = new ValueInjection<?>[0];
     private static final String[] NO_STRINGS = new String[0];
 
-    ServiceInstanceImpl(final Value<? extends Service<? extends S>> serviceValue, final Location location, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<? extends ServiceListener<? super S>> listeners) {
+    ServiceControllerImpl(final Value<? extends Service<? extends S>> serviceValue, final Location location, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<? extends ServiceListener<? super S>> listeners) {
         this.serviceValue = serviceValue;
         this.location = location;
         this.dependencies = dependencies;
@@ -135,7 +135,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         upperCount = - dependencies.length;
     }
 
-    ServiceInstanceImpl(final Value<? extends Service<? extends S>> serviceValue, final ServiceRegistrationImpl primaryRegistration) {
+    ServiceControllerImpl(final Value<? extends Service<? extends S>> serviceValue, final ServiceRegistrationImpl primaryRegistration) {
         this.serviceValue = serviceValue;
         this.primaryRegistration = primaryRegistration;
         location = null;
@@ -1043,7 +1043,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
             try {
                 doDemandParents();
                 final Runnable[] tasks;
-                synchronized (ServiceInstanceImpl.this) {
+                synchronized (ServiceControllerImpl.this) {
                     asyncTasks--;
                     tasks = transition();
                 }
@@ -1060,7 +1060,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
             try {
                 doUndemandParents();
                 final Runnable[] tasks;
-                synchronized (ServiceInstanceImpl.this) {
+                synchronized (ServiceControllerImpl.this) {
                     asyncTasks--;
                     tasks = transition();
                 }
@@ -1079,7 +1079,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                     dependency.dependentStopped();
                 }
                 final Runnable[] tasks;
-                synchronized (ServiceInstanceImpl.this) {
+                synchronized (ServiceControllerImpl.this) {
                     asyncTasks--;
                     tasks = transition();
                 }
@@ -1098,7 +1098,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                     dependency.dependentStarted();
                 }
                 final Runnable[] tasks;
-                synchronized (ServiceInstanceImpl.this) {
+                synchronized (ServiceControllerImpl.this) {
                     asyncTasks--;
                     tasks = transition();
                 }
@@ -1124,7 +1124,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
             final StartContextImpl context = new StartContextImpl(startNanos);
             try {
                 if (doInjection) {
-                    final ValueInjection<?>[] injections = ServiceInstanceImpl.this.injections;
+                    final ValueInjection<?>[] injections = ServiceControllerImpl.this.injections;
                     final int injectionsLength = injections.length;
                     boolean ok = false;
                     int i = 0;
@@ -1148,7 +1148,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 }
                 service.start(context);
                 final Runnable[] tasks;
-                synchronized (ServiceInstanceImpl.this) {
+                synchronized (ServiceControllerImpl.this) {
                     if (context.state != ContextState.SYNC) {
                         return;
                     }
@@ -1164,7 +1164,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 e.setServiceName(serviceName);
                 ServiceLogger.INSTANCE.startFailed(e, serviceName);
                 final Runnable[] tasks;
-                synchronized (ServiceInstanceImpl.this) {
+                synchronized (ServiceControllerImpl.this) {
                     final ContextState oldState = context.state;
                     if (oldState != ContextState.SYNC && oldState != ContextState.ASYNC) {
                         ServiceLogger.INSTANCE.exceptionAfterComplete(e, serviceName);
@@ -1182,7 +1182,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 doExecute(tasks);
             } catch (Throwable t) {
                 final Runnable[] tasks;
-                synchronized (ServiceInstanceImpl.this) {
+                synchronized (ServiceControllerImpl.this) {
                     final ContextState oldState = context.state;
                     if (oldState != ContextState.SYNC && oldState != ContextState.ASYNC) {
                         ServiceLogger.INSTANCE.exceptionAfterComplete(t, serviceName);
@@ -1231,7 +1231,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 }
             } finally {
                 Runnable[] tasks = null;
-                synchronized (ServiceInstanceImpl.this) {
+                synchronized (ServiceControllerImpl.this) {
                     if (ok && context.state != ContextState.SYNC) {
                         // We want to discard the exception anyway, if there was one.  Which there can't be.
                         //noinspection ReturnInsideFinallyBlock
@@ -1244,7 +1244,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 } catch (Throwable t) {
                     ServiceLogger.INSTANCE.uninjectFailed(t, serviceName, injection);
                 }
-                synchronized (ServiceInstanceImpl.this) {
+                synchronized (ServiceControllerImpl.this) {
                     asyncTasks--;
                     if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                         writeProfileInfo('X', startNanos, System.nanoTime());
@@ -1305,7 +1305,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                     }
                 }
                 final Runnable[] tasks;
-                synchronized (ServiceInstanceImpl.this) {
+                synchronized (ServiceControllerImpl.this) {
                     asyncTasks--;
                     tasks = transition();
                 }
@@ -1332,7 +1332,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                     }
                 }
                 final Runnable[] tasks;
-                synchronized (ServiceInstanceImpl.this) {
+                synchronized (ServiceControllerImpl.this) {
                     asyncTasks--;
                     tasks = transition();
                 }
@@ -1351,10 +1351,10 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         public void run() {
             try {
                 for (Dependency dependency : dependencies) {
-                    dependency.addDependent(ServiceInstanceImpl.this);
+                    dependency.addDependent(ServiceControllerImpl.this);
                 }
                 final Runnable[] tasks;
-                synchronized (ServiceInstanceImpl.this) {
+                synchronized (ServiceControllerImpl.this) {
                     asyncTasks--;
                     tasks = transition();
                 }
@@ -1374,18 +1374,18 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
             try {
                 assert getMode() == ServiceController.Mode.REMOVE;
                 assert getSubstate() == Substate.REMOVING;
-                primaryRegistration.clearInstance(ServiceInstanceImpl.this);
+                primaryRegistration.clearInstance(ServiceControllerImpl.this);
                 if (failed || dependencyFailed) {
                     primaryRegistration.getContainer().checkFailedDependencies(false);
                 }
                 for (ServiceRegistrationImpl registration : aliasRegistrations) {
-                    registration.clearInstance(ServiceInstanceImpl.this);
+                    registration.clearInstance(ServiceControllerImpl.this);
                 }
                 for (Dependency dependency : dependencies) {
-                    dependency.removeDependent(ServiceInstanceImpl.this);
+                    dependency.removeDependent(ServiceControllerImpl.this);
                 }
                 final Runnable[] tasks;
-                synchronized (ServiceInstanceImpl.this) {
+                synchronized (ServiceControllerImpl.this) {
                     asyncTasks--;
                     tasks = transition();
                 }
@@ -1408,7 +1408,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
 
         public void failed(final StartException reason) throws IllegalStateException {
             final Runnable[] tasks;
-            synchronized (ServiceInstanceImpl.this) {
+            synchronized (ServiceControllerImpl.this) {
                 if (state != ContextState.ASYNC) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
@@ -1428,7 +1428,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         }
 
         public void asynchronous() throws IllegalStateException {
-            synchronized (ServiceInstanceImpl.this) {
+            synchronized (ServiceControllerImpl.this) {
                 if (state == ContextState.SYNC) {
                     state = ContextState.ASYNC;
                 } else {
@@ -1439,7 +1439,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
 
         public void complete() throws IllegalStateException {
             final Runnable[] tasks;
-            synchronized (ServiceInstanceImpl.this) {
+            synchronized (ServiceControllerImpl.this) {
                 if (state != ContextState.ASYNC) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 } else {
@@ -1459,7 +1459,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         }
 
         public ServiceController<?> getController() {
-            return ServiceInstanceImpl.this;
+            return ServiceControllerImpl.this;
         }
     }
 
@@ -1492,7 +1492,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         }
 
         public void asynchronous() throws IllegalStateException {
-            synchronized (ServiceInstanceImpl.this) {
+            synchronized (ServiceControllerImpl.this) {
                 if (state == ContextState.SYNC) {
                     state = ContextState.ASYNC;
                 } else {
@@ -1502,7 +1502,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         }
 
         public void complete() throws IllegalStateException {
-            synchronized (ServiceInstanceImpl.this) {
+            synchronized (ServiceControllerImpl.this) {
                 if (state != ContextState.ASYNC) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
@@ -1512,7 +1512,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
                 injection.getTarget().uninject();
             }
             final Runnable[] tasks;
-            synchronized (ServiceInstanceImpl.this) {
+            synchronized (ServiceControllerImpl.this) {
                 asyncTasks--;
                 if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                     writeProfileInfo('X', startNanos, System.nanoTime());
@@ -1523,7 +1523,7 @@ final class ServiceInstanceImpl<S> implements ServiceController<S>, Dependent {
         }
 
         public ServiceController<?> getController() {
-            return ServiceInstanceImpl.this;
+            return ServiceControllerImpl.this;
         }
 
         public long getElapsedTime() {

@@ -50,7 +50,7 @@ import java.util.Set;
  */
 final class DependentNotifier implements Visitor<boolean[]> {
     // services selected as dependents (direct or not) of services that have a specific property
-    private final HashSet<ServiceInstanceImpl<?>>[] selectedServices;
+    private final HashSet<ServiceControllerImpl<?>>[] selectedServices;
     // cycles detected during visit
     private final Collection<List<ServiceName>> cycles;
     // all dependents of services having these properties will be selected (each one in the corresponding
@@ -59,23 +59,23 @@ final class DependentNotifier implements Visitor<boolean[]> {
     // visit path of traversal
     private final Deque<ServiceVisitInfo> visitPath;
     // services already visited
-    private final Set<ServiceInstanceImpl<?>> visited;
+    private final Set<ServiceControllerImpl<?>> visited;
     // services being currently visited
-    private final Set<ServiceInstanceImpl<?>> beingVisited;
+    private final Set<ServiceControllerImpl<?>> beingVisited;
     // shortcut for rejecting a service for all properties
     private final boolean[] falseForAllProps;
 
     @SuppressWarnings("unchecked")
     DependentNotifier(ServiceProperty... properties) {
         this.properties = properties;
-        selectedServices = (HashSet<ServiceInstanceImpl<?>>[]) Array.newInstance(HashSet.class, properties.length);
+        selectedServices = (HashSet<ServiceControllerImpl<?>>[]) Array.newInstance(HashSet.class, properties.length);
         for (int i = 0; i < properties.length; i++) {
-            selectedServices[i] = new HashSet<ServiceInstanceImpl<?>>();
+            selectedServices[i] = new HashSet<ServiceControllerImpl<?>>();
         }
         cycles = new ArrayList<List<ServiceName>>();
         visitPath = new ArrayDeque<ServiceVisitInfo>();
-        visited = new HashSet<ServiceInstanceImpl<?>>();
-        beingVisited = new HashSet<ServiceInstanceImpl<?>>();
+        visited = new HashSet<ServiceControllerImpl<?>>();
+        beingVisited = new HashSet<ServiceControllerImpl<?>>();
         falseForAllProps = new boolean[properties.length];
     }
 
@@ -97,7 +97,7 @@ final class DependentNotifier implements Visitor<boolean[]> {
         if (properties.length > 1) {
             for (int i = 1; i < properties.length; i++) {
                 properties[i].notifyAffectedDependents(selectedServices[i]);
-                HashSet<ServiceInstanceImpl<?>> rejectedServices = new HashSet<ServiceInstanceImpl<?>>();
+                HashSet<ServiceControllerImpl<?>> rejectedServices = new HashSet<ServiceControllerImpl<?>>();
                 rejectedServices.addAll(visited);
                 rejectedServices.removeAll(selectedServices[i]);
                 properties[i].notifyClearedDependents(rejectedServices);
@@ -113,7 +113,7 @@ final class DependentNotifier implements Visitor<boolean[]> {
         if (service == null) {
             return falseForAllProps;
         }
-        final ServiceInstanceImpl<?> instance;
+        final ServiceControllerImpl<?> instance;
         final boolean[] selectDependents = new boolean[properties.length];
         synchronized(service) {
             instance = service.getInstance();
@@ -131,7 +131,7 @@ final class DependentNotifier implements Visitor<boolean[]> {
         return selectDependents;
     }
 
-    private boolean[] visit(ServiceInstanceImpl<?> service) {
+    private boolean[] visit(ServiceControllerImpl<?> service) {
         // check if instance has already been visited
         if (visited.contains(service)) {
             boolean select[] = new boolean[properties.length];
@@ -172,7 +172,7 @@ final class DependentNotifier implements Visitor<boolean[]> {
         return selectService;
     }
 
-    private void recordCycle(ServiceInstanceImpl<?> service) {
+    private void recordCycle(ServiceControllerImpl<?> service) {
         final List<ServiceName> cycleServiceNames = new ArrayList<ServiceName>();
         // iterate through cycle recursively, recording the service names and updating visitPath information on the way
         recordCycle(service, cycleServiceNames, visitPath.descendingIterator());
@@ -181,10 +181,10 @@ final class DependentNotifier implements Visitor<boolean[]> {
         cycles.add(cycleServiceNames);
     }
 
-    private CycleInfo recordCycle(ServiceInstanceImpl<?> currentService, List<ServiceName> cycleServiceNames, Iterator<ServiceVisitInfo> pathIterator) {
+    private CycleInfo recordCycle(ServiceControllerImpl<?> currentService, List<ServiceName> cycleServiceNames, Iterator<ServiceVisitInfo> pathIterator) {
         assert pathIterator.hasNext();
         final ServiceVisitInfo visitInfo = pathIterator.next();
-        final ServiceInstanceImpl<?> serviceInstance = visitInfo.getService();
+        final ServiceControllerImpl<?> serviceInstance = visitInfo.getService();
         final CycleInfo cycleInfo; 
         // found the cycle head
         if (serviceInstance == currentService) {
@@ -201,17 +201,17 @@ final class DependentNotifier implements Visitor<boolean[]> {
 
     private class ServiceVisitInfo {
         private CycleInfo cycle;
-        private ServiceInstanceImpl<?> service;
+        private ServiceControllerImpl<?> service;
 
-        public ServiceVisitInfo(ServiceInstanceImpl<?> service) {
+        public ServiceVisitInfo(ServiceControllerImpl<?> service) {
             this.service = service;
         }
 
-        public ServiceInstanceImpl<?> getService() {
+        public ServiceControllerImpl<?> getService() {
             return service;
         }
 
-        public void selectService(HashSet<ServiceInstanceImpl<?>> selectedServices) {
+        public void selectService(HashSet<ServiceControllerImpl<?>> selectedServices) {
             if (cycle != null && cycle.getCycleHead() == this) {
                 selectedServices.addAll(cycle.getCycleNodes());
             }
@@ -233,11 +233,11 @@ final class DependentNotifier implements Visitor<boolean[]> {
 
     private static class CycleInfo {
         private final ServiceVisitInfo cycleHead;
-        private final Set<ServiceInstanceImpl<?>> cycleNodes;
+        private final Set<ServiceControllerImpl<?>> cycleNodes;
 
         CycleInfo(ServiceVisitInfo cycleHead) {
             this.cycleHead = cycleHead;
-            cycleNodes = new HashSet<ServiceInstanceImpl<?>>();
+            cycleNodes = new HashSet<ServiceControllerImpl<?>>();
         }
 
         ServiceVisitInfo getCycleHead() {
@@ -248,7 +248,7 @@ final class DependentNotifier implements Visitor<boolean[]> {
             cycleNodes.add(serviceVisitInfo.getService());
         }
 
-        Set<ServiceInstanceImpl<?>> getCycleNodes() {
+        Set<ServiceControllerImpl<?>> getCycleNodes() {
             return cycleNodes;
         }
 
