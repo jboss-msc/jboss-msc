@@ -33,6 +33,8 @@ import java.util.Collection;
  * {@link ServiceTarget#addServiceValue(ServiceName, Value)} or
  * methods.
  *
+ * @param <T> the service type
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface ServiceBuilder<T> {
@@ -276,7 +278,7 @@ public interface ServiceBuilder<T> {
     /**
      * Install all the defined services into the container.
      *
-     * @throws ServiceRegistryException
+     * @throws ServiceRegistryException if installation fails
      */
     void install() throws ServiceRegistryException;
 
