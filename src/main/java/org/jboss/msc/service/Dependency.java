@@ -89,11 +89,11 @@ interface Dependency extends Value<Object> {
     ServiceName getName();
 
     /**
-     * Acceps visit from {@code visitor}.
+     * Accepts visit from {@code visitor}.
      * 
-     * @param <T>
-     * @param visitor
-     * @return
+     * @param <T> the visitor return type
+     * @param visitor the visitor
+     * @return the return from the visitor
      */
     <T> T accept(Visitor<T> visitor);
 }

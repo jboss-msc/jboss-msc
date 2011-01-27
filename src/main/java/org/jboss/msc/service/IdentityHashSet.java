@@ -42,7 +42,9 @@ import java.util.Set;
  * would for HashSet, since the implementation is open-addressed with linear
  * probing. With a 50% load-factor a get is expected to return in only 2 probes.
  * However, a 90% load-factor is expected to return in around 50 probes.
- * 
+ *
+ * @param <E> the element type
+ *
  * @author Jason T. Greene
  */
 class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Serializable {
@@ -351,6 +353,7 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
      * addition, it will not operate correctly if a null was inserted into the
      * set. Use at your own risk....
      * 
+     * @param dummy the input array
      * @return an array containing elements in this set along with randomly
      *         placed nulls,
      */
@@ -408,11 +411,11 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
             }
         }
 
-        System.out.println(" Size:            " + size);
-        System.out.println(" Real Size:       " + total);
-        System.out.println(" Optimal:         " + optimal + " (" + (float) optimal * 100 / total + "%)");
-        System.out.println(" Average Distnce: " + ((float) totalSkew / (total - optimal)));
-        System.out.println(" Max Distance:    " + maxSkew);
+        System.out.println(" Size:             " + size);
+        System.out.println(" Real Size:        " + total);
+        System.out.println(" Optimal:          " + optimal + " (" + (float) optimal * 100 / total + "%)");
+        System.out.println(" Average Distance: " + ((float) totalSkew / (total - optimal)));
+        System.out.println(" Max Distance:     " + maxSkew);
     }
 
     @SuppressWarnings("unchecked")

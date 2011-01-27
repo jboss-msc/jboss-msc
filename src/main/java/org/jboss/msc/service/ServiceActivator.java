@@ -33,6 +33,7 @@ public interface ServiceActivator {
      * Activate services.
      *
      * @param serviceActivatorContext the activation context
+     * @throws ServiceRegistryException if there is a problem registering an activated service
      */
     void activate(ServiceActivatorContext serviceActivatorContext) throws ServiceRegistryException;
 }

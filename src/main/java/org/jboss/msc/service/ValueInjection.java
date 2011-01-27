@@ -28,6 +28,8 @@ import org.jboss.msc.value.Value;
 /**
  * An injection of a source value into a target injector.
  *
+ * @param <T> the value type
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class ValueInjection<T> {

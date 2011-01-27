@@ -26,6 +26,8 @@ package org.jboss.msc.service;
  * A listener for service lifecycle events. The associated controller will not leave its current state until
  * all listeners finish running.
  *
+ * @param <S> the service type
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
@@ -104,7 +106,7 @@ public interface ServiceListener<S> {
      * A dependency of the service is uninstalled.
      * <p> Dependencies that are subsequently uninstalled do not result in new {@code dependencyUninstalled}
      * notifications. A new call to this method will only be made to notify newly found uninstalled dependencies if
-     * the previously missing dependencies have been {@link #dependencyInstalled() installed}.
+     * the previously missing dependencies have been {@link #dependencyInstalled(ServiceController) installed}.
      * <p> The scope of this method includes both immediate and transitive dependencies.
      * @param controller the controller
      */

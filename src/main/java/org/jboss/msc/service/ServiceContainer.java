@@ -158,14 +158,22 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
             this.container = container;
         }
 
+        /**
+         * Construct a new instance.
+         *
+         * @param container the container to create the injector for
+         * @return the injector
+         */
         public static ExecutorInjector create(final ServiceContainer container) {
             return new ExecutorInjector(container);
         }
 
+        /** {@inheritDoc} */
         public void inject(final Executor value) throws InjectionException {
             container.setExecutor(value);
         }
 
+        /** {@inheritDoc} */
         public void uninject() {
             container.setExecutor(null);
         }

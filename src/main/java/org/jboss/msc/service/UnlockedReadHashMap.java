@@ -32,6 +32,10 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
+ * A hash map that supports non-blocking, lockless read access.
+ *
+ * @param <K> the key type
+ * @param <V> the value type
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 final class UnlockedReadHashMap<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> {

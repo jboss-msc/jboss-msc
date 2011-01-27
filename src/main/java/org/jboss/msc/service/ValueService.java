@@ -27,21 +27,31 @@ import org.jboss.msc.value.Value;
 /**
  * A service which does nothing but return the provided value.
  *
+ * @param <T> the service type
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class ValueService<T> implements Service<T> {
     private final Value<T> value;
 
+    /**
+     * Construct a new instance.
+     *
+     * @param value the value to return
+     */
     public ValueService(final Value<T> value) {
         this.value = value;
     }
 
+    /** {@inheritDoc} */
     public void start(final StartContext context) throws StartException {
     }
 
+    /** {@inheritDoc} */
     public void stop(final StopContext context) {
     }
 
+    /** {@inheritDoc} */
     public T getValue() throws IllegalStateException {
         return value.getValue();
     }
