@@ -32,6 +32,10 @@ import org.jboss.msc.service.management.ServiceStatus;
 import org.jboss.msc.value.Value;
 
 /**
+ * The service controller implementation.
+ *
+ * @param <S> the service type
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
@@ -661,7 +665,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         doExecute(tasks);
     }
 
-    final Dependency[] getDependencies() {
+    Dependency[] getDependencies() {
         return dependencies;
     }
 

@@ -28,6 +28,8 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  * A service listener which calls a callback once all of the services it was attached to
  * have been removed.
  *
+ * @param <T> the callback parameter type
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class MultipleRemoveListener<T> extends AbstractServiceListener<Object> {
@@ -120,6 +122,12 @@ public final class MultipleRemoveListener<T> extends AbstractServiceListener<Obj
      * A generalized callback for when all services are removed.
      */
     public interface Callback<T> {
+
+        /**
+         * Handle the completion of all removals.
+         *
+         * @param parameter the parameter
+         */
         void handleDone(T parameter);
     }
 }

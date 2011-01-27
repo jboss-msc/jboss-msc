@@ -25,6 +25,8 @@ package org.jboss.msc.service;
 /**
  * An abstract implementation of a service listener whose methods do nothing.
  *
+ * @param <S> the service type
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */

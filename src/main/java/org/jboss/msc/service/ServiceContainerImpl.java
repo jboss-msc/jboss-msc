@@ -503,7 +503,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     void checkMissingDependencies() {
         boolean scheduleRunnable;
         synchronized (this) {
-            switch(this.notificationScheduled) {
+            switch(notificationScheduled) {
                 case NOT_SCHEDULED:
                     notificationScheduled = DependentNotifierSchedule.MISSING_DEPENDENCY_CHECK;
                     cycleDetectionLatch = new CountDownLatch(1);
@@ -522,7 +522,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             scheduleNotifierTaskPostponed = false;
         }
         if (scheduleRunnable) {
-            Runnable structureChecker = new DependentNotiferTask();
+            Runnable structureChecker = new DependentNotifierTask();
             try {
                 getExecutor().execute(structureChecker);
             } catch (RejectedExecutionException e) {
@@ -548,7 +548,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             // for that reason, any request to check for failures on installation should be postponed
             // to the moment when installation is complete, avoiding multiple traversals 
             scheduleNotifierTaskPostponed = postponeExecution;
-            switch(this.notificationScheduled) {
+            switch(notificationScheduled) {
                 case NOT_SCHEDULED:
                     notificationScheduled = DependentNotifierSchedule.FAILED_DEPENDENCY_CHECK;
                     scheduleRunnable = !postponeExecution;
@@ -565,7 +565,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             }
         }
         if (scheduleRunnable) {
-            Runnable structureChecker = new DependentNotiferTask();
+            Runnable structureChecker = new DependentNotifierTask();
             try {
                 getExecutor().execute(structureChecker);
             } catch (RejectedExecutionException e) {
@@ -646,7 +646,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     /**
      * Roll back a service install.
      *
-     * @param instance
+     * @param instance the instance
      */
     private void rollback(final ServiceControllerImpl<?> instance) {
         instance.getPrimaryRegistration().clearInstance(instance);
@@ -762,7 +762,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         abstract DependentNotifier createDependentNotifier();
     }
 
-    private class DependentNotiferTask implements Runnable {
+    private class DependentNotifierTask implements Runnable {
         @Override
         public void run() {
             final DependentNotifierSchedule scheduleToExecute;

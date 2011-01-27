@@ -40,7 +40,7 @@ import java.util.Set;
  * by a property if and only if one of its dependencies is either affected by it or {@link
  * ServiceProperty#holdsFor(ServiceRegistrationImpl) has} the defined property itself. On {@link #finish()},
  * all selected dependents are notified they have one or more dependencies with the specified property.
- * Rejected dependents are also notified their dependencies are cleared in relatio to the property.
+ * Rejected dependents are also notified their dependencies are cleared in relation to the property.
  * <p>Multiple property notification is supported and should be the approach of choice when more than one
  * property needs to be verified. This will result in more than one property  being verified in a single traversal,
  * thus saving the cost of performing multiple traversals through the dependency graph.

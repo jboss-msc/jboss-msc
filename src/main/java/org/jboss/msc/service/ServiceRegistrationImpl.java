@@ -62,14 +62,14 @@ final class ServiceRegistrationImpl implements Dependency {
 
     /**
      * Returns the dependents lock.<p>
-     * This lock must be used to synchronize calls to {@link getDependents}, and any operations on the 
+     * This lock must be used to synchronize calls to {@link #getDependents}, and any operations on the
      * returned set. The lock should be released only after the dependents set reference is released
      * by the caller.
      *  
      * @return the dependents set lock
      * @see #getDependents()
      */
-    final Object getDependentsLock() {
+    Object getDependentsLock() {
         return dependents;
     }
 
@@ -81,7 +81,7 @@ final class ServiceRegistrationImpl implements Dependency {
      * @return the dependents set
      * @see #getDependentsLock()
      */
-    final IdentityHashSet<Dependent> getDependents() {
+    IdentityHashSet<Dependent> getDependents() {
         assert lockHeldBy(dependents);
         return dependents;
     }
@@ -196,6 +196,7 @@ final class ServiceRegistrationImpl implements Dependency {
     /**
      * Determine whether the dependent lock is currently held.
      *
+     * @param dependent the dependent to check
      * @return {@code true} if the lock is held
      */
     boolean lockHeldByDependent(Dependent dependent) {

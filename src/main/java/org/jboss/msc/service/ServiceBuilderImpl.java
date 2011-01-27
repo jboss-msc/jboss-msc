@@ -37,9 +37,10 @@ import org.jboss.msc.value.Value;
 
 /**
  * {@link ServiceBuilder} implementation.
- * 
- * 
-* @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ *
+ * @param <T> the type of service being built
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
 */
 class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
