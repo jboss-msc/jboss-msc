@@ -82,39 +82,37 @@ public abstract class AbstractDelegatingServiceTargetTest extends AbstractServic
     }
 
     @Test
-    public void addServiceWithDependencyToBatchBuilder() throws Exception {
-        BatchBuilder builder = serviceContainer.batchBuilder();
-        ServiceTarget serviceTarget = getDelegatingServiceTarget(builder);
-        serviceTarget.addService(anotherServiceName, Service.NULL).install();
+    public void addServiceWithDependency() throws Exception {
+        Future<ServiceController<?>> serviceStart = testListener.expectServiceStart(serviceName);
+        Future<ServiceController<?>> anotherServiceStart = testListener.expectServiceStart(anotherServiceName);
+
+        ServiceTarget serviceTarget = getDelegatingServiceTarget(serviceContainer);
         serviceTarget.addListener(testListener);
+        serviceTarget.addService(anotherServiceName, Service.NULL).install();
         serviceTarget.addDependency(anotherServiceName);
         serviceTarget.addServiceValue(serviceName, Values.immediateValue(Service.NULL)).install();
 
-        Future<ServiceController<?>> serviceStart = testListener.expectServiceStart(serviceName);
-        Future<ServiceController<?>> anotherServiceStart = testListener.expectServiceStart(anotherServiceName);
-        builder.install();
         assertController(serviceName, serviceStart);
         assertController(anotherServiceName, anotherServiceStart);
     }
 
     @Test
-    public void addServiceWithDependenciesToBatchBuilder() throws Exception {
-        BatchBuilder builder = serviceContainer.batchBuilder();
-        ServiceTarget serviceTarget = getDelegatingServiceTarget(builder);
-
-        ServiceTarget subTarget = getDelegatingServiceTarget(serviceTarget.subTarget());
-        serviceTarget.addService(oneMoreServiceName, Service.NULL).install();
-        serviceTarget.addService(anotherServiceName, Service.NULL).install();
-        serviceTarget.addListener(testListener);
-        subTarget.addDependency(anotherServiceName, oneMoreServiceName);
-        subTarget.addServiceValue(serviceName, Values.immediateValue(Service.NULL)).install();
-        subTarget.addServiceValue(extraServiceName, Values.immediateValue(Service.NULL)).install();
+    public void addServiceWithDependencies() throws Exception {
+        ServiceTarget serviceTarget = getDelegatingServiceTarget(serviceContainer);
 
         Future<ServiceController<?>> oneMoreServiceStart = testListener.expectServiceStart(oneMoreServiceName);
         Future<ServiceController<?>> anotherServiceStart = testListener.expectServiceStart(anotherServiceName);
         Future<ServiceController<?>> serviceStart = testListener.expectServiceStart(serviceName);
         Future<ServiceController<?>> extraServiceStart = testListener.expectServiceStart(extraServiceName);
-        builder.install();
+
+        ServiceTarget subTarget = getDelegatingServiceTarget(serviceTarget.subTarget());
+        serviceTarget.addListener(testListener);
+        serviceTarget.addService(oneMoreServiceName, Service.NULL).install();
+        serviceTarget.addService(anotherServiceName, Service.NULL).install();
+        subTarget.addDependency(anotherServiceName, oneMoreServiceName);
+        subTarget.addServiceValue(serviceName, Values.immediateValue(Service.NULL)).install();
+        subTarget.addServiceValue(extraServiceName, Values.immediateValue(Service.NULL)).install();
+
         assertController(oneMoreServiceName, oneMoreServiceStart);
         assertController(anotherServiceName, anotherServiceStart);
         assertController(serviceName, serviceStart);
@@ -124,8 +122,7 @@ public abstract class AbstractDelegatingServiceTargetTest extends AbstractServic
     @SuppressWarnings("unchecked")
     @Test
     public void addServiceWithDependencyCollection() throws Exception {
-        BatchBuilder builder = serviceTarget.batchBuilder();
-        ServiceTarget builderTarget = getDelegatingServiceTarget(builder);
+        ServiceTarget builderTarget = getDelegatingServiceTarget(serviceContainer);
         TestServiceListener testListener1 = new TestServiceListener();
         TestServiceListener testListener2 = new TestServiceListener();
         TestServiceListener testListener3 = new TestServiceListener();
@@ -139,6 +136,13 @@ public abstract class AbstractDelegatingServiceTargetTest extends AbstractServic
         assertController(oneMoreServiceController, oneMoreServiceStart2);
         assertController(oneMoreServiceController, oneMoreServiceStart3);
 
+        Future<ServiceController<?>> serviceStart1 = testListener1.expectServiceStart(serviceName);
+        Future<ServiceController<?>> serviceStart3 = testListener3.expectServiceStart(serviceName);
+        Future<ServiceController<?>> anotherServiceStart1 = testListener1.expectServiceStart(anotherServiceName);
+        Future<ServiceController<?>> anotherServiceStart3 = testListener3.expectServiceStart(anotherServiceName);
+        Future<ServiceController<?>> extraServiceStart1 = testListener1.expectServiceStart(extraServiceName);
+        Future<ServiceController<?>> extraServiceStart3 = testListener3.expectServiceStart(extraServiceName);
+
         Collection<ServiceName> dependencies = new ArrayList<ServiceName>();
         dependencies.add(oneMoreServiceName);
         builderTarget.addDependency(dependencies);
@@ -149,14 +153,6 @@ public abstract class AbstractDelegatingServiceTargetTest extends AbstractServic
         listeners.add(testListener1);
         listeners.add(testListener3);
         builderTarget.addListener(listeners);
-
-        Future<ServiceController<?>> serviceStart1 = testListener1.expectServiceStart(serviceName);
-        Future<ServiceController<?>> serviceStart3 = testListener3.expectServiceStart(serviceName);
-        Future<ServiceController<?>> anotherServiceStart1 = testListener1.expectServiceStart(anotherServiceName);
-        Future<ServiceController<?>> anotherServiceStart3 = testListener3.expectServiceStart(anotherServiceName);
-        Future<ServiceController<?>> extraServiceStart1 = testListener1.expectServiceStart(extraServiceName);
-        Future<ServiceController<?>> extraServiceStart3 = testListener3.expectServiceStart(extraServiceName);
-        builder.install();
 
         ServiceController<?> serviceController = assertController(serviceName, serviceStart1);
         assertController(serviceController, serviceStart3);
@@ -169,10 +165,7 @@ public abstract class AbstractDelegatingServiceTargetTest extends AbstractServic
     @SuppressWarnings("unchecked")
     public void addServicesAfterShutdown() {
         final ServiceTarget containerTarget = getDelegatingServiceTarget(serviceContainer);
-        final BatchBuilder batchBuilder = serviceContainer.batchBuilder();
-        final ServiceTarget batchBuilderTarget = getDelegatingServiceTarget(batchBuilder);
         final ServiceBuilder<?> builderFromContainer = containerTarget.addService(anotherServiceName, Service.NULL);
-        final ServiceBuilder<?> builderfromBatch = batchBuilderTarget.addService(extraServiceName, Service.NULL);
         final TestServiceListener testListener = new TestServiceListener();
 
         containerTarget.addListener(testListener);
@@ -224,19 +217,8 @@ public abstract class AbstractDelegatingServiceTargetTest extends AbstractServic
         assertEquals(1, dependencies.size());
         assertSame(serviceName, listeners.iterator().next());
 
-        batchBuilderTarget.addService(extraServiceName, Service.NULL);
-        try {
-            batchBuilder.install();
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-
         try {
             builderFromContainer.install();
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-
-        try {
-            builderfromBatch.install();
             fail ("IllegalStateException expected");
         } catch (IllegalStateException e) {}
     }

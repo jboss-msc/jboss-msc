@@ -22,7 +22,6 @@
 
 package org.jboss.msc.bench;
 
-import org.jboss.msc.service.BatchBuilder;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
@@ -49,7 +48,6 @@ public class FiveReverseInjectionsBench {
         final int totalServiceDefinitions = Integer.parseInt(args[0]);
 
         final ServiceContainer container = ServiceContainer.Factory.create();
-        BatchBuilder batch = container.batchBuilder();
 
         final LatchedFinishListener listener = new LatchedFinishListener();
 
@@ -63,7 +61,7 @@ public class FiveReverseInjectionsBench {
         for (int i = 0; i < totalServiceDefinitions; i++) {
             final TestObject testObject = new TestObject("test" + i);
             final TestObjectService service = new TestObjectService(testObject);
-            final ServiceBuilder<TestObject> builder = batch.addService(ServiceName.of(("test" + i).intern()), service);
+            final ServiceBuilder<TestObject> builder = container.addService(ServiceName.of(("test" + i).intern()), service);
             builder.addListener(listener);
 
             final Object injectedValue = new Object();
@@ -75,7 +73,6 @@ public class FiveReverseInjectionsBench {
             }
         }
 
-        batch.install();
         listener.await();
         System.out.println(totalServiceDefinitions + " : " + listener.getElapsedTime() / 1000.0);
         container.shutdown();

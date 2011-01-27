@@ -40,17 +40,13 @@ public class ServiceAliasTestCase extends AbstractServiceTest {
 
     @Test
     public void testAliases() throws Exception {
-        final BatchBuilder builder = serviceContainer.batchBuilder();
         final TestServiceListener listener = new TestServiceListener();
-        builder.addListener(listener);
-
-        builder.addService(ServiceName.of("service1"), Service.NULL)
-            .addAliases(ServiceName.of("alias1"))
-            .addAliases(ServiceName.of("alias2")).install();
+        serviceContainer.addListener(listener);
 
         final Future<ServiceController<?>> future = listener.expectServiceStart(ServiceName.of("service1"));
-
-        builder.install();
+        serviceContainer.addService(ServiceName.of("service1"), Service.NULL)
+            .addAliases(ServiceName.of("alias1"))
+            .addAliases(ServiceName.of("alias2")).install();
 
         ServiceController<?> controller = future.get();
 

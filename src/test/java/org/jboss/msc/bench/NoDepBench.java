@@ -22,13 +22,9 @@
 
 package org.jboss.msc.bench;
 
-import java.util.concurrent.CountDownLatch;
-
-import org.jboss.msc.service.BatchBuilder;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
-import org.jboss.msc.service.TimingServiceListener;
 import org.jboss.msc.service.util.LatchedFinishListener;
 
 public class NoDepBench {
@@ -37,14 +33,14 @@ public class NoDepBench {
         final int totalServiceDefinitions = Integer.parseInt(args[0]);
 
         final ServiceContainer container = ServiceContainer.Factory.create();
-        BatchBuilder batch = container.batchBuilder();
 
         final LatchedFinishListener listener = new LatchedFinishListener();
+        container.addListener(listener);
+
         for (int i = 0; i < totalServiceDefinitions; i++) {
-            batch.addService(ServiceName.of("test" + i), Service.NULL);
+            container.addService(ServiceName.of("test" + i), Service.NULL);
         }
-        batch.addListener(listener);
-        batch.install();
+
         listener.await();
         System.out.println(totalServiceDefinitions + " : "  + listener.getElapsedTime() / 1000.0);
         container.shutdown();

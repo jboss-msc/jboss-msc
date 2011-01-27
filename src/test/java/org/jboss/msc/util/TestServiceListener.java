@@ -241,7 +241,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     }
 
     public Future<ServiceController<?>> expectNoDependencyUninstall(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(200);
+        final ServiceFuture future = new ServiceFuture(20);
         expectedDependencyUninstalls.put(serviceName, future);
         return future;
     }

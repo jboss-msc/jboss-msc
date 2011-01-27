@@ -173,14 +173,6 @@ abstract class AbstractServiceTarget implements ServiceTarget {
     abstract void install(ServiceBuilderImpl<?> serviceBuilder) throws ServiceRegistryException;
 
     /**
-     * Install {@code batchBuilder} in this target.
-     * 
-     * @param batchBuilder              a batchBuilder created by this ServiceTarget
-     * @throws ServiceRegistryException if a service registry issue occurred during installation
-     */
-    abstract void install(BatchBuilderImpl batchBuilder) throws ServiceRegistryException;
-
-    /**
      * Indicate whether a service with the specified name exists in this target.
      * 
      * @param name the specified name
@@ -200,11 +192,5 @@ abstract class AbstractServiceTarget implements ServiceTarget {
     public ServiceTarget subTarget() {
         validateTargetState();
         return new SubTarget(this);
-    }
-
-    @Override
-    public BatchBuilderImpl batchBuilder() {
-        validateTargetState();
-        return new BatchBuilderImpl(this);
     }
 }

@@ -55,23 +55,21 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
 
     @Test
     public void testResolvable() throws Exception {
-        final BatchBuilder builder = serviceContainer.batchBuilder();
         final LatchedListener listener = new LatchedListener();
-        builder.addListener(listener);
-        builder.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"))
+        serviceContainer.addListener(listener);
+        serviceContainer.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"))
             .install();
-        builder.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11")).install();
-        builder.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"))
+        serviceContainer.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11")).install();
+        serviceContainer.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"))
             .install();
-        builder.addService(ServiceName.of("11"), Service.NULL)
+        serviceContainer.addService(ServiceName.of("11"), Service.NULL)
             .addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"))
             .install();
-        builder.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install();
-        builder.addService(ServiceName.of("2"), Service.NULL).install();
-        builder.addService(ServiceName.of("9"), Service.NULL).install();
-        builder.addService(ServiceName.of("10"), Service.NULL).install();
+        serviceContainer.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install();
+        serviceContainer.addService(ServiceName.of("2"), Service.NULL).install();
+        serviceContainer.addService(ServiceName.of("9"), Service.NULL).install();
+        serviceContainer.addService(ServiceName.of("10"), Service.NULL).install();
 
-        builder.install();
         listener.await();
 
         assertEquals(8, listener.startedControllers.size());
@@ -90,30 +88,24 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
     @Test
     public void testResolvableWithPreexistingDeps() throws Exception {
         final LatchedListener listener = new LatchedListener();
-        final BatchBuilder builder1 = serviceContainer.batchBuilder();
-        builder1.addListener(listener);
-        builder1.addService(ServiceName.of("2"), Service.NULL).install();
-        builder1.addService(ServiceName.of("9"), Service.NULL).install();
-        builder1.addService(ServiceName.of("10"), Service.NULL).install();
+        serviceContainer.addListener(listener);
+        serviceContainer.addService(ServiceName.of("2"), Service.NULL).install();
+        serviceContainer.addService(ServiceName.of("9"), Service.NULL).install();
+        serviceContainer.addService(ServiceName.of("10"), Service.NULL).install();
 
-        final BatchBuilder builder2 = serviceContainer.batchBuilder();
-        builder2.addListener(listener);
-        builder2.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"))
+        serviceContainer.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"))
             .install();
-        builder2.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11")).install();
-        builder2.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"))
+        serviceContainer.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11")).install();
+        serviceContainer.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"))
             .install();
-        builder2.addService(ServiceName.of("11"), Service.NULL)
+        serviceContainer.addService(ServiceName.of("11"), Service.NULL)
             .addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"))
             .install();
-        builder2.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install();
+        serviceContainer.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install();
         try {
-            builder2.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install();
+            serviceContainer.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install();
             fail("IllegalArgumentException expected");
         } catch (IllegalArgumentException e) {}
-
-        builder1.install();
-        builder2.install();
 
         listener.await();
 
@@ -132,17 +124,15 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
 
     @Test
     public void testOptionalDependency() throws Exception {
-        final BatchBuilder builder = serviceContainer.batchBuilder();
         final TestServiceListener listener = new TestServiceListener();
-        builder.addListener(listener);
-
-        builder.addService(ServiceName.of("7"), Service.NULL)
-            .addOptionalDependencies(ServiceName.of("11"), ServiceName.of("8"))
-            .install();
+        serviceContainer.addListener(listener);
 
         Future<ServiceController<?>> startFuture = listener.expectServiceStart(ServiceName.of("7"));
 
-        builder.install();
+        serviceContainer.addService(ServiceName.of("7"), Service.NULL)
+            .addOptionalDependencies(ServiceName.of("11"), ServiceName.of("8"))
+            .install();
+
         ServiceController<?> service7Controller = startFuture.get();
         assertEquals(ServiceController.State.UP, service7Controller.getState());
 

@@ -281,9 +281,7 @@ public class ContainerShutdownTestCase extends AbstractServiceTest{
         final ServiceName serviceName2 = ServiceName.of("2");
         final ServiceName serviceName3 = ServiceName.of("3");
         final ServiceName serviceName4 = ServiceName.of("4");
-        final BatchBuilder batchBuilder = serviceContainer.batchBuilder();
         final ServiceBuilder<Void> builderFromContainer = serviceContainer.addService(serviceName1, Service.NULL);
-        final ServiceBuilder<Void> builderfromBatch = batchBuilder.addService(serviceName2, Service.NULL);
 
         serviceContainer.addListener(testListener);
         serviceContainer.addDependency(serviceName3);
@@ -323,11 +321,6 @@ public class ContainerShutdownTestCase extends AbstractServiceTest{
             serviceContainer.addService(serviceName4, Service.NULL);
             fail ("IllegalStateException expected");
         } catch (IllegalStateException e) {}
-        
-        try {
-            serviceContainer.batchBuilder();
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
 
         try {
             serviceContainer.addServiceValue(serviceName3, Values.<Service<Void>>nullValue());
@@ -346,24 +339,6 @@ public class ContainerShutdownTestCase extends AbstractServiceTest{
         assertEquals(1, dependencies.size());
         assertSame(serviceName3, dependencies.iterator().next());
 
-        // we can edit batch builder all along, as long as we want...
-        batchBuilder.addService(serviceName4, Service.NULL);
-        batchBuilder.addServiceValue(serviceName3, Values.<Service<Void>>nullValue());
-        batchBuilder.addListener(new TestServiceListener());
-        batchBuilder.addDependency(new ArrayList<ServiceName>());
-        batchBuilder.addDependency(serviceName1);
-        batchBuilder.addDependency(serviceName2, serviceName3);
-        batchBuilder.addListener(new ArrayList<ServiceListener<Object>>());
-        batchBuilder.addListener(new TestServiceListener());
-        batchBuilder.addListener(new TestServiceListener(), new TestServiceListener());
-        batchBuilder.addService(serviceName4, Service.NULL);
-        batchBuilder.batchBuilder();
-        // ... as long as don't install the batch
-        try {
-            batchBuilder.install();
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-
         // we can also invoke any method on the serviceBuilder...
         builderFromContainer.addAliases(serviceName2, serviceName3, serviceName4);
         builderFromContainer.addDependencies(new ArrayList<ServiceName>());
@@ -372,12 +347,6 @@ public class ContainerShutdownTestCase extends AbstractServiceTest{
         // ... as long as we don't try to install it
         try {
             builderFromContainer.install();
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-
-        // the same here
-        try {
-            builderfromBatch.install();
             fail ("IllegalStateException expected");
         } catch (IllegalStateException e) {}
     }

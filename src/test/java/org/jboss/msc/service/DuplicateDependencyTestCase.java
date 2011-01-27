@@ -99,7 +99,6 @@ public class DuplicateDependencyTestCase extends AbstractServiceTest {
 
     @Test
     public void duplicateDependencyFailsToStart() throws Exception {
-        
         Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
         serviceContainer.addService(secondServiceName, new FailToStartService(true))
             .addAliases(secondServiceAlias1, secondServiceAlias2, secondServiceAlias3, secondServiceAlias4, secondServiceAlias5)
@@ -111,16 +110,14 @@ public class DuplicateDependencyTestCase extends AbstractServiceTest {
         Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
         Future<ServiceController<?>> thirdServiceListenerAdded = testListener.expectListenerAdded(thirdServiceName);
         Future<ServiceController<?>> thirdServiceDependencyFailure = testListener.expectDependencyFailure(thirdServiceName);
-        BatchBuilder builder = serviceContainer.batchBuilder();
-        builder.addService(firstServiceName, Service.NULL)
+        serviceContainer.addService(firstServiceName, Service.NULL)
             .addDependencies(secondServiceName, secondServiceAlias2, secondServiceAlias5, thirdServiceName)
             .addListener(testListener)
             .install();
-        builder.addService(thirdServiceName, Service.NULL)
+        serviceContainer.addService(thirdServiceName, Service.NULL)
             .addDependencies(secondServiceAlias1, secondServiceAlias2, secondServiceAlias3, secondServiceAlias4, secondServiceAlias5)
             .addListener(testListener)
             .install();
-        builder.install();
         ServiceController<?> firstController = assertController(firstServiceName, firstServiceListenerAdded);
         assertController(firstController, firstServiceDependencyFailure);
         assertEquals(State.DOWN, firstController.getState());

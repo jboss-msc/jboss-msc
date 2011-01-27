@@ -265,19 +265,19 @@ public class ChangeModeTestCase extends AbstractServiceTest {
      * @return           the ServiceController of the specified service.
      */
     private final ServiceController<?> getUpOnDemandSecondController() throws Exception{
-        final BatchBuilder batch = serviceContainer.batchBuilder();
-        batch.addService(firstServiceName, Service.NULL)
+        final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
+        final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
+
+        serviceContainer.addService(secondServiceName, Service.NULL)
+        .addListener(testListener)
+        .setInitialMode(Mode.ON_DEMAND)
+        .install();
+
+        serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
             .addDependency(secondServiceName)
             .install();
-        batch.addService(secondServiceName, Service.NULL)
-            .addListener(testListener)
-            .setInitialMode(Mode.ON_DEMAND)
-            .install();
 
-        final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
-        final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
-        batch.install();
         assertController(firstServiceName, firstServiceStart);
         return assertController(secondServiceName, secondServiceStart);
     }
@@ -313,16 +313,16 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> secondServiceInstall = testListener.expectListenerAdded(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
-        final BatchBuilder batch = serviceContainer.batchBuilder();
-        batch.addService(firstServiceName, new FailToStartService(true))
-            .addListener(testListener)
-            .addDependency(secondServiceName)
-            .install();
-        batch.addService(secondServiceName, new FailToStartService(true))
+
+        serviceContainer.addService(secondServiceName, new FailToStartService(true))
             .addListener(testListener)
             .setInitialMode(Mode.ON_DEMAND)
             .install();
-        batch.install();
+        serviceContainer.addService(firstServiceName, new FailToStartService(true))
+            .addListener(testListener)
+            .addDependency(secondServiceName)
+            .install();
+
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceInstall);
         final ServiceController<?> secondController = assertController(secondServiceName, secondServiceInstall);
         assertFailure(secondController, secondServiceFailure);
@@ -532,16 +532,17 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> secondServiceInstall = testListener.expectListenerAdded(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
-        final BatchBuilder batch = serviceContainer.batchBuilder();
-        batch.addService(firstServiceName, new FailToStartService(true))
-            .addListener(testListener)
-            .addDependency(secondServiceName)
-            .install();
-        batch.addService(secondServiceName, new FailToStartService(true))
+
+        serviceContainer.addService(secondServiceName, new FailToStartService(true))
             .addListener(testListener)
             .setInitialMode(Mode.PASSIVE)
             .install();
-        batch.install();
+
+        serviceContainer.addService(firstServiceName, new FailToStartService(true))
+            .addListener(testListener)
+            .addDependency(secondServiceName)
+            .install();
+
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceInstall);
         final ServiceController<?> secondController = assertController(secondServiceName, secondServiceInstall);
         assertFailure(secondController, secondServiceFailure);
@@ -717,16 +718,16 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> secondServiceInstall = testListener.expectListenerAdded(secondServiceName);
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailure= testListener.expectDependencyFailure(firstServiceName);
-        final BatchBuilder batch = serviceContainer.batchBuilder();
-        batch.addService(firstServiceName, Service.NULL)
+
+        serviceContainer.addService(secondServiceName, new FailToStartService(true))
+            .addListener(testListener)
+            .install();
+        serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
             .addDependency(secondServiceName)
             .setInitialMode(Mode.PASSIVE)
             .install();
-        batch.addService(secondServiceName, new FailToStartService(true))
-            .addListener(testListener)
-            .install();
-        batch.install();
+
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceInstall);
         final ServiceController<?> secondController = assertController(secondServiceName, secondServiceInstall);
         assertFailure(secondController, secondServiceFailure);
@@ -748,16 +749,16 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> secondServiceInstall = testListener.expectListenerAdded(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
-        final BatchBuilder batch = serviceContainer.batchBuilder();
-        batch.addService(firstServiceName, new FailToStartService(true))
-            .addListener(testListener)
-            .addDependency(secondServiceName)
-            .install();
-        batch.addService(secondServiceName, new FailToStartService(true))
+
+        serviceContainer.addService(secondServiceName, new FailToStartService(true))
             .addListener(testListener)
             .setInitialMode(Mode.ACTIVE)
             .install();
-        batch.install();
+        serviceContainer.addService(firstServiceName, new FailToStartService(true))
+            .addListener(testListener)
+            .addDependency(secondServiceName)
+            .install();
+
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceInstall);
         final ServiceController<?> secondController = assertController(secondServiceName, secondServiceInstall);
         assertFailure(secondController, secondServiceFailure);

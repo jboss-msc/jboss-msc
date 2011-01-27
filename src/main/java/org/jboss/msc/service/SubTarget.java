@@ -49,16 +49,6 @@ final class SubTarget extends AbstractServiceTarget {
         parent.install(serviceBuilder);
     }
 
-    /**
-     * Apply the listeners and dependencies to the set of ServiceBuilders created by {@code batchBuilder}, before
-     * proceeding with installation of {@code batchBuilder} into the parent target.
-     */
-    @Override
-    void install(BatchBuilderImpl batchBuilder) throws ServiceRegistryException {
-        apply(batchBuilder.getBatchServices().values());
-        parent.install(batchBuilder);
-    }
-
     @Override
     boolean hasService(ServiceName name) {
         return parent.hasService(name);

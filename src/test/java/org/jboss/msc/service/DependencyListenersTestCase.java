@@ -191,15 +191,13 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
     public void testDependenciesFailed() throws Exception {
         Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
         Future<ServiceController<?>> secondServiceDependencyFailure = testListener.expectNoDependencyFailure(secondServiceName);
-        // install firstService and secondService on a batch
-        final BatchBuilder batch = serviceContainer.batchBuilder();
-        batch.addService(firstServiceName, Service.NULL)
+        // install firstService and secondService
+        serviceContainer.addService(firstServiceName, Service.NULL)
             .addDependency(secondServiceName)
             .addListener(testListener)
             .install();
         // secondService will throw a StartException at first attempt to start
-        batch.addService(secondServiceName, new FailToStartService(true)).install();
-        batch.install();
+        serviceContainer.addService(secondServiceName, new FailToStartService(true)).install();
 
         // dependencyFailure notification expected from firstService
         final ServiceController<?> controller= assertController(firstServiceName, firstServiceDependencyFailure);
@@ -222,19 +220,17 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
     public void testTransitiveDependenciesFailed() throws Exception {
         Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
         Future<ServiceController<?>> secondServiceDependencyFailure = testListener.expectDependencyFailure(secondServiceName);
-        // install firstService and secondService on a batch
-        final BatchBuilder batch = serviceContainer.batchBuilder();
-        batch.addService(firstServiceName, Service.NULL)
+        // install firstService and secondService
+        serviceContainer.addService(firstServiceName, Service.NULL)
             .addDependency(secondServiceName)
             .addListener(testListener)
             .install();
-        batch.addService(secondServiceName, Service.NULL)
+        serviceContainer.addService(secondServiceName, Service.NULL)
         .addDependency(thirdServiceName)
         .addListener(testListener)
         .install();
         // thirdService will throw a StartException at first attempt to start
-        batch.addService(thirdServiceName, new FailToStartService(true)).addListener(testListener).install();
-        batch.install();
+        serviceContainer.addService(thirdServiceName, new FailToStartService(true)).addListener(testListener).install();
 
         // dependencyFailure notification expected from secondService
         final ServiceController<?> secondController = assertController(secondServiceName, secondServiceDependencyFailure);
@@ -273,17 +269,15 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
 
         Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
         Future<ServiceController<?>> secondServiceDependencyFailure = testListener.expectDependencyFailure(secondServiceName);
-        // now install firstService and secondService on a batch
-        final BatchBuilder batch = serviceContainer.batchBuilder();
-        batch.addService(firstServiceName, Service.NULL)
+        // now install firstService and secondService
+        serviceContainer.addService(firstServiceName, Service.NULL)
             .addDependency(secondServiceName)
             .addListener(testListener)
             .install();
-        batch.addService(secondServiceName, Service.NULL)
+        serviceContainer.addService(secondServiceName, Service.NULL)
         .addDependency(thirdServiceName)
         .addListener(testListener)
         .install();
-        batch.install();
 
         // dependencyFailure notification expected from secondService
         final ServiceController<?> secondController = assertController(secondServiceName, secondServiceDependencyFailure);
@@ -341,17 +335,16 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
     public void testFailedDependencyUninstalled() throws Exception {
         final Future<StartException> secondServiceFailed = testListener.expectServiceFailure(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailed = testListener.expectDependencyFailure(firstServiceName);
-        final BatchBuilder batch = serviceContainer.batchBuilder();
-        // install first service, that depens on second service...
-        batch.addService(firstServiceName, Service.NULL)
+        // install second service, a fail to start service that should fail at the first attempt to start
+        serviceContainer.addService(secondServiceName, new FailToStartService(true))
+            .addListener(testListener)
+            .install();        
+        // also install first service, that depends on second service...
+        serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
             .addDependency(secondServiceName)
             .install();
-        // a fail to start service that should fail at the first attempt to start
-        batch.addService(secondServiceName, new FailToStartService(true))
-            .addListener(testListener)
-            .install();
-        batch.install();
+
         // second service should fail
         final ServiceController<?> secondController = assertFailure(secondServiceName, secondServiceFailed);
         // and first service should send a dep failed notification
@@ -359,6 +352,7 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
 
         final Future<ServiceController<?>> firstServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyUninstalled = testListener.expectDependencyUninstall(firstServiceName);
+        Thread.sleep(200);
         // remove second service
         secondController.setMode(Mode.REMOVE);
         // the failure is expected to have cleared
@@ -403,15 +397,13 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
 
         final Future<StartException> fourthServiceFailure = testListener.expectServiceFailure(fourthServiceName);
         final Future<StartException> fifthServiceFailure = testListener.expectServiceFailure(fifthServiceName);
-        final BatchBuilder batch = serviceContainer.batchBuilder();
-        // install fourth and fifth services in a batch, both services set to fail at the first attempt to start
-        batch.addService(fourthServiceName, new FailToStartService(true))
+        // install fourth and fifth services, both set to fail at the first attempt to start
+        serviceContainer.addService(fourthServiceName, new FailToStartService(true))
             .addListener(testListener)
             .install();
-        batch.addService(fifthServiceName, new FailToStartService(true))
+        serviceContainer.addService(fifthServiceName, new FailToStartService(true))
             .addListener(testListener)
             .install();
-        batch.install();
         // fourth and fifth services expected to fail to start
         assertFailure(fourthServiceName, fourthServiceFailure);
         assertFailure(fifthServiceName, fifthServiceFailure);
@@ -430,37 +422,36 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
 
     @Test
     public void testMultipleDependenciesWithFailure() throws Exception {
-        final BatchBuilder batch = serviceContainer.batchBuilder();
-        // install first, second, third, fourth, and fifth services in a batch
-        // first service depends on second service
-        batch.addService(firstServiceName, Service.NULL)
-            .addListener(testListener)
-            .addDependency(secondServiceName)
-            .install();
-        // second depends on third, fourth and fifth
-        batch.addService(secondServiceName, Service.NULL)
-            .addListener(testListener)
-            .addDependencies(thirdServiceName, fourthServiceName, fifthServiceName)
-            .install();
-        // third service is set to fail on the first attempt to start
-        batch.addService(thirdServiceName, new FailToStartService(true))
-            .addListener(testListener)
-            .install();
-        // fourth service is also set to fail
-        batch.addService(fourthServiceName, new FailToStartService(true))
-        .addListener(testListener)
-        .install();
-        // as is fifth service
-        batch.addService(fifthServiceName, new FailToStartService(true))
-        .addListener(testListener)
-        .install();
-
         final Future<StartException> thirdServiceFailure = testListener.expectServiceFailure(thirdServiceName);
         final Future<StartException> fourthServiceFailure = testListener.expectServiceFailure(fourthServiceName);
         final Future<StartException> fifthServiceFailure = testListener.expectServiceFailure(fifthServiceName);
         final Future<ServiceController<?>> secondServiceDependencyFailure = testListener.expectDependencyFailure(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
-        batch.install();
+
+        // install first, second, third, fourth, and fifth services
+        // first service depends on second service
+        serviceContainer.addService(firstServiceName, Service.NULL)
+            .addListener(testListener)
+            .addDependency(secondServiceName)
+            .install();
+        // second depends on third, fourth and fifth
+        serviceContainer.addService(secondServiceName, Service.NULL)
+            .addListener(testListener)
+            .addDependencies(thirdServiceName, fourthServiceName, fifthServiceName)
+            .install();
+        // third service is set to fail on the first attempt to start
+        serviceContainer.addService(thirdServiceName, new FailToStartService(true))
+            .addListener(testListener)
+            .install();
+        // fourth service is also set to fail
+        serviceContainer.addService(fourthServiceName, new FailToStartService(true))
+            .addListener(testListener)
+            .install();
+        // as is fifth service
+        serviceContainer.addService(fifthServiceName, new FailToStartService(true))
+            .addListener(testListener)
+            .install();
+
         // third, fourth and fifth services are expected to fail
         final ServiceController<?> thirdController = assertFailure(thirdServiceName, thirdServiceFailure);
         final ServiceController<?> fourthController = assertFailure(fourthServiceName, fourthServiceFailure);
@@ -513,28 +504,27 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
 
     @Test
     public void testMultipleMissingDependencies() throws Exception {
-        final BatchBuilder batch = serviceContainer.batchBuilder();
-        // install first, second and third services in a batch
+        final Future<ServiceController<?>> firstServiceDependencyMissing = testListener.expectDependencyUninstall(firstServiceName);
+        final Future<ServiceController<?>> secondServiceDependencyMissing = testListener.expectDependencyUninstall(secondServiceName);
+        final Future<ServiceController<?>> thirdServiceDependencyMissing = testListener.expectDependencyUninstall(thirdServiceName);
+
+        // install first, second and third services
         // first service depends on second service
-        batch.addService(firstServiceName, Service.NULL)
+        serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
             .addDependency(secondServiceName)
             .install();
         // second service depends on missing third, fourth and sixth services
-        batch.addService(secondServiceName, Service.NULL)
+        serviceContainer.addService(secondServiceName, Service.NULL)
             .addListener(testListener)
             .addDependencies(thirdServiceName, fourthServiceName, sixthServiceName)
             .install();
         // third service depends o missing fifth service
-        batch.addService(thirdServiceName, Service.NULL)
+        serviceContainer.addService(thirdServiceName, Service.NULL)
             .addListener(testListener)
             .addDependencies(fifthServiceName)
             .install();
 
-        final Future<ServiceController<?>> firstServiceDependencyMissing = testListener.expectDependencyUninstall(firstServiceName);
-        final Future<ServiceController<?>> secondServiceDependencyMissing = testListener.expectDependencyUninstall(secondServiceName);
-        final Future<ServiceController<?>> thirdServiceDependencyMissing = testListener.expectDependencyUninstall(thirdServiceName);
-        batch.install();
         // a dependency missing notification is expected from the three installed services
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceDependencyMissing);
         final ServiceController<?> secondController = assertController(secondServiceName, secondServiceDependencyMissing);
@@ -580,53 +570,48 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
         Future<ServiceController<?>> fifthServiceDependencyMissing = testListener.expectDependencyUninstall(fifthServiceName);
         Future<ServiceController<?>> thirdServiceDependencyFailure = testListener.expectDependencyFailure(thirdServiceName);
         Future<ServiceController<?>> thirdServiceDependencyMissing = testListener.expectDependencyUninstall(thirdServiceName);
-        // install in a batch ...
-        BatchBuilder batch = serviceContainer.batchBuilder();
-        // ... third service with dependencies on fourth and fifth services
-        batch.addService(thirdServiceName, Service.NULL)
-            .addListener(testListener)
-            .addDependencies(fourthServiceName, fifthServiceName)
-            .install();
-        // ... fourth service, a fail to start service, set to fail at the first attempt to fail
-        batch.addService(fourthServiceName, new FailToStartService(true))
+        // install fourth service, a fail to start service, set to fail at the first attempt to fail
+        serviceContainer.addService(fourthServiceName, new FailToStartService(true))
             .addListener(testListener)
             .install();
-        // fifth service, with a dependency on the missing sixth service
-        batch.addService(fifthServiceName, Service.NULL)
+        // fourth service is expected to have failed
+        assertFailure(fourthServiceName, fourthServiceFailed);
+        // install fifth service, with a dependency on the missing sixth service
+        serviceContainer.addService(fifthServiceName, Service.NULL)
             .addListener(testListener)
             .addDependencies(sixthServiceName)
             .install();
-        batch.install();
-        // fourth service is expected to have failed
-        assertFailure(fourthServiceName, fourthServiceFailed);
         // fifth service should send a notification of a missing dep
         final ServiceController<?> fifthController = assertController(fifthServiceName, fifthServiceDependencyMissing);
+        // ... and third service with dependencies on fourth and fifth services
+        serviceContainer.addService(thirdServiceName, Service.NULL)
+            .addListener(testListener)
+            .addDependencies(fourthServiceName, fifthServiceName)
+            .install();
         // the fourth service failure should reach third service
         final ServiceController<?> thirdController = assertController(thirdServiceName, thirdServiceDependencyFailure);
         // the same goes with the missing dependency
         assertController(thirdController, thirdServiceDependencyMissing);
 
-        Future<ServiceController<?>> firstServiceDependencyFailed = testListener.expectDependencyFailure(firstServiceName);
-        Future<ServiceController<?>> firstServiceDependencyMissing = testListener.expectDependencyUninstall(firstServiceName);
         Future<ServiceController<?>> secondServiceDependencyFailed = testListener.expectDependencyFailure(secondServiceName);
         Future<ServiceController<?>> secondServiceDependencyMissing = testListener.expectDependencyUninstall(secondServiceName);
-        batch = serviceContainer.batchBuilder();
-        // install first service, that depends on second service
-        batch.addService(firstServiceName, Service.NULL)
-            .addListener(testListener)
-            .addDependency(secondServiceName)
-            .install();
         // and second service, that depends on third service
-        batch.addService(secondServiceName, Service.NULL)
+        serviceContainer.addService(secondServiceName, Service.NULL)
             .addListener(testListener)
             .addDependency(thirdServiceName)
             .install();
-        batch.install();
+        final ServiceController<?> secondController = assertController(secondServiceName, secondServiceDependencyFailed);
+        assertController(secondController, secondServiceDependencyMissing);
+        Future<ServiceController<?>> firstServiceDependencyFailed = testListener.expectDependencyFailure(firstServiceName);
+        Future<ServiceController<?>> firstServiceDependencyMissing = testListener.expectDependencyUninstall(firstServiceName);
+        // install first service, that depends on second service
+        serviceContainer.addService(firstServiceName, Service.NULL)
+            .addListener(testListener)
+            .addDependency(secondServiceName)
+            .install();
         // both first and second services should receive the dep failed and missing dep notifications
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceDependencyFailed);
         assertController(firstController, firstServiceDependencyMissing);
-        final ServiceController<?> secondController = assertController(secondServiceName, secondServiceDependencyFailed);
-        assertController(secondController, secondServiceDependencyMissing);
 
         Future<ServiceController<?>> sixthServiceStart = testListener.expectServiceStart(sixthServiceName);
         Future<ServiceController<?>> fifthServiceDependencyInstall = testListener.expectDependencyInstall(fifthServiceName);
@@ -654,6 +639,7 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
         secondServiceDependencyMissing = testListener.expectDependencyUninstall(secondServiceName);
         firstServiceDependencyMissing = testListener.expectDependencyUninstall(firstServiceName);
         // remove sixth service
+        Thread.sleep(100);
         sixthController.setMode(Mode.REMOVE);
         assertController(sixthController, sixthServiceRemoval);
         // all services in the dep chain of sixth service should send a missing dep notification
@@ -703,17 +689,15 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
         thirdServiceDependencyInstall = testListener.expectDependencyInstall(thirdServiceName);
         secondServiceDependencyInstall = testListener.expectDependencyInstall(secondServiceName);
         firstServiceDependencyInstall = testListener.expectDependencyInstall(firstServiceName);
-        batch = serviceContainer.batchBuilder();
         // install fifth service, that depends on sixth service
-        batch.addService(fifthServiceName, Service.NULL)
+        serviceContainer.addService(fifthServiceName, Service.NULL)
             .addListener(testListener)
             .addDependency(sixthServiceName)
             .install();
         // a service without dependencies
-        batch.addService(sixthServiceName, Service.NULL)
+        serviceContainer.addService(sixthServiceName, Service.NULL)
             .addListener(testListener)
             .install();
-        batch.install();
         // both services are expected to start
         assertController(sixthServiceName, sixthServiceStart);
         assertController(fifthServiceName, fifthServiceStart);

@@ -22,16 +22,13 @@
 
 package org.jboss.msc.bench;
 
-import org.jboss.msc.service.BatchBuilder;
-import org.jboss.msc.service.ServiceContainer;
-import org.jboss.msc.service.ServiceName;
-import org.jboss.msc.service.TimingServiceListener;
-import org.jboss.msc.service.util.LatchedFinishListener;
-
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import org.jboss.msc.service.ServiceContainer;
+import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.service.util.LatchedFinishListener;
 
 public class NoDepsSleepyStartBench {
 
@@ -44,17 +41,14 @@ public class NoDepsSleepyStartBench {
         final ThreadPoolExecutor executor = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 1000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
         container.setExecutor(executor);
 
-        BatchBuilder batch = container.batchBuilder();
-
         final LatchedFinishListener listener = new LatchedFinishListener();
+        container.addListener(listener);
 
         for (int i = 0; i < totalServiceDefinitions; i++) {
             final SleepService service = new SleepService();
-            batch.addService(ServiceName.of(("test" + i).intern()), service);
+            container.addService(ServiceName.of(("test" + i).intern()), service);
         }
-        
-        batch.addListener(listener);
-        batch.install();
+
         listener.await();
         System.out.println(totalServiceDefinitions + " : " + listener.getElapsedTime() / 1000.0);
         container.shutdown();

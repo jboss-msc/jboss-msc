@@ -62,9 +62,10 @@ public class TrackingServiceTargetTestCase extends AbstractDelegatingServiceTarg
         assertTrue(services.contains(ServiceName.of("service", "name")));
     }
 
+     
     @Test
-    public void addServiceWithDependencyToBatchBuilder() throws Exception {
-        super.addServiceWithDependencyToBatchBuilder();
+    public void addServiceWithDependency() throws Exception {
+        super.addServiceWithDependency();
         final Set<ServiceName> services = trackingServiceTarget.getSet();
         assertNotNull(services);
         assertEquals(2, services.size());
@@ -73,8 +74,8 @@ public class TrackingServiceTargetTestCase extends AbstractDelegatingServiceTarg
     }
 
     @Test
-    public void addServiceWithDependenciesToBatchBuilder() throws Exception {
-        super.addServiceWithDependenciesToBatchBuilder();
+    public void addServiceWithDependencies() throws Exception {
+        super.addServiceWithDependencies();
         final Set<ServiceName> services = trackingServiceTarget.getSet();
         assertNotNull(services);
         assertEquals(2, services.size());

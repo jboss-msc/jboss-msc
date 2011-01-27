@@ -116,9 +116,4 @@ public class DelegatingServiceTarget implements ServiceTarget {
     public ServiceTarget subTarget() {
         return delegate.subTarget();
     }
-
-    /** {@inheritDoc} */
-    public BatchBuilder batchBuilder() {
-        return delegate.batchBuilder();
-    }
 }

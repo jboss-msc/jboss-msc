@@ -22,7 +22,6 @@
 
 package org.jboss.msc.bench;
 
-import org.jboss.msc.service.BatchBuilder;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
@@ -59,8 +58,6 @@ public class InjectionsWithStartBench {
         final ThreadPoolExecutor executor = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 1000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
         container.setExecutor(executor);
 
-        BatchBuilder batch = container.batchBuilder();
-
         final LatchedFinishListener listener = new LatchedFinishListener();
 
         final Value<Field> testFieldValue = new CachedValue<Field>(new LookupFieldValue(new ImmediateValue<Class<?>>(TestObject.class), "test"));
@@ -73,7 +70,7 @@ public class InjectionsWithStartBench {
         for (int i = 0; i < totalServiceDefinitions; i++) {
             final TestObject testObject = new TestObject("test" + i);
             final TestObjectService service = new TestObjectService(testObject);
-            final ServiceBuilder<TestObject> builder = batch.addService(ServiceName.of(("test" + i).intern()), service).addListener(listener);
+            final ServiceBuilder<TestObject> builder = container.addService(ServiceName.of(("test" + i).intern()), service).addListener(listener);
 
             final Object injectedValue = new Object();
 //            builder.addInjection(injectedValue).toFieldValue(testFieldValue);
@@ -89,7 +86,6 @@ public class InjectionsWithStartBench {
             }
         }
 
-        batch.install();
         listener.await();
         System.out.println(totalServiceDefinitions + " : " + listener.getElapsedTime() / 1000.0);
         container.shutdown();

@@ -67,11 +67,6 @@ public class TrackingServiceTarget extends DelegatingServiceTarget {
         return new TrackingServiceTarget(super.subTarget(), set);
     }
 
-    /** {@inheritDoc} */
-    public BatchBuilder batchBuilder() {
-        return new TrackingBatchBuilder(super.batchBuilder(), set);
-    }
-
     /**
      * Get the set of service names.
      *

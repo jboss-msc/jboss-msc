@@ -46,10 +46,10 @@ import org.junit.runners.Suite.SuiteClasses;
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
 @RunWith(Suite.class)
-@SuiteClasses({MultipleThreadsExecutorTestCase.DependencyListenersTest.class,
-    MultipleThreadsExecutorTestCase.OptionalDependencyListenersTest.class, 
-    MultipleThreadsExecutorTestCase.ServiceBuilderTest.class})
-public class MultipleThreadsExecutorTestCase {
+@SuiteClasses({MultipleThreadExecutorTestCase.DependencyListenersTest.class,
+    MultipleThreadExecutorTestCase.OptionalDependencyListenersTest.class, 
+    MultipleThreadExecutorTestCase.ServiceBuilderTest.class})
+public class MultipleThreadExecutorTestCase {
 
     public static class DependencyListenersTest extends DependencyListenersTestCase {
         private MultipleThreadExecutor executor;

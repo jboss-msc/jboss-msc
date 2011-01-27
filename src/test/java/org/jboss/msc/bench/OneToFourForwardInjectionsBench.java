@@ -22,7 +22,6 @@
 
 package org.jboss.msc.bench;
 
-import org.jboss.msc.service.BatchBuilder;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceContainer;
@@ -37,39 +36,40 @@ import java.util.concurrent.CountDownLatch;
 
 public class OneToFourForwardInjectionsBench {
 
+    // MSC-63
     public static void main(String[] args) throws Exception {
-        final int totalServiceDefinitions = Integer.parseInt(args[0]);
-
-        final ServiceContainer container = ServiceContainer.Factory.create();
-        BatchBuilder batch = container.batchBuilder();
-
-        final LatchedFinishListener listener = new LatchedFinishListener();
-
-        for (int i = 0; i < totalServiceDefinitions; i++) {
-            final TestObject testObject = new TestObject("test" + i);
-            final TestObjectService service = new TestObjectService(testObject);
-            
-            final ServiceBuilder<TestObject> builder = batch.addService(ServiceName.of(("test" + i).intern()), service);
-
-            final Object injectedValue = new Object();
-//            builder.addInjection(injectedValue);//.toField("test");
-
-            int nextDivByFive = (5 - (i % 5)) + i;
-            int numDeps = Math.min(nextDivByFive - i, totalServiceDefinitions - i - 1);
-            for (int j = 0; j < numDeps; j++) {
-                int depId = i + j + 1;
-                if(depId % 5 ==0)
-                    continue;
-
-                builder.addDependency(ServiceName.of(("test" + depId).intern()));
-//                    .toMethod("setOther" + (i));
-            }
-        }
-
-        batch.install();
-        listener.await();
-        System.out.println(totalServiceDefinitions + " : " + listener.getElapsedTime() / 1000.0);
-        container.shutdown();
+//        final int totalServiceDefinitions = Integer.parseInt(args[0]);
+//
+//        final ServiceContainer container = ServiceContainer.Factory.create();
+//        BatchBuilder batch = container.batchBuilder();
+//
+//        final LatchedFinishListener listener = new LatchedFinishListener();
+//
+//        for (int i = 0; i < totalServiceDefinitions; i++) {
+//            final TestObject testObject = new TestObject("test" + i);
+//            final TestObjectService service = new TestObjectService(testObject);
+//            
+//            final ServiceBuilder<TestObject> builder = batch.addService(ServiceName.of(("test" + i).intern()), service);
+//
+//            final Object injectedValue = new Object();
+////            builder.addInjection(injectedValue);//.toField("test");
+//
+//            int nextDivByFive = (5 - (i % 5)) + i;
+//            int numDeps = Math.min(nextDivByFive - i, totalServiceDefinitions - i - 1);
+//            for (int j = 0; j < numDeps; j++) {
+//                int depId = i + j + 1;
+//                if(depId % 5 ==0)
+//                    continue;
+//
+//                builder.addDependency(ServiceName.of(("test" + depId).intern()));
+////                    .toMethod("setOther" + (i));
+//            }
+//        }
+//
+//        batch.install();
+//        listener.await();
+//        System.out.println(totalServiceDefinitions + " : " + listener.getElapsedTime() / 1000.0);
+//        container.shutdown();
     }
 
     public static class TestObject {

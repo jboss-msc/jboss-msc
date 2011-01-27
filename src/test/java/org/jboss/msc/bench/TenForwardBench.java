@@ -24,14 +24,11 @@ package org.jboss.msc.bench;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 
-import org.jboss.msc.service.BatchBuilder;
-import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.Service;
+import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
-import org.jboss.msc.service.TimingServiceListener;
 import org.jboss.msc.service.util.LatchedFinishListener;
 
 public class TenForwardBench {
@@ -40,9 +37,9 @@ public class TenForwardBench {
         final int totalServiceDefinitions = Integer.parseInt(args[0]);
 
         final ServiceContainer container = ServiceContainer.Factory.create();
-        BatchBuilder batch = container.batchBuilder();
 
         final LatchedFinishListener listener = new LatchedFinishListener();
+        container.addListener(listener);
 
         for (int i = 0; i < totalServiceDefinitions; i++) {
             List<ServiceName> deps = new ArrayList<ServiceName>();
@@ -51,14 +48,12 @@ public class TenForwardBench {
             for (int j = 1; j < numDeps + 1; j++) {
                 deps.add(ServiceName.of(("test" + (i + j)).intern()));
             }
-            final ServiceBuilder<Void> builder = batch.addService(ServiceName.of(("test" + i).intern()), Service.NULL);
+            final ServiceBuilder<Void> builder = container.addService(ServiceName.of(("test" + i).intern()), Service.NULL);
             for (ServiceName dep : deps) {
                 builder.addDependency(dep);
             }
         }
 
-        batch.addListener(listener);
-        batch.install();
         listener.await();
         System.out.println(totalServiceDefinitions + " : "  + listener.getElapsedTime() / 1000.0);
         container.shutdown();

@@ -22,6 +22,10 @@
 
 package org.jboss.msc.service;
 
+import static org.jboss.modules.management.ObjectProperties.property;
+import static org.jboss.msc.service.ServiceProperty.FAILED_TO_START;
+import static org.jboss.msc.service.ServiceProperty.UNINSTALLED;
+
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -32,12 +36,10 @@ import java.io.Writer;
 import java.lang.management.ManagementFactory;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -53,22 +55,18 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.jboss.modules.management.ObjectProperties;
-import org.jboss.msc.Version;
-import org.jboss.msc.inject.Injector;
-import org.jboss.modules.ref.Reaper;
-import org.jboss.modules.ref.Reference;
-import org.jboss.modules.ref.WeakReference;
-import org.jboss.msc.service.ServiceController.Mode;
-import org.jboss.msc.service.management.ServiceContainerMXBean;
-import org.jboss.msc.service.management.ServiceStatus;
-
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
-import static org.jboss.modules.management.ObjectProperties.property;
-import static org.jboss.msc.service.ServiceProperty.FAILED_TO_START;
-import static org.jboss.msc.service.ServiceProperty.UNINSTALLED;
+import org.jboss.modules.management.ObjectProperties;
+import org.jboss.modules.ref.Reaper;
+import org.jboss.modules.ref.Reference;
+import org.jboss.modules.ref.WeakReference;
+import org.jboss.msc.Version;
+import org.jboss.msc.inject.Injector;
+import org.jboss.msc.service.ServiceController.Mode;
+import org.jboss.msc.service.management.ServiceContainerMXBean;
+import org.jboss.msc.service.management.ServiceStatus;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -449,52 +447,6 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     }
 
     /**
-     * Install a collection of service definitions into the registry.  Will install the services
-     * in dependency order.
-     *
-     * @param serviceBatch The service batch to install
-     * @throws ServiceRegistryException If any problems occur resolving the dependencies or adding to the registry.
-     */
-    @Override
-    void install(final BatchBuilderImpl serviceBatch) throws ServiceRegistryException {
-        validateTargetState();
-        install(serviceBatch.getBatchServices().values());
-    }
-
-    /**
-     * Install a batch of builders.
-     *
-     * @param builders the builders
-     * @throws DuplicateServiceException if a service is duplicated
-     */
-    private void install(final Collection<ServiceBuilderImpl<?>> builders) throws DuplicateServiceException {
-        final Deque<ServiceBuilderImpl<?>> installedBuilders = new ArrayDeque<ServiceBuilderImpl<?>>(builders.size());
-        final Deque<ServiceControllerImpl<?>> installedInstances = new ArrayDeque<ServiceControllerImpl<?>>(builders.size());
-        boolean ok = false;
-        try {
-            for (ServiceBuilderImpl<?> builder : builders) {
-                installedInstances.addLast(doInstall(builder));
-                installedBuilders.addLast(builder);
-            }
-            ok = true;
-        } finally {
-            if (! ok) {
-                for (ServiceControllerImpl<?> instance : installedInstances) {
-                    rollback(instance);
-                }
-            } else {
-                while (! installedBuilders.isEmpty()) {
-                    final ServiceBuilderImpl<?> builder = installedBuilders.removeFirst();
-                    final ServiceControllerImpl<?> instance = installedInstances.removeFirst();
-                    commit(builder.getInitialMode(), instance);
-                }
-                checkMissingDependencies(); // verify if there are new missing dependencies or
-                // new cycles to notify after service installation
-            }
-        }
-    }
-
-    /**
      * Checks the dependency graph structure formed by installed services, detecting missing dependencies.
      * All affected dependents are notified.
      * <p>
@@ -703,7 +655,22 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     @Override
     void install(final ServiceBuilderImpl<?> serviceBuilder) throws DuplicateServiceException {
         validateTargetState();
-        install(Collections.<ServiceBuilderImpl<?>>singleton(serviceBuilder));
+        ServiceControllerImpl<?> instance = null;
+        boolean ok = false;
+        try {
+            instance = doInstall(serviceBuilder);
+            ok = true;
+        } finally {
+            if (! ok) {
+                if (instance != null) {
+                    rollback(instance);
+                }
+            } else {
+                commit(serviceBuilder.getInitialMode(), instance);
+                checkMissingDependencies(); // verify if there are new missing dependencies or
+                // new cycles to notify after service installation
+            }
+        }
     }
 
     @Override

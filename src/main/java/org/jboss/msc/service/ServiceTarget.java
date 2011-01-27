@@ -140,11 +140,4 @@ public interface ServiceTarget {
      * @return the new service target
      */
     ServiceTarget subTarget();
-
-    /**
-     * Create a new batch builder, which is used to resolve and install described services in this target.
-     *
-     * @return the new batch builder
-     */
-    BatchBuilder batchBuilder();
 }
