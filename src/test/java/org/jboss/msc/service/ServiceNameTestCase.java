@@ -71,6 +71,8 @@ public final class ServiceNameTestCase {
         assertEquals("simple canonical", ServiceName.of("a", "b", "c"), ServiceName.parse("a.b.c"));
         assertEquals("complex canonical (string side)", "a.\"\\r\\n\".b", ServiceName.parse("\"a\".\"\\r\\n\".b").getCanonicalName());
         assertEquals("complex canonical", ServiceName.of("a", "\r\n", "b"), ServiceName.parse("\"a\".\"\\r\\n\".b"));
+        assertEquals("regression 1a", ServiceName.of("jboss", "managedbean-example.jar", "Bean"), ServiceName.parse("jboss.\"managedbean-example.jar\".Bean"));
+        assertEquals("regression 1b", "jboss.\"managedbean-example.jar\".Bean", ServiceName.of("jboss", "managedbean-example.jar", "Bean").getCanonicalName());
         try {
             ServiceName.parse(" foo");
             fail("Expected exception: whitespace in simple name");

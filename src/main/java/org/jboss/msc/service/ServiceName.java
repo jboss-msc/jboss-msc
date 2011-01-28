@@ -475,7 +475,7 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
         final String name = this.name;
         final int nameLength = name.length();
         boolean simple = true;
-        for (int i = 0; i < nameLength; i += name.offsetByCodePoints(i, 1)) {
+        for (int i = 0; i < nameLength; i = name.offsetByCodePoints(i, 1)) {
             final int c = name.codePointAt(i);
             if (Character.isISOControl(c) || Character.isWhitespace(c) || c == '.' || c == '"') {
                 simple = false;
