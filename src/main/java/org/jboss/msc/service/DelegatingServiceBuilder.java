@@ -169,7 +169,7 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     }
 
     /** {@inheritDoc} */
-    public void install() throws ServiceRegistryException {
-        delegate.install();
+    public ServiceController<T> install() throws ServiceRegistryException {
+        return delegate.install();
     }
 }

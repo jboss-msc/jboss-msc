@@ -44,9 +44,9 @@ final class SubTarget extends AbstractServiceTarget {
      * proceeding with installation of {@code serviceBuilder} into the parent target.
      */
     @Override
-    void install(ServiceBuilderImpl<?> serviceBuilder) throws ServiceRegistryException {
+    <T> ServiceController<T> install(ServiceBuilderImpl<T> serviceBuilder) throws ServiceRegistryException {
         apply(serviceBuilder);
-        parent.install(serviceBuilder);
+        return parent.install(serviceBuilder);
     }
 
     @Override

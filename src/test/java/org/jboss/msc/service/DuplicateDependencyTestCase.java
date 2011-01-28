@@ -59,40 +59,43 @@ public class DuplicateDependencyTestCase extends AbstractServiceTest {
 
     @Test
     public void duplicateDependency() throws Exception {
-        
-        Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
-        serviceContainer.addService(secondServiceName, Service.NULL)
+        final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
+        final ServiceController<?> secondController = serviceContainer.addService(secondServiceName, Service.NULL)
             .addAliases(secondServiceAlias1, secondServiceAlias2)
             .addListener(testListener)
             .install();
-        assertController(secondServiceName, secondServiceStart);
+        assertController(secondServiceName, secondController);
+        assertController(secondController, secondServiceStart);
 
-        Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
-        serviceContainer.addService(firstServiceName, Service.NULL)
+        final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
+        final ServiceController<?> firstController = serviceContainer.addService(firstServiceName, Service.NULL)
             .addDependencies(secondServiceName, secondServiceAlias2)
             .addListener(testListener)
             .install();
-        assertController(firstServiceName, firstServiceStart);
+        assertController(firstServiceName, firstController);
+        assertController(firstController, firstServiceStart);
     }
 
     @Test
     public void duplicateDependencyWithMissingDependency() throws Exception {
         
-        Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
-        serviceContainer.addService(secondServiceName, Service.NULL)
+        final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
+        final ServiceController<?> secondController = serviceContainer.addService(secondServiceName, Service.NULL)
             .addAliases(secondServiceAlias1, secondServiceAlias2)
             .addListener(testListener)
             .install();
-        assertController(secondServiceName, secondServiceStart);
+        assertController(secondServiceName, secondController);
+        assertController(secondController, secondServiceStart);
 
-        Future<ServiceController<?>> firstServiceListenerAdded = testListener.expectListenerAdded(firstServiceName);
-        Future<ServiceController<?>> firstServiceDependencyMissing = testListener.expectDependencyUninstall(firstServiceName);
-        serviceContainer.addService(firstServiceName, Service.NULL)
+        final Future<ServiceController<?>> firstServiceListenerAdded = testListener.expectListenerAdded(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyMissing = testListener.expectDependencyUninstall(firstServiceName);
+        final ServiceController<?> firstController = serviceContainer.addService(firstServiceName, Service.NULL)
             .addAliases(firstServiceAlias)
             .addDependencies(secondServiceName, secondServiceAlias2, thirdServiceName)
             .addListener(testListener)
             .install();
-        ServiceController<?> firstController = assertController(firstServiceAlias, firstServiceListenerAdded);
+        assertController(firstServiceAlias, firstController);
+        assertController(firstController, firstServiceListenerAdded);
         assertController(firstController, firstServiceDependencyMissing);
         assertEquals(State.DOWN, firstController.getState());
     }

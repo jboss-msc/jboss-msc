@@ -290,13 +290,14 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     }
 
     @Override
-    public void install() throws ServiceRegistryException {
-        if (!installed) {
-            // mark it before perform the installation,
-            // so we avoid ServiceRegistryException being thrown multiple times
-            installed = true;
-            serviceTarget.install(this);
+    public ServiceController<T> install() throws ServiceRegistryException {
+        if (installed) {
+            throw new IllegalStateException("ServiceBuilder is already installed");
         }
+        // mark it before perform the installation,
+        // so we avoid ServiceRegistryException being thrown multiple times
+        installed = true;
+        return serviceTarget.install(this);
     }
 
     Value<? extends Service<T>> getServiceValue() {

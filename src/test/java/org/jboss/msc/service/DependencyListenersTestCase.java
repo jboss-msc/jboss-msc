@@ -63,49 +63,53 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
     public void testMissingDependencies() throws Exception {
         Future<ServiceController<?>> missingDependency = testListener.expectDependencyUninstall(firstServiceName);
         // add firstService with dependency on missing secondService
-        serviceContainer.addService(firstServiceName, Service.NULL)
+        final ServiceController<?> firstController = serviceContainer.addService(firstServiceName, Service.NULL)
             .addDependency(secondServiceName)
             .addListener(testListener)
             .install();
+        assertController(firstServiceName, firstController);
         // uninstalled dependency notification expected
-        final ServiceController<?> controller = assertController(firstServiceName, missingDependency);
+        assertController(firstController, missingDependency);
 
         final Future<ServiceController<?>> installDependency = testListener.expectDependencyInstall(firstServiceName);
         // install missing secondService
-        serviceContainer.addService(secondServiceName, Service.NULL).install();
+        final ServiceController<?> secondController = serviceContainer.addService(secondServiceName, Service.NULL).install();
+        assertController(secondServiceName, secondController);
         // dependency installed notification expected
-        assertController(controller, installDependency);
+        assertController(firstController, installDependency);
 
         missingDependency = testListener.expectDependencyUninstall(firstServiceName);
         // remove secondService
         serviceContainer.getService(secondServiceName).setMode(Mode.REMOVE);
         // uninstalled dependency notification expected again
-        assertController(controller, missingDependency);
+        assertController(firstController, missingDependency);
     }
 
     @Test
     public void testTransitiveMissingDependencies() throws Exception {
         Future<ServiceController<?>> firstServiceMissingDependency = testListener.expectDependencyUninstall(firstServiceName);
         // add firstService with dependency on missing secondService
-        serviceContainer.addService(firstServiceName, Service.NULL)
+        final ServiceController<?> firstController = serviceContainer.addService(firstServiceName, Service.NULL)
             .addDependency(secondServiceName)
             .addListener(testListener)
             .install();
         // uninstalled dependency notification expected
-        final ServiceController<?> firstController = assertController(firstServiceName, firstServiceMissingDependency);
+        assertController(firstServiceName, firstController);
+        assertController(firstController, firstServiceMissingDependency);
 
         Future<ServiceController<?>> firstServiceInstalledDependency = testListener.expectNoDependencyInstall(firstServiceName);
         Future<ServiceController<?>> firstServiceUninstalledDependency = testListener.expectNoDependencyUninstall(firstServiceName);
         Future<ServiceController<?>> secondServiceMissingDependency = testListener.expectDependencyUninstall(secondServiceName);
         // add secondService with dependency on missing thirdService
-        serviceContainer.addService(secondServiceName, Service.NULL)
+        final ServiceController<?> secondController = serviceContainer.addService(secondServiceName, Service.NULL)
             .addDependency(thirdServiceName)
             .addListener(testListener)
             .install();
+        assertController(secondServiceName, secondController);
         // installed and uninstalled dependency notifications expected
         assertOppositeNotifications(firstController, firstServiceInstalledDependency, firstServiceUninstalledDependency);
         // uninstalled dependency notification expected from secondService
-        final ServiceController<?> secondController = assertController(secondServiceName, secondServiceMissingDependency);
+        assertController(secondController, secondServiceMissingDependency);
 
         firstServiceInstalledDependency = testListener.expectDependencyInstall(firstServiceName);
         Future<ServiceController<?>> secondServiceInstalledDependency = testListener.expectDependencyInstall(secondServiceName);
@@ -130,19 +134,21 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
     public void testMissingDependenciesNotifiedToNewDependent() throws Exception {
         Future<ServiceController<?>> firstServiceMissingDependency = testListener.expectDependencyUninstall(firstServiceName);
         // add firstService with dependency on missing secondService
-        serviceContainer.addService(firstServiceName, Service.NULL)
+        final ServiceController<?> firstController = serviceContainer.addService(firstServiceName, Service.NULL)
             .addDependency(secondServiceName)
             .addListener(testListener)
             .install();
+        assertController(firstServiceName, firstController);
         // uninstalled dependency notification expected
-        final ServiceController<?> firstController= assertController(firstServiceName, firstServiceMissingDependency);
+        assertController(firstController, firstServiceMissingDependency);
 
         Future<ServiceController<?>> fourthServiceMissingDependency = testListener.expectDependencyUninstall(fourthServiceName);
-        serviceContainer.addService(fourthServiceName, Service.NULL)
+        final ServiceController<?> fourthController = serviceContainer.addService(fourthServiceName, Service.NULL)
             .addDependency(firstServiceName)
             .addListener(testListener)
             .install();
-        final ServiceController<?> fourthController = assertController(fourthServiceName, fourthServiceMissingDependency);
+        assertController(fourthServiceName, fourthController);
+        assertController(fourthController, fourthServiceMissingDependency);
 
         Future<ServiceController<?>> firstServiceInstalledDependency = testListener.expectNoDependencyInstall(firstServiceName);
         Future<ServiceController<?>> firstServiceUninstalledDependency = testListener.expectNoDependencyUninstall(firstServiceName);
@@ -150,22 +156,25 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
         Future<ServiceController<?>> fourthServiceUninstalledDependency = testListener.expectNoDependencyUninstall(fourthServiceName);
         Future<ServiceController<?>> secondServiceMissingDependency = testListener.expectDependencyUninstall(secondServiceName);
         // add secondService with dependency on missing thirdService
-        serviceContainer.addService(secondServiceName, Service.NULL)
+        final ServiceController<?> secondController = serviceContainer.addService(secondServiceName, Service.NULL)
             .addDependency(thirdServiceName)
             .addListener(testListener)
             .install();
+        assertController(secondServiceName, secondController);
         // installed and uninstalled dependency notifications expected
         assertOppositeNotifications(firstController, firstServiceInstalledDependency, firstServiceUninstalledDependency);
         assertOppositeNotifications(fourthController, fourthServiceInstalledDependency, fourthServiceUninstalledDependency);
         // uninstalled dependency notification expected from secondService
-        final ServiceController<?> secondController = assertController(secondServiceName, secondServiceMissingDependency);
+        assertController(secondController, secondServiceMissingDependency);
 
         firstServiceInstalledDependency = testListener.expectDependencyInstall(firstServiceName);
         fourthServiceInstalledDependency = testListener.expectDependencyInstall(fourthServiceName);
         final Future<ServiceController<?>> secondServiceInstalledDependency = testListener.expectDependencyInstall(secondServiceName);
         final Future<ServiceController<?>> thirdServiceStart = testListener.expectServiceStart(thirdServiceName);
         // install missing thirdService
-        serviceContainer.addService(thirdServiceName, Service.NULL).addListener(testListener).install();
+        final ServiceController<?> thirdController = serviceContainer.addService(thirdServiceName, Service.NULL)
+            .addListener(testListener).install();
+        assertController(thirdServiceName, thirdController);
         // dependency installed notification expected
         assertController(secondController, secondServiceInstalledDependency);
         // dependency installed notification also expected from firstService
@@ -173,7 +182,7 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
         // and from fourthService
         assertController(fourthController, fourthServiceInstalledDependency);
         // thirdService is expected to start
-        final ServiceController<?> thirdController = assertController(thirdServiceName, thirdServiceStart);
+        assertController(thirdController, thirdServiceStart);
 
         fourthServiceMissingDependency = testListener.expectDependencyUninstall(fourthServiceName);
         firstServiceMissingDependency = testListener.expectDependencyUninstall(firstServiceName);

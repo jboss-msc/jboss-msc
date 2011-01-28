@@ -168,9 +168,10 @@ abstract class AbstractServiceTarget implements ServiceTarget {
      * Install {@code serviceBuilder} in this target.
      * 
      * @param serviceBuilder            a serviceBuilder created by this ServiceTarget
+     * @return the installed service controller
      * @throws ServiceRegistryException if a service registry issue occurred during installation
      */
-    abstract void install(ServiceBuilderImpl<?> serviceBuilder) throws ServiceRegistryException;
+    abstract <T> ServiceController<T> install(ServiceBuilderImpl<T> serviceBuilder) throws ServiceRegistryException;
 
     /**
      * Indicate whether a service with the specified name exists in this target.

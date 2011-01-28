@@ -58,8 +58,9 @@ public class ServiceUtilsTestCase extends AbstractServiceTest {
 
         Future<ServiceController<?>> serviceStart = testListener.expectServiceStart(serviceName);
         // install service
-        serviceContainer.addService(serviceName, Service.NULL).addListener(testListener).install();
-        ServiceController<?> serviceController = assertController(serviceName, serviceStart);
+        ServiceBuilder<?> serviceBuilder = serviceContainer.addService(serviceName, Service.NULL).addListener(testListener);
+        ServiceController<?> serviceController = assertController(serviceName, serviceBuilder.install());
+        assertController(serviceController, serviceStart);
 
         // use ServiceUtils to undeploy the service
         final TestTask completeTask = new TestTask();
@@ -79,18 +80,21 @@ public class ServiceUtilsTestCase extends AbstractServiceTest {
 
         // install service1
         Future<ServiceController<?>> service1Start = testListener.expectServiceStart(serviceName1);
-        serviceContainer.addService(serviceName1, Service.NULL).addListener(testListener).install();
-        ServiceController<?> serviceController1 = assertController(serviceName1, service1Start);
+        ServiceBuilder<?> serviceBuilder = serviceContainer.addService(serviceName1, Service.NULL).addListener(testListener);
+        ServiceController<?> serviceController1 = assertController(serviceName1, serviceBuilder.install());
+        assertController(serviceController1, service1Start);
 
         // install service2
         Future<ServiceController<?>> service2Start = testListener.expectServiceStart(serviceName2);
-        serviceContainer.addService(serviceName2, Service.NULL).addListener(testListener).install();
-        ServiceController<?> serviceController2 = assertController(serviceName2, service2Start);
+        serviceBuilder = serviceContainer.addService(serviceName2, Service.NULL).addListener(testListener);
+        ServiceController<?> serviceController2 = assertController(serviceName2, serviceBuilder.install());
+        assertController(serviceController2, service2Start);
 
         // install service3
         Future<ServiceController<?>> service3Start = testListener.expectServiceStart(serviceName3);
-        serviceContainer.addService(serviceName3, Service.NULL).addListener(testListener).install();
-        ServiceController<?> serviceController3 = assertController(serviceName3, service3Start);
+        serviceBuilder = serviceContainer.addService(serviceName3, Service.NULL).addListener(testListener);
+        ServiceController<?> serviceController3 = assertController(serviceName3, serviceBuilder.install());
+        assertController(serviceController3, service3Start);
 
         // undeploy service1 and service2 by calling ServiceUtils.undeployAll
         final TestTask completeTask = new TestTask();
@@ -112,8 +116,9 @@ public class ServiceUtilsTestCase extends AbstractServiceTest {
 
         // install service
         Future<ServiceController<?>> serviceStart = testListener.expectServiceStart(serviceName);
-        serviceContainer.addService(serviceName, Service.NULL).addListener(testListener).install();
-        ServiceController<?> serviceController = assertController(serviceName, serviceStart);
+        ServiceBuilder<?> serviceBuilder = serviceContainer.addService(serviceName, Service.NULL).addListener(testListener);
+        ServiceController<?> serviceController = assertController(serviceName, serviceBuilder.install());
+        assertController(serviceController, serviceStart);
 
         // try to undeploy a null service... NPE is expected
         final TestTask completeTask = new TestTask();
@@ -126,8 +131,9 @@ public class ServiceUtilsTestCase extends AbstractServiceTest {
 
         // reinstall service
         serviceStart = testListener.expectServiceStart(serviceName);
-        serviceContainer.addService(serviceName, Service.NULL).addListener(testListener).install();
-        serviceController = assertController(serviceName, serviceStart);
+        serviceBuilder = serviceContainer.addService(serviceName, Service.NULL).addListener(testListener);
+        serviceController = assertController(serviceName, serviceBuilder.install());
+        assertController(serviceController, serviceStart);
 
         // try to remove null service with null complete task... no NPE is expected
         ServiceUtils.undeployAll(null, (ServiceController<?>) null);
@@ -144,8 +150,9 @@ public class ServiceUtilsTestCase extends AbstractServiceTest {
 
         // reinstall service
         serviceStart = testListener.expectServiceStart(serviceName);
-        serviceContainer.addService(serviceName, Service.NULL).addListener(testListener).install();
-        serviceController = assertController(serviceName, serviceStart);
+        serviceBuilder = serviceContainer.addService(serviceName, Service.NULL).addListener(testListener);
+        serviceController = assertController(serviceName, serviceBuilder.install());
+        assertController(serviceController, serviceStart);
 
         // remove null list of services with a null complete task... NPE is expected
         ServiceUtils.undeployAll(null, (List<ServiceController<?>>) null);

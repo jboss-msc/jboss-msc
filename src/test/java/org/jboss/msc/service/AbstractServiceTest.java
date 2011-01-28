@@ -67,6 +67,23 @@ public class AbstractServiceTest {
     }
 
     /**
+     * Asserts that {@code controller} is not null and that it is the controller identified by {@code serviceName},
+     * installed in {@link serviceContainer}.
+     * 
+     * @param serviceName  the name of the service
+     * @param controller   the controller to be asserted. It should be the same as the ServiceController identified by {@code
+     *                     serviceName}, installed into {@code serviceContainer}
+     * @return             {@code controller}
+     */
+    protected final ServiceController<?> assertController(ServiceName serviceName, ServiceController<?> controller) {
+        // retrieve the service controller only after future returns
+        assertNotNull(controller);
+        ServiceController<?> expectedServiceController = serviceContainer.getService(serviceName);
+        assertController(expectedServiceController, controller);
+        return controller;
+    }
+
+    /**
      * Asserts that {@code futureController.get()} returns the controller identified by {@code serviceName}, installed in 
      * {@link serviceContainer}.
      * 

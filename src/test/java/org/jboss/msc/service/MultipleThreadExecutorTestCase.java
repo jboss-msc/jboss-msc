@@ -119,9 +119,10 @@ public class MultipleThreadExecutorTestCase {
             final ServiceContainer.ExecutorInjector executorInjector = ServiceContainer.ExecutorInjector.create(serviceContainer);
             testListener = new TestServiceListener();
             final Future<ServiceController<?>> executorInjected = testListener.expectServiceStart(ServiceName.of("executor"));
-            serviceContainer.addService(ServiceName.of("executor"), Service.NULL).addListener(testListener).addInjection(executorInjector, executor).install();
-            executorInjectorController = executorInjected.get();
+            executorInjectorController = serviceContainer.addService(ServiceName.of("executor"), Service.NULL)
+                .addListener(testListener).addInjection(executorInjector, executor).install();
             assertNotNull(executorInjector);
+            assertSame(executorInjectorController, executorInjected.get());
         }
 
         public void uninstall() throws Exception {

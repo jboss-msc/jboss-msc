@@ -61,16 +61,18 @@ public abstract class AbstractDelegatingServiceTargetTest extends AbstractServic
     public void addService() throws Exception {
         Future<ServiceController<?>> serviceStart = testListener.expectServiceStart(serviceName);
         serviceTarget.addListener(testListener);
-        serviceTarget.addService(serviceName, Service.NULL).install();
-        assertController(serviceName, serviceStart);
+        ServiceController<?> serviceController = serviceTarget.addService(serviceName, Service.NULL).install();
+        assertController(serviceName, serviceController);
+        assertController(serviceController, serviceStart);
     }
 
     @Test
     public void addServiceValue() throws Exception {
         Future<ServiceController<?>> serviceStart = testListener.expectServiceStart(serviceName);
         serviceTarget.addListener(testListener);
-        serviceTarget.addServiceValue(serviceName, Values.immediateValue(Service.NULL)).install();
-        assertController(serviceName, serviceStart);
+        ServiceController<?> serviceController = serviceTarget.addServiceValue(serviceName, Values.immediateValue(Service.NULL)).install();
+        assertController(serviceName, serviceController);
+        assertController(serviceController, serviceStart);
     }
 
     @Test

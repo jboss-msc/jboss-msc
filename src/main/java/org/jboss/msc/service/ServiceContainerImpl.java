@@ -644,13 +644,14 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     }
 
     @Override
-    void install(final ServiceBuilderImpl<?> serviceBuilder) throws DuplicateServiceException {
+    <T> ServiceController<T> install(final ServiceBuilderImpl<T> serviceBuilder) throws DuplicateServiceException {
         validateTargetState();
-        ServiceControllerImpl<?> instance = null;
+        ServiceControllerImpl<T> instance = null;
         boolean ok = false;
         try {
             instance = doInstall(serviceBuilder);
             ok = true;
+            return instance;
         } finally {
             if (! ok) {
                 if (instance != null) {

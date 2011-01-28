@@ -276,11 +276,13 @@ public interface ServiceBuilder<T> {
     ServiceBuilder<T> addListener(Collection<? extends ServiceListener<? super T>> listeners);
 
     /**
-     * Install all the defined services into the container.
+     * Install the defined service into the container.
      *
+     * @return the installed service controller
      * @throws ServiceRegistryException if installation fails
+     * @throws IllegalStateException    if installation has been performed previously
      */
-    void install() throws ServiceRegistryException;
+    ServiceController<T> install() throws ServiceRegistryException, IllegalStateException;
 
     /**
      * The dependency type.

@@ -211,9 +211,10 @@ public class TrackingServiceTarget extends DelegatingServiceTarget {
             return this;
         }
 
-        public void install() throws ServiceRegistryException {
-            builder.install();
+        public ServiceController<T> install() throws ServiceRegistryException {
+            ServiceController<T> controller = builder.install();
             set.add(name);
+            return controller;
         }
     }
 }

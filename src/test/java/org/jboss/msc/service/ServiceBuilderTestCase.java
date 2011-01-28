@@ -70,7 +70,7 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         final Location location = createLocation(null, 50, 23, null);
 
         // install dummy service
-        ServiceBuilder<DummyManager> serviceBuilder = serviceContainer.addService(serviceName, service);
+        ServiceBuilder<?> serviceBuilder = serviceContainer.addService(serviceName, service);
         // with aliases
         serviceBuilder.addAliases(dummyServiceName);
         serviceBuilder.addAliases();
@@ -90,8 +90,9 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         serviceBuilder.setLocation(location);
 
         Future<ServiceController<?>> dummyServiceListenerAdded = testListener.expectListenerAdded(ServiceName.of("service"));
-        serviceBuilder.install();
-        ServiceController<?> dummyController = assertController(serviceName, dummyServiceListenerAdded);
+        ServiceController<?> dummyController = serviceBuilder.install();
+        assertController(serviceName, dummyController);
+        assertController(dummyController, dummyServiceListenerAdded);
         assertEquals(location,  dummyController.getLocation());
         ServiceName[] aliases = dummyController.getAliases();
         assertNotNull(aliases);
@@ -102,8 +103,10 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         Future<ServiceController<?>> dummyServiceStart = testListener.expectServiceStart(serviceName);
         Future<ServiceController<?>> anotherDummyServiceStart = testListener.expectServiceStart(anotherServiceName);
         // install the missing non-optional dependency another service
-        serviceContainer.addService(anotherServiceName, Service.NULL).addListener(testListener).install();
-        assertController(anotherServiceName, anotherDummyServiceStart);
+        serviceBuilder = serviceContainer.addService(anotherServiceName, Service.NULL).addListener(testListener);
+        ServiceController<?> anotherController = serviceBuilder.install();
+        assertController(anotherServiceName, anotherController);
+        assertController(anotherController, anotherDummyServiceStart);
         // dummy service is expected to start
         assertController(dummyController, dummyServiceStart);
         // so description of dummy manager should have been initialized
@@ -121,7 +124,7 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         final Location location = createLocation(null, 50, 23, null);
 
         // install dummy service
-        ServiceBuilder<DummyManager> serviceBuilder = serviceContainer.addService(serviceName, service);
+        ServiceBuilder<?> serviceBuilder = serviceContainer.addService(serviceName, service);
         // with aliases
         serviceBuilder.addAliases(dummyServiceName);
         serviceBuilder.addAliases();
@@ -142,8 +145,9 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         serviceBuilder.setLocation(location);
 
         Future<ServiceController<?>> dummyServiceListenerAdded = testListener.expectListenerAdded(ServiceName.of("service"));
-        serviceBuilder.install();
-        ServiceController<?> dummyController = assertController(serviceName, dummyServiceListenerAdded);
+        ServiceController<?> dummyController = serviceBuilder.install();
+        assertController(serviceName, dummyController);
+        assertController(dummyController, dummyServiceListenerAdded);
         assertEquals(location,  dummyController.getLocation());
         ServiceName[] aliases = dummyController.getAliases();
         assertNotNull(aliases);
@@ -154,14 +158,16 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         assertSame(dummyController.getState(), State.DOWN);
         
         Future<ServiceController<?>> uninstalledServiceStart = testListener.expectServiceStart(uninstalledServiceName);
-        serviceContainer.addService(uninstalledServiceName, Service.NULL).addListener(testListener).install();
-        assertController(uninstalledServiceName, uninstalledServiceStart);
+        ServiceController<?> uninstalledController = serviceContainer.addService(uninstalledServiceName, Service.NULL).addListener(testListener).install();
+        assertController(uninstalledServiceName, uninstalledController);
+        assertController(uninstalledController, uninstalledServiceStart);
 
         Future<ServiceController<?>> dummyServiceStart = testListener.expectServiceStart(serviceName);
         Future<ServiceController<?>> anotherDummyServiceStart = testListener.expectServiceStart(anotherServiceName);
         // install the missing non-optional dependency another service
-        serviceContainer.addService(anotherServiceName, Service.NULL).addListener(testListener).install();
-        assertController(anotherServiceName, anotherDummyServiceStart);
+        serviceBuilder = serviceContainer.addService(anotherServiceName, Service.NULL).addListener(testListener);
+        ServiceController<?> anotherController = assertController(anotherServiceName, serviceBuilder.install());
+        assertController(anotherController, anotherDummyServiceStart);
         // dummy service is expected to start
         assertController(dummyController, dummyServiceStart);
         // so description of dummy manager should have been initialized
@@ -212,9 +218,9 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         Future<ServiceController<?>> dummyServiceStart2 = testListener2.expectServiceStart(serviceName);
         Future<ServiceController<?>> dummyServiceStart3 = testListener3.expectServiceStart(serviceName);
         // finally install the service
-        serviceBuilder.install();
+        ServiceController<?> dummyController = assertController(serviceName, serviceBuilder.install());
         // three notifications expected, one from each listener
-        ServiceController<?> dummyController = assertController(serviceName, dummyServiceStart1);
+        assertController(dummyController, dummyServiceStart1);
         assertController(dummyController, dummyServiceStart2);
         assertController(dummyController, dummyServiceStart3);
         // the value of dummy controller should be dummy manager
@@ -237,15 +243,16 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
     public void addServiceWithDefaultLocationAndInjectionAndWithOptionalDepOverride() throws Exception {
         Future<ServiceController<?>> anotherServiceStart = testListener.expectServiceStart(anotherServiceName);
         // install another service
-        serviceContainer.addService(anotherServiceName, Service.NULL).addListener(testListener).install();
-        assertController(anotherServiceName, anotherServiceStart);
+        ServiceBuilder<?> serviceBuilder = serviceContainer.addService(anotherServiceName, Service.NULL).addListener(testListener);
+        ServiceController<?> anotherController = assertController(anotherServiceName, serviceBuilder.install());
+        assertController(anotherController, anotherServiceStart);
 
         // create dummy manager
         DummyManager dummyManager = new DummyManager();
         // and dummy service is a plain value service 
         Service<DummyManager> service = new ValueService<DummyManager>(Values.immediateValue(dummyManager));
         // start installation of dummy service
-        ServiceBuilder<DummyManager> serviceBuilder = serviceContainer.addService(serviceName, service);
+        serviceBuilder = serviceContainer.addService(serviceName, service);
         // with with 5 aliases. Two of them are equal (alias1 and alias2), and the fifth is the same serviceName
         // used for the primary registration
         serviceBuilder.addAliases(serviceNameAlias1, serviceNameAlias2, serviceNameAlias3, serviceNameAlias4, serviceName);
@@ -276,9 +283,9 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         Future<ServiceController<?>> dummyServiceMissingDependency2 = testListener2.expectDependencyUninstall(serviceName);
         Future<ServiceController<?>> dummyServiceMissingDependency3 = testListener3.expectDependencyUninstall(serviceName);
         // finally install the service
-        serviceBuilder.install();
+        ServiceController<?> dummyController = assertController(serviceName, serviceBuilder.install());
         // three notifications expected, one from each listener
-        ServiceController<?> dummyController = assertController(serviceName, dummyServiceMissingDependency1);
+        assertController(dummyController, dummyServiceMissingDependency1);
         assertController(dummyController, dummyServiceMissingDependency2);
         assertController(dummyController, dummyServiceMissingDependency3);
         // the value of dummy controller should be dummy manager
@@ -301,8 +308,9 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         Future<ServiceController<?>> dummyServiceStart1 = testListener1.expectServiceStart(serviceName);
         Future<ServiceController<?>> dummyServiceStart2 = testListener2.expectServiceStart(serviceName);
         Future<ServiceController<?>> dummyServiceStart3 = testListener3.expectServiceStart(serviceName);
-        serviceContainer.addService(uninstalledServiceName, Service.NULL).addListener(testListener).install();
-        assertController(uninstalledServiceName, uninstalledServiceStart);
+        serviceBuilder = serviceContainer.addService(uninstalledServiceName, Service.NULL).addListener(testListener);
+        ServiceController<?> uninstalledController = assertController(uninstalledServiceName, serviceBuilder.install());
+        assertController(uninstalledController, uninstalledServiceStart);
         // three notifications expected again
         assertController(dummyController, dummyServiceStart1);
         assertController(dummyController, dummyServiceStart2);
@@ -321,16 +329,17 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
 
         Future<ServiceController<?>> anotherServiceStart = testListener.expectServiceStart(anotherServiceName);
         // install another service, with a string value
-        serviceContainer.addService(anotherServiceName, new ValueService<String>(
-                Values.immediateValue("final description"))).addListener(testListener).install();
-        assertNotNull(anotherServiceStart.get());
+        ServiceBuilder<?> serviceBuilder = serviceContainer.addService(anotherServiceName, new ValueService<String>(
+                Values.immediateValue("final description"))).addListener(testListener);
+        ServiceController<?> anotherController = assertController(anotherServiceName, serviceBuilder.install());
+        assertController(anotherController, anotherServiceStart);
 
         // create dummy manager
         final DummyManager dummyManager = new DummyManager();
         // and dummy service, a plain value service whose valu is dummy manager
         final Service<DummyManager> service = new ValueService<DummyManager>(Values.immediateValue(dummyManager));
         // start installation of dummy service
-        ServiceBuilder<DummyManager> serviceBuilder = serviceContainer.addService(serviceName, service);
+        serviceBuilder = serviceContainer.addService(serviceName, service);
         // with with 5 aliases. Two of them are equal (alias1 and alias2), and the fifth is the same serviceName
         // used for the primary registration
         serviceBuilder.addAliases(serviceNameAlias1, serviceNameAlias2, serviceNameAlias3, serviceNameAlias4, serviceName);
@@ -356,8 +365,8 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
 
         Future<ServiceController<?>> dummyServiceStart = testListener.expectServiceStart(serviceName);
         // finally install dummy service
-        serviceBuilder.install();
-        ServiceController<?> dummyController = assertController(serviceName, dummyServiceStart);
+        ServiceController<?> dummyController = assertController(serviceName, serviceBuilder.install());
+        assertController(dummyController, dummyServiceStart);
         assertEquals(location, dummyController.getLocation());
         ServiceName[] aliases = dummyController.getAliases();
         assertNotNull(aliases);
@@ -387,16 +396,17 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
 
         Future<ServiceController<?>> anotherServiceStart = testListener.expectServiceStart(anotherServiceName);
         // install another service, with a string value
-        serviceContainer.addService(anotherServiceName, new ValueService<String>(
-                Values.immediateValue("final description"))).addListener(testListener).install();
-        assertNotNull(anotherServiceStart.get());
+        ServiceBuilder<?> serviceBuilder = serviceContainer.addService(anotherServiceName, new ValueService<String>(
+                Values.immediateValue("final description"))).addListener(testListener);
+        ServiceController<?> anotherController = assertController(anotherServiceName, serviceBuilder.install());
+        assertController(anotherController, anotherServiceStart);
 
         // create dummy manager
         final DummyManager dummyManager = new DummyManager();
         // and dummy service, a plain value service whose valu is dummy manager
         final Service<DummyManager> service = new ValueService<DummyManager>(Values.immediateValue(dummyManager));
         // start installation of dummy service
-        ServiceBuilder<DummyManager> serviceBuilder = serviceContainer.addService(serviceName, service);
+        serviceBuilder = serviceContainer.addService(serviceName, service);
         // with with 5 aliases. Two of them are equal (alias1 and alias2), and the fifth is the same serviceName
         // used for the primary registration
         serviceBuilder.addAliases(serviceNameAlias1, serviceNameAlias2, serviceNameAlias3, serviceNameAlias4, serviceName);
@@ -424,8 +434,8 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         Future<ServiceController<?>> dummyServiceStart = testListener.expectServiceStart(serviceName);
         Future<ServiceController<?>> dummyServiceListenerAdded = testListener.expectListenerAdded(serviceName);
         // finally install dummy service
-        serviceBuilder.install();
-        ServiceController<?> dummyController = assertController(serviceName, dummyServiceListenerAdded);
+        ServiceController<?> dummyController = assertController(serviceName, serviceBuilder.install());
+        assertController(dummyController, dummyServiceListenerAdded);
         // the value of the installed controller should be dummy manager
         assertSame(dummyManager, dummyController.getValue());
         assertEquals(location, dummyController.getLocation());
@@ -442,8 +452,9 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         assertNull(dummyManager.getDescription());
 
         Future<ServiceController<?>> uninstalledServiceStart = testListener.expectServiceStart(uninstalledServiceName);
-        serviceContainer.addService(uninstalledServiceName, Service.NULL).addListener(testListener).install();
-        ServiceController<?> uninstalledController = assertController(uninstalledServiceName, uninstalledServiceStart);
+        serviceBuilder = serviceContainer.addService(uninstalledServiceName, Service.NULL).addListener(testListener);
+        ServiceController<?> uninstalledController = assertController(uninstalledServiceName, serviceBuilder.install());
+        assertController(uninstalledController, uninstalledServiceStart);
         assertController(dummyController, dummyServiceStart);
         // the value of the installed controller should still be dummy manager
         assertSame(dummyManager, dummyController.getValue());
@@ -466,18 +477,20 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
     public void addServiceWithDependencyInjections() throws Exception {
         Future<ServiceController<?>> serviceDescriptionStart = testListener.expectServiceStart(descriptionServiceName);
         // add service description, with a String value
-        serviceContainer.addService(descriptionServiceName, new ValueService<String>(
-                Values.immediateValue("final description"))).addListener(testListener).install();
-        ServiceController<?> serviceDescriptionController = assertController(descriptionServiceName, serviceDescriptionStart);
+        ServiceBuilder<?> serviceBuilder = serviceContainer.addService(descriptionServiceName, new ValueService<String>(
+                Values.immediateValue("final description"))).addListener(testListener);
+        ServiceController<?> serviceDescriptionController = assertController(descriptionServiceName, serviceBuilder.install());
+        assertController(serviceDescriptionController, serviceDescriptionStart);
         assertEquals("final description", serviceDescriptionController.getValue());
 
         // create dummy helper
         final DummyHelper dummyHelper = new DummyHelper();
         Future<ServiceController<?>> serviceHelperStart = testListener.expectServiceStart(helperServiceName);
         // install dummy helper service, a plain value service with dummy helper as its value
-        serviceContainer.addService(helperServiceName, new ValueService<DummyHelper>(Values.immediateValue(dummyHelper))).
-                addListener(testListener).install();
-        ServiceController<?> serviceHelperController = assertController(helperServiceName, serviceHelperStart);
+        serviceBuilder = serviceContainer.addService(helperServiceName, new ValueService<DummyHelper>(Values.immediateValue(dummyHelper))).
+                addListener(testListener);
+        ServiceController<?> serviceHelperController = assertController(helperServiceName, serviceBuilder.install());
+        assertController(serviceHelperController, serviceHelperStart);
         assertSame(dummyHelper, serviceHelperController.getValue());
 
         // create dummy manager
@@ -486,7 +499,7 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         final Service<DummyManager> service = new ValueService<DummyManager>(Values.immediateValue(dummyManager));
 
         // start installation process
-        ServiceBuilder<DummyManager> serviceBuilder = serviceContainer.addService(serviceName, service);
+        serviceBuilder = serviceContainer.addService(serviceName, service);
         // with optional dependency on service description, whereas the service description value should be injected
         // into the description property of dummy service
         serviceBuilder.addOptionalDependency(descriptionServiceName, String.class,
@@ -506,8 +519,8 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
 
         Future<ServiceController<?>> dummyServiceStart = testListener.expectServiceStart(serviceName);
         // finally install
-        serviceBuilder.install();
-        ServiceController<?> dummyController = assertController(serviceName, dummyServiceStart);
+        ServiceController<?> dummyController = assertController(serviceName, serviceBuilder.install());
+        assertController(dummyController, dummyServiceStart);
         assertEquals(location, dummyController.getLocation());
         ServiceName[] aliases = dummyController.getAliases();
         assertTrue(aliases == null || aliases.length == 0);
@@ -549,17 +562,20 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
     public void addServiceWithOptionalDependencyInjections() throws Exception {
         Future<ServiceController<?>> serviceDescriptionStart = testListener.expectServiceStart(descriptionServiceName);
         // install service description, a plain value service with a String value
-        serviceContainer.addService(descriptionServiceName, new ValueService<String>(Values.immediateValue("final description"))).addListener(testListener).install();
-        ServiceController<?> serviceDescriptionController = assertController(descriptionServiceName, serviceDescriptionStart);
+        ServiceBuilder<?> serviceBuilder = serviceContainer.addService(descriptionServiceName,
+                new ValueService<String>(Values.immediateValue("final description"))).addListener(testListener);
+        ServiceController<?> serviceDescriptionController = assertController(descriptionServiceName, serviceBuilder.install());
+        assertController(serviceDescriptionController, serviceDescriptionStart);
         assertEquals("final description", serviceDescriptionController.getValue());
 
         // create dummy helper
         final DummyHelper dummyHelper = new DummyHelper();
         Future<ServiceController<?>> serviceHelperStart = testListener.expectServiceStart(helperServiceName);
         // install helper service, a plain value service with dummy helper as its value
-        serviceContainer.addService(helperServiceName, new ValueService<DummyHelper>(Values.immediateValue(dummyHelper))).
-                addListener(testListener).install();
-        ServiceController<?> serviceHelperController = assertController(helperServiceName, serviceHelperStart);
+        serviceBuilder = serviceContainer.addService(helperServiceName,
+                new ValueService<DummyHelper>(Values.immediateValue(dummyHelper))).addListener(testListener);
+        ServiceController<?> serviceHelperController = assertController(helperServiceName, serviceBuilder.install());
+        assertController(serviceHelperController, serviceHelperStart);
         assertSame(dummyHelper, serviceHelperController.getValue());
 
         // create dummy manager
@@ -568,7 +584,7 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         Service<DummyManager> service = new ValueService<DummyManager>(Values.immediateValue(dummyManager));
 
         // setup dummy service installation
-        ServiceBuilder<DummyManager> serviceBuilder = serviceContainer.addService(serviceName, service);
+        serviceBuilder = serviceContainer.addService(serviceName, service);
         // add optional dependency on description service, with an injection on description property
         serviceBuilder.addOptionalDependency(descriptionServiceName, String.class,
                 new SetMethodInjector<String>(dummyManager, DummyManager.class, "setDescription", String.class));
@@ -583,8 +599,8 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
 
         Future<ServiceController<?>> dummyServiceStart = testListener.expectServiceStart(serviceName);
         // finally, install dummy service
-        serviceBuilder.install();
-        ServiceController<?> dummyController = assertController(serviceName, dummyServiceStart);
+        ServiceController<?> dummyController = assertController(serviceName, serviceBuilder.install());
+        assertController(dummyController, dummyServiceStart);
         assertSame(dummyManager, dummyController.getValue());
         // description and helper properties should have been injected
         assertEquals("final description", dummyManager.getDescription());
@@ -610,15 +626,18 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         // add service
         ServiceBuilder<?> serviceBuilder = serviceContainer.addService(serviceName, Service.NULL).addListener(testListener);
         // install it
-        serviceBuilder.install();
-        assertController(serviceName, serviceStart);
+        ServiceController<?> serviceController = assertController(serviceName, serviceBuilder.install());
+        assertController(serviceController, serviceStart);
         try {
             // edition of a already installed builder should fail
             serviceBuilder.addListener(testListener);
             fail("IllegalStateException expected");
         } catch (IllegalStateException e) {}
-        // try to install again, no failures expected
-        serviceBuilder.install(); // this installation request is ignored
+        // try to install again, IllegalStateException expected
+        try {
+            serviceBuilder.install();
+            fail ("IllegalStateException expected");
+        } catch (IllegalStateException e) {}
     }
 
     /**
