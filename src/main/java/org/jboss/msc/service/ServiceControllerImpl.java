@@ -1465,6 +1465,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         public ServiceController<?> getController() {
             return ServiceControllerImpl.this;
         }
+
+        public void execute(final Runnable command) {
+            doExecute(command);
+        }
     }
 
     private void writeProfileInfo(final char statusChar, final long startNanos, final long endNanos) {
@@ -1528,6 +1532,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
         public ServiceController<?> getController() {
             return ServiceControllerImpl.this;
+        }
+
+        public void execute(final Runnable command) {
+            doExecute(command);
         }
 
         public long getElapsedTime() {

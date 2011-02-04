@@ -22,12 +22,14 @@
 
 package org.jboss.msc.service;
 
+import java.util.concurrent.Executor;
+
 /**
  * A context object for lifecycle events.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface LifecycleContext {
+public interface LifecycleContext extends Executor {
 
     /**
      * Call within the service lifecycle method to trigger an <em>asynchronous</em> lifecycle action.  This action
@@ -58,4 +60,11 @@ public interface LifecycleContext {
      * @return the service controller
      */
     ServiceController<?> getController();
+
+    /**
+     * Execute a task asynchronously using the MSC task executor.
+     *
+     * @param command the command to execute
+     */
+    void execute(Runnable command);
 }
