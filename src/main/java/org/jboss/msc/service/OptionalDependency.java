@@ -122,6 +122,7 @@ class OptionalDependency implements Dependency, Dependent {
         assert !lockHeldByDependent(dependent);
         final boolean notifyDependent;
         final DependencyState currentDependencyState;
+        optionalDependency.addDependent(this);
         synchronized (this) {
             if (this.dependent != null) {
                 throw new IllegalStateException("Optional dependent is already set");
@@ -130,7 +131,6 @@ class OptionalDependency implements Dependency, Dependent {
             notifyDependent = forwardNotifications = dependencyState.compareTo(DependencyState.INSTALLED) >= 0;
             currentDependencyState = dependencyState;
         }
-        optionalDependency.addDependent(this);
         if (notifyDependent) {
             switch (currentDependencyState) {
                 case FAILED:
