@@ -141,9 +141,8 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                                         listener.countDown();
                                         continue;
                                     }
-                                    container.shutdown();
                                     container.addTerminateListener(listener);
-
+                                    container.shutdown();
                                 }
                                 set.clear();
                             }
