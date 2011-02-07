@@ -1380,7 +1380,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 assert getSubstate() == Substate.REMOVING;
                 primaryRegistration.clearInstance(ServiceControllerImpl.this);
                 if (failed || dependencyFailed) {
-                    primaryRegistration.getContainer().checkFailedDependencies(false);
+                    primaryRegistration.getContainer().checkFailedDependencies(true);
                 }
                 for (ServiceRegistrationImpl registration : aliasRegistrations) {
                     registration.clearInstance(ServiceControllerImpl.this);

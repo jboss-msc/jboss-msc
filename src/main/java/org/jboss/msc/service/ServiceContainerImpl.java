@@ -44,12 +44,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -142,6 +143,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                                     }
                                     container.shutdown();
                                     container.addTerminateListener(listener);
+
                                 }
                                 set.clear();
                             }
@@ -474,12 +476,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             scheduleNotifierTaskPostponed = false;
         }
         if (scheduleRunnable) {
-            Runnable structureChecker = new DependentNotifierTask();
-            try {
-                getExecutor().execute(structureChecker);
-            } catch (RejectedExecutionException e) {
-                structureChecker.run();
-            }
+            NotifierTaskExecutor.executeTask(new DependentNotifierTask());
         }
     }
 
@@ -499,11 +496,11 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             // the installation of services is always followed by a dependency availability check
             // for that reason, any request to check for failures on installation should be postponed
             // to the moment when installation is complete, avoiding multiple traversals 
-            scheduleNotifierTaskPostponed = postponeExecution;
             switch(notificationScheduled) {
                 case NOT_SCHEDULED:
                     notificationScheduled = DependentNotifierSchedule.FAILED_DEPENDENCY_CHECK;
                     scheduleRunnable = !postponeExecution;
+                    scheduleNotifierTaskPostponed = postponeExecution;
                     cycleDetectionLatch = new CountDownLatch(1);
                     break;
                 case CYCLE_VISIT_CHECK:
@@ -517,12 +514,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             }
         }
         if (scheduleRunnable) {
-            Runnable structureChecker = new DependentNotifierTask();
-            try {
-                getExecutor().execute(structureChecker);
-            } catch (RejectedExecutionException e) {
-                structureChecker.run();
-            }
+            NotifierTaskExecutor.executeTask(new DependentNotifierTask());
         }
     }
 
@@ -692,10 +684,11 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         synchronized(this) {
             cycleCountDown = cycleDetectionLatch;
         }
-        if (cycleCountDown != null)
-        try {
-            cycleCountDown.await();
-        } catch (InterruptedException e) {}
+        if (cycleCountDown != null) {
+            try {
+                cycleCountDown.await();
+            } catch (InterruptedException e) {}
+        }
         return cycles;
     }
 
@@ -730,6 +723,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     }
 
     private class DependentNotifierTask implements Runnable {
+
         @Override
         public void run() {
             final DependentNotifierSchedule scheduleToExecute;
@@ -754,6 +748,42 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
             }
             cycleCountDown.countDown();
             visitor.finish();
+        }
+    }
+
+    private static class NotifierTaskExecutor  extends Thread implements Executor {
+
+        private static NotifierTaskExecutor instance;
+
+        public static void executeTask(DependentNotifierTask notifierTask) {
+            if (instance == null) {
+                instance = new NotifierTaskExecutor();
+                instance.start();
+            }
+            instance.execute(notifierTask);
+        }
+
+        private Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
+
+        public NotifierTaskExecutor() {
+            this.setDaemon(true);
+        }
+
+        @Override
+        public void run() {
+            do {
+                while (taskQueue.isEmpty()) {
+                    try {
+                        Thread.sleep(50);
+                    } catch (InterruptedException e) {}
+                }
+                taskQueue.remove().run();
+            } while(true);
+        }
+
+        @Override
+        public void execute(Runnable command) {
+            taskQueue.add(command);
         }
     }
 }
