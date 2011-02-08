@@ -649,7 +649,6 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         sixthController.setMode(Mode.REMOVE);
         assertController(sixthController, sixthServiceRemoval);
         // the dependency missing notification is expected from both third and fifth services
-        // FIXME this line failes on MultipleThreadsExecutor
         assertController(fifthController, fifthServiceDependencyMissing);
         assertController(thirdController, thirdServiceDependencyMissing);
         // meanwhile, first and second services are in the up state
@@ -802,7 +801,6 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         sixthController.setMode(Mode.REMOVE);
         assertController(sixthController, sixthServiceRemoval);
         // the entire chain should send the dependency uninstalled notification
-        // FIXME fails here!
         assertController(fifthController, fifthServiceDependencyMissing);
         assertController(thirdController, thirdServiceDependencyMissing);
         assertController(secondController, secondServiceDependencyMissing);

@@ -133,8 +133,9 @@ public abstract class AbstractDelegatingServiceTargetTest extends AbstractServic
         Future<ServiceController<?>> oneMoreServiceStart1 = testListener1.expectServiceStart(oneMoreServiceName);
         Future<ServiceController<?>> oneMoreServiceStart2 = testListener2.expectServiceStart(oneMoreServiceName);
         Future<ServiceController<?>> oneMoreServiceStart3 = testListener3.expectServiceStart(oneMoreServiceName);
-        serviceTarget.addService(oneMoreServiceName, Service.NULL).install();
-        ServiceController<?> oneMoreServiceController = assertController(oneMoreServiceName, oneMoreServiceStart1);
+        ServiceController<?> oneMoreServiceController = serviceTarget.addService(oneMoreServiceName, Service.NULL).install();
+        assertController(oneMoreServiceName, oneMoreServiceController);
+        assertController(oneMoreServiceController, oneMoreServiceStart1);
         assertController(oneMoreServiceController, oneMoreServiceStart2);
         assertController(oneMoreServiceController, oneMoreServiceStart3);
 

@@ -181,8 +181,9 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
     public void addServiceWithDefaultLocationAndInjection() throws Exception {
         Future<ServiceController<?>> anotherServiceStart = testListener.expectServiceStart(anotherServiceName);
         // install another service
-        serviceContainer.addService(anotherServiceName, Service.NULL).addListener(testListener).install();
-        assertController(anotherServiceName, anotherServiceStart);
+        ServiceController<?> anotherServiceController = serviceContainer.addService(anotherServiceName, Service.NULL).addListener(testListener).install();
+        assertController(anotherServiceName, anotherServiceController);
+        assertController(anotherServiceController, anotherServiceStart);
 
         // create dummy manager
         DummyManager dummyManager = new DummyManager();

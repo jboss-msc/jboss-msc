@@ -103,11 +103,13 @@ public class DuplicateDependencyTestCase extends AbstractServiceTest {
     @Test
     public void duplicateDependencyFailsToStart() throws Exception {
         Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
-        serviceContainer.addService(secondServiceName, new FailToStartService(true))
+        ServiceController<?> secondController = serviceContainer.addService(secondServiceName, new FailToStartService(true))
             .addAliases(secondServiceAlias1, secondServiceAlias2, secondServiceAlias3, secondServiceAlias4, secondServiceAlias5)
             .addListener(testListener)
             .install();
-        ServiceController<?> secondController = assertFailure(secondServiceAlias4, secondServiceFailure);
+        assertController(secondServiceName, secondController);
+        assertController(secondServiceAlias3, secondController);
+        assertFailure(secondServiceAlias4, secondServiceFailure);
 
         Future<ServiceController<?>> firstServiceListenerAdded = testListener.expectListenerAdded(firstServiceName);
         Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);

@@ -114,11 +114,13 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> serviceADepMissing = testListener.expectDependencyUninstall(serviceAName);
         final Future<ServiceController<?>> serviceBDepMissing = testListener.expectDependencyUninstall(serviceBName);
 
-        serviceContainer.addService(serviceAName, Service.NULL).addDependency(serviceBName).install();
-        serviceContainer.addService(serviceBName, Service.NULL).addDependency(serviceCName).install();
+        final ServiceController<?> serviceAController = serviceContainer.addService(serviceAName, Service.NULL).addDependency(serviceBName).install();
+        final ServiceController<?> serviceBController = serviceContainer.addService(serviceBName, Service.NULL).addDependency(serviceCName).install();
 
-        final ServiceController<?> serviceAController = assertController(serviceAName, serviceADepMissing);
-        final ServiceController<?> serviceBController = assertController(serviceBName, serviceBDepMissing);
+        assertController(serviceAName, serviceAController);
+        assertController(serviceAController, serviceADepMissing);
+        assertController(serviceBName, serviceBController);
+        assertController(serviceBController, serviceBDepMissing);
 
         Collection<List<ServiceName>> cycles = serviceContainer.detectCircularity();
         assertNotNull(cycles);
@@ -127,11 +129,12 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> serviceCListenerAdded = testListener.expectListenerAdded(serviceCName);
         final Future<ServiceController<?>> serviceADepInstall = testListener.expectDependencyInstall(serviceAName);
         final Future<ServiceController<?>> serviceBDepInstall = testListener.expectDependencyInstall(serviceBName);
-        serviceContainer.addService(serviceCName, Service.NULL).addDependency(serviceAName).install();
+        final ServiceController<?> serviceCController = serviceContainer.addService(serviceCName, Service.NULL).addDependency(serviceAName).install();
+        assertController(serviceCName, serviceCController);
         assertController(serviceCName, serviceCListenerAdded);
         assertController(serviceAController, serviceADepInstall);
         assertController(serviceBController, serviceBDepInstall);
-        final ServiceController<?> serviceCController = assertController(serviceCName, serviceCListenerAdded);
+        assertController(serviceCController, serviceCListenerAdded);
         assertSame(State.DOWN, serviceCController.getState());
 
         cycles = serviceContainer.detectCircularity();
@@ -591,14 +594,17 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         Future<ServiceController<?>> serviceCMissingDep = testListener.expectDependencyUninstall(serviceCName);
         Future<ServiceController<?>> serviceEStart = testListener.expectServiceStart(serviceEName);
 
-        serviceContainer.addService(serviceCName, Service.NULL).addDependency(serviceDName).install();
-        serviceContainer.addService(serviceEName, Service.NULL).addDependency(DependencyType.OPTIONAL, serviceGName).install();
-        serviceContainer.addService(serviceBName, Service.NULL).addAliases(serviceHName, serviceIName, serviceJName)
+        final ServiceController<?> serviceCController = serviceContainer.addService(serviceCName, Service.NULL).addDependency(serviceDName).install();
+        final ServiceController<?> serviceEController = serviceContainer.addService(serviceEName, Service.NULL).addDependency(DependencyType.OPTIONAL, serviceGName).install();
+        final ServiceController<?> serviceBController = serviceContainer.addService(serviceBName, Service.NULL).addAliases(serviceHName, serviceIName, serviceJName)
             .addDependency(serviceCName).addDependency(DependencyType.OPTIONAL, serviceEName).install();
 
-        final ServiceController<?> serviceBController = assertController(serviceBName, serviceBMissingDep);
-        final ServiceController<?> serviceCController = assertController(serviceCName, serviceCMissingDep);
-        final ServiceController<?> serviceEController = assertController(serviceEName, serviceEStart);
+        assertController(serviceBName, serviceBController);
+        assertController(serviceBController, serviceBMissingDep);
+        assertController(serviceCName, serviceCController);
+        assertController(serviceCController, serviceCMissingDep);
+        assertController(serviceEName, serviceEController);
+        assertController(serviceEController, serviceEStart);
 
         Collection<List<ServiceName>> cycles = serviceContainer.detectCircularity();
         assertTrue(cycles == null || cycles.isEmpty());
@@ -607,8 +613,9 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         Future<ServiceController<?>> serviceAListenerAdded = testListener.expectListenerAdded(serviceAName);
         Future<ServiceController<?>> serviceBInstalledDep = testListener.expectDependencyInstall(serviceBName);
         Future<ServiceController<?>> serviceCInstalledDep = testListener.expectDependencyInstall(serviceCName);
-        serviceContainer.addService(serviceAName, Service.NULL).addAliases(serviceDName).addDependency(serviceBName).install();
-        ServiceController<?> serviceAController = assertController(serviceAName, serviceAListenerAdded);
+        final ServiceController<?> serviceAController = serviceContainer.addService(serviceAName, Service.NULL).addAliases(serviceDName).addDependency(serviceBName).install();
+        assertController(serviceAName, serviceAController);
+        assertController(serviceAName, serviceAListenerAdded);
         assertController(serviceBController, serviceBInstalledDep);
         assertController(serviceCController, serviceCInstalledDep);
 
@@ -619,8 +626,9 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
 
         // install service F
         final Future<ServiceController<?>> serviceFListenerAdded = testListener.expectListenerAdded(serviceFName);
-        serviceContainer.addService(serviceFName, Service.NULL).addAliases(serviceGName).addDependencies(serviceIName, serviceJName).install();
-        ServiceController<?> serviceFController = assertController(serviceFName, serviceFListenerAdded);
+        final ServiceController<?> serviceFController = serviceContainer.addService(serviceFName, Service.NULL).addAliases(serviceGName).addDependencies(serviceIName, serviceJName).install();
+        assertController(serviceFName, serviceFController);
+        assertController(serviceFName, serviceFListenerAdded);
 
         cycles = serviceContainer.detectCircularity();
         assertNotNull(cycles);
@@ -677,12 +685,13 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> serviceCFailedDep = testListener.expectDependencyFailure(serviceCName);
         final Future<ServiceController<?>> serviceEFailedDep = testListener.expectDependencyFailure(serviceEName);
         final Future<ServiceController<?>> serviceFFailedDep = testListener.expectDependencyFailure(serviceFName);
-        serviceContainer.addService(serviceDName, serviceD).install();
+        final ServiceController<?> serviceDController = serviceContainer.addService(serviceDName, serviceD).install();
+        assertController(serviceDName, serviceDController);
         assertController(serviceBController, serviceBInstalledDep);
         assertController(serviceCController, serviceCInstalledDep);
         assertController(serviceEController, serviceEInstalledDep);
         assertController(serviceFController, serviceFInstalledDep);
-        final ServiceController<?> serviceDController = assertFailure(serviceDName, serviceDFailure);
+        assertFailure(serviceDController, serviceDFailure);
         assertController(serviceBController, serviceBFailedDep);
         assertController(serviceCController, serviceCFailedDep);
         assertController(serviceEController, serviceEFailedDep);
@@ -734,13 +743,15 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> serviceIStart = testListener.expectServiceStart(serviceIName);
         final Future<ServiceController<?>> serviceJStart = testListener.expectServiceStart(serviceJName);
 
-        serviceContainer.addService(serviceIName, Service.NULL).addDependency(serviceJName).install();
-        serviceContainer.addService(serviceJName, Service.NULL).install();
+        final ServiceController<?> serviceIController = serviceContainer.addService(serviceIName, Service.NULL).addDependency(serviceJName).install();
+        assertController(serviceIName, serviceIController);
+        final ServiceController<?> serviceJController = serviceContainer.addService(serviceJName, Service.NULL).install();
+        assertController(serviceJName, serviceJController);
 
         assertController(serviceEController, serviceEStart);
         assertController(serviceFController, serviceFStart);
-        assertController(serviceIName, serviceIStart);
-        assertController(serviceJName, serviceJStart);
+        assertController(serviceIController, serviceIStart);
+        assertController(serviceJController, serviceJStart);
         // services C and D else remain in UP state
         assertSame(State.UP, serviceCController.getState());
         assertSame(State.UP, serviceDController.getState());
