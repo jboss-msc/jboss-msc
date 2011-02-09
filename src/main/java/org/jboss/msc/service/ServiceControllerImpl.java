@@ -793,17 +793,20 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     void addChild(ServiceControllerImpl<?> child) {
         assert ! lockHeld();
+        final Runnable[] tasks;
         synchronized (this) {
             switch (state) {
                 case STARTING:
                 case UP:
                 case STOP_REQUESTED: {
                     children.add(child);
+                    tasks = newDependent(child);
                     break;
                 }
                 default: throw new IllegalStateException("Children cannot be added in state " + state.getState());
             }
         }
+        doExecute(tasks);
     }
 
     void removeChild(ServiceControllerImpl<?> child) {
@@ -1077,19 +1080,22 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private Dependent[][] getDependents() {
         if (aliasRegistrations.length == 0) {
             synchronized (primaryRegistration.getDependentsLock()) {
-                return new Dependent[][] {primaryRegistration.getDependents().toScatteredArray(NO_DEPENDENTS)};
+                return new Dependent[][] {primaryRegistration.getDependents().toScatteredArray(NO_DEPENDENTS),
+                        children.toScatteredArray(NO_DEPENDENTS)};
             }
         }
-        Dependent[][] dependents = new Dependent[aliasRegistrations.length + 1][];
+        Dependent[][] dependents = new Dependent[aliasRegistrations.length + 2][];
         synchronized (primaryRegistration.getDependentsLock()) {
             dependents[0] = primaryRegistration.getDependents().toScatteredArray(NO_DEPENDENTS);
         }
+        dependents[1] = children.toScatteredArray(NO_DEPENDENTS);
         for (int i = 0; i < aliasRegistrations.length; i++) {
             ServiceRegistrationImpl alias = aliasRegistrations[i];
             synchronized (alias.getDependentsLock()) {
-                dependents[i + 1] = alias.getDependents().toScatteredArray(NO_DEPENDENTS);
+                dependents[i + 2] = alias.getDependents().toScatteredArray(NO_DEPENDENTS);
             }
         }
+        
         return dependents;
     }
 

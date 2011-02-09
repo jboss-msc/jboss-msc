@@ -55,7 +55,7 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
     protected ServiceTarget serviceTarget;
 
     @Before
-    public void initializeServiceTarget() {
+    public void initializeServiceTarget() throws Exception {
         serviceTarget = getServiceTarget(serviceContainer);
     }
 

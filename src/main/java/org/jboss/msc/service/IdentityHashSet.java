@@ -358,9 +358,9 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
      *         placed nulls,
      */
     @SuppressWarnings({ "unchecked" })
-    public E[] toScatteredArray(E[] dummy) {
-        final E[] ret = (E[]) Array.newInstance(dummy.getClass().getComponentType(), table.length);
-        System.arraycopy((E[])table, 0, ret, 0, ret.length);
+    public <T> T[] toScatteredArray( T[] dummy) {
+        final T[] ret = (T[]) Array.newInstance(dummy.getClass().getComponentType(), table.length);
+        System.arraycopy((T[])table, 0, ret, 0, ret.length);
         
         return ret;
     }
