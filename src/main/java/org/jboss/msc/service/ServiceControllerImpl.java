@@ -1582,6 +1582,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             return super.install(serviceBuilder);
         }
+
+        protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
+            return super.createServiceBuilder(name, value, ServiceControllerImpl.this);
+        }
     }
 
     private void writeProfileInfo(final char statusChar, final long startNanos, final long endNanos) {
