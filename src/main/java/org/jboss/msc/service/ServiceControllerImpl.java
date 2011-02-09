@@ -128,7 +128,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     /**
      * The service target for adding child services (can be {@code null} if none were added).
      */
-    private ChildServiceTarget childTarget;
+    private volatile ChildServiceTarget childTarget;
     /**
      * The system nanotime of the moment in which the last lifecycle change was initiated.
      */
@@ -1516,7 +1516,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 if (state == ContextState.COMPLETE || state == ContextState.FAILED) {
                     throw new IllegalStateException("Lifecycle context is no longer valid");
                 }
-                return ServiceControllerImpl.this.getChildTarget();
+                if (childTarget == null) {
+                    childTarget = new ChildServiceTarget(parent == null ? getServiceContainer() : parent.childTarget);
+                }
+                return childTarget;
             }
         }
 
@@ -1558,15 +1561,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         public void execute(final Runnable command) {
             doExecute(command);
         }
-    }
-
-    ServiceTargetImpl getChildTarget() {
-        assert lockHeld();
-        if (childTarget == null) {
-            final ServiceControllerImpl<?> parent = this.parent;
-            childTarget = new ChildServiceTarget(parent == null ? getServiceContainer() : parent.getChildTarget());
-        }
-        return childTarget;
     }
 
     private final class ChildServiceTarget extends ServiceTargetImpl {
