@@ -23,15 +23,15 @@
 package org.jboss.msc.service;
 
 /**
- * Test for {@link DelegatingServiceTarget}.
+ * Test for {@link BatchServiceTarget} implementation.
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
- *
  */
-public class DelegatingServiceTargetTestCase extends ServiceTargetWrapperTest {
+public class BatchServiceTargetTestCase extends AbstractServiceTargetTest {
 
     @Override
     protected ServiceTarget getServiceTarget(ServiceTarget serviceTarget) {
-        return new DelegatingServiceTarget(serviceTarget);
+        return serviceTarget.batchTarget();
     }
+
 }

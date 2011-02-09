@@ -140,4 +140,11 @@ public interface ServiceTarget {
      * @return the new service target
      */
     ServiceTarget subTarget();
+
+    /**
+     * Create a new batch service target, which is used to install described services in this target.
+     *
+     * @return the new batch service target
+     */
+    BatchServiceTarget batchTarget();
 }

@@ -34,12 +34,12 @@ import org.junit.Test;
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  *
  */
-public class TrackingServiceTargetTestCase extends AbstractDelegatingServiceTargetTest {
+public class TrackingServiceTargetTestCase extends ServiceTargetWrapperTest {
 
     private TrackingServiceTarget trackingServiceTarget; 
 
     @Override
-    protected ServiceTarget getDelegatingServiceTarget(ServiceTarget serviceTarget) {
+    protected ServiceTarget getServiceTarget(ServiceTarget serviceTarget) {
         trackingServiceTarget = new TrackingServiceTarget(serviceTarget);
         return trackingServiceTarget;
     }
@@ -62,7 +62,6 @@ public class TrackingServiceTargetTestCase extends AbstractDelegatingServiceTarg
         assertTrue(services.contains(ServiceName.of("service", "name")));
     }
 
-     
     @Test
     public void addServiceWithDependency() throws Exception {
         super.addServiceWithDependency();

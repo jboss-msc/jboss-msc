@@ -23,15 +23,16 @@
 package org.jboss.msc.service;
 
 /**
- * Test for {@link DelegatingServiceTarget}.
+ * Runs all the tests in {@code AbstractServiceTargetTest} against the service container.
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  *
  */
-public class DelegatingServiceTargetTestCase extends ServiceTargetWrapperTest {
+public class ServiceTargetTestCase extends AbstractServiceTargetTest {
 
     @Override
     protected ServiceTarget getServiceTarget(ServiceTarget serviceTarget) {
-        return new DelegatingServiceTarget(serviceTarget);
+        return serviceTarget;
     }
+
 }

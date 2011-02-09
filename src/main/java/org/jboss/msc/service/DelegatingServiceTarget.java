@@ -116,4 +116,9 @@ public class DelegatingServiceTarget implements ServiceTarget {
     public ServiceTarget subTarget() {
         return delegate.subTarget();
     }
+
+    /** {@inheritDoc} */
+    public BatchServiceTarget batchTarget() {
+        return delegate.batchTarget();
+    }
 }

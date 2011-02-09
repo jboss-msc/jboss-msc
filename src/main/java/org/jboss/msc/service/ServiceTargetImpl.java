@@ -188,8 +188,22 @@ class ServiceTargetImpl implements ServiceTarget {
         return parent.install(serviceBuilder);
     }
 
+    /**
+     * Returns the serviceRegistry that contains all services installed by this target.
+     * 
+     * @return the serviceRegistry containing services installed by this target
+     */
+    ServiceRegistry getServiceRegistry() {
+        return parent.getServiceRegistry();
+    }
+
     @Override
     public ServiceTarget subTarget() {
         return new ServiceTargetImpl(this);
+    }
+
+    @Override
+    public BatchServiceTarget batchTarget() {
+        return new BatchServiceTargetImpl(this, getServiceRegistry());
     }
 }

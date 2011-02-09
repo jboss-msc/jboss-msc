@@ -325,6 +325,11 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         listener.await(timeout, unit);
     }
 
+    @Override
+    public ServiceRegistry getServiceRegistry() {
+        return this;
+    }
+
     boolean isShutdown() {
         return down;
     }
