@@ -119,8 +119,8 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          */
         public static ServiceContainer create() {
             int cpuCount = Runtime.getRuntime().availableProcessors();
-            int coreSize = Math.min(cpuCount >> 2, 2);
-            int maxSize = Math.min(cpuCount << 1, coreSize);
+            int coreSize = Math.max(cpuCount >> 2, 2);
+            int maxSize = Math.max(cpuCount << 1, coreSize);
             return new ServiceContainerImpl(null, coreSize, maxSize, 30L, TimeUnit.SECONDS);
         }
 
@@ -132,8 +132,8 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          */
         public static ServiceContainer create(String name) {
             int cpuCount = Runtime.getRuntime().availableProcessors();
-            int coreSize = Math.min(cpuCount >> 2, 2);
-            int maxSize = Math.min(cpuCount << 1, coreSize);
+            int coreSize = Math.max(cpuCount >> 2, 2);
+            int maxSize = Math.max(cpuCount << 1, coreSize);
             return new ServiceContainerImpl(name, coreSize, maxSize, 30L, TimeUnit.SECONDS);
         }
 
