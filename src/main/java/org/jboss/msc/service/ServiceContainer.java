@@ -39,20 +39,6 @@ import org.jboss.msc.inject.Injector;
 public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
 
     /**
-     * Set the container executor.  If {@code null} is specified, a default single-thread executor is used.
-     * <p>
-     * You <b>must</b> adhere to the following rules when setting an executor:
-     * <ul>
-     * <li>The executor must always accept tasks (throwing {@link java.util.concurrent.RejectedExecutionException RejectedExecutionException}
-     * can cause significant problems)</li>
-     * <li>The executor must be removed (by setting this value to {@code null} or another executor) before it is shut down.</li>
-     * </ul>
-     *
-     * @param executor the executor to use
-     */
-    void setExecutor(Executor executor);
-
-    /**
      * Stop all services within this container.
      */
     void shutdown();
@@ -127,55 +113,55 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
         }
 
         /**
-         * Create a new instance with a generated name.
+         * Create a new instance with a generated name and default thread pool.
          *
          * @return a new service container instance
          */
         public static ServiceContainer create() {
-            return new ServiceContainerImpl(null);
+            int cpuCount = Runtime.getRuntime().availableProcessors();
+            int coreSize = Math.min(cpuCount >> 2, 2);
+            int maxSize = Math.min(cpuCount << 1, coreSize);
+            return new ServiceContainerImpl(null, coreSize, maxSize, 30L, TimeUnit.SECONDS);
         }
 
         /**
-         * Create a new instance with a given name.
+         * Create a new instance with a given name and default thread pool.
          *
          * @param name the name of the new container
          * @return a new service container instance
          */
         public static ServiceContainer create(String name) {
-            return new ServiceContainerImpl(name);
-        }
-    }
-
-    /**
-     * A convenience injector for the container executor.  This class makes it easier to implement
-     * a service which configures a thread pool on a container.
-     */
-    class ExecutorInjector implements Injector<Executor> {
-
-        private final ServiceContainer container;
-
-        private ExecutorInjector(final ServiceContainer container) {
-            this.container = container;
+            int cpuCount = Runtime.getRuntime().availableProcessors();
+            int coreSize = Math.min(cpuCount >> 2, 2);
+            int maxSize = Math.min(cpuCount << 1, coreSize);
+            return new ServiceContainerImpl(name, coreSize, maxSize, 30L, TimeUnit.SECONDS);
         }
 
         /**
-         * Construct a new instance.
+         * Create a new instance with a generated name and specified initial thread pool settings.
          *
-         * @param container the container to create the injector for
-         * @return the injector
+         * @param coreSize the core pool size (must be greater than zero)
+         * @param maxSize the maximum pool size (must be greater than, or equal to, {@code coreSize})
+         * @param keepAliveTime the amount of time that non-core threads should linger without tasks
+         * @param keepAliveTimeUnit the time unit for {@code keepAliveTime}
+         * @return a new service container instance
          */
-        public static ExecutorInjector create(final ServiceContainer container) {
-            return new ExecutorInjector(container);
+        public static ServiceContainer create(int coreSize, int maxSize, long keepAliveTime, TimeUnit keepAliveTimeUnit) {
+            return new ServiceContainerImpl(null, coreSize, maxSize, keepAliveTime, keepAliveTimeUnit);
         }
 
-        /** {@inheritDoc} */
-        public void inject(final Executor value) throws InjectionException {
-            container.setExecutor(value);
-        }
-
-        /** {@inheritDoc} */
-        public void uninject() {
-            container.setExecutor(null);
+        /**
+         * Create a new instance with a given name and specified initial thread pool settings.
+         *
+         * @param name the name of the new container
+         * @param coreSize the core pool size (must be greater than zero)
+         * @param maxSize the maximum pool size (must be greater than, or equal to, {@code coreSize})
+         * @param keepAliveTime the amount of time that non-core threads should linger without tasks
+         * @param keepAliveTimeUnit the time unit for {@code keepAliveTime}
+         * @return a new service container instance
+         */
+        public static ServiceContainer create(String name, int coreSize, int maxSize, long keepAliveTime, TimeUnit keepAliveTimeUnit) {
+            return new ServiceContainerImpl(name, coreSize, maxSize, keepAliveTime, keepAliveTimeUnit);
         }
     }
 

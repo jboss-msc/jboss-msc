@@ -74,8 +74,8 @@ interface ServiceLogger {
     void internalServiceError(@Cause Throwable cause, ServiceName serviceName);
 
     @LogMessage(level = ERROR)
-    @Message(id = 8, value = "A worker thread threw an uncaught exception")
-    void uncaughtException(@Cause Throwable cause);
+    @Message(id = 8, value = "Worker thread %s threw an uncaught exception")
+    void uncaughtException(@Cause Throwable cause, Thread thread);
 
     @LogMessage(level = WARN)
     @Message(id = 9, value = "An error occurred while trying to close the profile output file: %s")

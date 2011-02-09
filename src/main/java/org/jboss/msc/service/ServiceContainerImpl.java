@@ -91,33 +91,9 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     private final Map<ServiceName, ServiceRegistrationImpl> registry = new UnlockedReadHashMap<ServiceName, ServiceRegistrationImpl>(512);
 
     private final long start = System.nanoTime();
+    private long shutdownInitiated;
 
     private final List<TerminateListener> terminateListeners = new ArrayList<TerminateListener>(1);
-
-    private static final class ExecutorHolder {
-        private static final Executor VALUE;
-
-        static {
-            final ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 30L, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
-                public Thread newThread(final Runnable r) {
-                    final Thread thread = new Thread(r);
-                    thread.setDaemon(true);
-                    thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-                        public void uncaughtException(final Thread t, final Throwable e) {
-                            ServiceLogger.INSTANCE.uncaughtException(e);
-                        }
-                    });
-                    return thread;
-                }
-            });
-            executor.allowCoreThreadTimeOut(true);
-            executor.setCorePoolSize(1);
-            VALUE = executor;
-        }
-
-        private ExecutorHolder() {
-        }
-    }
 
     private static final class ShutdownHookHolder {
         private static final Set<Reference<ServiceContainerImpl, Void>> containers;
@@ -171,7 +147,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
     private volatile boolean down = false;
 
-    private volatile Executor executor;
+    private final ContainerExecutor executor;
 
     private final String name;
     private final MBeanServer mBeanServer;
@@ -255,13 +231,14 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
     };
 
-    ServiceContainerImpl(String name) {
+    ServiceContainerImpl(String name, int coreSize, int maxSize, long timeOut, TimeUnit timeOutUnit) {
         super(null);
         final int serialNo = SERIAL.getAndIncrement();
         if (name == null) {
             name = String.format("anonymous-%d", Integer.valueOf(serialNo));
         }
         this.name = name;
+        executor = new ContainerExecutor(coreSize, maxSize, timeOut, timeOutUnit);
         ObjectName objectName = null;
         MBeanServer mBeanServer = null;
         try {
@@ -322,10 +299,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         return start;
     }
 
-    public void setExecutor(final Executor executor) {
-        this.executor = executor;
-    }
-
     @Override
     public synchronized void addTerminateListener(TerminateListener listener) {
         if (terminateInfo != null) { // if shutdown is already performed 
@@ -356,17 +329,16 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
     public void shutdown() {
         final MultipleRemoveListener<Runnable> shutdownListener;
-        final long started;
         synchronized(this) {
             if (down){
                 return;
             }
             down = true;
+            shutdownInitiated = System.nanoTime();
         }
-        started =  System.nanoTime();
         shutdownListener = MultipleRemoveListener.create(new Runnable() {
             public void run() {
-                shutdownComplete(started);
+                executor.shutdown();
             }
         });
         final HashSet<ServiceControllerImpl<?>> done = new HashSet<ServiceControllerImpl<?>>();
@@ -444,8 +416,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     }
 
     Executor getExecutor() {
-        final Executor executor = this.executor;
-        return executor != null ? executor : ExecutorHolder.VALUE;
+        return executor;
     }
 
     /**
@@ -756,7 +727,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         private Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
 
         public NotifierTaskExecutor() {
-            this.setDaemon(true);
+            setDaemon(true);
         }
 
         @Override
@@ -774,6 +745,34 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         @Override
         public void execute(Runnable command) {
             taskQueue.add(command);
+        }
+    }
+
+    private static final AtomicInteger executorSeq = new AtomicInteger(1);
+    private static final Thread.UncaughtExceptionHandler HANDLER = new Thread.UncaughtExceptionHandler() {
+        public void uncaughtException(final Thread t, final Throwable e) {
+            ServiceLogger.INSTANCE.uncaughtException(e, t);
+        }
+    };
+    private static final ThreadPoolExecutor.CallerRunsPolicy POLICY = new ThreadPoolExecutor.CallerRunsPolicy();
+
+    final class ContainerExecutor extends ThreadPoolExecutor {
+
+        ContainerExecutor(final int corePoolSize, final int maximumPoolSize, final long keepAliveTime, final TimeUnit unit) {
+            super(corePoolSize, maximumPoolSize, keepAliveTime, unit, new LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
+                private final int id = executorSeq.getAndIncrement();
+                private final AtomicInteger threadSeq = new AtomicInteger(1);
+                public Thread newThread(final Runnable r) {
+                    Thread thread = new Thread(r);
+                    thread.setName(String.format("MSC service thread %d-%d", Integer.valueOf(id), Integer.valueOf(threadSeq.getAndIncrement())));
+                    thread.setUncaughtExceptionHandler(HANDLER);
+                    return thread;
+                }
+            }, POLICY);
+        }
+
+        protected void terminated() {
+            shutdownComplete(shutdownInitiated);
         }
     }
 }

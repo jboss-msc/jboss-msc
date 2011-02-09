@@ -29,7 +29,6 @@ import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
-import org.jboss.msc.service.TimingServiceListener;
 import org.jboss.msc.service.util.LatchedFinishListener;
 import org.jboss.msc.value.CachedValue;
 import org.jboss.msc.value.ImmediateValue;
@@ -42,11 +41,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import org.jboss.msc.value.Values;
 
 public class InjectionsWithStartBench {
 
@@ -55,8 +49,6 @@ public class InjectionsWithStartBench {
         final int threadPoolSize = Integer.parseInt(args[1]);
 
         final ServiceContainer container = ServiceContainer.Factory.create();
-        final ThreadPoolExecutor executor = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 1000, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
-        container.setExecutor(executor);
 
         final LatchedFinishListener listener = new LatchedFinishListener();
 
@@ -89,7 +81,6 @@ public class InjectionsWithStartBench {
         listener.await();
         System.out.println(totalServiceDefinitions + " : " + listener.getElapsedTime() / 1000.0);
         container.shutdown();
-        executor.shutdown();
     }
 
     public static class TestObject {

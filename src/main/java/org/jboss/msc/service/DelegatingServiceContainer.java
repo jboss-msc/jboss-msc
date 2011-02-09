@@ -26,7 +26,6 @@ import java.io.PrintStream;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.msc.value.Value;
@@ -134,11 +133,6 @@ public class DelegatingServiceContainer implements ServiceContainer {
 
     /** {@inheritDoc} */
     public String getName() {
-        throw new UnsupportedOperationException();
-    }
-
-    /** {@inheritDoc} */
-    public void setExecutor(final Executor executor) {
         throw new UnsupportedOperationException();
     }
 
