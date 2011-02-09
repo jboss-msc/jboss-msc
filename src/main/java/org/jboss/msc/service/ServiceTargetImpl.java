@@ -35,40 +35,52 @@ import org.jboss.msc.value.Value;
  *
  * @author John Bailey
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-abstract class AbstractServiceTarget implements ServiceTarget {
+class ServiceTargetImpl implements ServiceTarget {
 
+    private final ServiceTargetImpl parent;
     private final Set<ServiceListener<Object>> listeners = Collections.synchronizedSet(new HashSet<ServiceListener<Object>>());
     private final Set<ServiceName> dependencies = Collections.synchronizedSet(new HashSet<ServiceName>());
 
-    @Override
-    public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
-        return createServiceBuilder(name, value);
+    ServiceTargetImpl(final ServiceTargetImpl parent) {
+        this.parent = parent;
     }
 
-    private <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
-        validateTargetState();
-        if (hasService(name)) {
-            throw new IllegalArgumentException("Service named " + name + " is already defined in this batch");
+    @Override
+    public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
+        return createServiceBuilder(name, value, null);
+    }
+
+    protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
+        if (name == null) {
+            throw new IllegalArgumentException("name is null");
         }
-        return new ServiceBuilderImpl<T>(this, value, name);
+        if (value == null) {
+            throw new IllegalArgumentException("value is null");
+        }
+        return new ServiceBuilderImpl<T>(this, value, name, parent);
     }
 
     @Override
     public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
-        return createServiceBuilder(name, new ImmediateValue<Service<T>>(service));
+        return createServiceBuilder(name, new ImmediateValue<Service<T>>(service), null);
     }
 
     @Override
     public ServiceTarget addListener(ServiceListener<Object> listener) {
-        validateTargetState();
+        if (listener == null) {
+            return this;
+        }
         listeners.add(listener);
         return this;
     }
 
     @Override
     public ServiceTarget addListener(ServiceListener<Object>... listeners) {
-        validateTargetState();
+        if (listeners == null) {
+            return this;
+        }
         final Set<ServiceListener<Object>> batchListeners = this.listeners;
 
         for(ServiceListener<Object> listener : listeners) {
@@ -79,9 +91,9 @@ abstract class AbstractServiceTarget implements ServiceTarget {
 
     @Override
     public ServiceTarget addListener(Collection<ServiceListener<Object>> listeners) {
-        validateTargetState();
-        if (listeners == null)
-            throw new IllegalArgumentException("Listeners can not be null");
+        if (listeners == null) {
+            return this;
+        }
 
         final Set<ServiceListener<Object>> batchListeners = this.listeners;
 
@@ -93,6 +105,9 @@ abstract class AbstractServiceTarget implements ServiceTarget {
 
     @Override
     public ServiceTarget removeListener(final ServiceListener<Object> listener) {
+        if (listener == null) {
+            return this;
+        }
         listeners.remove(listener);
         return this;
     }
@@ -104,34 +119,42 @@ abstract class AbstractServiceTarget implements ServiceTarget {
 
     @Override
     public ServiceTarget addDependency(ServiceName dependency) {
-        validateTargetState();
+        if (dependency == null) {
+            return this;
+        }
         dependencies.add(dependency);
         return this;
     }
 
     @Override
     public ServiceTarget addDependency(ServiceName... dependencies) {
-        validateTargetState();
-        final Set<ServiceName> batchDependencies = this.dependencies;
+        if (dependencies == null) {
+            return this;
+        }
+        final Set<ServiceName> myDependencies = this.dependencies;
         for(ServiceName dependency : dependencies) {
-            batchDependencies.add(dependency);
+            myDependencies.add(dependency);
         }
         return this;
     }
 
     @Override
     public ServiceTarget addDependency(Collection<ServiceName> dependencies) {
-        validateTargetState();
-        if(dependencies == null) throw new IllegalArgumentException("Dependencies can not be null");
-        final Set<ServiceName> batchDependencies = this.dependencies;
+        if (dependencies == null) {
+            return this;
+        }
+        final Set<ServiceName> myDependencies = this.dependencies;
         for(ServiceName dependency : dependencies) {
-            batchDependencies.add(dependency);
+            myDependencies.add(dependency);
         }
         return this;
     }
 
     @Override
     public ServiceTarget removeDependency(final ServiceName dependency) {
+        if (dependency == null) {
+            return this;
+        }
         dependencies.remove(dependency);
         return this;
     }
@@ -139,19 +162,6 @@ abstract class AbstractServiceTarget implements ServiceTarget {
     @Override
     public Set<ServiceName> getDependencies() {
         return Collections.unmodifiableSet(dependencies);
-    }
-
-    /**
-     * Apply listeners and dependencies to {@code serviceBuilders}.
-     * 
-     * @param serviceBuilders a collection of the ServiceBuilders which the listeners and dependencies
-     *                        will be added to.
-     */
-    void apply(Collection<ServiceBuilderImpl<?>> serviceBuilders) {
-        for(ServiceBuilderImpl<?> serviceBuilder : serviceBuilders) {
-            serviceBuilder.addListenerNoCheck(listeners);
-            serviceBuilder.addDependenciesNoCheck(dependencies);
-        }
     }
 
     /**
@@ -166,32 +176,20 @@ abstract class AbstractServiceTarget implements ServiceTarget {
 
     /**
      * Install {@code serviceBuilder} in this target.
-     * 
-     * @param serviceBuilder            a serviceBuilder created by this ServiceTarget
+     *
+     * @param serviceBuilder a serviceBuilder created by this ServiceTarget
+     *
      * @return the installed service controller
+     *
      * @throws ServiceRegistryException if a service registry issue occurred during installation
      */
-    abstract <T> ServiceController<T> install(ServiceBuilderImpl<T> serviceBuilder) throws ServiceRegistryException;
-
-    /**
-     * Indicate whether a service with the specified name exists in this target.
-     * 
-     * @param name the specified name
-     * @return {@code true} if the service exists in this target
-     */
-    abstract boolean hasService(ServiceName name);
-
-    /**
-     * Validate the state of this target, checking if it is valid for additions.
-     * This method is invoked prior to every new addition of Services, Dependencies and ServiceListeners.
-     * 
-     * @throws IllegalStateException if the state is not valid for additions
-     */
-    abstract void validateTargetState() throws IllegalStateException;
+    <T> ServiceController<T> install(ServiceBuilderImpl<T> serviceBuilder) throws ServiceRegistryException {
+        apply(serviceBuilder);
+        return parent.install(serviceBuilder);
+    }
 
     @Override
     public ServiceTarget subTarget() {
-        validateTargetState();
-        return new SubTarget(this);
+        return new ServiceTargetImpl(this);
     }
 }

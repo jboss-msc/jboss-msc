@@ -44,7 +44,8 @@ import org.jboss.msc.value.Value;
 */
 class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
-    private final AbstractServiceTarget serviceTarget;
+    private final ServiceControllerImpl<?> parent;
+    private final ServiceTargetImpl serviceTarget;
     private final Value<? extends Service<T>> serviceValue;
     private final ServiceName serviceName;
     private Location location;
@@ -82,7 +83,8 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         }
     }
 
-    ServiceBuilderImpl(AbstractServiceTarget serviceTarget, final Value<? extends Service<T>> serviceValue, final ServiceName serviceName) {
+    ServiceBuilderImpl(ServiceTargetImpl serviceTarget, final Value<? extends Service<T>> serviceValue, final ServiceName serviceName, final ServiceControllerImpl<?> parent) {
+        this.parent = parent;
         if(serviceTarget == null) throw new IllegalArgumentException("ServiceTarget can not be null");
         this.serviceTarget = serviceTarget;
         if(serviceValue == null) throw new IllegalArgumentException("ServiceValue can not be null");
@@ -334,5 +336,9 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     ServiceTarget getTarget() {
         return serviceTarget;
+    }
+
+    ServiceControllerImpl<?> getParent() {
+        return parent;
     }
 }

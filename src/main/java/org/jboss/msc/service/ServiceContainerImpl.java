@@ -73,7 +73,7 @@ import org.jboss.msc.service.management.ServiceStatus;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
-final class ServiceContainerImpl extends AbstractServiceTarget implements ServiceContainer {
+final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceContainer {
 
     private static final AtomicInteger SERIAL = new AtomicInteger(1);
 
@@ -256,6 +256,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
     };
 
     ServiceContainerImpl(String name) {
+        super(null);
         final int serialNo = SERIAL.getAndIncrement();
         if (name == null) {
             name = String.format("anonymous-%d", Integer.valueOf(serialNo));
@@ -555,7 +556,7 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
         final ValueInjection<?>[] injections = valueInjections.toArray(new ValueInjection<?>[valueInjections.size()]);
 
         // Next create the actual controller
-        final ServiceControllerImpl<S> instance = new ServiceControllerImpl<S>(serviceBuilder.getServiceValue(), serviceBuilder.getLocation(), dependencies, injections, primaryRegistration, aliasRegistrations, serviceBuilder.getListeners());
+        final ServiceControllerImpl<S> instance = new ServiceControllerImpl<S>(serviceBuilder.getServiceValue(), serviceBuilder.getLocation(), dependencies, injections, primaryRegistration, aliasRegistrations, serviceBuilder.getListeners(), serviceBuilder.getParent());
 
         boolean ok = false;
         try {
@@ -645,7 +646,9 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
 
     @Override
     <T> ServiceController<T> install(final ServiceBuilderImpl<T> serviceBuilder) throws DuplicateServiceException {
-        validateTargetState();
+        if (down) {
+            throw new IllegalStateException ("Container is down");
+        }
         ServiceControllerImpl<T> instance = null;
         boolean ok = false;
         try {
@@ -662,19 +665,6 @@ final class ServiceContainerImpl extends AbstractServiceTarget implements Servic
                 checkMissingDependencies(); // verify if there are new missing dependencies or
                 // new cycles to notify after service installation
             }
-        }
-    }
-
-    @Override
-    boolean hasService(ServiceName name) {
-        final ServiceRegistrationImpl serviceRegistration = registry.get(name);
-        return serviceRegistration != null && serviceRegistration.getInstance() != null;
-    }
-
-    @Override
-    void validateTargetState() {
-        if (down) {
-            throw new IllegalStateException ("Container is down");
         }
     }
 

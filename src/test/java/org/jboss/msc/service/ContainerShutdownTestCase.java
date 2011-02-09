@@ -287,57 +287,24 @@ public class ContainerShutdownTestCase extends AbstractServiceTest{
         serviceContainer.addDependency(serviceName3);
         shutdownContainer();
 
-        try {
-            serviceContainer.addDependency(new ArrayList<ServiceName>());
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-
-        try {
-            serviceContainer.addDependency(serviceName2);
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-
-        try {
-            serviceContainer.addDependency(serviceName3, serviceName4);
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-
-        try {
-            serviceContainer.addListener(new ArrayList<ServiceListener<Object>>());
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-
-        try {
-            serviceContainer.addListener(new TestServiceListener());
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-
-        try {
-            serviceContainer.addListener(new TestServiceListener(), new TestServiceListener());
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-        
-        try {
-            serviceContainer.addService(serviceName4, Service.NULL);
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-
-        try {
-            serviceContainer.addServiceValue(serviceName3, Values.<Service<Void>>nullValue());
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
+        serviceContainer.addDependency(new ArrayList<ServiceName>());
+        serviceContainer.addDependency(serviceName2);
+        serviceContainer.addDependency(serviceName3, serviceName4);
+        serviceContainer.addListener(new ArrayList<ServiceListener<Object>>());
+        serviceContainer.addListener(new TestServiceListener());
+        serviceContainer.addListener(new TestServiceListener(), new TestServiceListener());
+        serviceContainer.addService(serviceName4, Service.NULL);
+        serviceContainer.addServiceValue(serviceName3, Values.<Service<Void>>nullValue());
 
         // listeners can be read without any problems
         Set<ServiceListener<Object>> listeners = serviceContainer.getListeners();
         assertNotNull(listeners);
-        assertEquals(1, listeners.size());
-        assertSame(testListener, listeners.iterator().next());
+        assertEquals(4, listeners.size());
 
         // the same goes with dependencies set
         Set<ServiceName> dependencies = serviceContainer.getDependencies();
         assertNotNull(dependencies);
-        assertEquals(1, dependencies.size());
-        assertSame(serviceName3, dependencies.iterator().next());
+        assertEquals(3, dependencies.size());
 
         // we can also invoke any method on the serviceBuilder...
         builderFromContainer.addAliases(serviceName2, serviceName3, serviceName4);

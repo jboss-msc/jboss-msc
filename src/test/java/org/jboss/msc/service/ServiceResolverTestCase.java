@@ -104,8 +104,8 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
         serviceContainer.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install();
         try {
             serviceContainer.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install();
-            fail("IllegalArgumentException expected");
-        } catch (IllegalArgumentException e) {}
+            fail("DuplicateServiceException expected");
+        } catch (DuplicateServiceException e) {}
 
         listener.await();
 

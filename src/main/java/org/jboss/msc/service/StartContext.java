@@ -37,4 +37,13 @@ public interface StartContext extends LifecycleContext {
      * completed
      */
     void failed(StartException reason) throws IllegalStateException;
+
+    /**
+     * Get a service target which may be used to add child services.  Child services have an implicit dependency on
+     * their parent, and are automatically removed when the parent service stops (or if the parent service fails
+     * during startup).
+     *
+     * @return the child target
+     */
+    ServiceTarget getChildTarget();
 }

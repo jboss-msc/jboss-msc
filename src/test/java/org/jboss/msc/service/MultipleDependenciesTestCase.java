@@ -191,26 +191,11 @@ public class MultipleDependenciesTestCase extends AbstractServiceTest {
             fail("NullPointerException expected");
         } catch (NullPointerException e) {}
 */
-        try {
-            serviceContainer.addDependency((ServiceName[]) null);
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
-
-        try {
-            serviceContainer.addDependency((Collection<ServiceName>) null);
-            fail("IllegalArgumentException expected");
-        } catch (IllegalArgumentException e) {}
-
-        try {
-            serviceContainer.addListener((ServiceListener<Object>[]) null);
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
-
-        try {
-            serviceContainer.addListener((Collection<ServiceListener<Object>>) null);
-            fail("IllegalArgumentException expected");
-        } catch (IllegalArgumentException e) {}
-
+        // No exception expected
+        serviceContainer.addDependency((ServiceName[]) null);
+        serviceContainer.addDependency((Collection<ServiceName>) null);
+        serviceContainer.addListener((ServiceListener<Object>[]) null);
+        serviceContainer.addListener((Collection<ServiceListener<Object>>) null);
         try {
             serviceContainer.addService(null, Service.NULL);
             fail("IllegalArgumentException expected");

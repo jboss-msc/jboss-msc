@@ -43,12 +43,14 @@ public class ServiceStatus implements Serializable {
     private final String[] dependencies;
     private final boolean dependencyFailed;
     private final boolean dependencyMissing;
+    private final String parentName;
 
     /**
      * Construct a new instance.
      *
+     * @param parentName the name of the parent
      * @param serviceName the service name
-     * @param aliases
+     * @param aliases the aliases of this service
      * @param serviceClassName the name of the service class
      * @param modeName the service mode name
      * @param stateName the service state name
@@ -57,8 +59,8 @@ public class ServiceStatus implements Serializable {
      * @param dependencyFailed {@code true} if some dependency is failed
      * @param dependencyMissing {@code true} if some dependency is missing
      */
-    @ConstructorProperties({"serviceName", "serviceClassName", "modeName", "stateName", "substateName", "dependencies", "dependencyFailed", "dependencyMissing"})
-    public ServiceStatus(final String serviceName, final String[] aliases, final String serviceClassName, final String modeName, final String stateName, final String substateName, final String[] dependencies, final boolean dependencyFailed, final boolean dependencyMissing) {
+    @ConstructorProperties({"parentName", "serviceName", "serviceClassName", "modeName", "stateName", "substateName", "dependencies", "dependencyFailed", "dependencyMissing"})
+    public ServiceStatus(final String parentName, final String serviceName, final String[] aliases, final String serviceClassName, final String modeName, final String stateName, final String substateName, final String[] dependencies, final boolean dependencyFailed, final boolean dependencyMissing) {
         if (serviceName == null) {
             throw new IllegalArgumentException("serviceName is null");
         }
@@ -89,6 +91,7 @@ public class ServiceStatus implements Serializable {
         this.dependencies = dependencies;
         this.dependencyFailed = dependencyFailed;
         this.dependencyMissing = dependencyMissing;
+        this.parentName = parentName;
     }
 
     /**
@@ -216,5 +219,14 @@ public class ServiceStatus implements Serializable {
             builder.append(" (has missing dependency)");
         }
         return builder.toString();
+    }
+
+    /**
+     * Get the name of the parent service, if any.
+     *
+     * @return the parent name
+     */
+    public String getParentName() {
+        return parentName;
     }
 }
