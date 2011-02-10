@@ -42,6 +42,14 @@ public interface StartContext extends LifecycleContext {
      * Get a service target which may be used to add child services.  Child services have an implicit dependency on
      * their parent, and are automatically removed when the parent service stops (or if the parent service fails
      * during startup).
+     * <p>
+     * Any listeners added directly to this service target will be added to child services when they are installed.
+     * Listeners added directly to this service target will be applied recursively to descendants as well, as long as
+     * the listener exists on this service target.  To avoid this recursive behavior, apply listeners to any sub-target
+     * of this this target (see {@link ServiceTarget#subTarget()} for more information about sub-targets).
+     * <p>
+     * Note that any listeners existing on the starting service are <b>not</b> applied to child services automatically;
+     * they must be explicitly added to the child service target.
      *
      * @return the child target
      */
