@@ -40,6 +40,7 @@ import org.jboss.msc.inject.Injector;
 public final class InjectedSetValue<T> implements Value<Set<T>> {
 
     private final Set<T> value = new LinkedHashSet<T>();
+    private volatile Set<T> cachedValue;
 
     /**
      * Construct a new instance.
@@ -49,20 +50,29 @@ public final class InjectedSetValue<T> implements Value<Set<T>> {
 
     /** {@inheritDoc} */
     public Set<T> getValue() throws IllegalStateException {
-        return Collections.unmodifiableSet(value);
+        if (cachedValue == null) {
+            synchronized (this) {
+                if (cachedValue == null) {
+                    cachedValue = Collections.unmodifiableSet(new LinkedHashSet<T>(value));
+                }
+            }
+        }
+        return cachedValue;
     }
 
     /** {@inheritDoc} */
     public Set<T> getOptionalValue() {
-        return Collections.unmodifiableSet(value);
+        return getValue();
     }
 
     private synchronized void addItem(T item) {
         value.add(item);
+        cachedValue = null;
     }
 
     private synchronized void removeItem(T item) {
         value.remove(item);
+        cachedValue = null;
     }
 
     /**
