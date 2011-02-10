@@ -54,6 +54,7 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     private final Map<ServiceName, Dependency> dependencies = new HashMap<ServiceName, Dependency>(0);
     private final Set<ServiceListener<? super T>> listeners = new IdentityHashSet<ServiceListener<? super T>>(0);
     private final List<ValueInjection<?>> valueInjections = new ArrayList<ValueInjection<?>>(0);
+    private final List<Injector<? super T>> outInjections = new ArrayList<Injector<? super T>>(0);
     private boolean installed = false;
 
     static final class Dependency {
@@ -258,6 +259,13 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     }
 
     @Override
+    public ServiceBuilder<T> addInjection(final Injector<? super T> target) {
+        checkAlreadyInstalled();
+        outInjections.add(target);
+        return this;
+    }
+
+    @Override
     public ServiceBuilderImpl<T> addListener(final ServiceListener<? super T> listener) {
         checkAlreadyInstalled();
         listeners.add(listener);
@@ -340,5 +348,9 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     ServiceControllerImpl<?> getParent() {
         return parent;
+    }
+
+    List<Injector<? super T>> getOutInjections() {
+        return outInjections;
     }
 }

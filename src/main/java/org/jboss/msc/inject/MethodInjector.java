@@ -40,7 +40,7 @@ import org.jboss.msc.value.Values;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class MethodInjector<T> implements Injector<T> {
-    private final Value<Method> methodValue;
+    private final Method method;
     private final Value<?> injectedValue;
     private final Value<?> targetValue;
     private final List<? extends Value<?>> parameterList;
@@ -53,9 +53,22 @@ public final class MethodInjector<T> implements Injector<T> {
      * @param injectedValue the value to use for {@link Values#injectedValue()} on uninjection (usually {@link Values#nullValue()})
      * @param parameterList the list of parameter values (any {@code null} parameters should use {@link Values#nullValue()})
      */
+    @Deprecated
     public MethodInjector(final Value<Method> methodValue, final Value<?> targetValue, final Value<?> injectedValue, final List<? extends Value<?>> parameterList) {
-        if (methodValue == null) {
-            throw new IllegalArgumentException("methodValue is null");
+        this(methodValue.getValue(), targetValue, injectedValue, parameterList);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param method the method to invoke
+     * @param targetValue the value of the invocation target (the object being called upon) - use {@link Values#nullValue()} for static methods
+     * @param injectedValue the value to use for {@link Values#injectedValue()} on uninjection (usually {@link Values#nullValue()})
+     * @param parameterList the list of parameter values (any {@code null} parameters should use {@link Values#nullValue()})
+     */
+    public MethodInjector(final Method method, final Value<?> targetValue, final Value<?> injectedValue, final List<? extends Value<?>> parameterList) {
+        if (method == null) {
+            throw new IllegalArgumentException("method is null");
         }
         if (targetValue == null) {
             throw new IllegalArgumentException("targetValue is null");
@@ -74,10 +87,10 @@ public final class MethodInjector<T> implements Injector<T> {
                 throw new IllegalArgumentException("parameter value at index " + i + " is null");
             }
         }
-        this.methodValue = methodValue;
-        this.targetValue = targetValue;
+        this.method = method;
         this.injectedValue = injectedValue;
-        this.parameterList = list;
+        this.targetValue = targetValue;
+        this.parameterList = parameterList;
     }
 
     /** {@inheritDoc} */
@@ -89,7 +102,7 @@ public final class MethodInjector<T> implements Injector<T> {
         try {
             final Value<?> oldThis = tlsThisValue.getAndSetValue(thisValue);
             try {
-                methodValue.getValue().invoke(thisValue.getValue(), Values.getValues(parameterList));
+                method.invoke(thisValue.getValue(), Values.getValues(parameterList));
             } catch (InvocationTargetException e) {
                 try {
                     throw e.getCause();
@@ -116,9 +129,9 @@ public final class MethodInjector<T> implements Injector<T> {
         try {
             final Value<?> oldThis = thisValue.getAndSetValue(targetValue);
             try {
-                methodValue.getValue().invoke(targetValue.getValue(), Values.getValues(parameterList));
+                method.invoke(targetValue.getValue(), Values.getValues(parameterList));
             } catch (Throwable t) {
-                InjectorLogger.INSTANCE.uninjectFailed(t, methodValue);
+                InjectorLogger.INSTANCE.uninjectFailed(t, method);
             } finally {
                 thisValue.setValue(oldThis);
             }

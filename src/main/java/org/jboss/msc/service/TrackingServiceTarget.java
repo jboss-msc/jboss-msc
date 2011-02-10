@@ -196,6 +196,11 @@ public class TrackingServiceTarget extends DelegatingServiceTarget {
             return this;
         }
 
+        public ServiceBuilder<T> addInjection(final Injector<? super T> target) {
+            builder.addInjection(target);
+            return this;
+        }
+
         public ServiceBuilder<T> addListener(final ServiceListener<? super T> listener) {
             builder.addListener(listener);
             return this;

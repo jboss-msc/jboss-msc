@@ -142,41 +142,7 @@ public class SetMethodInjectorTestCase {
 
     @Test
     public void nullSetMethod() throws Exception {
-        Injector<Integer> injector = new SetMethodInjector<Integer>(Values.<AnotherService>nullValue(), methodValue);
-        try {
-            injector.inject(0);
-            fail("InjectionException expected");
-        } catch (InjectionException e) {}
-
-        injector = new SetMethodInjector<Integer>(target, Values.<Method>nullValue());
-        try {
-            injector.inject(0);
-            fail("InjectionException expected");
-        } catch (InjectionException e) {}
-
-        injector = new SetMethodInjector<Integer>(Values.<AnotherService>nullValue(), Values.<Method>nullValue());
-        try {
-            injector.inject(0);
-            fail("InjectionException expected");
-        } catch (InjectionException e) {}
-
-        injector = new SetMethodInjector<Integer>(null, methodValue);
-        try {
-            injector.inject(0);
-            fail("InjectionException expected");
-        } catch (InjectionException e) {}
-
-        injector = new SetMethodInjector<Integer>(target, (Value<Method>) null);
-        try {
-            injector.inject(0);
-            fail("InjectionException expected");
-        } catch (InjectionException e) {}
-
-        injector = new SetMethodInjector<Integer>(null, (Value<Method>) null);
-        try {
-            injector.inject(0);
-            fail("InjectionException expected");
-        } catch (InjectionException e) {}
+        Injector<Integer> injector;
 
         injector = new SetMethodInjector<Integer>(null, method);
         try {
@@ -195,47 +161,5 @@ public class SetMethodInjectorTestCase {
             injector.inject(0);
             fail("InjectionException expected");
         } catch (InjectionException e) {}
-
-        injector = new SetMethodInjector<Integer>(Values.<AnotherService>nullValue(), AnotherService.class, "setRetry", int.class);
-        try {
-            injector.inject(0);
-            fail("InjectionException expected");
-        } catch (InjectionException e) {}
-
-        try {
-            injector = new SetMethodInjector<Integer>(target, (Class<AnotherService>) null, "setRetry", int.class);
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
-
-        try {
-            injector = new SetMethodInjector<Integer>(target, AnotherService.class, null, int.class);
-            fail("NullPointerException e");
-        } catch (NullPointerException e) {}
-
-        try {
-            injector = new SetMethodInjector<Integer>(target, AnotherService.class, "setRetry", null);
-            fail ("IllegalArgumentException e");
-        } catch (IllegalArgumentException e) {}
-
-        injector = new SetMethodInjector<Integer>((AnotherService) null, AnotherService.class, "setRetry", int.class);
-        try {
-            injector.inject(0);
-            fail("InjectionException expected");
-        } catch (InjectionException e) {}
-
-        try {
-            injector = new SetMethodInjector<Integer>(service, null, "setRetry", int.class);
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
-
-        try {
-            injector = new SetMethodInjector<Integer>(service, AnotherService.class, null, int.class);
-            fail("NullPointerException e");
-        } catch (NullPointerException e) {}
-
-        try {
-            injector = new SetMethodInjector<Integer>(service, AnotherService.class, "setRetry", null);
-            fail ("IllegalArgumentException e");
-        } catch (IllegalArgumentException e) {}
     }
 }

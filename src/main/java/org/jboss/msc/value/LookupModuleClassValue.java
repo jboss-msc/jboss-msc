@@ -29,8 +29,11 @@ import org.jboss.modules.ModuleLoader;
 /**
  * A value which looks up a class by name from a module.
  *
+ * @deprecated Will be removed before 1.0.0.GA
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
+@Deprecated
 public final class LookupModuleClassValue implements Value<Class<?>> {
     private final String className;
     private final ModuleIdentifier moduleIdentifier;

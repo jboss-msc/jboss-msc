@@ -22,8 +22,8 @@
 
 package org.jboss.msc.value;
 
-import org.jboss.msc.inject.InjectionException;
 import org.jboss.msc.inject.Injector;
+import org.jboss.msc.inject.RetainingInjector;
 
 /**
  * A value which is injected from another source.  The value may only be read if the injector has populated it.
@@ -32,9 +32,7 @@ import org.jboss.msc.inject.Injector;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class InjectedValue<T> implements Injector<T>, Value<T> {
-
-    private volatile Value<T> value;
+public final class InjectedValue<T> extends RetainingInjector<T> implements Injector<T>, Value<T> {
 
     /**
      * Construct a new instance.
@@ -44,21 +42,20 @@ public final class InjectedValue<T> implements Injector<T>, Value<T> {
 
     /** {@inheritDoc} */
     public T getValue() throws IllegalStateException {
-        final Value<T> value = this.value;
+        final Value<T> value = getStoredValue();
         if (value == null) {
             throw new IllegalStateException();
         }
         return value.getValue();
     }
 
-    /** {@inheritDoc} */
-    public void inject(final T value) throws InjectionException {
-        this.value = new ImmediateValue<T>(value);
-    }
-
-    /** {@inheritDoc} */
-    public void uninject() {
-        value = null;
+    /**
+     * Set the value to be injected to a {@code Value} instance.
+     *
+     * @param value the value to set, cannot be {@code null} (though it may be {@link org.jboss.msc.value.Values#nullValue()})
+     */
+    public void setValue(final Value<T> value) {
+        setStoredValue(value);
     }
 
     /**
@@ -67,7 +64,7 @@ public final class InjectedValue<T> implements Injector<T>, Value<T> {
      * @return the value or {@code null} if it was not injected
      */
     public T getOptionalValue() {
-        final Value<T> value = this.value;
+        final Value<T> value = getStoredValue();
         return value == null ? null : value.getValue();
     }
 }

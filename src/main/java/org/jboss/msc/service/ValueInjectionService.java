@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2010, Red Hat, Inc., and individual contributors
+ * Copyright 2011, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -20,43 +20,39 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.inject;
+package org.jboss.msc.service;
+
+import org.jboss.msc.inject.Injector;
+import org.jboss.msc.value.InjectedValue;
 
 /**
- * An injector which casts the value to a specific type.
+ * A service which propagates a value from a dependency.
  *
- * @param <T> the type to which the argument should be cast
- *
+ * @param <T> the service type
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class CastingInjector<T> implements Injector<Object> {
-    private final Injector<T> target;
-    private final Class<T> type;
+public final class ValueInjectionService<T> implements Service<T> {
+    private final InjectedValue<T> injector = new InjectedValue<T>();
+
+    /** {@inheritDoc} */
+    public void start(final StartContext context) throws StartException {
+    }
+
+    /** {@inheritDoc} */
+    public void stop(final StopContext context) {
+    }
+
+    /** {@inheritDoc} */
+    public T getValue() throws IllegalStateException, IllegalArgumentException {
+        return injector.getValue();
+    }
 
     /**
-     * Construct a new instance.
+     * Get the injector, which should be used to inject the dependency.
      *
-     * @param target the injection target
-     * @param type the type to cast to
+     * @return the injector
      */
-    public CastingInjector(final Injector<T> target, final Class<T> type) {
-        this.target = target;
-        this.type = type;
-    }
-
-    /** {@inheritDoc} */
-    public void inject(final Object value) throws InjectionException {
-        final T castValue;
-        try {
-            castValue = type.cast(value);
-        } catch (ClassCastException e) {
-            throw new InjectionException("Injecting the wrong type (expected " + type + ", got " + value.getClass() + ")", e);
-        }
-        target.inject(castValue);
-    }
-
-    /** {@inheritDoc} */
-    public void uninject() {
-        target.uninject();
+    public Injector<T> getInjector() {
+        return injector;
     }
 }

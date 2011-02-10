@@ -31,8 +31,11 @@ import java.security.PrivilegedAction;
  * A value which looks up a possibly non-public field by name from a class.  This may be considerably slower than
  * {@link LookupFieldValue} so that class should be used whenever possible.
  *
+ * @deprecated Will be removed before 1.0.0.GA
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
+@Deprecated
 public final class LookupDeclaredFieldValue implements Value<Field> {
     private final Value<Class<?>> target;
     private final String fieldName;

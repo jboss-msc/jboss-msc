@@ -30,8 +30,11 @@ import java.util.List;
 /**
  * A value which looks up a public constructor by name from a class.
  *
+ * @deprecated Will be removed before 1.0.0.GA
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
+@Deprecated
 public final class LookupConstructorValue implements Value<Constructor<?>> {
     private final Value<Class<?>> target;
     private final List<? extends Value<Class<?>>> parameterTypes;

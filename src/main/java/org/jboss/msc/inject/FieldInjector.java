@@ -35,23 +35,23 @@ import org.jboss.msc.value.Value;
 public final class FieldInjector<T> implements Injector<T> {
 
     private final Value<?> target;
-    private final Value<Field> fieldValue;
+    private final Field field;
 
     /**
      * Construct a new instance.
      *
      * @param target the object whose field is to be updated
-     * @param fieldValue the field to update
+     * @param field the field to update
      */
-    public FieldInjector(final Value<?> target, final Value<Field> fieldValue) {
+    public FieldInjector(final Value<?> target, final Field field) {
         this.target = target;
-        this.fieldValue = fieldValue;
+        this.field = field;
     }
 
     /** {@inheritDoc} */
     public void inject(final T value) {
         try {
-            fieldValue.getValue().set(target.getValue(), value);
+            field.set(target.getValue(), value);
         } catch (Exception e) {
             throw new InjectionException("Failed to inject value into field", e);
         }
@@ -59,22 +59,21 @@ public final class FieldInjector<T> implements Injector<T> {
 
     /** {@inheritDoc} */
     public void uninject() {
-         
+        final Field field = this.field;
         try {
-            Field field = fieldValue.getValue();
             Class<?> fieldType = field.getType();
             Object targetValue = target.getValue();
             if (fieldType.isPrimitive()) {
                 uninjectPrimitive(field, fieldType, targetValue);
             } else {
-                fieldValue.getValue().set(targetValue, null);
+                field.set(targetValue, null);
             }
         } catch (Throwable throwable) {
-            InjectorLogger.INSTANCE.uninjectFailed(throwable, fieldValue);
+            InjectorLogger.INSTANCE.uninjectFailed(throwable, field);
         }
     }
 
-    private final void uninjectPrimitive(Field field, Class<?> fieldType, Object targetValue)
+    private void uninjectPrimitive(Field field, Class<?> fieldType, Object targetValue)
         throws IllegalArgumentException, IllegalAccessException {
         
         switch(fieldType.getName().toString().charAt(0)) {

@@ -34,8 +34,11 @@ import java.util.List;
  * A value which looks up a possibly non-public method by name and parameters from a class.  This may be considerably slower than
  * {@link LookupMethodValue} so that class should be used whenever possible.
  *
+ * @deprecated Will be removed before 1.0.0.GA
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
+@Deprecated
 public final class LookupDeclaredMethodValue implements Value<Method> {
     private final Value<Class<?>> target;
     private final String methodName;

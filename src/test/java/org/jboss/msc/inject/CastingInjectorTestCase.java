@@ -51,7 +51,7 @@ public class CastingInjectorTestCase {
     public void castingFieldInjection() throws Exception {
         final Field field = CastingInjectorTestCase.class.getField("listField");
         Collection<String> collection = new ArrayList<String>();
-        final Injector<List> fieldInjector = new FieldInjector<List>(Values.immediateValue(this), Values.immediateValue(field));
+        final Injector<List> fieldInjector = new FieldInjector<List>(Values.immediateValue(this), Values.immediateValue(field).getValue());
         final Injector<Object> castingInjector = Injectors.cast(fieldInjector, List.class);
         castingInjector.inject(collection);
         assertSame(collection, listField);
@@ -74,7 +74,7 @@ public class CastingInjectorTestCase {
     @Test
     public void castingStaticFieldInjection() throws Exception {
         final Field field = CastingInjectorTestCase.class.getField("stringField");
-        final Injector<String> fieldInjector = new FieldInjector<String>(Values.<CastingInjectorTestCase>nullValue(), Values.immediateValue(field));
+        final Injector<String> fieldInjector = new FieldInjector<String>(Values.<CastingInjectorTestCase>nullValue(), Values.immediateValue(field).getValue());
         final Injector<Object> castingInjector = new CastingInjector<String>(fieldInjector, String.class);
         castingInjector.inject("injection");
         assertEquals("injection", stringField);
@@ -96,7 +96,7 @@ public class CastingInjectorTestCase {
     @Test
     public void nullCastingInjector() throws Exception {
         final Field field = CastingInjectorTestCase.class.getField("stringField");
-        final Injector<String> fieldInjector = new FieldInjector<String>(Values.<CastingInjectorTestCase>nullValue(), Values.immediateValue(field));
+        final Injector<String> fieldInjector = new FieldInjector<String>(Values.<CastingInjectorTestCase>nullValue(), Values.immediateValue(field).getValue());
         Injector<Object> castingInjector = new CastingInjector<String>(null, String.class);
         try {
             castingInjector.inject("injection");

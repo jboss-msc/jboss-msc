@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2010, Red Hat, Inc., and individual contributors
+ * Copyright 2011, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -28,13 +28,16 @@ import java.util.Set;
 
 import org.jboss.msc.inject.InjectionException;
 import org.jboss.msc.inject.Injector;
+import org.jboss.msc.inject.RetainingInjector;
 
 /**
  * A {@link Set} value that can have entries injected into it. The underlying set is an instance of {@link LinkedHashSet}, so
  * iteration order will be consistent.
  * <p/>
  * The {@link #injector()} method is used to get an injector that can inject into the set.
- * 
+ *
+ * @param <T> the value type
+ *
  * @author Stuart Douglas
  */
 public final class InjectedSetValue<T> implements Value<Set<T>> {
@@ -81,20 +84,18 @@ public final class InjectedSetValue<T> implements Value<Set<T>> {
      * @return An {@link Injector} that can inject into the value set.
      */
     public Injector<T> injector() {
-        return new Injector<T>() {
-
-            private volatile T value;
+        return new RetainingInjector<T>() {
 
             @Override
             public void inject(T value) throws InjectionException {
-                this.value = value;
+                super.inject(value);
                 addItem(value);
             }
 
             @Override
             public void uninject() {
-                removeItem(value);
-                value = null;
+                removeItem(getStoredValue().getValue());
+                super.uninject();
             }
         };
     }

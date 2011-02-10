@@ -252,6 +252,15 @@ public interface ServiceBuilder<T> {
     <I> ServiceBuilder<T> addInjectionValue(Injector<? super I> target, Value<I> value);
 
     /**
+     * Add an injection of this service into another target.  The given injector will be given this service upon
+     * start, and uninjected when this service stops.
+     *
+     * @param target the injector target
+     * @return this builder
+     */
+    ServiceBuilder<T> addInjection(Injector<? super T> target);
+
+    /**
      * Add a service listener that will be added to this service.
      *
      * @param listener the listener to add to the service

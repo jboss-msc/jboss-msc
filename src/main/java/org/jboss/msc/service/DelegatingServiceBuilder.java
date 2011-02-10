@@ -29,6 +29,8 @@ import org.jboss.msc.value.Value;
 /**
  * A service builder which delegates to another service builder.
  *
+ * @param <T> the service type
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
@@ -151,6 +153,11 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     /** {@inheritDoc} */
     public <I> ServiceBuilder<T> addInjectionValue(final Injector<? super I> target, final Value<I> value) {
         return delegate.addInjectionValue(target, value);
+    }
+
+    /** {@inheritDoc} */
+    public ServiceBuilder<T> addInjection(final Injector<? super T> target) {
+        return delegate.addInjection(target);
     }
 
     /** {@inheritDoc} */

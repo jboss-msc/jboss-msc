@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2010, Red Hat, Inc., and individual contributors
+ * Copyright 2011, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -22,41 +22,44 @@
 
 package org.jboss.msc.inject;
 
+import java.util.concurrent.ConcurrentMap;
+
 /**
- * An injector which casts the value to a specific type.
+ * An injector which applies a value to a concurrent map entry.
  *
- * @param <T> the type to which the argument should be cast
- *
+ * @param <K> the key type
+ * @param <T> the value type
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class CastingInjector<T> implements Injector<Object> {
-    private final Injector<T> target;
-    private final Class<T> type;
+public final class ConcurrentMapInjector<K, T> extends RetainingInjector<T> implements Injector<T> {
+    private final ConcurrentMap<K, T> map;
+    private final K key;
 
     /**
      * Construct a new instance.
      *
-     * @param target the injection target
-     * @param type the type to cast to
+     * @param map the map to update
+     * @param key the key for this injector
      */
-    public CastingInjector(final Injector<T> target, final Class<T> type) {
-        this.target = target;
-        this.type = type;
+    public ConcurrentMapInjector(final ConcurrentMap<K, T> map, final K key) {
+        this.map = map;
+        this.key = key;
     }
 
     /** {@inheritDoc} */
-    public void inject(final Object value) throws InjectionException {
-        final T castValue;
-        try {
-            castValue = type.cast(value);
-        } catch (ClassCastException e) {
-            throw new InjectionException("Injecting the wrong type (expected " + type + ", got " + value.getClass() + ")", e);
+    public void inject(final T value) throws InjectionException {
+        if (map.putIfAbsent(key, value) != null) {
+            throw new InjectionException("Value already injected into map key " + key);
         }
-        target.inject(castValue);
+        super.inject(value);
     }
 
     /** {@inheritDoc} */
     public void uninject() {
-        target.uninject();
+        try {
+            map.remove(key, getStoredValue().getValue());
+        } finally {
+            super.uninject();
+        }
     }
 }

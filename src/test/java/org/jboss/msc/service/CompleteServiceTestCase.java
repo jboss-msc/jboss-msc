@@ -92,12 +92,10 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         final Value<ServiceA> serviceAValue = Values.immediateValue(serviceA);
         final Future<ServiceController<?>> serviceAStart = testListener.expectServiceStart(serviceNameA);
         final ServiceController<?> serviceAController = serviceContainer.addService(serviceNameA, serviceA)
-                .addInjection(new FieldInjector<String>(serviceAValue,
-                new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "description")), "serviceA")
-                .addInjection(new FieldInjector<Integer>(serviceAValue,
-                        new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "initialParameter")), 2215)
+                .addInjection(new FieldInjector<String>(serviceAValue, new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "description").getValue()), "serviceA")
+                .addInjection(new FieldInjector<Integer>(serviceAValue, new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "initialParameter").getValue()), 2215)
                 .addDependency(serviceNameB,
-                        new FieldInjector<Object>(serviceAValue, new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "serviceB")))
+                        new FieldInjector<Object>(serviceAValue, new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "serviceB").getValue()))
                 .addDependency(serviceNameD, 
                 new SetMethodInjector<Object>(Values.immediateValue(serviceA), ServiceA.class, "setServiceD", ServiceD.class))
                 .addListener(testListener)
@@ -175,12 +173,10 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
                      try {
                          // install service A as foo service, with a description injected, an initial parameter
                          // plus service D and service B injected
-                        serviceContainer.addService(fooServiceName, serviceA).addInjection(new FieldInjector<String>(serviceAValue,
-                                 new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "description")), "foo")
-                                 .addInjection(new FieldInjector<Integer>(serviceAValue,
-                                         new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "initialParameter")), 2218)
+                        serviceContainer.addService(fooServiceName, serviceA).addInjection(new FieldInjector<String>(serviceAValue, new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "description").getValue()), "foo")
+                                 .addInjection(new FieldInjector<Integer>(serviceAValue, new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "initialParameter").getValue()), 2218)
                                  .addDependency(serviceNameB,
-                                         new FieldInjector<Object>(serviceAValue, new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "serviceB")))
+                                         new FieldInjector<Object>(serviceAValue, new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "serviceB").getValue()))
                                  .addDependency(serviceNameD, 
                                  new SetMethodInjector<Object>(Values.immediateValue(serviceA), ServiceA.class, "setServiceD", ServiceD.class))
                                  .addListener(testListener)
@@ -256,10 +252,9 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
             .install();
         // install service A, inject description, initialParameter, service B and service D
         final Value<ServiceA> serviceAValue = Values.immediateValue(serviceA);
-        final ServiceController<?> serviceAController = serviceContainer.addService(fooServiceName, serviceA).addInjection(new FieldInjector<String>(serviceAValue,
-                new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "description")), "foo service_")
-                .addInjection(new FieldInjector<Integer>(serviceAValue, new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "initialParameter")), 137)
-                .addDependency(serviceNameB, new FieldInjector<Object>(serviceAValue, new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "serviceB")))
+        final ServiceController<?> serviceAController = serviceContainer.addService(fooServiceName, serviceA).addInjection(new FieldInjector<String>(serviceAValue, new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "description").getValue()), "foo service_")
+                .addInjection(new FieldInjector<Integer>(serviceAValue, new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "initialParameter").getValue()), 137)
+                .addDependency(serviceNameB, new FieldInjector<Object>(serviceAValue, new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "serviceB").getValue()))
                 .addDependency(serviceNameD, new SetMethodInjector<Object>(Values.immediateValue(serviceA), ServiceA.class, "setServiceD", ServiceD.class))
                 .addListener(testListener)
                 .addListener(new AbstractServiceListener<ServiceA>() {
@@ -358,30 +353,6 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         assertController(serviceNameB, serviceBController);
         assertController(serviceBController, serviceBStart);
         assertSame(serviceB, serviceBController.getValue());
-
-        final Value<ServiceA> serviceAValue = Values.immediateValue(serviceA);
-        final Future<StartException> serviceAFailure = testListener.expectServiceFailure(serviceNameA);
-        final ServiceController<?> serviceAController = serviceContainer.addService(serviceNameA, serviceA)
-                .addInjection(new FieldInjector<String>(serviceAValue,
-                new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "description")), "serviceA")
-                .addInjection(new FieldInjector<Integer>(serviceAValue,
-                        new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "initialParameter")), 2215)
-                .addDependency(serviceNameB,
-                        new FieldInjector<Object>(serviceAValue, new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "serviceB")))
-                .addDependency(serviceNameD, 
-                new SetMethodInjector<Object>(Values.immediateValue(serviceA), ServiceA.class, "setServiceD", ServiceD.class))
-                // wrong field!
-                .addInjection(new FieldInjector<Integer>(serviceAValue,
-                        new LookupFieldValue(Values.<Class<?>>immediateValue(ServiceA.class), "initialParametER")), 2215)
-                .addListener(testListener)
-                        .install();
-        assertController(serviceNameA, serviceAController);
-        assertFailure(serviceAController, serviceAFailure);
-        assertSame(serviceA, serviceAController.getValue()); 
-        assertNull(serviceA.description);
-        assertEquals(0, serviceA.initialParameter);
-        assertNull(serviceA.serviceB);
-        assertNull(serviceA.serviceC);
     }
 
     @Test

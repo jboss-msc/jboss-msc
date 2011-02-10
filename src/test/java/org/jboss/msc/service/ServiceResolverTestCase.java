@@ -79,7 +79,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
             final List<ServiceController<?>> deps = getServiceDependencies(serviceContainer, serviceController);
             for(ServiceController<?> depController : deps) {
                 if(depController.getValue() != serviceContainer)
-                    assertTrue(processed.contains(depController));
+                    assertTrue("Missing dependency " + depController, processed.contains(depController));
             }
             processed.add(serviceController);
         }

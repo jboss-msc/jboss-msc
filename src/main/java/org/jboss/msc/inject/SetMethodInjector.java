@@ -38,7 +38,7 @@ public final class SetMethodInjector<T> implements Injector<T> {
     private static final Object[] NULL_PARAM = new Object[] {null};
 
     private final Value<?> target;
-    private final Value<Method> methodValue;
+    private final Method method;
 
     /**
      * Construct a new instance.
@@ -46,9 +46,9 @@ public final class SetMethodInjector<T> implements Injector<T> {
      * @param target the object upon which the method is to be called
      * @param methodValue the method to invoke
      */
+    @Deprecated
     public SetMethodInjector(final Value<?> target, final Value<Method> methodValue) {
-        this.target = target;
-        this.methodValue = methodValue;
+        this(target, methodValue.getValue());
     }
 
     /**
@@ -58,7 +58,8 @@ public final class SetMethodInjector<T> implements Injector<T> {
      * @param method the method to invoke
      */
     public SetMethodInjector(final Value<?> target, final Method method) {
-        this(target, new ImmediateValue<Method>(method));
+        this.target = target;
+        this.method = method;
     }
 
     /**
@@ -66,7 +67,9 @@ public final class SetMethodInjector<T> implements Injector<T> {
      *
      * @param target the object upon which the method is to be called
      * @param methodValue the method to invoke
+     * @return the new instance
      */
+    @Deprecated
     public static <T> Injector<T> create(final Value<?> target, Value<Method> methodValue) {
         return new SetMethodInjector<T>(target, methodValue);
     }
@@ -76,6 +79,7 @@ public final class SetMethodInjector<T> implements Injector<T> {
      *
      * @param target the object upon which the method is to be called
      * @param method the method to invoke
+     * @return the new instance
      */
     public static <T> Injector<T> create(final Value<?> target, final Method method) {
         return new SetMethodInjector<T>(target, method);
@@ -90,6 +94,7 @@ public final class SetMethodInjector<T> implements Injector<T> {
      * @param paramType the parameter type
      * @param <C> the type of the class upon which the method may be found
      */
+    @Deprecated
     public <C> SetMethodInjector(final Value<? extends C> target, final Class<C> clazz, final String methodName, final Class<? extends T> paramType) {
         this(target, lookupMethod(clazz, methodName, paramType));
     }
@@ -103,6 +108,7 @@ public final class SetMethodInjector<T> implements Injector<T> {
      * @param paramType the parameter type
      * @param <C> the type of the class upon which the method may be found
      */
+    @Deprecated
     public <C> SetMethodInjector(final C target, final Class<C> clazz, final String methodName, final Class<? extends T> paramType) {
         this(new ImmediateValue<C>(target), clazz, methodName, paramType);
     }
@@ -121,7 +127,7 @@ public final class SetMethodInjector<T> implements Injector<T> {
     /** {@inheritDoc} */
     public void inject(final T value) {
         try {
-            methodValue.getValue().invoke(target.getValue(), value);
+            method.invoke(target.getValue(), value);
         } catch (Exception e) {
             throw new InjectionException("Failed to inject value into method", e);
         }
@@ -130,9 +136,9 @@ public final class SetMethodInjector<T> implements Injector<T> {
     /** {@inheritDoc} */
     public void uninject() {
         try {
-            methodValue.getValue().invoke(target.getValue(), NULL_PARAM);
+            method.invoke(target.getValue(), NULL_PARAM);
         } catch (Exception e) {
-            InjectorLogger.INSTANCE.uninjectFailed(e, methodValue);
+            InjectorLogger.INSTANCE.uninjectFailed(e, method);
         }
     }
 }

@@ -41,6 +41,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -68,6 +69,7 @@ import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.ServiceController.Mode;
 import org.jboss.msc.service.management.ServiceContainerMXBean;
 import org.jboss.msc.service.management.ServiceStatus;
+import org.jboss.msc.value.InjectedValue;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -510,6 +512,12 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         final int dependencyCount = dependencyMap.size();
         final Dependency[] dependencies = new Dependency[dependencyCount];
         final List<ValueInjection<?>> valueInjections = new ArrayList<ValueInjection<?>>(serviceBuilder.getValueInjections());
+        final List<Injector<? super S>> outInjections = serviceBuilder.getOutInjections();
+
+        final InjectedValue<S> serviceValue = new InjectedValue<S>();
+        for (final Injector<? super S> outInjection : outInjections) {
+            valueInjections.add(new ValueInjection<S>(serviceValue, outInjection));
+        }
 
         // Dependencies
         int i = 0;
@@ -528,6 +536,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
         // Next create the actual controller
         final ServiceControllerImpl<S> instance = new ServiceControllerImpl<S>(serviceBuilder.getServiceValue(), serviceBuilder.getLocation(), dependencies, injections, primaryRegistration, aliasRegistrations, serviceBuilder.getListeners(), serviceBuilder.getParent());
+        serviceValue.setValue(instance);
 
         boolean ok = false;
         try {
