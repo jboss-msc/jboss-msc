@@ -32,17 +32,23 @@ import java.lang.reflect.Field;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class FieldValue<T> implements Value<T> {
-    private final Value<Field> fieldValue;
+    private final Field field;
     private final Value<?> targetValue;
 
     /**
      * Construct a new instance.
      *
-     * @param fieldValue the field to access
+     * @param field the field to access
      * @param targetValue the target object containing the field
      */
-    public FieldValue(final Value<Field> fieldValue, final Value<?> targetValue) {
-        this.fieldValue = fieldValue;
+    public FieldValue(final Field field, final Value<?> targetValue) {
+        if (field == null) {
+            throw new IllegalArgumentException("field is null");
+        }
+        if (targetValue == null) {
+            throw new IllegalArgumentException("targetValue is null");
+        }
+        this.field = field;
         this.targetValue = targetValue;
     }
 
@@ -50,7 +56,7 @@ public final class FieldValue<T> implements Value<T> {
     @SuppressWarnings({ "unchecked" })
     public T getValue() throws IllegalStateException {
         try {
-            return (T) fieldValue.getValue().get(targetValue.getValue());
+            return (T) field.get(targetValue.getValue());
         } catch (IllegalAccessException e) {
             throw new IllegalStateException("Field is not accessible", e);
         }

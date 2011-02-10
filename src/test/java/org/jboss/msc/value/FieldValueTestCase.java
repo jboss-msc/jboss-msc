@@ -42,9 +42,8 @@ public class FieldValueTestCase {
         final AnyService anyObject = new AnyService();
         anyObject.count = 5;
         final Field field = AnyService.class.getDeclaredField("count");
-        final Value<Field> fieldValue = new ImmediateValue<Field>(field);
         final Value<AnyService> anyObjectValue = new ImmediateValue<AnyService>(anyObject);
-        final FieldValue<Integer> countValue = new FieldValue<Integer>(fieldValue, anyObjectValue);
+        final FieldValue<Integer> countValue = new FieldValue<Integer>(field, anyObjectValue);
         assertEquals(5, (int) countValue.getValue());
 
         anyObject.count = 10;
@@ -58,9 +57,8 @@ public class FieldValueTestCase {
     public void testPrivateField() throws Exception {
         final AnyService anyObject = new AnyService();
         final Field field = AnyService.class.getDeclaredField("sum");
-        final Value<Field> fieldValue = new ImmediateValue<Field>(field);
         final Value<AnyService> anyObjectValue = new ImmediateValue<AnyService>(anyObject);
-        final FieldValue<Integer> sumValue = new FieldValue<Integer>(fieldValue, anyObjectValue);
+        final FieldValue<Integer> sumValue = new FieldValue<Integer>(field, anyObjectValue);
 
         try {
             sumValue.getValue();
@@ -80,43 +78,33 @@ public class FieldValueTestCase {
         final AnyService anyObject = new AnyService();
         anyObject.count = 50;
         final Field field = AnyService.class.getDeclaredField("count");
-        final Value<Field> fieldValue = new ImmediateValue<Field>(field);
         final Value<AnyService> anyObjectValue = new ImmediateValue<AnyService>(anyObject);
 
-        FieldValue<Integer> countValue = new FieldValue<Integer>(Values.<Field>nullValue(), anyObjectValue);
+        FieldValue<Integer> countValue;
+        try {
+            countValue = new FieldValue<Integer>(null, anyObjectValue);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e) {}
+
+        countValue = new FieldValue<Integer>(field, Values.<AnyService>nullValue());
         try {
             countValue.getValue();
             fail("NullPointerException expected");
         } catch (NullPointerException e) {}
 
-        countValue = new FieldValue<Integer>(fieldValue, Values.<AnyService>nullValue());
         try {
-            countValue.getValue();
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
+            countValue = new FieldValue<Integer>(null, Values.<AnyService>nullValue());
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e) {}
 
-        countValue = new FieldValue<Integer>(Values.<Field>nullValue(), Values.<AnyService>nullValue());
         try {
-            countValue.getValue();
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
+            countValue = new FieldValue<Integer>(field, null);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e) {}
 
-        countValue = new FieldValue<Integer>(null, anyObjectValue);
         try {
-            countValue.getValue();
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
-
-        countValue = new FieldValue<Integer>(fieldValue, null);
-        try {
-            countValue.getValue();
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
-
-        countValue = new FieldValue<Integer>(null, null);
-        try {
-            countValue.getValue();
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
+            countValue = new FieldValue<Integer>(null, null);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e) {}
     }
 }
