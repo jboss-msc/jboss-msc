@@ -35,7 +35,7 @@ import java.util.List;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class ConstructedValue<T> implements Value<T> {
-    private final Value<Constructor<T>> constructorValue;
+    private final Constructor<T> constructor;
     private final List<? extends Value<?>> parameters;
 
     /**
@@ -43,16 +43,35 @@ public final class ConstructedValue<T> implements Value<T> {
      *
      * @param constructorValue the constructor to use
      * @param parameters the parameters to pass to the constructor
+     *
+     * @deprecated Will be removed before 1.0.0.GA
      */
+    @Deprecated
     public ConstructedValue(final Value<Constructor<T>> constructorValue, final List<? extends Value<?>> parameters) {
-        this.constructorValue = constructorValue;
+        this(constructorValue.getValue(), parameters);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param constructor the constructor to use
+     * @param parameters the parameters to pass to the constructor
+     */
+    public ConstructedValue(final Constructor<T> constructor, final List<? extends Value<?>> parameters) {
+        if (constructor == null) {
+            throw new IllegalArgumentException("constructor is null");
+        }
+        if (parameters == null) {
+            throw new IllegalArgumentException("parameters is null");
+        }
+        this.constructor = constructor;
         this.parameters = parameters;
     }
 
     /** {@inheritDoc} */
     public T getValue() throws IllegalStateException {
         try {
-            return constructorValue.getValue().newInstance(Values.getValues(parameters));
+            return constructor.newInstance(Values.getValues(parameters));
         } catch (IllegalAccessException e) {
             throw new IllegalStateException("Field is not accessible", e);
         } catch (InvocationTargetException e) {

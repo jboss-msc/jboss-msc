@@ -148,36 +148,16 @@ public class ConstructedValueTestCase {
     @Test
     public void nullConstructor() throws Exception {
         final Value<Constructor<ConstructedService>> constructor = getConstructor(ConstructedService.class);
-        Value<ConstructedService> value = new ConstructedValue<ConstructedService>(
-                Values.<Constructor<ConstructedService>>nullValue(), Collections.<Value<?>>emptyList());
-        try {
-            value.getValue();
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
 
-        value = new ConstructedValue<ConstructedService>(constructor, null);
         try {
-            value.getValue();
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
+            new ConstructedValue<ConstructedService>((Constructor<ConstructedService>) null, Collections.<Value<?>>emptyList());
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e) {}
 
-        value = new ConstructedValue<ConstructedService>(Values.<Constructor<ConstructedService>>nullValue(), null);
         try {
-            value.getValue();
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
-
-        value = new ConstructedValue<ConstructedService>(null, Collections.<Value<?>>emptyList());
-        try {
-            value.getValue();
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
-
-        value = new ConstructedValue<ConstructedService>(null, null);
-        try {
-            value.getValue();
-            fail("NullPointerException expected");
-        } catch (NullPointerException e) {}
+            new ConstructedValue<ConstructedService>(constructor.getValue(), null);
+            fail("IllegalArgumentException expected");
+        } catch (IllegalArgumentException e) {}
     }
 
     @Test
