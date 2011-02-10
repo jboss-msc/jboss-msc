@@ -29,7 +29,9 @@ import static org.junit.Assert.fail;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Future;
 
 import org.jboss.msc.service.ServiceController.Mode;
@@ -57,31 +59,29 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
     public void testResolvable() throws Exception {
         final LatchedListener listener = new LatchedListener();
         serviceContainer.addListener(listener);
-        serviceContainer.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"))
-            .install();
-        serviceContainer.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11")).install();
-        serviceContainer.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"))
-            .install();
-        serviceContainer.addService(ServiceName.of("11"), Service.NULL)
+        final Set<ServiceController<?>> expected = new HashSet<ServiceController<?>>();
+        expected.add(serviceContainer.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"))
+            .install());
+        expected.add(serviceContainer.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11")).install());
+        expected.add(serviceContainer.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"))
+            .install());
+        expected.add(serviceContainer.addService(ServiceName.of("11"), Service.NULL)
             .addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"))
-            .install();
-        serviceContainer.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install();
-        serviceContainer.addService(ServiceName.of("2"), Service.NULL).install();
-        serviceContainer.addService(ServiceName.of("9"), Service.NULL).install();
-        serviceContainer.addService(ServiceName.of("10"), Service.NULL).install();
+            .install());
+        expected.add(serviceContainer.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install());
+        expected.add(serviceContainer.addService(ServiceName.of("2"), Service.NULL).install());
+        expected.add(serviceContainer.addService(ServiceName.of("9"), Service.NULL).install());
+        expected.add(serviceContainer.addService(ServiceName.of("10"), Service.NULL).install());
 
         listener.await();
 
         assertEquals(8, listener.startedControllers.size());
-        final List<ServiceController<?>> processed = new ArrayList<ServiceController<?>>(listener.startedControllers.size());
         for(ServiceController<?> serviceController : listener.startedControllers) {
             assertEquals(ServiceController.State.UP, serviceController.getState());
             final List<ServiceController<?>> deps = getServiceDependencies(serviceContainer, serviceController);
             for(ServiceController<?> depController : deps) {
-                if(depController.getValue() != serviceContainer)
-                    assertTrue("Missing dependency " + depController, processed.contains(depController));
+                assertTrue("Missing dependency " + depController, expected.contains(depController));
             }
-            processed.add(serviceController);
         }
     }
 
@@ -89,19 +89,20 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
     public void testResolvableWithPreexistingDeps() throws Exception {
         final LatchedListener listener = new LatchedListener();
         serviceContainer.addListener(listener);
-        serviceContainer.addService(ServiceName.of("2"), Service.NULL).install();
-        serviceContainer.addService(ServiceName.of("9"), Service.NULL).install();
-        serviceContainer.addService(ServiceName.of("10"), Service.NULL).install();
+        final Set<ServiceController<?>> expected = new HashSet<ServiceController<?>>();
+        expected.add(serviceContainer.addService(ServiceName.of("2"), Service.NULL).install());
+        expected.add(serviceContainer.addService(ServiceName.of("9"), Service.NULL).install());
+        expected.add(serviceContainer.addService(ServiceName.of("10"), Service.NULL).install());
 
-        serviceContainer.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"))
-            .install();
-        serviceContainer.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11")).install();
-        serviceContainer.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"))
-            .install();
-        serviceContainer.addService(ServiceName.of("11"), Service.NULL)
+        expected.add(serviceContainer.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"))
+            .install());
+        expected.add(serviceContainer.addService(ServiceName.of("5"), Service.NULL).addDependencies(ServiceName.of("11")).install());
+        expected.add(serviceContainer.addService(ServiceName.of("3"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("9"))
+            .install());
+        expected.add(serviceContainer.addService(ServiceName.of("11"), Service.NULL)
             .addDependencies(ServiceName.of("2"), ServiceName.of("9"), ServiceName.of("10"))
-            .install();
-        serviceContainer.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install();
+            .install());
+        expected.add(serviceContainer.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install());
         try {
             serviceContainer.addService(ServiceName.of("8"), Service.NULL).addDependencies(ServiceName.of("9")).install();
             fail("DuplicateServiceException expected");
@@ -110,15 +111,12 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
         listener.await();
 
         assertEquals(8, listener.startedControllers.size());
-        final List<ServiceController<?>> processed = new ArrayList<ServiceController<?>>(listener.startedControllers.size());
         for(ServiceController<?> serviceController : listener.startedControllers) {
             assertEquals(ServiceController.State.UP, serviceController.getState());
             final List<ServiceController<?>> deps = getServiceDependencies(serviceContainer, serviceController);
             for(ServiceController<?> depController : deps) {
-                if(depController.getValue() != serviceContainer)
-                    assertTrue(processed.contains(depController));
+                assertTrue(expected.contains(depController));
             }
-            processed.add(serviceController);
         }
     }
 

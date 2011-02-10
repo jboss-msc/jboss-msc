@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2010, Red Hat, Inc., and individual contributors
+ * Copyright 2011, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -188,7 +188,7 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
     public void batchServiceTarget() throws Exception {
         final ServiceTarget containerTarget = getServiceTarget(serviceContainer);
         final BatchServiceTarget batchTarget = containerTarget.batchTarget();
-        // add testListener to containterTarget
+        // add testListener to containerTarget
         containerTarget.addListener(testListener);
 
         // install anotherService into containerTarget

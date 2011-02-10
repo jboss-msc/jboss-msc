@@ -54,6 +54,7 @@ public class AbstractServiceTest {
     public void tearDown() throws Exception {
         if (shutdownOnTearDown) {
             serviceContainer.shutdown();
+            serviceContainer.awaitTermination();
         }
         serviceContainer = null;
     }
@@ -63,6 +64,11 @@ public class AbstractServiceTest {
      */
     public void shutdownContainer() {
         serviceContainer.shutdown();
+        try {
+            serviceContainer.awaitTermination();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         shutdownOnTearDown = false;
     }
 
