@@ -291,7 +291,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 if (! children.isEmpty()) {
                     asyncTasks++;
-                    // todo - this might have to happen outside of the lock.
                     for (ServiceControllerImpl<?> child : children) {
                         child.setMode(Mode.REMOVE);
                     }
@@ -323,7 +322,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 if (! children.isEmpty()) {
                     asyncTasks++;
-                    // todo - this might have to happen outside of the lock.
                     for (ServiceControllerImpl<?> child : children) {
                         child.setMode(Mode.REMOVE);
                     }

@@ -23,8 +23,6 @@
 package org.jboss.msc.service;
 
 import static org.jboss.modules.management.ObjectProperties.property;
-import static org.jboss.msc.service.ServiceProperty.FAILED_TO_START;
-import static org.jboss.msc.service.ServiceProperty.UNINSTALLED;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
@@ -44,10 +42,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -153,15 +149,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     private final String name;
     private final MBeanServer mBeanServer;
     private final ObjectName objectName;
-
-    // list of cycles that have been detected
-    private volatile Collection<List<ServiceName>> cycles;
-    // latch to avoid that cycles are returned before they are detected
-    private CountDownLatch cycleDetectionLatch;
-    // indicates when a notifier task is postponed
-    private boolean scheduleNotifierTaskPostponed = false;
-    // dependent notification task that has been scheduled
-    private DependentNotifierSchedule notificationScheduled = DependentNotifierSchedule.NOT_SCHEDULED;
 
     private final ServiceContainerMXBean containerMXBean = new ServiceContainerMXBean() {
         public ServiceStatus getServiceStatus(final String name) {
@@ -425,76 +412,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         return executor;
     }
 
-    /**
-     * Checks the dependency graph structure formed by installed services, detecting missing dependencies.
-     * All affected dependents are notified.
-     * <p>
-     * This method should be called when the dependency graph structure is changed.
-     */
-    void checkMissingDependencies() {
-        boolean scheduleRunnable;
-        synchronized (this) {
-            switch(notificationScheduled) {
-                case NOT_SCHEDULED:
-                    notificationScheduled = DependentNotifierSchedule.MISSING_DEPENDENCY_CHECK;
-                    cycleDetectionLatch = new CountDownLatch(1);
-                    scheduleRunnable = true;
-                    break;
-                case CYCLE_VISIT_CHECK:
-                    notificationScheduled = DependentNotifierSchedule.MISSING_DEPENDENCY_CHECK;
-                    scheduleRunnable = false;
-                    break;
-                case FAILED_DEPENDENCY_CHECK:
-                    notificationScheduled = DependentNotifierSchedule.MISSING_AND_FAILED_DEPENDENCIES_CHECK;
-                default:
-                    scheduleRunnable = false;
-            }
-            scheduleRunnable = scheduleRunnable || scheduleNotifierTaskPostponed;
-            scheduleNotifierTaskPostponed = false;
-        }
-        if (scheduleRunnable) {
-            NotifierTaskExecutor.executeTask(new DependentNotifierTask());
-        }
-    }
-
-    /**
-     * Notifies dependents affected by dependency failures.<p>
-     * This method should be called whenever a dependent should be notified of a dependency failure or of
-     * a dependency failure that has been cleared. This will happen every time a service failure occurs, when a service
-     * failure is cleared, and when a new dependent is added to a failed service.
-     * 
-     * @param postponeExecution indicates if this request will be followed by a request to check for missing
-     *                          dependencies. When this value is {@code true}, the task to check dependencies will be
-     *                          scheduled only when the next call to {@link #checkMissingDependencies()} is made.
-     */
-    void checkFailedDependencies(boolean postponeExecution) {
-        final boolean scheduleRunnable;
-        synchronized (this) {
-            // the installation of services is always followed by a dependency availability check
-            // for that reason, any request to check for failures on installation should be postponed
-            // to the moment when installation is complete, avoiding multiple traversals 
-            switch(notificationScheduled) {
-                case NOT_SCHEDULED:
-                    notificationScheduled = DependentNotifierSchedule.FAILED_DEPENDENCY_CHECK;
-                    scheduleRunnable = !postponeExecution;
-                    scheduleNotifierTaskPostponed = postponeExecution;
-                    cycleDetectionLatch = new CountDownLatch(1);
-                    break;
-                case CYCLE_VISIT_CHECK:
-                    notificationScheduled = DependentNotifierSchedule.FAILED_DEPENDENCY_CHECK;
-                    scheduleRunnable = false;
-                    break;
-                case MISSING_DEPENDENCY_CHECK:
-                    notificationScheduled = DependentNotifierSchedule.MISSING_AND_FAILED_DEPENDENCIES_CHECK;
-                default:
-                    scheduleRunnable = false;
-            }
-        }
-        if (scheduleRunnable) {
-            NotifierTaskExecutor.executeTask(new DependentNotifierTask());
-        }
-    }
-
     private <S> ServiceControllerImpl<S> doInstall(final ServiceBuilderImpl<S> serviceBuilder) throws DuplicateServiceException {
         apply(serviceBuilder);
 
@@ -646,118 +563,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 }
             } else {
                 commit(serviceBuilder.getInitialMode(), instance);
-                checkMissingDependencies(); // verify if there are new missing dependencies or
-                // new cycles to notify after service installation
             }
-        }
-    }
-
-    @Override
-    public Collection<List<ServiceName>> detectCircularity() {
-        final CountDownLatch cycleCountDown;
-        synchronized(this) {
-            cycleCountDown = cycleDetectionLatch;
-        }
-        if (cycleCountDown != null) {
-            try {
-                cycleCountDown.await();
-            } catch (InterruptedException e) {}
-        }
-        return cycles;
-    }
-
-    private static enum DependentNotifierSchedule {
-        NOT_SCHEDULED() {
-            DependentNotifier createDependentNotifier() {
-                return null;
-            }
-        },
-        CYCLE_VISIT_CHECK () {
-            DependentNotifier createDependentNotifier() {
-                return new DependentNotifier();
-            }
-        },
-        MISSING_DEPENDENCY_CHECK () {
-            DependentNotifier createDependentNotifier() {
-                return new DependentNotifier(UNINSTALLED);
-            }
-        },
-        FAILED_DEPENDENCY_CHECK () {
-            DependentNotifier createDependentNotifier() {
-                return new DependentNotifier(FAILED_TO_START);
-            }
-        },
-        MISSING_AND_FAILED_DEPENDENCIES_CHECK () {
-            DependentNotifier createDependentNotifier() {
-                return new DependentNotifier(UNINSTALLED, FAILED_TO_START);
-            }
-        };
-        
-        abstract DependentNotifier createDependentNotifier();
-    }
-
-    private class DependentNotifierTask implements Runnable {
-
-        @Override
-        public void run() {
-            final DependentNotifierSchedule scheduleToExecute;
-            final CountDownLatch cycleCountDown;
-            synchronized(ServiceContainerImpl.this) {
-                if (down) {
-                    return;
-                }
-                cycleCountDown = cycleDetectionLatch;
-                scheduleToExecute = notificationScheduled;
-                notificationScheduled = DependentNotifierSchedule.NOT_SCHEDULED;
-            }
-            final DependentNotifier visitor = scheduleToExecute.createDependentNotifier();
-            for (ServiceRegistrationImpl service: registry.values()) {
-                service.accept(visitor);
-            }
-            synchronized(ServiceContainerImpl.this) {
-                if (cycleDetectionLatch == cycleCountDown) {
-                    cycleDetectionLatch = null;
-                }
-                cycles = visitor.getDetectedCycles();
-            }
-            cycleCountDown.countDown();
-            visitor.finish();
-        }
-    }
-
-    private static class NotifierTaskExecutor  extends Thread implements Executor {
-
-        private static NotifierTaskExecutor instance;
-
-        public static void executeTask(DependentNotifierTask notifierTask) {
-            if (instance == null) {
-                instance = new NotifierTaskExecutor();
-                instance.start();
-            }
-            instance.execute(notifierTask);
-        }
-
-        private Queue<Runnable> taskQueue = new ConcurrentLinkedQueue<Runnable>();
-
-        public NotifierTaskExecutor() {
-            setDaemon(true);
-        }
-
-        @Override
-        public void run() {
-            do {
-                while (taskQueue.isEmpty()) {
-                    try {
-                        Thread.sleep(50);
-                    } catch (InterruptedException e) {}
-                }
-                taskQueue.remove().run();
-            } while(true);
-        }
-
-        @Override
-        public void execute(Runnable command) {
-            taskQueue.add(command);
         }
     }
 
