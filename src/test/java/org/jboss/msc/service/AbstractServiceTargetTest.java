@@ -198,7 +198,7 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
         assertController(anotherServiceName, anotherController);
         assertController(anotherController, anotherServiceStart);
 
-        // install noeMoreService into batchTarget
+        // install oneMoreService into batchTarget
         final Future<ServiceController<?>> oneServiceStart = testListener.expectServiceStart(oneMoreServiceName);
         final ServiceController<?> oneController = batchTarget.addService(oneMoreServiceName, Service.NULL).install();
         assertController(oneMoreServiceName, oneController);

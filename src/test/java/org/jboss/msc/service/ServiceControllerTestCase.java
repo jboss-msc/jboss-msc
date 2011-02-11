@@ -98,14 +98,16 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
         assertState(serviceContainer, ServiceName.of("serviceOne"), ServiceController.State.DOWN);
 
-        serviceContainer.addService(ServiceName.of("serviceTwo"), Service.NULL)
+        final ServiceController<?> serviceTwoController = serviceContainer.addService(ServiceName.of("serviceTwo"), Service.NULL)
             .setInitialMode(ServiceController.Mode.PASSIVE)
             .addDependencies(ServiceName.of("serviceOne"))
+            .addListener(listener)
             .install();
 
         assertState(serviceContainer, ServiceName.of("serviceTwo"), ServiceController.State.DOWN);
 
         final Future<ServiceController<?>> serviceFuture = listener.expectServiceStart(ServiceName.of("serviceThree"));
+        final Future<ServiceController<?>> serviceTwoStart = listener.expectServiceStart(ServiceName.of("serviceTwo"));
         final ServiceController<?> serviceController = serviceContainer.addService(ServiceName.of("serviceThree"), Service.NULL)
             .setInitialMode(ServiceController.Mode.ACTIVE)
             .addDependencies(ServiceName.of("serviceOne"))
@@ -114,6 +116,7 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
         assertController(ServiceName.of("serviceThree"), serviceController);
         assertController(serviceController, serviceFuture);
+        assertController(serviceTwoController, serviceTwoStart);
 
         assertEquals(ServiceController.State.UP, serviceController.getState());
         assertState(serviceContainer, ServiceName.of("serviceTwo"), ServiceController.State.UP);
