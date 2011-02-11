@@ -200,6 +200,10 @@ public class ServiceStatus implements Serializable {
         if (! stateName.equals(substateName)) {
             builder.append(" (").append(substateName).append(')');
         }
+        String parentName = this.parentName;
+        if (parentName != null) {
+            builder.append(" (parent: ").append(parentName).append(')');
+        }
         final String[] dependencies = this.dependencies;
         final int dependenciesLength = dependencies.length;
         if (dependenciesLength > 0) {
