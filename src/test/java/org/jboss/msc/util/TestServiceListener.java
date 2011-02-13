@@ -253,8 +253,8 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         private final TimeUnit delayTimeUnit;
 
         ServiceFuture() {
-            delay = 30L;
-            delayTimeUnit = TimeUnit.SECONDS;
+            delay = 500L;
+            delayTimeUnit = TimeUnit.MILLISECONDS;
         }
 
         ServiceFuture(long timeInMs) {
