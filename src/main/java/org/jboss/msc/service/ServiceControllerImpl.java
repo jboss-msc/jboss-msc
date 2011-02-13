@@ -111,13 +111,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private int runningDependents;
     /**
-     * Indicates if this service has one or more dependencies that failed.
+     * Indicates if this service has one or more (possibly transitive) dependencies that failed.
      */
-    private boolean dependencyFailed = false;
+    private int dependencyFailed;
     /**
-     * Indicates if this service has one or more dependencies that are not installed. 
+     * Indicates if this service has one or more (possibly transitive) dependencies that are not installed.
      */
-    private boolean missingDependency;
+    private int missingDependency;
     /**
      * The number of asynchronous tasks that are currently running.  This includes listeners, start/stop methods,
      * outstanding asynchronous start/stops, and internal tasks.
@@ -589,10 +589,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void dependencyInstalled() {
         final Runnable[] tasks;
         synchronized (this) {
-            if (!missingDependency) {
+            if (--missingDependency != 0) {
                 return;
             }
-            missingDependency = false;
             tasks = getListenerTasks(ListenerNotification.DEPENDENCY_INSTALLED);
             asyncTasks += tasks.length;
         }
@@ -608,10 +607,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void dependencyUninstalled() {
         final Runnable[] tasks;
         synchronized (this) {
-            if (missingDependency) {
+            if (++missingDependency != 1) {
                 return;
             }
-            missingDependency = true;
             tasks = getListenerTasks(ListenerNotification.MISSING_DEPENDENCY);
             asyncTasks += tasks.length;
         }
@@ -648,10 +646,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void dependencyFailed() {
         Runnable[] tasks = null;
         synchronized (this) {
-            if (dependencyFailed) {
+            if (++dependencyFailed != 1) {
                 return;
             }
-            dependencyFailed = true;
             // we raised it to 1
             tasks = getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE);
             asyncTasks += tasks.length;
@@ -663,10 +660,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void dependencyFailureCleared() {
         Runnable[] tasks = null;
         synchronized (this) {
-            if (!dependencyFailed) {
+            if (--dependencyFailed != 0) {
                 return;
             }
-            dependencyFailed = false;
             // we dropped it to 0
             tasks = getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR);
             asyncTasks += tasks.length;
@@ -950,8 +946,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     state.getState().name(),
                     state.name(),
                     dependencyNames,
-                    dependencyFailed,
-                    missingDependency
+                    dependencyFailed != 0,
+                    missingDependency != 0
             );
         }
     }
