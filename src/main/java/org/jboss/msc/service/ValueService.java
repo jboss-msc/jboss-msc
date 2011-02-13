@@ -25,7 +25,7 @@ package org.jboss.msc.service;
 import org.jboss.msc.value.Value;
 
 /**
- * A service which does nothing but return the provided value.
+ * A service which returns the provided value, which is evaluated once per service start.
  *
  * @param <T> the service type
  *
@@ -33,6 +33,7 @@ import org.jboss.msc.value.Value;
  */
 public final class ValueService<T> implements Service<T> {
     private final Value<T> value;
+    private volatile T valueInstance;
 
     /**
      * Construct a new instance.
@@ -45,14 +46,20 @@ public final class ValueService<T> implements Service<T> {
 
     /** {@inheritDoc} */
     public void start(final StartContext context) throws StartException {
+        valueInstance = value.getValue();
     }
 
     /** {@inheritDoc} */
     public void stop(final StopContext context) {
+        valueInstance = null;
     }
 
     /** {@inheritDoc} */
     public T getValue() throws IllegalStateException {
-        return value.getValue();
+        final T value = valueInstance;
+        if (value == null) {
+            throw ServiceLogger.INSTANCE.serviceNotStarted();
+        }
+        return value;
     }
 }

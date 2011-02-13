@@ -84,4 +84,7 @@ interface ServiceLogger {
     @LogMessage(level = ERROR)
     @Message(id = 10, value = "Failed to register MBean with MBeanServer")
     void mbeanFailed(@Cause Exception e);
+
+    @Message(id = 11, value = "Service not started")
+    IllegalStateException serviceNotStarted();
 }
