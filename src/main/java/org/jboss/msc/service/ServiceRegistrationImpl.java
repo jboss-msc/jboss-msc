@@ -22,6 +22,8 @@
 
 package org.jboss.msc.service;
 
+import static java.lang.Thread.holdsLock;
+
 /**
  * A single service registration.
  *
@@ -61,28 +63,11 @@ final class ServiceRegistrationImpl implements Dependency {
     }
 
     /**
-     * Returns the dependents lock.<p>
-     * This lock must be used to synchronize calls to {@link #getDependents}, and any operations on the
-     * returned set. The lock should be released only after the dependents set reference is released
-     * by the caller.
-     *  
-     * @return the dependents set lock
-     * @see #getDependents()
-     */
-    Object getDependentsLock() {
-        return dependents;
-    }
-
-    /**
-     * Returns the dependents set.<p>
-     * This method must be called only by threads that hold the {@link #getDependentsLock() dependents lock},
-     * and any operations on the returned set, including iteration, should synchronize on the same lock.
-     * 
+     * Returns the dependents set.
+     *
      * @return the dependents set
-     * @see #getDependentsLock()
      */
     IdentityHashSet<Dependent> getDependents() {
-        assert lockHeldBy(dependents);
         return dependents;
     }
 
@@ -93,8 +78,8 @@ final class ServiceRegistrationImpl implements Dependency {
      */
     @Override
     public void addDependent(final Dependent dependent) {
-        assert !lockHeld();
-        assert !lockHeldByDependent(dependent);
+        assert !holdsLock(this);
+        assert !holdsLock(dependent);
         final ServiceControllerImpl<?> instance;
         Runnable[] tasks;
         synchronized (this) {
@@ -136,8 +121,8 @@ final class ServiceRegistrationImpl implements Dependency {
      */
     @Override
     public void removeDependent(final Dependent dependent) {
-        assert !lockHeld();
-        assert !lockHeldByDependent(dependent);
+        assert ! holdsLock(this);
+        assert ! holdsLock(dependent);
         synchronized (dependents) {
             dependents.remove(dependent);
         }
@@ -151,8 +136,8 @@ final class ServiceRegistrationImpl implements Dependency {
      */
     void setInstance(final ServiceControllerImpl<?> instance) throws DuplicateServiceException {
         assert instance != null;
-        assert !lockHeld();
-        assert !instance.lockHeld();
+        assert ! holdsLock(this);
+        assert ! holdsLock(instance);
         synchronized (this) {
             if (this.instance != null) {
                 throw new DuplicateServiceException(String.format("Service %s is already registered", name.getCanonicalName()));
@@ -168,7 +153,7 @@ final class ServiceRegistrationImpl implements Dependency {
     }
 
     void clearInstance(final ServiceControllerImpl<?> oldInstance) {
-        assert !lockHeld();
+        assert ! holdsLock(this);
         synchronized (this) {
             final ServiceControllerImpl<?> instance = this.instance;
             if (instance != oldInstance) {
@@ -181,30 +166,6 @@ final class ServiceRegistrationImpl implements Dependency {
                 dependent.immediateDependencyUninstalled();
             }
         }
-        container.checkMissingDependencies();
-    }
-
-    /**
-     * Determine whether the lock is currently held.
-     *
-     * @return {@code true} if the lock is held
-     */
-    boolean lockHeld() {
-        return Thread.holdsLock(this);
-    }
-
-    /**
-     * Determine whether the dependent lock is currently held.
-     *
-     * @param dependent the dependent to check
-     * @return {@code true} if the lock is held
-     */
-    boolean lockHeldByDependent(Dependent dependent) {
-        return Thread.holdsLock(dependent);
-    }
-
-    boolean lockHeldBy(Object object) {
-        return Thread.holdsLock(object);
     }
 
     ServiceContainerImpl getContainer() {

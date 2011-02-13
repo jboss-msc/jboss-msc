@@ -22,6 +22,8 @@
 
 package org.jboss.msc.service;
 
+import static java.lang.Thread.holdsLock;
+
 /**
  * An OptionalDependency.<br>This class establishes a transitive dependency relationship between the
  * dependent and the real dependency. The intermediation performed by this class adds the required optional
@@ -105,21 +107,15 @@ class OptionalDependency implements Dependency, Dependent {
      */
     private boolean dependentStartedNotified = false;
 
-    /**
-     * The container to which this dependency belongs.
-     */
-    private final ServiceContainerImpl container;
-
-    OptionalDependency(ServiceContainerImpl container, Dependency optionalDependency) {
+    OptionalDependency(Dependency optionalDependency) {
         this.optionalDependency = optionalDependency;
         dependencyState = DependencyState.INSTALLED;
-        this.container = container;
     }
 
     @Override
     public void addDependent(Dependent dependent) {
-        assert !lockHeld();
-        assert !lockHeldByDependent(dependent);
+        assert !holdsLock(this);
+        assert !holdsLock(dependent);
         final boolean notifyDependent;
         final DependencyState currentDependencyState;
         optionalDependency.addDependent(this);
@@ -134,7 +130,6 @@ class OptionalDependency implements Dependency, Dependent {
         if (notifyDependent) {
             switch (currentDependencyState) {
                 case FAILED:
-                    container.checkFailedDependencies(true);
                     break;
                 case UP:
                     dependent.immediateDependencyUp();
@@ -150,8 +145,8 @@ class OptionalDependency implements Dependency, Dependent {
 
     @Override
     public void removeDependent(Dependent dependent) {
-        assert !lockHeld();
-        assert !lockHeldByDependent(dependent);
+        assert !holdsLock(this);
+        assert !holdsLock(dependent);
         synchronized (this) {
             dependent = null;
             forwardNotifications = false;
@@ -161,7 +156,7 @@ class OptionalDependency implements Dependency, Dependent {
 
     @Override
     public void addDemand() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final boolean notifyOptionalDependency;
         synchronized (this) {
             demandedByDependent = true;
@@ -174,7 +169,7 @@ class OptionalDependency implements Dependency, Dependent {
 
     @Override
     public void removeDemand() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final boolean startNotifying;
         final boolean notifyOptionalDependency;
         final DependencyState currentDependencyState;
@@ -202,8 +197,6 @@ class OptionalDependency implements Dependency, Dependent {
             }
             // the status of missing and failed dependencies is changed now
             // that this optional dep is connected with the dependent
-            container.checkFailedDependencies(true);
-            container.checkMissingDependencies();
             if (transitiveDependencyMissing) {
                 dependent.dependencyUninstalled();
             }
@@ -214,7 +207,7 @@ class OptionalDependency implements Dependency, Dependent {
 
     @Override
     public void dependentStarted() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final boolean notifyOptionalDependency;
         synchronized (this) {
             dependentStartedNotified = notifyOptionalDependency = forwardNotifications;
@@ -226,7 +219,7 @@ class OptionalDependency implements Dependency, Dependent {
 
     @Override
     public void dependentStopped() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final boolean notifyOptionalDependency;
         synchronized (this) {
             // on some multi-thread scenarios, it can happen that forwardNotification become true as the result of a
@@ -243,7 +236,7 @@ class OptionalDependency implements Dependency, Dependent {
 
     @Override
     public Object getValue() throws IllegalStateException {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final boolean retrieveValue;
         synchronized (this) {
             retrieveValue = forwardNotifications;
@@ -258,7 +251,7 @@ class OptionalDependency implements Dependency, Dependent {
 
     @Override
     public void immediateDependencyInstalled() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final boolean notifyOptionalDependent;
         synchronized (this) {
             dependencyState = DependencyState.INSTALLED;
@@ -272,7 +265,7 @@ class OptionalDependency implements Dependency, Dependent {
 
     @Override
     public void immediateDependencyUninstalled() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final boolean notificationsForwarded;
         final boolean demandNotified;
         synchronized (this) {
@@ -292,7 +285,7 @@ class OptionalDependency implements Dependency, Dependent {
 
     @Override
     public void immediateDependencyUp() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final boolean notifyOptionalDependent;
         synchronized (this) {
             dependencyState = DependencyState.UP;
@@ -305,7 +298,7 @@ class OptionalDependency implements Dependency, Dependent {
 
     @Override
     public void immediateDependencyDown() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final boolean notifyOptionalDependent;
         synchronized (this) {
             dependencyState = DependencyState.INSTALLED;
@@ -318,7 +311,7 @@ class OptionalDependency implements Dependency, Dependent {
 
     @Override
     public void dependencyFailed() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final boolean notifyOptionalDependent;
         synchronized (this) {
             dependencyState = DependencyState.FAILED;
@@ -331,7 +324,7 @@ class OptionalDependency implements Dependency, Dependent {
 
     @Override
     public void dependencyFailureCleared() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final boolean notifyOptionalDependent;
         synchronized (this) {
             dependencyState = DependencyState.INSTALLED;
@@ -344,7 +337,7 @@ class OptionalDependency implements Dependency, Dependent {
 
     @Override
     public void dependencyInstalled() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final boolean notifyOptionalDependent;
         synchronized (this) {
             notifyOptionalDependent = forwardNotifications;
@@ -356,8 +349,13 @@ class OptionalDependency implements Dependency, Dependent {
     }
 
     @Override
+    public ServiceControllerImpl<?> getController() {
+        return dependent.getController();
+    }
+
+    @Override
     public void dependencyUninstalled() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final boolean notifyOptionalDependent;
         synchronized (this) {
             notifyOptionalDependent = forwardNotifications;
@@ -370,7 +368,7 @@ class OptionalDependency implements Dependency, Dependent {
 
     @Override
     public <T> T accept(Visitor<T> visitor) {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final boolean acceptRealDependency;
         synchronized (this) {
             acceptRealDependency = forwardNotifications;
@@ -379,23 +377,5 @@ class OptionalDependency implements Dependency, Dependent {
             return optionalDependency.accept(visitor);
         }
         return visitor.visit(null);
-    }
-
-    /**
-     * Determine whether the lock is currently held.
-     *
-     * @return {@code true} if the lock is held
-     */
-    boolean lockHeld() {
-        return Thread.holdsLock(this);
-    }
-
-    /**
-     * Determine whether the dependent lock is currently held.
-     *
-     * @return {@code true} if the lock is held
-     */
-    boolean lockHeldByDependent(Dependent dependent) {
-        return Thread.holdsLock(dependent);
     }
 }

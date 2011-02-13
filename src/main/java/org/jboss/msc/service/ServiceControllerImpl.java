@@ -31,6 +31,8 @@ import java.util.concurrent.RejectedExecutionException;
 import org.jboss.msc.service.management.ServiceStatus;
 import org.jboss.msc.value.Value;
 
+import static java.lang.Thread.holdsLock;
+
 /**
  * The service controller implementation.
  *
@@ -109,10 +111,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private int runningDependents;
     /**
-     * Indicates if this service has failed to start.
-     */
-    private boolean failed;
-    /**
      * Indicates if this service has one or more dependencies that failed.
      */
     private boolean dependencyFailed = false;
@@ -151,15 +149,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         children = new IdentityHashSet<ServiceControllerImpl<?>>();
     }
 
-    /**
-     * Determine whether the lock is currently held.
-     *
-     * @return {@code true} if the lock is held
-     */
-    boolean lockHeld() {
-        return Thread.holdsLock(this);
-    }
-
     Substate getSubstateLocked() {
         return state;
     }
@@ -178,7 +167,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * @return the transition or {@code null} if none is needed at this time
      */
     private Transition getTransition() {
-        assert lockHeld();
+        assert holdsLock(this);
         if (asyncTasks != 0) {
             // no movement possible
             return null;
@@ -253,13 +242,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * @return the async tasks to start when the lock is not held, {@code null} for none
      */
     Runnable[] transition() {
-        assert lockHeld();
+        assert holdsLock(this);
         final Transition transition = getTransition();
         if (transition == null) {
             return null;
         }
         final Runnable[] tasks;
-        boolean notifyDependentsOfFailure = false;
         switch (transition) {
             case STOPPING_to_DOWN: {
                 tasks = getListenerTasks(transition.getAfter().getState(), new DependentStoppedTask());
@@ -283,7 +271,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case STARTING_to_START_FAILED: {
-                notifyDependentsOfFailure = true;
                 ChildServiceTarget childTarget = this.childTarget;
                 if (childTarget != null) {
                     childTarget.valid = false;
@@ -299,14 +286,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case START_FAILED_to_STARTING: {
-                notifyDependentsOfFailure = true;
                 tasks = getListenerTasks(transition.getAfter().getState()/*, new DependencyRetryingTask(getDependents())*/, new StartTask(false));
                 break;
             }
             case START_FAILED_to_DOWN: {
                 startException = null;
-                failed = false;
-                notifyDependentsOfFailure = true;
                 tasks = getListenerTasks(transition.getAfter().getState()/*, new DependencyRetryingTask(getDependents())*/, new StopTask(true), new DependentStoppedTask());
                 break;
             }
@@ -348,9 +332,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
         }
         state = transition.getAfter();
-        if (notifyDependentsOfFailure) {
-            primaryRegistration.getContainer().checkFailedDependencies(false);
-        }
         asyncTasks += tasks.length;
         return tasks;
     }
@@ -415,7 +396,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     void doExecute(final Runnable task) {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         if (task == null) return;
         try {
             primaryRegistration.getContainer().getExecutor().execute(task);
@@ -425,7 +406,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     void doExecute(final Runnable... tasks) {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         if (tasks == null) return;
         final Executor executor = primaryRegistration.getContainer().getExecutor();
         for (Runnable task : tasks) {
@@ -442,7 +423,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private boolean internalSetMode(final ServiceController.Mode expectedMode, final ServiceController.Mode newMode) {
-        assert !lockHeld();
+        assert !holdsLock(this);
         if (newMode == null) {
             throw new IllegalArgumentException("newMode is null");
         }
@@ -618,6 +599,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         doExecute(tasks);
     }
 
+    /** {@inheritDoc} */
+    public ServiceControllerImpl<?> getController() {
+        return this;
+    }
+
     @Override
     public void dependencyUninstalled() {
         final Runnable[] tasks;
@@ -693,14 +679,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     void dependentStarted() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         synchronized (this) {
             runningDependents++;
         }
     }
 
     void dependentStopped() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final Runnable[] tasks;
         synchronized (this) {
             if (--runningDependents != 0) {
@@ -712,11 +698,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     Runnable[] newDependent(final Dependent dependent) {
-        assert lockHeld();
+        assert holdsLock(this);
         final Runnable[] tasks;
-        if (failed || dependencyFailed) {
-            primaryRegistration.getContainer().checkFailedDependencies(true);
-        }
         if (state == Substate.UP){
             tasks = new Runnable[]{new DependencyStartedTask(new Dependent[][]{{dependent}})};
             asyncTasks ++;
@@ -727,7 +710,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private void doDemandParents() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         for (Dependency dependency : dependencies) {
             dependency.addDemand();
         }
@@ -736,7 +719,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private void doUndemandParents() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         for (Dependency dependency : dependencies) {
             dependency.removeDemand();
         }
@@ -749,7 +732,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     void addDemands(final int demandedByCount) {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final Runnable[] tasks;
         final boolean propagate;
         synchronized (this) {
@@ -770,7 +753,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     void removeDemand() {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final Runnable[] tasks;
         final boolean propagate;
         synchronized (this) {
@@ -790,7 +773,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     void addChild(ServiceControllerImpl<?> child) {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final Runnable[] tasks;
         synchronized (this) {
             switch (state) {
@@ -808,7 +791,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     void removeChild(ServiceControllerImpl<?> child) {
-        assert ! lockHeld();
+        assert !holdsLock(this);
         final Runnable[] tasks;
         synchronized (this) {
             children.remove(child);
@@ -865,7 +848,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     public void addListener(final ServiceListener<? super S> listener) {
-        assert !lockHeld();
+        assert !holdsLock(this);
         final Substate state;
         synchronized (this) {
             state = this.state;
@@ -899,14 +882,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     public void retry() {
-        assert !lockHeld();
+        assert !holdsLock(this);
         final Runnable[] tasks;
         synchronized (this) {
             if (state.getState() != ServiceController.State.START_FAILED) {
                 return;
             }
             startException = null;
-            failed = false;
             tasks = transition();
         }
         doExecute(tasks);
@@ -997,7 +979,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      *                      {@link ListenerNotification#STATE}
      */
     private void invokeListener(final ServiceListener<? super S> listener, final ListenerNotification notification, final State state ) {
-        assert !lockHeld();
+        assert !holdsLock(this);
         try {
             switch (notification) {
                 case LISTENER_ADDED:
@@ -1076,24 +1058,25 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * @return an array of dependents
      */
     private Dependent[][] getDependents() {
+        IdentityHashSet<Dependent> dependentSet = primaryRegistration.getDependents();
         if (aliasRegistrations.length == 0) {
-            synchronized (primaryRegistration.getDependentsLock()) {
-                return new Dependent[][] {primaryRegistration.getDependents().toScatteredArray(NO_DEPENDENTS),
+            synchronized (dependentSet) {
+                return new Dependent[][] { dependentSet.toScatteredArray(NO_DEPENDENTS),
                         children.toScatteredArray(NO_DEPENDENTS)};
             }
         }
         Dependent[][] dependents = new Dependent[aliasRegistrations.length + 2][];
-        synchronized (primaryRegistration.getDependentsLock()) {
-            dependents[0] = primaryRegistration.getDependents().toScatteredArray(NO_DEPENDENTS);
+        synchronized (dependentSet) {
+            dependents[0] = dependentSet.toScatteredArray(NO_DEPENDENTS);
         }
         dependents[1] = children.toScatteredArray(NO_DEPENDENTS);
         for (int i = 0; i < aliasRegistrations.length; i++) {
-            ServiceRegistrationImpl alias = aliasRegistrations[i];
-            synchronized (alias.getDependentsLock()) {
-                dependents[i + 2] = alias.getDependents().toScatteredArray(NO_DEPENDENTS);
+            final ServiceRegistrationImpl alias = aliasRegistrations[i];
+            final IdentityHashSet<Dependent> aliasDependentSet = alias.getDependents();
+            synchronized (aliasDependentSet) {
+                dependents[i + 2] = aliasDependentSet.toScatteredArray(NO_DEPENDENTS);
             }
         }
-        
         return dependents;
     }
 
@@ -1202,7 +1185,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public void run() {
-            assert !lockHeld();
+            assert !holdsLock(ServiceControllerImpl.this);
             final ServiceName serviceName = primaryRegistration.getName();
             final long startNanos = System.nanoTime();
             final StartContextImpl context = new StartContextImpl(startNanos);
@@ -1260,7 +1243,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                         writeProfileInfo('F', startNanos, System.nanoTime());
                     }
-                    failed = true;
                     tasks = transition();
                 }
                 doExecute(tasks);
@@ -1278,7 +1260,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                         writeProfileInfo('F', startNanos, System.nanoTime());
                     }
-                    failed = true;
                     tasks = transition();
                 }
                 doExecute(tasks);
@@ -1294,7 +1275,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public void run() {
-            assert !lockHeld();
+            assert !holdsLock(ServiceControllerImpl.this);
             final ServiceName serviceName = primaryRegistration.getName();
             final long startNanos = System.nanoTime();
             final StopContextImpl context = new StopContextImpl(startNanos);
@@ -1359,7 +1340,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public void run() {
-            assert !lockHeld();
+            assert !holdsLock(ServiceControllerImpl.this);
             if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                 final long start = System.nanoTime();
                 try {
@@ -1461,9 +1442,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 assert getMode() == ServiceController.Mode.REMOVE;
                 assert getSubstate() == Substate.REMOVING;
                 primaryRegistration.clearInstance(ServiceControllerImpl.this);
-                if (failed || dependencyFailed) {
-                    primaryRegistration.getContainer().checkFailedDependencies(true);
-                }
                 for (ServiceRegistrationImpl registration : aliasRegistrations) {
                     registration.clearInstance(ServiceControllerImpl.this);
                 }
@@ -1505,7 +1483,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 reason.setServiceName(serviceName);
                 ServiceLogger.INSTANCE.startFailed(reason, serviceName);
                 startException = reason;
-                failed = true;
                 asyncTasks--;
                 if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                     writeProfileInfo('F', startNanos, System.nanoTime());

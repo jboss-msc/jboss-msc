@@ -92,4 +92,11 @@ interface Dependent {
      * <p> This method must not be called under a lock.
      */
     void dependencyInstalled();
+
+    /**
+     * Get the controller of this dependent.
+     *
+     * @return the controller
+     */
+    ServiceControllerImpl<?> getController();
 }
