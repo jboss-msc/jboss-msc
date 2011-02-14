@@ -42,10 +42,14 @@ class BatchServiceTargetImpl extends DelegatingServiceTarget implements BatchSer
     private final Collection<ServiceController<?>> addedServiceControllers;
 
     BatchServiceTargetImpl(ServiceTarget serviceTarget, ServiceRegistry serviceRegistry) {
+        this(new HashSet<ServiceController<?>>(), serviceTarget.subTarget(), serviceRegistry);
+    }
+
+    private BatchServiceTargetImpl(Collection<ServiceController<?>> controllers, ServiceTarget serviceTarget, ServiceRegistry serviceRegistry) {
         super(serviceTarget.subTarget());
-        this.serviceTarget = serviceTarget.subTarget();
+        this.serviceTarget = serviceTarget;
         this.serviceRegistry = serviceRegistry;
-        addedServiceControllers = new HashSet<ServiceController<?>>();
+        addedServiceControllers = controllers;
     }
 
     @Override
@@ -123,5 +127,9 @@ class BatchServiceTargetImpl extends DelegatingServiceTarget implements BatchSer
     public BatchServiceTarget removeDependency(final ServiceName dependency) {
         super.removeDependency(dependency);
         return this;
+    }
+
+    public ServiceTarget subTarget() {
+        return new BatchServiceTargetImpl(new HashSet<ServiceController<?>>(), super.subTarget(), serviceRegistry);
     }
 }
