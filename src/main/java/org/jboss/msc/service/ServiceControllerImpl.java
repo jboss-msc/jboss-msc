@@ -94,41 +94,64 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private Substate state = Substate.NEW;
     /**
-     * The number of registrations which place a demand-to-start on this instance.  If this value is >0, propagate a demand
-     * up to all parent dependents.  If this value is >0 and mode is ON_DEMAND, put a load of +1 on {@code upperCount}.
+     * The number of registrations which place a demand-to-start on this
+     * instance. If this value is >0, propagate a demand up to all parent
+     * dependents. If this value is >0 and mode is ON_DEMAND, put a load of +1
+     * on {@code upperCount}.
      */
     private int demandedByCount;
     /**
-     * Semaphore count for bringing this dep up.  If the value is <= 0, the service is stopped.  Each unstarted
-     * dependency will put a load of -1 on this value.  A mode of AUTOMATIC or IMMEDIATE will put a load of +1 on this
-     * value.  A mode of NEVER will cause this value to be ignored.  A mode of ON_DEMAND will put a load of +1 on this
-     * value <b>if</b> {@link #demandedByCount} is >0.
+     * Semaphore count for bringing this dep up. If the value is <= 0, the
+     * service is stopped. Each unstarted dependency will put a load of -1 on
+     * this value. A mode of AUTOMATIC or IMMEDIATE will put a load of +1 on
+     * this value. A mode of NEVER will cause this value to be ignored. A mode
+     * of ON_DEMAND will put a load of +1 on this value <b>if</b>
+     * {@link #demandedByCount} is >0.
      */
     private int upperCount;
     /**
-     * The number of dependents that are currently running.  The deployment will not execute the {@code stop()} method
-     * (and subsequently leave the {@link org.jboss.msc.service.ServiceController.State#STOPPING} state) until all running dependents (and listeners) are stopped.
+     * The number of dependents that are currently running. The deployment will
+     * not execute the {@code stop()} method (and subsequently leave the
+     * {@link org.jboss.msc.service.ServiceController.State#STOPPING} state)
+     * until all running dependents (and listeners) are stopped.
      */
     private int runningDependents;
     /**
-     * Indicates if this service has one or more (possibly transitive) dependencies that failed.
+     * Count for failure notification. It indicates how many services have
+     * failed to start and are not recovered so far. This count monitors
+     * failures that happen when starting this service, and dependency related
+     * failures as well. When incremented from 0 to 1, it is time to notify
+     * dependents and listeners that a failure occurred. When decremented from 1
+     * to 0, the dependents and listeners are notified that the affected
+     * services are retrying to start. Values larger than 1 are ignored to avoid
+     * multiple notifications.
      */
-    private int dependencyFailed;
+    private int failCount;
     /**
-     * Indicates if this service has one or more (possibly transitive) dependencies that are not installed.
+     * Indicates if this service has one or more (possibly transitive)
+     * dependencies that are not installed. Count for notification of missing
+     * (uninstalled) dependencies. Its value indicates how many dependencies are
+     * missing. When incremented from 0 to 1, dependents and listeners are
+     * notified of the missing dependency. When decremented from 1 to 0, a
+     * notification that the missing dependencies are now installed is sent to
+     * dependents and listeners. Values larger than 1 are ignored to avoid
+     * multiple notifications.
      */
-    private int missingDependency;
+    private int missingDepCount;
     /**
-     * The number of asynchronous tasks that are currently running.  This includes listeners, start/stop methods,
-     * outstanding asynchronous start/stops, and internal tasks.
+     * The number of asynchronous tasks that are currently running. This
+     * includes listeners, start/stop methods, outstanding asynchronous
+     * start/stops, and internal tasks.
      */
     private int asyncTasks;
     /**
-     * The service target for adding child services (can be {@code null} if none were added).
+     * The service target for adding child services (can be {@code null} if none
+     * were added).
      */
     private volatile ChildServiceTarget childTarget;
     /**
-     * The system nanotime of the moment in which the last lifecycle change was initiated.
+     * The system nanotime of the moment in which the last lifecycle change was
+     * initiated.
      */
     private volatile long lifecycleTime;
 
@@ -282,16 +305,19 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         child.setMode(Mode.REMOVE);
                     }
                 }
-                tasks = getListenerTasks(transition.getAfter().getState()/*, new DependencyFailedTask(getDependents())*/);
+                tasks = getListenerTasks(transition.getAfter().getState(), new DependencyFailedTask(getDependents()));
                 break;
             }
             case START_FAILED_to_STARTING: {
-                tasks = getListenerTasks(transition.getAfter().getState()/*, new DependencyRetryingTask(getDependents())*/, new StartTask(false));
+                tasks = getListenerTasks(transition.getAfter().getState(), new DependencyRetryingTask(getDependents()),
+                        new StartTask(false));
                 break;
             }
             case START_FAILED_to_DOWN: {
                 startException = null;
-                tasks = getListenerTasks(transition.getAfter().getState()/*, new DependencyRetryingTask(getDependents())*/, new StopTask(true), new DependentStoppedTask());
+                failCount--;
+                tasks = getListenerTasks(transition.getAfter().getState(), new DependencyRetryingTask(getDependents()),
+                        new StopTask(true), new DependentStoppedTask());
                 break;
             }
             case STOP_REQUESTED_to_UP: {
@@ -314,7 +340,25 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case DOWN_to_REMOVING: {
-                tasks = new Runnable[] { new RemoveTask() };
+                Dependent[][] dependents = getDependents();
+                if (failCount > 0) {
+                    if (missingDepCount > 0) {
+                        tasks = new Runnable[3];
+                        tasks[1] = new DependencyInstalledTask(dependents);
+                    }
+                    else {
+                        tasks = new Runnable[2];
+                    }
+                    tasks[0] = new DependencyRetryingTask(dependents);
+                }
+                else if (missingDepCount > 0) {
+                    tasks = new Runnable[2];
+                    tasks [0] = new DependencyInstalledTask(dependents);
+                }
+                else {
+                    tasks = new Runnable[1];
+                }
+                tasks[tasks.length -1] = new RemoveTask();
                 break;
             }
             case REMOVING_to_REMOVED: {
@@ -336,7 +380,23 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return tasks;
     }
 
-    private Runnable[] getListenerTasks(final ServiceController.State newState, final Runnable extraTask1, final Runnable extraTask2) {
+    private Runnable[] getListenerTasks(final ServiceController.State newState, final Runnable extraTask1,
+            final Runnable extraTask2, final Runnable extraTask3) {
+        final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
+        final int size = listeners.size();
+        final Runnable[] tasks = new Runnable[size + 3];
+        int i = 0;
+        for (ServiceListener<? super S> listener : listeners) {
+            tasks[i++] = new ListenerTask(listener, newState);
+        }
+        tasks[i++] = extraTask1;
+        tasks[i++] = extraTask2;
+        tasks[i] = extraTask3;
+        return tasks;
+    }
+
+    private Runnable[] getListenerTasks(final ServiceController.State newState, final Runnable extraTask1,
+            final Runnable extraTask2) {
         final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
         final int size = listeners.size();
         final Runnable[] tasks = new Runnable[size + 2];
@@ -368,17 +428,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         int i = 0;
         for (ServiceListener<? super S> listener : listeners) {
             tasks[i++] = new ListenerTask(listener, newState);
-        }
-        return tasks;
-    }
-
-    private Runnable[] getListenerTasks(final ListenerNotification notification) {
-        final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
-        final int size = listeners.size();
-        final Runnable[] tasks = new Runnable[size];
-        int i = 0;
-        for (ServiceListener<? super S> listener : listeners) {
-            tasks[i++] = new ListenerTask(listener, notification);
         }
         return tasks;
     }
@@ -579,20 +628,24 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     @Override
     public void immediateDependencyInstalled() {
+        dependencyInstalled();
     }
 
     @Override
     public void immediateDependencyUninstalled() {
+        dependencyUninstalled();
     }
 
     @Override
     public void dependencyInstalled() {
         final Runnable[] tasks;
         synchronized (this) {
-            if (--missingDependency != 0) {
+            if (--missingDepCount != 0) {
                 return;
             }
-            tasks = getListenerTasks(ListenerNotification.DEPENDENCY_INSTALLED);
+            // we dropped it to 0
+            tasks = getListenerTasks(ListenerNotification.DEPENDENCY_INSTALLED,
+                    new DependencyInstalledTask(getDependents()));
             asyncTasks += tasks.length;
         }
         doExecute(tasks);
@@ -607,10 +660,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void dependencyUninstalled() {
         final Runnable[] tasks;
         synchronized (this) {
-            if (++missingDependency != 1) {
+            if (++missingDepCount != 1) {
                 return;
             }
-            tasks = getListenerTasks(ListenerNotification.MISSING_DEPENDENCY);
+            // we raised it to 1
+            tasks = getListenerTasks(ListenerNotification.MISSING_DEPENDENCY,
+                    new DependencyUninstalledTask(getDependents()));
             asyncTasks += tasks.length;
         }
         doExecute(tasks);
@@ -646,11 +701,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void dependencyFailed() {
         Runnable[] tasks = null;
         synchronized (this) {
-            if (++dependencyFailed != 1) {
+            if (++failCount != 1) {
                 return;
             }
             // we raised it to 1
-            tasks = getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE);
+            tasks = getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, new DependencyFailedTask(getDependents()));
             asyncTasks += tasks.length;
         }
         doExecute(tasks);
@@ -660,11 +715,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void dependencyFailureCleared() {
         Runnable[] tasks = null;
         synchronized (this) {
-            if (--dependencyFailed != 0) {
+            if (--failCount != 0) {
                 return;
             }
             // we dropped it to 0
-            tasks = getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR);
+            tasks = getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR,
+                    new DependencyRetryingTask(getDependents()));
             asyncTasks += tasks.length;
         }
         doExecute(tasks);
@@ -696,11 +752,26 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     Runnable[] newDependent(final Dependent dependent) {
         assert holdsLock(this);
         final Runnable[] tasks;
-        if (state == Substate.UP){
-            tasks = new Runnable[]{new DependencyStartedTask(new Dependent[][]{{dependent}})};
-            asyncTasks ++;
-        } else {
-            tasks = null;
+        synchronized (this) {
+            if (failCount > 0) {
+                final Dependent[][] dependents = new Dependent[][] { { dependent } };
+                if (missingDepCount > 0) {
+                    tasks = new Runnable[2];
+                    tasks[1] = new DependencyUninstalledTask(dependents);
+                } else {
+                    tasks = new Runnable[1];
+                }
+                tasks[0] = new DependencyFailedTask(dependents);
+                asyncTasks += tasks.length;
+            } else if (missingDepCount > 0) {
+                tasks = new Runnable[] { new DependencyUninstalledTask(new Dependent[][] { { dependent } }) };
+                asyncTasks++;
+            } else if (state == Substate.UP) {
+                tasks = new Runnable[] { new DependencyStartedTask(new Dependent[][] { { dependent } }) };
+                asyncTasks++;
+            } else {
+                tasks = null;
+            }
         }
         return tasks;
     }
@@ -884,6 +955,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (state.getState() != ServiceController.State.START_FAILED) {
                 return;
             }
+            failCount--;
             startException = null;
             tasks = transition();
         }
@@ -946,8 +1018,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     state.getState().name(),
                     state.name(),
                     dependencyNames,
-                    dependencyFailed != 0,
-                    missingDependency != 0
+                    failCount != 0,
+                    missingDepCount != 0
             );
         }
     }
@@ -1239,6 +1311,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                         writeProfileInfo('F', startNanos, System.nanoTime());
                     }
+                    failCount++;
                     tasks = transition();
                 }
                 doExecute(tasks);
@@ -1400,6 +1473,115 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 doExecute(tasks);
             } catch (Throwable t) {
                 ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
+            }
+        }
+    }
+
+    private class DependencyFailedTask implements Runnable {
+
+        private final Dependent[][] dependents;
+
+        DependencyFailedTask(final Dependent[][] dependents) {
+            this.dependents = dependents;
+        }
+
+        public void run() {
+            try {
+                for (Dependent[] dependentArray : dependents) {
+                    for (Dependent dependent : dependentArray) {
+                        if (dependent != null) dependent.dependencyFailed();
+                    }
+                }
+                final Runnable[] tasks;
+                synchronized (ServiceControllerImpl.this) {
+                    asyncTasks--;
+                    tasks = transition();
+                }
+                doExecute(tasks);
+            } catch (Throwable t) {
+                ServiceLogger.INSTANCE.internalServiceError(t, primaryRegistration.getName());
+            }
+        }
+    }
+
+    private class DependencyRetryingTask implements Runnable {
+
+        private final Dependent[][] dependents;
+
+        DependencyRetryingTask(final Dependent[][] dependents) {
+            this.dependents = dependents;
+        }
+
+        public void run() {
+            try {
+                for (Dependent[] dependentArray : dependents) {
+                    for (Dependent dependent : dependentArray) {
+                        if (dependent != null) dependent.dependencyFailureCleared();
+                    }
+                }
+                final Runnable[] tasks;
+                synchronized (ServiceControllerImpl.this) {
+                    asyncTasks--;
+                    tasks = transition();
+                }
+                doExecute(tasks);
+            } catch (Throwable t) {
+                ServiceLogger.INSTANCE.internalServiceError(t, primaryRegistration.getName());
+            }
+        }
+    }
+
+    private class DependencyInstalledTask implements Runnable {
+
+        private final Dependent[][] dependents;
+
+        DependencyInstalledTask(final Dependent[][] dependents) {
+            this.dependents = dependents;
+        }
+
+        public void run() {
+            try {
+                for (Dependent[] dependentArray : dependents) {
+                    for (Dependent dependent : dependentArray) {
+                        if (dependent != null) dependent.dependencyInstalled();
+                    }
+                }
+                final Runnable[] tasks;
+                synchronized (ServiceControllerImpl.this) {
+                    asyncTasks--;
+                    tasks = transition();
+                }
+                doExecute(tasks);
+            } catch (Throwable t) {
+                ServiceLogger.INSTANCE.internalServiceError(t, primaryRegistration.getName());
+            }
+        }
+
+    }
+
+    private class DependencyUninstalledTask implements Runnable {
+
+        private final Dependent[][] dependents;
+
+        DependencyUninstalledTask(final Dependent[][] dependents) {
+            this.dependents = dependents;
+        }
+
+        public void run() {
+            try {
+                for (Dependent[] dependentArray : dependents) {
+                    for (Dependent dependent : dependentArray) {
+                        if (dependent != null) dependent.dependencyUninstalled();
+                    }
+                }
+                final Runnable[] tasks;
+                synchronized (ServiceControllerImpl.this) {
+                    asyncTasks--;
+                    tasks = transition();
+                }
+                doExecute(tasks);
+            } catch (Throwable t) {
+                ServiceLogger.INSTANCE.internalServiceError(t, primaryRegistration.getName());
             }
         }
     }
