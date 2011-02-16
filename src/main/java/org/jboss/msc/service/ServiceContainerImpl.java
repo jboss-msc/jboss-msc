@@ -619,6 +619,13 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             }, POLICY);
         }
 
+        protected void afterExecute(final Runnable r, final Throwable t) {
+            super.afterExecute(r, t);
+            if (t != null) {
+                HANDLER.uncaughtException(Thread.currentThread(), t);
+            }
+        }
+
         protected void terminated() {
             shutdownComplete(shutdownInitiated);
         }
