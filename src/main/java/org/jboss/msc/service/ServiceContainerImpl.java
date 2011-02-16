@@ -85,7 +85,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 return System.getProperty("jboss.msc.profile.output");
             }
         });
-        ServiceLogger.INSTANCE.greeting(Version.getVersionString());
+        ServiceLogger.ROOT.greeting(Version.getVersionString());
     }
 
     private final Map<ServiceName, ServiceRegistrationImpl> registry = new UnlockedReadHashMap<ServiceName, ServiceRegistrationImpl>(512);
@@ -237,7 +237,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             mBeanServer = ManagementFactory.getPlatformMBeanServer();
             mBeanServer.registerMBean(containerMXBean, objectName);
         } catch (Exception e) {
-            ServiceLogger.INSTANCE.mbeanFailed(e);
+            ServiceLogger.ROOT.mbeanFailed(e);
         }
         this.mBeanServer = mBeanServer;
         this.objectName = objectName;
@@ -599,7 +599,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     private static final AtomicInteger executorSeq = new AtomicInteger(1);
     private static final Thread.UncaughtExceptionHandler HANDLER = new Thread.UncaughtExceptionHandler() {
         public void uncaughtException(final Thread t, final Throwable e) {
-            ServiceLogger.INSTANCE.uncaughtException(e, t);
+            ServiceLogger.ROOT.uncaughtException(e, t);
         }
     };
     private static final ThreadPoolExecutor.CallerRunsPolicy POLICY = new ThreadPoolExecutor.CallerRunsPolicy();

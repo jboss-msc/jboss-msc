@@ -58,7 +58,7 @@ public final class ValueService<T> implements Service<T> {
     public T getValue() throws IllegalStateException {
         final T value = valueInstance;
         if (value == null) {
-            throw ServiceLogger.INSTANCE.serviceNotStarted();
+            throw ServiceLogger.SERVICE.serviceNotStarted();
         }
         return value;
     }

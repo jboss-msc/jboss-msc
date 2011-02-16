@@ -27,6 +27,9 @@ import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
  * A Service that can be set to fail to start on any start attempt.
  * 
@@ -49,7 +52,15 @@ public class FailToStartService implements Service<Void> {
     public void start(StartContext context) throws StartException {
         if (fail) {
             fail = false;
-            throw new StartException("Second service failed");
+            context.asynchronous();
+            Logger logger = Logger.getLogger("org.jboss.msc.service.fail");
+            Level level = logger.getLevel();
+            try {
+                logger.setLevel(Level.OFF);
+                context.failed(new StartException("Second service failed"));
+            } finally {
+                logger.setLevel(level);
+            }
         }
     }
 

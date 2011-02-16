@@ -39,7 +39,9 @@ import static org.jboss.logging.Logger.Level.*;
 @MessageLogger(projectCode = "MSC")
 interface ServiceLogger {
 
-    ServiceLogger INSTANCE = Logger.getMessageLogger(ServiceLogger.class, "org.jboss.msc");
+    ServiceLogger ROOT = Logger.getMessageLogger(ServiceLogger.class, "org.jboss.msc");
+    ServiceLogger SERVICE = Logger.getMessageLogger(ServiceLogger.class, "org.jboss.msc.service");
+    ServiceLogger FAIL = Logger.getMessageLogger(ServiceLogger.class, "org.jboss.msc.service.fail");
 
     @LogMessage(level = INFO)
     @Message(value = "JBoss MSC version %s")

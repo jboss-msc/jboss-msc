@@ -1023,7 +1023,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
             }
         } catch (Throwable t) {
-            ServiceLogger.INSTANCE.listenerFailed(t, listener);
+            ServiceLogger.SERVICE.listenerFailed(t, listener);
         } finally {
             final Runnable[] tasks;
             synchronized (this) {
@@ -1104,7 +1104,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
-                ServiceLogger.INSTANCE.internalServiceError(t, primaryRegistration.getName());
+                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
             }
         }
     }
@@ -1121,7 +1121,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
-                ServiceLogger.INSTANCE.internalServiceError(t, primaryRegistration.getName());
+                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
             }
         }
     }
@@ -1144,7 +1144,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
-                ServiceLogger.INSTANCE.internalServiceError(t, primaryRegistration.getName());
+                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
             }
         }
     }
@@ -1167,7 +1167,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
-                ServiceLogger.INSTANCE.internalServiceError(t, primaryRegistration.getName());
+                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
             }
         }
     }
@@ -1225,12 +1225,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 doExecute(tasks);
             } catch (StartException e) {
                 e.setServiceName(serviceName);
-                ServiceLogger.INSTANCE.startFailed(e, serviceName);
+                ServiceLogger.FAIL.startFailed(e, serviceName);
                 final Runnable[] tasks;
                 synchronized (ServiceControllerImpl.this) {
                     final ContextState oldState = context.state;
                     if (oldState != ContextState.SYNC && oldState != ContextState.ASYNC) {
-                        ServiceLogger.INSTANCE.exceptionAfterComplete(e, serviceName);
+                        ServiceLogger.FAIL.exceptionAfterComplete(e, serviceName);
                         return;
                     }
                     context.state = ContextState.FAILED;
@@ -1247,12 +1247,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 synchronized (ServiceControllerImpl.this) {
                     final ContextState oldState = context.state;
                     if (oldState != ContextState.SYNC && oldState != ContextState.ASYNC) {
-                        ServiceLogger.INSTANCE.exceptionAfterComplete(t, serviceName);
+                        ServiceLogger.FAIL.exceptionAfterComplete(t, serviceName);
                         return;
                     }
                     context.state = ContextState.FAILED;
                     asyncTasks--;
-                    ServiceLogger.INSTANCE.startFailed(startException = new StartException("Failed to start service", t, location, serviceName), serviceName);
+                    ServiceLogger.FAIL.startFailed(startException = new StartException("Failed to start service", t, location, serviceName), serviceName);
                     if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                         writeProfileInfo('F', startNanos, System.nanoTime());
                     }
@@ -1284,10 +1284,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                             service.stop(context);
                             ok = true;
                         } else {
-                            ServiceLogger.INSTANCE.stopServiceMissing(serviceName);
+                            ServiceLogger.ROOT.stopServiceMissing(serviceName);
                         }
                     } catch (Throwable t) {
-                        ServiceLogger.INSTANCE.stopFailed(t, serviceName);
+                        ServiceLogger.FAIL.stopFailed(t, serviceName);
                     }
                 }
             } finally {
@@ -1303,7 +1303,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 for (ValueInjection<?> injection : injections) try {
                     injection.getTarget().uninject();
                 } catch (Throwable t) {
-                    ServiceLogger.INSTANCE.uninjectFailed(t, serviceName, injection);
+                    ServiceLogger.ROOT.uninjectFailed(t, serviceName, injection);
                 }
                 synchronized (ServiceControllerImpl.this) {
                     asyncTasks--;
@@ -1372,7 +1372,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
-                ServiceLogger.INSTANCE.internalServiceError(t, primaryRegistration.getName());
+                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
             }
         }
     }
@@ -1399,7 +1399,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
-                ServiceLogger.INSTANCE.internalServiceError(t, primaryRegistration.getName());
+                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
             }
         }
     }
@@ -1423,7 +1423,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
-                ServiceLogger.INSTANCE.internalServiceError(t, primaryRegistration.getName());
+                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
             }
         }
     }
@@ -1453,7 +1453,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
-                ServiceLogger.INSTANCE.internalServiceError(t, primaryRegistration.getName());
+                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
             }
         }
     }
@@ -1477,7 +1477,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 state = ContextState.FAILED;
                 final ServiceName serviceName = getName();
                 reason.setServiceName(serviceName);
-                ServiceLogger.INSTANCE.startFailed(reason, serviceName);
+                ServiceLogger.FAIL.startFailed(reason, serviceName);
                 startException = reason;
                 asyncTasks--;
                 if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
