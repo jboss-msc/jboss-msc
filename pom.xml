@@ -48,7 +48,7 @@
         <dependency>
             <groupId>org.jboss.logging</groupId>
             <artifactId>jboss-logging-tools</artifactId>
-            <version>1.0.0.Beta4-SNAPSHOT</version>
+            <version>1.0.0.Beta4</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
