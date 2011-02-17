@@ -33,7 +33,7 @@ import org.jboss.msc.value.Value;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
+public final class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     private final ServiceBuilder<T> delegate;
 
     /**

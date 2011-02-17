@@ -29,7 +29,7 @@ import java.util.List;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public class DelegatingServiceRegistry implements ServiceRegistry {
+public final class DelegatingServiceRegistry implements ServiceRegistry {
     private final ServiceRegistry delegate;
 
     /**

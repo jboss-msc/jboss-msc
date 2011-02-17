@@ -36,7 +36,7 @@ import org.jboss.msc.value.Value;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public class DelegatingServiceContainer implements ServiceContainer {
+public final class DelegatingServiceContainer implements ServiceContainer {
     private final ServiceTarget delegateTarget;
     private final ServiceRegistry delegateRegistry;
 
