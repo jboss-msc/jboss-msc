@@ -27,7 +27,6 @@ import java.util.HashSet;
 
 import org.jboss.msc.service.ServiceController.Mode;
 import org.jboss.msc.value.ImmediateValue;
-import org.jboss.msc.value.Value;
 
 /**
  * {@link BatchServiceTarget} implementation.
@@ -35,21 +34,13 @@ import org.jboss.msc.value.Value;
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-class BatchServiceTargetImpl extends DelegatingServiceTarget implements BatchServiceTarget {
+class BatchServiceTargetImpl extends ServiceTargetImpl implements BatchServiceTarget {
 
-    private final ServiceTarget serviceTarget;
-    private final ServiceRegistry serviceRegistry;
     private final Collection<ServiceController<?>> addedServiceControllers;
 
-    BatchServiceTargetImpl(ServiceTarget serviceTarget, ServiceRegistry serviceRegistry) {
-        this(new HashSet<ServiceController<?>>(), serviceTarget.subTarget(), serviceRegistry);
-    }
-
-    private BatchServiceTargetImpl(Collection<ServiceController<?>> controllers, ServiceTarget serviceTarget, ServiceRegistry serviceRegistry) {
-        super(serviceTarget.subTarget());
-        this.serviceTarget = serviceTarget;
-        this.serviceRegistry = serviceRegistry;
-        addedServiceControllers = controllers;
+    BatchServiceTargetImpl(final ServiceTargetImpl parent) {
+        super(parent);
+        addedServiceControllers = new HashSet<ServiceController<?>>();
     }
 
     @Override
@@ -65,18 +56,13 @@ class BatchServiceTargetImpl extends DelegatingServiceTarget implements BatchSer
         }
     }
 
-    @Override
-    public <T> ServiceBuilder<T> addServiceValue(ServiceName name, Value<? extends Service<T>> value) {
-        return new DelegatingServiceBuilder<T>(super.addServiceValue(name, value)) {
-            public ServiceController<T> install() throws ServiceRegistryException {
-                ServiceController<T> installed = super.install();
-                final Collection<ServiceController<?>> controllers = addedServiceControllers;
-                synchronized (controllers) {
-                    controllers.add(installed);
-                }
-                return installed;
-            }
-        };
+    <T> ServiceController<T> install(final ServiceBuilderImpl<T> serviceBuilder) throws ServiceRegistryException {
+        final ServiceController<T> controller = super.install(serviceBuilder);
+        final Collection<ServiceController<?>> controllers = addedServiceControllers;
+        synchronized (controllers) {
+            controllers.add(controller);
+        }
+        return controller;
     }
 
     @Override
@@ -84,10 +70,7 @@ class BatchServiceTargetImpl extends DelegatingServiceTarget implements BatchSer
         return addServiceValue(name, new ImmediateValue<Service<T>>(service));
     }
 
-    @Override
-    public BatchServiceTarget batchTarget() {
-        return new BatchServiceTargetImpl(serviceTarget, serviceRegistry);
-    }
+    // these are overridden for covariant return type only
 
     public BatchServiceTarget addListener(final ServiceListener<Object> listener) {
         super.addListener(listener);
@@ -127,9 +110,5 @@ class BatchServiceTargetImpl extends DelegatingServiceTarget implements BatchSer
     public BatchServiceTarget removeDependency(final ServiceName dependency) {
         super.removeDependency(dependency);
         return this;
-    }
-
-    public ServiceTarget subTarget() {
-        return new BatchServiceTargetImpl(new HashSet<ServiceController<?>>(), super.subTarget(), serviceRegistry);
     }
 }

@@ -204,6 +204,6 @@ class ServiceTargetImpl implements ServiceTarget {
 
     @Override
     public BatchServiceTarget batchTarget() {
-        return new BatchServiceTargetImpl(this, getServiceRegistry());
+        return new BatchServiceTargetImpl(this);
     }
 }
