@@ -175,8 +175,9 @@ final class ServiceRegistrationImpl implements Dependency {
     @Override
     public void dependentStopped() {
         synchronized (this) {
-            assert instance != null;
-            instance.dependentStopped();
+            if (instance != null) {
+                instance.dependentStopped();
+            }
         }
     }
 
@@ -200,8 +201,9 @@ final class ServiceRegistrationImpl implements Dependency {
     @Override
     public void dependentStarted() {
         synchronized (this) {
-            assert instance != null;
-            instance.dependentStarted();
+            if (instance != null) {
+                instance.dependentStarted();
+            }
         }
     }
 
