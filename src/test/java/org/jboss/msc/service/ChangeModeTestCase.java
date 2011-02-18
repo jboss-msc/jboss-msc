@@ -411,9 +411,8 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     @Test
     public void changeDownOnDemandToOnDemand() throws Exception {
         final ServiceController<?> firstController = getDownOnDemandFirstController();
-        final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
-        firstController.setMode(Mode.PASSIVE);
-        assertController(firstController, firstServiceStart);
+        firstController.setMode(Mode.ON_DEMAND);
+        assertSame(State.DOWN, firstController.getState());
     }
 
     @Test
@@ -741,7 +740,7 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
             .addDependency(secondServiceName)
-            .setInitialMode(Mode.PASSIVE)
+            .setInitialMode(Mode.ACTIVE)
             .install();
 
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceInstall);
