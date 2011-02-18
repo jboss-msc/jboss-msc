@@ -399,8 +399,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             case START_FAILED_to_DOWN: {
                 startException = null;
                 failCount--;
-                tasks = getListenerTasks(transition.getAfter().getState(), new DependencyRetryingTask(getDependents()),
+                if (failCount == 0) {
+                    tasks = getListenerTasks(transition.getAfter().getState(), new DependencyRetryingTask(getDependents()),
                         new StopTask(true), new DependentStoppedTask());
+                }
+                else {
+                    tasks = new Runnable[] {new StopTask(true), new DependentStoppedTask()};
+                }
                 break;
             }
             case STOP_REQUESTED_to_UP: {
