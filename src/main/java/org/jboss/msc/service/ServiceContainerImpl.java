@@ -65,6 +65,7 @@ import org.jboss.modules.ref.WeakReference;
 import org.jboss.msc.Version;
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.ServiceController.Mode;
+import org.jboss.msc.service.ServiceControllerImpl.Substate;
 import org.jboss.msc.service.management.ServiceContainerMXBean;
 import org.jboss.msc.service.management.ServiceStatus;
 import org.jboss.msc.value.InjectedValue;
@@ -340,7 +341,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         final HashSet<ServiceControllerImpl<?>> done = new HashSet<ServiceControllerImpl<?>>();
         for (ServiceRegistrationImpl registration : registry.values()) {
             ServiceControllerImpl<?> serviceInstance = registration.getInstance();
-            if (serviceInstance != null && done.add(serviceInstance)) {
+            if (serviceInstance != null && serviceInstance.getSubstate() != Substate.CANCELLED && done.add(serviceInstance)) {
                 try {
                     serviceInstance.addListener(shutdownListener);
                 } catch (IllegalArgumentException e) {
@@ -413,29 +414,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
     Executor getExecutor() {
         return executor;
-    }
-
-    /**
-     * Commit a service install, kicking off the mode set and listener execution.
-     *
-     * @param initialMode the initial service mode
-     * @param instance the service instance
-     */
-    private void commit(final ServiceController.Mode initialMode, final ServiceControllerImpl<?> instance) {
-        // Go!
-        instance.setMode(initialMode == null ? ServiceController.Mode.ACTIVE : initialMode);
-    }
-
-    /**
-     * Roll back a service install.
-     *
-     * @param instance the instance
-     */
-    private void rollback(final ServiceControllerImpl<?> instance) {
-        instance.getPrimaryRegistration().clearInstance(instance);
-        for (ServiceRegistrationImpl registration : instance.getAliasRegistrations()) {
-            registration.clearInstance(instance);
-        }
     }
 
     /**
@@ -535,65 +513,78 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         boolean ok = false;
         try {
             serviceValue.setValue(instance);
-
-            // Install the controller in each registration
-            primaryRegistration.setInstance(instance);
-
-            for (i = 0; i < aliasCount; i++) {
-                aliasRegistrations[i].setInstance(instance);
-            }
-            // Detect circularity before committing
-            final Set<ServiceControllerImpl<?>> visited = new IdentityHashSet<ServiceControllerImpl<?>>();
-            final Deque<ServiceControllerImpl<?>> remaining = new ArrayDeque<ServiceControllerImpl<?>>();
-            ServiceControllerImpl<?> current = instance;
-            do {
-                try {
-                    synchronized (current) {
-                        switch (current.getSubstateLocked()) {
-                            case DOWN:
-                            case START_REQUESTED:
-                            case NEW: {
-                                // cycle is possible
-                                break;
-                            }
-                            default: {
-                                // no cycle possible
-                                continue;
-                            }
-                        }
-                    }
-                    final ServiceRegistrationImpl reg = current.getPrimaryRegistration();
-                    synchronized (reg) {
-                        final IdentityHashSet<Dependent> dependents = reg.getDependents();
-                        synchronized (dependents) {
-                            final Iterator<Dependent> iterator = dependents.iterator();
-                            if (! iterator.hasNext()) {
-                                // No dependents == no cycle; continue
-                                continue;
-                            } else do {
-                                final Dependent dependent = iterator.next();
-                                final ServiceControllerImpl<?> controller = dependent.getController();
-                                if (controller == instance) {
-                                    throw new CircularDependencyException("Service " + name + " has a circular dependency");
-                                }
-                                if (visited.add(controller)) {
-                                    remaining.push(controller);
-                                }
-                            } while (iterator.hasNext());
-                        }
-                    }
-                } finally {
-                    current = remaining.pollFirst();
-                }
-            } while (current != null);
-            commit(serviceBuilder.getInitialMode(), instance);
+            instance.startInstallation();
+            // detect circularity before committing
+            detectCircularity(instance);
+            instance.commitInstallation(serviceBuilder.getInitialMode());
             ok = true;
             return instance;
         } finally {
             if (! ok) {
-                rollback(instance);
+                instance.rollbackInstallation();
             }
         }
+    }
+
+    /**
+     * Detects if installation of {@code instance} results in dependency cycles.
+     * 
+     * @param instance                     the service being installed
+     * @throws CircularDependencyException if a dependency cycle involving {@code instance} is detected
+     */
+    private <T> void detectCircularity(ServiceControllerImpl<T> instance) throws CircularDependencyException {
+        final Set<ServiceControllerImpl<?>> visited = new IdentityHashSet<ServiceControllerImpl<?>>();
+        final Deque<ServiceControllerImpl<?>> remaining = new ArrayDeque<ServiceControllerImpl<?>>();
+        ServiceControllerImpl<?> current = instance;
+        do {
+            try {
+                synchronized (current) {
+                    if (current.getSubstateLocked() == Substate.CANCELLED) {
+                        continue;
+                    }
+                }
+                final ServiceRegistrationImpl reg = current.getPrimaryRegistration();
+                IdentityHashSet<Dependent> dependents = null;
+                synchronized (reg) {
+                    dependents = reg.getDependents();
+                    synchronized (dependents) {
+                        detectCircularity(reg.getDependents(), instance, visited, remaining);
+                    }
+                    if (reg.getInstance() != null) {
+                        synchronized (current) {
+                            detectCircularity(current.getChildren(), instance, visited, remaining);
+                        }
+                    }
+                }
+                for (ServiceRegistrationImpl alias: current.getAliasRegistrations()) {
+                    synchronized (alias) {
+                        dependents = alias.getDependents();
+                        synchronized (dependents) {
+                            detectCircularity(dependents, instance, visited, remaining);
+                        }
+                    }
+                }
+            } finally {
+                current = remaining.pollFirst();
+            }
+        } while (current != null);
+    }
+
+    private void detectCircularity(IdentityHashSet<? extends Dependent> dependents, ServiceControllerImpl<?> instance, Set<ServiceControllerImpl<?>> visited,  Deque<ServiceControllerImpl<?>> remaining) {
+        final Iterator<? extends Dependent> iterator = dependents.iterator();
+        if (! iterator.hasNext()) {
+            // No dependents == no cycle; continue
+            return;
+        } else do {
+            final Dependent dependent = iterator.next();
+            final ServiceControllerImpl<?> controller = dependent.getController();
+            if (controller == instance) {
+                throw new CircularDependencyException("Service " + name + " has a circular dependency");
+            }
+            if (visited.add(controller)) {
+                remaining.push(controller);
+            }
+        } while (iterator.hasNext());
     }
 
     private static final AtomicInteger executorSeq = new AtomicInteger(1);
