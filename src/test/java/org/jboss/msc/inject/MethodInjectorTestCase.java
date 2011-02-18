@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.jboss.msc.translate.util.TargetWrapper;
+import org.jboss.msc.util.TargetWrapper;
 import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;

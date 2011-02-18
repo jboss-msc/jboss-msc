@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.translate.util;
+package org.jboss.msc.util;
 
 import org.jboss.msc.value.Values;
 

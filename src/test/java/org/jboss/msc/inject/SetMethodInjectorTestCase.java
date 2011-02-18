@@ -29,7 +29,7 @@ import static org.junit.Assert.fail;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-import org.jboss.msc.translate.util.TargetWrapper;
+import org.jboss.msc.util.TargetWrapper;
 import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
