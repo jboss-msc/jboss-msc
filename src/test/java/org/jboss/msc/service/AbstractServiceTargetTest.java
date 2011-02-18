@@ -232,11 +232,12 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
         batchTarget.addListener(testListener1, testListener2, testListener3);
         // plus one dependency on oneMoreServiceName
         batchTarget.addDependency(oneMoreServiceName);
-        // containerTarget should have no dependencies at all
+        // containerTarget shouldn't have oneMoreServiceName as dependency
         assertTrue(containerTarget.getDependencies() == null || containerTarget.getDependencies().isEmpty());
-        // and just one listener: testListener
-        assertEquals(1, containerTarget.getListeners().size());
-        assertSame(testListener, containerTarget.getListeners().iterator().next());
+        // and four listeners: testListener, testListener1, testListener2, and testListener3
+        Set<ServiceListener<Object>> listeners = containerTarget.getListeners();
+        assertEquals(1, listeners.size());
+        assertSame(testListener, listeners.iterator().next());
 
         // install oneMoreService on batchTarget
         final Future<ServiceController<?>> oneServiceStart = testListener.expectServiceStart(oneMoreServiceName);
@@ -306,10 +307,10 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
         assertController(extraController, extraServiceRemoval3);
 
         // installing extraService is not successful because there is a missing dependency on oneMoreService
-        final Future<ServiceController<?>> extraServiceDepMissing = testListener.expectDependencyUninstall(extraServiceName);
-        final Future<ServiceController<?>> extraServiceDepMissing1 = testListener1.expectDependencyUninstall(extraServiceName);
-        final Future<ServiceController<?>> extraServiceDepMissing2 = testListener2.expectDependencyUninstall(extraServiceName);
-        final Future<ServiceController<?>> extraServiceDepMissing3 = testListener3.expectDependencyUninstall(extraServiceName);
+        Future<ServiceController<?>> extraServiceDepMissing = testListener.expectDependencyUninstall(extraServiceName);
+        Future<ServiceController<?>> extraServiceDepMissing1 = testListener1.expectDependencyUninstall(extraServiceName);
+        Future<ServiceController<?>> extraServiceDepMissing2 = testListener2.expectDependencyUninstall(extraServiceName);
+        Future<ServiceController<?>> extraServiceDepMissing3 = testListener3.expectDependencyUninstall(extraServiceName);
         extraController = batchTarget.addService(extraServiceName, Service.NULL).install();
         assertController(extraServiceName, extraController);
         assertController(extraController, extraServiceDepMissing);
@@ -322,6 +323,128 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
         extraServiceRemoval1 = testListener1.expectServiceRemoval(extraServiceName);
         extraServiceRemoval2 = testListener2.expectServiceRemoval(extraServiceName);
         extraServiceRemoval3 = testListener3.expectServiceRemoval(extraServiceName);
+        batchTarget.removeServices();
+        assertController(extraController, extraServiceRemoval);
+        assertController(extraController, extraServiceRemoval1);
+        assertController(extraController, extraServiceRemoval2);
+        assertController(extraController, extraServiceRemoval3);
+
+        // installing extraService on containerTarget is also not successful because there is the
+        // dep on oneMoreService in containerTarget
+        extraServiceDepMissing = testListener.expectDependencyUninstall(extraServiceName);
+        extraServiceDepMissing1 = testListener1.expectDependencyUninstall(extraServiceName);
+        extraServiceDepMissing2 = testListener2.expectDependencyUninstall(extraServiceName);
+        extraServiceDepMissing3 = testListener3.expectDependencyUninstall(extraServiceName);
+        extraController = batchTarget.addService(extraServiceName, Service.NULL).install();
+        assertController(extraServiceName, extraController);
+        assertController(extraController, extraServiceDepMissing);
+        assertController(extraController, extraServiceDepMissing1);
+        assertController(extraController, extraServiceDepMissing2);
+        assertController(extraController, extraServiceDepMissing3);
+
+        // there should be no effect on this call, as no new services have been added
+        batchTarget.removeServices(); 
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void batchSubServiceTargetWithDependencyAndListeners() throws Exception {
+        final ServiceTarget containerTarget = getServiceTarget(serviceContainer);
+        final BatchServiceTarget batchTarget = containerTarget.batchTarget();
+        final ServiceTarget batchSubTarget = batchTarget.subTarget();
+        // this call should take no effect, as no new services have been added so far
+        batchTarget.removeServices(); 
+
+        // add testListener to containerTaget
+        containerTarget.addListener(testListener);
+        // and 3 testListeners to batchTarget
+        final TestServiceListener testListener1 = new TestServiceListener();
+        final TestServiceListener testListener2 = new TestServiceListener();
+        final TestServiceListener testListener3 = new TestServiceListener();
+        batchSubTarget.addListener(testListener1, testListener2, testListener3);
+        // plus one dependency on oneMoreServiceName
+        batchSubTarget.addDependency(oneMoreServiceName);
+        // containerTarget should have no dependencies
+        assertTrue(containerTarget.getDependencies() == null || containerTarget.getDependencies().isEmpty());
+        assertTrue(batchTarget.getDependencies() == null || batchTarget.getDependencies().isEmpty());
+        // and one listener: testListener
+        Set<ServiceListener<Object>> listeners = containerTarget.getListeners();
+        assertEquals(1, listeners.size());
+        assertSame(testListener, listeners.iterator().next());
+        assertTrue(batchTarget.getListeners() == null || batchTarget.getListeners().isEmpty());
+
+        // install oneMoreService on batchTarget
+        final Future<ServiceController<?>> oneServiceStart = testListener.expectServiceStart(oneMoreServiceName);
+        final Future<ServiceController<?>> oneServiceStart1 = testListener1.expectServiceStart(oneMoreServiceName);
+        final Future<ServiceController<?>> oneServiceStart2 = testListener2.expectServiceStart(oneMoreServiceName);
+        final Future<ServiceController<?>> oneServiceStart3 = testListener3.expectServiceStart(oneMoreServiceName);
+        final ServiceController<?> oneController = batchSubTarget.addService(oneMoreServiceName, Service.NULL).install();
+        assertController(oneMoreServiceName, oneController);
+        assertController(oneController, oneServiceStart);
+        assertController(oneController, oneServiceStart1);
+        assertController(oneController, oneServiceStart2);
+        assertController(oneController, oneServiceStart3);
+
+        // install anotherService on batchTarget
+        final Future<ServiceController<?>> anotherServiceStart = testListener.expectServiceStart(anotherServiceName);
+        final Future<ServiceController<?>> anotherServiceStart1 = testListener1.expectServiceStart(anotherServiceName);
+        final Future<ServiceController<?>> anotherServiceStart2 = testListener2.expectServiceStart(anotherServiceName);
+        final Future<ServiceController<?>> anotherServiceStart3 = testListener3.expectServiceStart(anotherServiceName);
+        final ServiceController<?> anotherController = batchSubTarget.addService(anotherServiceName, Service.NULL)
+            .install();
+        assertController(anotherServiceName, anotherController);
+        assertController(anotherController, anotherServiceStart);
+        assertController(anotherController, anotherServiceStart1);
+        assertController(anotherController, anotherServiceStart2);
+        assertController(anotherController, anotherServiceStart3);
+
+        // install extraService on batchTarget
+        Future<ServiceController<?>> extraServiceStart = testListener.expectServiceStart(extraServiceName);
+        ServiceController<?> extraController = batchTarget.addService(extraServiceName, Service.NULL).install();
+        assertController(extraServiceName, extraController);
+        assertController(extraController, extraServiceStart);
+
+        // removing anotherService is ok
+        final Future<ServiceController<?>> anotherServiceRemoval = testListener.expectServiceRemoval(anotherServiceName);
+        final Future<ServiceController<?>> anotherServiceRemoval1 = testListener1.expectServiceRemoval(anotherServiceName);
+        final Future<ServiceController<?>> anotherServiceRemoval2 = testListener2.expectServiceRemoval(anotherServiceName);
+        final Future<ServiceController<?>> anotherServiceRemoval3 = testListener3.expectServiceRemoval(anotherServiceName);
+        anotherController.setMode(Mode.REMOVE);
+        assertController(anotherController, anotherServiceRemoval);
+        assertController(anotherController, anotherServiceRemoval1);
+        assertController(anotherController, anotherServiceRemoval2);
+        assertController(anotherController, anotherServiceRemoval3);
+
+        // call batchTarget.removeServices: only oneService and extraServices will be removed this time
+        final Future<ServiceController<?>> oneServiceRemoval = testListener.expectServiceRemoval(oneMoreServiceName);
+        final Future<ServiceController<?>> oneServiceRemoval1 = testListener1.expectServiceRemoval(oneMoreServiceName);
+        final Future<ServiceController<?>> oneServiceRemoval2 = testListener2.expectServiceRemoval(oneMoreServiceName);
+        final Future<ServiceController<?>> oneServiceRemoval3 = testListener3.expectServiceRemoval(oneMoreServiceName);
+        Future<ServiceController<?>> extraServiceRemoval = testListener.expectServiceRemoval(extraServiceName);
+        batchTarget.removeServices();
+        assertController(oneController, oneServiceRemoval);
+        assertController(oneController, oneServiceRemoval1);
+        assertController(oneController, oneServiceRemoval2);
+        assertController(oneController, oneServiceRemoval3);
+        assertController(extraController, extraServiceRemoval);
+
+        // installing extraService is not successful because there is a missing dependency on oneMoreService
+        final Future<ServiceController<?>> extraServiceDepMissing = testListener.expectDependencyUninstall(extraServiceName);
+        final Future<ServiceController<?>> extraServiceDepMissing1 = testListener1.expectDependencyUninstall(extraServiceName);
+        final Future<ServiceController<?>> extraServiceDepMissing2 = testListener2.expectDependencyUninstall(extraServiceName);
+        final Future<ServiceController<?>> extraServiceDepMissing3 = testListener3.expectDependencyUninstall(extraServiceName);
+        extraController = batchSubTarget.addService(extraServiceName, Service.NULL).install();
+        assertController(extraServiceName, extraController);
+        assertController(extraController, extraServiceDepMissing);
+        assertController(extraController, extraServiceDepMissing1);
+        assertController(extraController, extraServiceDepMissing2);
+        assertController(extraController, extraServiceDepMissing3);
+
+        // extraService should be removed on invoking batchTarget.removeServices()
+        extraServiceRemoval = testListener.expectServiceRemoval(extraServiceName);
+        final Future<ServiceController<?>> extraServiceRemoval1 = testListener1.expectServiceRemoval(extraServiceName);
+        final Future<ServiceController<?>> extraServiceRemoval2 = testListener2.expectServiceRemoval(extraServiceName);
+        final Future<ServiceController<?>> extraServiceRemoval3 = testListener3.expectServiceRemoval(extraServiceName);
         batchTarget.removeServices();
         assertController(extraController, extraServiceRemoval);
         assertController(extraController, extraServiceRemoval1);

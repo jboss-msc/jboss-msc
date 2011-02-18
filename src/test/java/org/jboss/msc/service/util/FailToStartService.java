@@ -52,7 +52,8 @@ public class FailToStartService implements Service<Void> {
     public void start(StartContext context) throws StartException {
         if (fail) {
             fail = false;
-            context.asynchronous();
+            // FIXME investigate why this piece of code does not work
+            /*context.asynchronous();
             Logger logger = Logger.getLogger("org.jboss.msc.service.fail");
             Level level = logger.getLevel();
             try {
@@ -60,7 +61,8 @@ public class FailToStartService implements Service<Void> {
                 context.failed(new StartException("Second service failed"));
             } finally {
                 logger.setLevel(level);
-            }
+            }*/
+            throw new StartException("Second service failed");
         }
     }
 

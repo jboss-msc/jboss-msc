@@ -634,8 +634,14 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     @Test
     public void changeFailedToStartPassiveToOnDemand() throws Exception {
         final ServiceController<?> secondController = getFailedToStartPassiveSecondController();
+        Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
         secondController.setMode(Mode.ON_DEMAND);
-        assertSame(State.START_FAILED, secondController.getState());
+        if (secondController.getState() == State.DOWN) {
+            assertController(secondController, secondServiceStart);
+        }
+        else {
+            assertSame(State.START_FAILED, secondController.getState());
+        }
     }
 
     @Test

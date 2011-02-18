@@ -289,8 +289,6 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         assertController(dummyController, dummyServiceMissingDependency1);
         assertController(dummyController, dummyServiceMissingDependency2);
         assertController(dummyController, dummyServiceMissingDependency3);
-        // the value of dummy controller should be dummy manager
-        assertSame(dummyManager, dummyController.getValue());
         // should have a non null location
         assertNotNull(dummyController.getLocation());
         ServiceName[] aliases = dummyController.getAliases();
@@ -316,6 +314,8 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         assertController(dummyController, dummyServiceStart1);
         assertController(dummyController, dummyServiceStart2);
         assertController(dummyController, dummyServiceStart3);
+        // the value of dummy controller should be dummy manager
+        assertSame(dummyManager, dummyController.getValue());
         // the value of dummy controller should still be dummy manager
         assertSame(dummyManager, dummyController.getValue());
         // location continues to exist as a non null value
@@ -408,7 +408,7 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         final Service<DummyManager> service = new ValueService<DummyManager>(Values.immediateValue(dummyManager));
         // start installation of dummy service
         serviceBuilder = serviceContainer.addService(serviceName, service);
-        // with with 5 aliases. Two of them are equal (alias1 and alias2), and the fifth is the same serviceName
+        // with 5 aliases. Two of them are equal (alias1 and alias2), and the fifth is the same serviceName
         // used for the primary registration
         serviceBuilder.addAliases(serviceNameAlias1, serviceNameAlias2, serviceNameAlias3, serviceNameAlias4, serviceName);
         // add dependency on another service with injection... its value should be injected into the description property
@@ -438,7 +438,6 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         ServiceController<?> dummyController = assertController(serviceName, serviceBuilder.install());
         assertController(dummyController, dummyServiceListenerAdded);
         // the value of the installed controller should be dummy manager
-        assertSame(dummyManager, dummyController.getValue());
         assertEquals(location, dummyController.getLocation());
         ServiceName[] aliases = dummyController.getAliases();
         assertNotNull(aliases);
@@ -457,6 +456,7 @@ public class ServiceBuilderTestCase extends AbstractServiceTest {
         ServiceController<?> uninstalledController = assertController(uninstalledServiceName, serviceBuilder.install());
         assertController(uninstalledController, uninstalledServiceStart);
         assertController(dummyController, dummyServiceStart);
+        assertSame(dummyManager, dummyController.getValue());
         // the value of the installed controller should still be dummy manager
         assertSame(dummyManager, dummyController.getValue());
         // but now, dummy manager should finally have the value of another service injected in the description property
