@@ -213,12 +213,19 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     final void commitInstallation(Mode initialMode) {
         assert (state == Substate.NEW);
         final Runnable[] listenerAddedTasks;
-        final Runnable[] asyncListenerTasks;
         final Runnable specialTask;
-        final Runnable[] transitionTasks;
         synchronized(this) {
             listenerAddedTasks = getListenerTasks(ListenerNotification.LISTENER_ADDED);
-            asyncTasks += listenerAddedTasks.length;
+            asyncTasks += listenerAddedTasks.length + 1;
+            specialTask = internalSetMode(initialMode == null ? ServiceController.Mode.ACTIVE : initialMode);
+        }
+        doExecute(specialTask);
+        for (Runnable listenerAddedTask : listenerAddedTasks) {
+            listenerAddedTask.run();
+        }
+        final Runnable[] asyncListenerTasks;
+        final Runnable[] transitionTasks;
+        synchronized (this) {
             if (failCount > 0) {
                 if (missingDepCount > 0) {
                     asyncListenerTasks = getListenerTasks(new ListenerNotification[] { ListenerNotification.DEPENDENCY_FAILURE,
@@ -239,14 +246,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 asyncListenerTasks = null;
             }
             state = Substate.DOWN;
-            specialTask = internalSetMode(initialMode == null ? ServiceController.Mode.ACTIVE : initialMode);
+            asyncTasks --;
             transitionTasks = transition();
         }
-        for (Runnable listenerAddedTask : listenerAddedTasks) {
-            listenerAddedTask.run();
-        }
         doExecute(asyncListenerTasks);
-        doExecute(specialTask);
         doExecute(transitionTasks);
     }
 
