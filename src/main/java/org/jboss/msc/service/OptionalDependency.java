@@ -384,17 +384,4 @@ class OptionalDependency implements Dependency, Dependent {
             dependent.dependencyUninstalled();
         }
     }
-
-    @Override
-    public <T> T accept(Visitor<T> visitor) {
-        assert !holdsLock(this);
-        final boolean acceptRealDependency;
-        synchronized (this) {
-            acceptRealDependency = forwardNotifications;
-        }
-        if (acceptRealDependency) {
-            return optionalDependency.accept(visitor);
-        }
-        return visitor.visit(null);
-    }
 }

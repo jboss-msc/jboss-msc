@@ -234,9 +234,4 @@ final class ServiceRegistrationImpl implements Dependency {
             return instance;
         }
     }
-
-    @Override
-    public <T> T accept(Visitor<T> visitor) {
-        return visitor.visit(this);
-    }
 }
