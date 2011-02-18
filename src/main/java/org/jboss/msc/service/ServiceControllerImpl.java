@@ -1717,6 +1717,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 reason.setServiceName(serviceName);
                 ServiceLogger.FAIL.startFailed(reason, serviceName);
                 startException = reason;
+                failCount ++;
                 asyncTasks--;
                 if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                     writeProfileInfo('F', startNanos, System.nanoTime());
