@@ -577,7 +577,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert holdsLock(this);
         Runnable specialTask = null;
         final ServiceController.Mode oldMode = mode;
-        mode = newMode;
         switch (oldMode) {
             case REMOVE: {
                 switch (newMode) {
@@ -698,6 +697,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
         }
+        mode = newMode;
         return specialTask;
     }
 
