@@ -104,9 +104,8 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          */
         public static ServiceContainer create() {
             int cpuCount = Runtime.getRuntime().availableProcessors();
-            int coreSize = Math.max(cpuCount, 2);
-            int maxSize = Math.max(cpuCount << 1, coreSize);
-            return new ServiceContainerImpl(null, coreSize, maxSize, 30L, TimeUnit.SECONDS);
+            int coreSize = Math.max(cpuCount << 1, 2);
+            return new ServiceContainerImpl(null, coreSize, 30L, TimeUnit.SECONDS);
         }
 
         /**
@@ -117,36 +116,35 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          */
         public static ServiceContainer create(String name) {
             int cpuCount = Runtime.getRuntime().availableProcessors();
-            int coreSize = Math.max(cpuCount, 2);
-            int maxSize = Math.max(cpuCount << 1, coreSize);
-            return new ServiceContainerImpl(name, coreSize, maxSize, 30L, TimeUnit.SECONDS);
+            int coreSize = Math.max(cpuCount << 1, 2);
+            return new ServiceContainerImpl(name, coreSize, 30L, TimeUnit.SECONDS);
         }
 
         /**
          * Create a new instance with a generated name and specified initial thread pool settings.
          *
+         *
          * @param coreSize the core pool size (must be greater than zero)
-         * @param maxSize the maximum pool size (must be greater than, or equal to, {@code coreSize})
          * @param keepAliveTime the amount of time that non-core threads should linger without tasks
          * @param keepAliveTimeUnit the time unit for {@code keepAliveTime}
          * @return a new service container instance
          */
-        public static ServiceContainer create(int coreSize, int maxSize, long keepAliveTime, TimeUnit keepAliveTimeUnit) {
-            return new ServiceContainerImpl(null, coreSize, maxSize, keepAliveTime, keepAliveTimeUnit);
+        public static ServiceContainer create(int coreSize, long keepAliveTime, TimeUnit keepAliveTimeUnit) {
+            return new ServiceContainerImpl(null, coreSize, keepAliveTime, keepAliveTimeUnit);
         }
 
         /**
          * Create a new instance with a given name and specified initial thread pool settings.
          *
+         *
          * @param name the name of the new container
          * @param coreSize the core pool size (must be greater than zero)
-         * @param maxSize the maximum pool size (must be greater than, or equal to, {@code coreSize})
          * @param keepAliveTime the amount of time that non-core threads should linger without tasks
          * @param keepAliveTimeUnit the time unit for {@code keepAliveTime}
          * @return a new service container instance
          */
-        public static ServiceContainer create(String name, int coreSize, int maxSize, long keepAliveTime, TimeUnit keepAliveTimeUnit) {
-            return new ServiceContainerImpl(name, coreSize, maxSize, keepAliveTime, keepAliveTimeUnit);
+        public static ServiceContainer create(String name, int coreSize, long keepAliveTime, TimeUnit keepAliveTimeUnit) {
+            return new ServiceContainerImpl(name, coreSize, keepAliveTime, keepAliveTimeUnit);
         }
     }
 

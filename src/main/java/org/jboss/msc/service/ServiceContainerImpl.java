@@ -223,14 +223,14 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
     };
 
-    ServiceContainerImpl(String name, int coreSize, int maxSize, long timeOut, TimeUnit timeOutUnit) {
+    ServiceContainerImpl(String name, int coreSize, long timeOut, TimeUnit timeOutUnit) {
         super(null);
         final int serialNo = SERIAL.getAndIncrement();
         if (name == null) {
             name = String.format("anonymous-%d", Integer.valueOf(serialNo));
         }
         this.name = name;
-        executor = new ContainerExecutor(coreSize, maxSize, timeOut, timeOutUnit);
+        executor = new ContainerExecutor(coreSize, coreSize, timeOut, timeOutUnit);
         ObjectName objectName = null;
         MBeanServer mBeanServer = null;
         try {
