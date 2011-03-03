@@ -293,7 +293,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
     @Override
     public synchronized void addTerminateListener(TerminateListener listener) {
-        if (terminateInfo != null) { // if shutdown is already performed 
+        if (terminateInfo != null) { // if shutdown is already performed
             listener.handleTermination(terminateInfo); // invoke handleTermination immediately
         }
         else {
@@ -485,13 +485,9 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         final Map<ServiceName, ServiceBuilderImpl.Dependency> dependencyMap = serviceBuilder.getDependencies();
         final int dependencyCount = dependencyMap.size();
         final Dependency[] dependencies = new Dependency[dependencyCount];
-        final List<ValueInjection<?>> valueInjections = new ArrayList<ValueInjection<?>>(serviceBuilder.getValueInjections());
+        final List<ValueInjection<?>> valueInjections = new ArrayList<ValueInjection<?>>();
         final List<Injector<? super T>> outInjections = serviceBuilder.getOutInjections();
 
-        final InjectedValue<T> serviceValue = new InjectedValue<T>();
-        for (final Injector<? super T> outInjection : outInjections) {
-            valueInjections.add(new ValueInjection<T>(serviceValue, outInjection));
-        }
 
         // Dependencies
         int i = 0;
@@ -506,6 +502,14 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 valueInjections.add(new ValueInjection<Object>(registration, injector));
             }
         }
+        // Other injections
+        final InjectedValue<T> serviceValue = new InjectedValue<T>();
+        for (final Injector<? super T> outInjection : outInjections) {
+            valueInjections.add(new ValueInjection<T>(serviceValue, outInjection));
+        }
+
+        valueInjections.addAll(serviceBuilder.getValueInjections());
+
         final ValueInjection<?>[] injections = valueInjections.toArray(new ValueInjection<?>[valueInjections.size()]);
 
         // Next create the actual controller
@@ -528,7 +532,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
     /**
      * Detects if installation of {@code instance} results in dependency cycles.
-     * 
+     *
      * @param instance                     the service being installed
      * @throws CircularDependencyException if a dependency cycle involving {@code instance} is detected
      */
