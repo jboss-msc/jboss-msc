@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2010, Red Hat, Inc., and individual contributors
+ * Copyright 2011, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -22,14 +22,25 @@
 
 package org.jboss.msc.service;
 
-import org.junit.Test;
-
 import static java.lang.Integer.signum;
 import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertNull;
+import static junit.framework.Assert.assertTrue;
 import static junit.framework.Assert.fail;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+
+import org.junit.Test;
+
 /**
+ * Test for {@link ServiceName}.
+ * 
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
 public final class ServiceNameTestCase {
     @Test
@@ -62,6 +73,17 @@ public final class ServiceNameTestCase {
     }
 
     @Test
+    public void testNullCollation() {
+        final ServiceName name = ServiceName.of("one", "two", "three");
+        try {
+            name.compareTo(null);
+            fail("ExpectedException: o is null");
+        } catch (IllegalArgumentException expected) {
+            
+        }
+    }
+
+    @Test
     public void testCanonicalization() {
         assertEquals("OSGi regression case 1", ServiceName.JBOSS.append("osgi", "framework"), ServiceName.parse("jboss.osgi.framework"));
         assertEquals("OSGi regression case 1 (hash code)", ServiceName.JBOSS.append("osgi", "framework").hashCode(), ServiceName.parse("jboss.osgi.framework").hashCode());
@@ -70,6 +92,8 @@ public final class ServiceNameTestCase {
         assertEquals("simple canonical (string side)", "a.b.c", ServiceName.parse("a.b.c").getCanonicalName());
         assertEquals("simple canonical", ServiceName.of("a", "b", "c"), ServiceName.parse("a.b.c"));
         assertEquals("complex canonical (string side)", "a.\"\\r\\n\".b", ServiceName.parse("\"a\".\"\\r\\n\".b").getCanonicalName());
+        assertEquals("complex canonical (string side)", ServiceName.of("\t\b\f", "\'", "abab", "end"), ServiceName.parse("\"\\t\\b\\f\".\"\\\'\".abab.end"));
+        assertEquals("complex canonical (string side)", "\"\\t\\b\\f\".\'.abab.end", ServiceName.parse("\"\\t\\b\\f\".\"\\\'\".abab.end").getCanonicalName());
         assertEquals("complex canonical", ServiceName.of("a", "\r\n", "b"), ServiceName.parse("\"a\".\"\\r\\n\".b"));
         assertEquals("regression 1a", ServiceName.of("jboss", "managedbean-example.jar", "Bean"), ServiceName.parse("jboss.\"managedbean-example.jar\".Bean"));
         assertEquals("regression 1b", "jboss.\"managedbean-example.jar\".Bean", ServiceName.of("jboss", "managedbean-example.jar", "Bean").getCanonicalName());
@@ -134,5 +158,139 @@ public final class ServiceNameTestCase {
             fail("Expected exception: unexpected end of string");
         } catch (IllegalArgumentException expected) {
         }
+    }
+
+    @Test
+    public void testInvalidServiceName() {
+        // this untrusted service name can be created with of, because of performance issues
+        // check that the canonicalName can be retrieved
+        assertEquals("complex canonical with ISO", "\"\\u0003 \\t\\b\\f\\0\".\"\\\"\\\"\\\\\'abab\\\\\'\".end", ServiceName.of("\u0003 \t\b\f\0", "\"\"\\'abab\\'", "end").getCanonicalName());
+        try {
+            // parse doesnt accept untrusted service names
+            ServiceName.parse("\u0003 \t\b\f\0.\"\"\\'abab\\'.end");
+            fail ("Expected exception: invalid name character");
+        } catch (IllegalArgumentException expected) {
+        }
+
+        try {
+            // parse doesn't accept untrusted service names
+            ServiceName.parse((char) (0x0000 + 1) + " ");
+            fail ("Expected exception: invalid name character");
+        } catch (IllegalArgumentException expected) {
+        }
+    }
+
+    @Test
+    public void testIsValidNameSegment() {
+        assertTrue(ServiceName.isValidNameSegment("a"));
+        assertFalse(ServiceName.isValidNameSegment("\u0001"));
+        assertFalse(ServiceName.isValidNameSegment(null));
+        assertFalse(ServiceName.isValidNameSegment(""));
+        assertFalse(ServiceName.isValidNameSegment(" "));
+    }
+
+    @Test
+    public void testIllegalArgumentException() {
+        try {
+            ServiceName.of();
+            fail ("Expected exception: must provide at least one name segment");
+        } catch (IllegalArgumentException expected) {
+        }
+
+        try {
+            ServiceName.of("A", "B", "", "C");
+            fail ("Expected exception: empty name segment is not allowed");
+        } catch (IllegalArgumentException expected) {
+        }
+
+        try {
+            ServiceName.of("A", null, "B", "C");
+            fail ("Expected exception: name segment is null");
+        } catch (IllegalArgumentException expected) {
+        }
+    }
+
+    @Test
+    public void testChainAppend() {
+        final ServiceName black = ServiceName.of("bl", "ack");
+        final ServiceName white = ServiceName.of("wh", "ite");
+        final ServiceName blackAndWhite = black.append("&").append(white);
+        assertEquals("bl.ack.&.wh.ite", blackAndWhite.getCanonicalName());
+        assertNull(white.commonAncestorOf(blackAndWhite));
+        assertEquals(black, black.commonAncestorOf(blackAndWhite));
+    }
+
+    @Test
+    public void testAppend() {
+        final ServiceName  jbossMSC = ServiceName.of("JBoss", "MSC");
+        final ServiceName jbossMSCNewRelease = jbossMSC.append("New", "Release");
+        assertFalse(jbossMSC.equals(jbossMSCNewRelease));
+        assertEquals(jbossMSC, jbossMSC.commonAncestorOf(jbossMSCNewRelease));
+    }
+
+    @Test
+    public void testIllegalAppend() {
+        final ServiceName jbossMSC = ServiceName.of("JBoss", "MSC");
+        try {
+            jbossMSC.append();
+            fail ("Expected exception: must provide at least one name segment");
+        } catch (IllegalArgumentException expected) {
+        }
+
+        try {
+            jbossMSC.append("Illegal", "");
+            fail ("Expected exception: empty name segment is not allowed");
+        } catch (IllegalArgumentException expected) {
+        }
+
+        try {
+            jbossMSC.append((String) null);
+            fail ("Expected exception: name segment is null");
+        } catch (IllegalArgumentException expected) {
+        }
+    }
+
+    @Test
+    public void testCommonAncestor() {
+        final ServiceName parent = ServiceName.of("parent");
+        final ServiceName unrelated = ServiceName.of("unrelated");
+        final ServiceName ancestor = ServiceName.of(parent, "child");
+        final ServiceName child1 = ServiceName.of(parent, "child", "1");
+        final ServiceName child2 = ServiceName.of(parent, "child", "2");
+        assertEquals(ancestor, child1.commonAncestorOf(child2));
+        assertEquals(ancestor, child2.commonAncestorOf(child1));
+        assertNull(child1.commonAncestorOf(unrelated));
+        assertNull(unrelated.commonAncestorOf(child1));
+        final ServiceName child3 = ServiceName.of(child2, "child", "3");
+        assertEquals(ancestor, child1.commonAncestorOf(child3));
+        assertEquals(ancestor, child2.commonAncestorOf(child1));
+        assertEquals(child2, child2.commonAncestorOf(child3));
+        assertEquals(child2, child3.commonAncestorOf(child2));
+        assertEquals(parent, parent.commonAncestorOf(parent));
+        assertNull(parent.commonAncestorOf(null));
+        assertNull(child1.commonAncestorOf(null));
+        assertNull(child2.commonAncestorOf(null));
+        assertNull(child3.commonAncestorOf(null));
+        assertEquals(ancestor, child1.getParent());
+        assertEquals(ancestor, child2.getParent());
+        assertEquals(child2.append("child"), child3.getParent());
+        assertTrue(parent.isParentOf(child1));
+        assertTrue(parent.isParentOf(child2));
+        assertTrue(parent.isParentOf(child3));
+        assertTrue(child2.isParentOf(child3));
+        assertFalse(parent.isParentOf(null));
+        assertFalse(parent.isParentOf(unrelated));
+    }
+
+    @Test
+    public void testSerialize() throws Exception {
+        final ServiceName serviceName = ServiceName.of("S", "E", "R", "V", "I", "C", "E");
+        ByteArrayOutputStream byteOutputStream = new ByteArrayOutputStream();
+        ObjectOutputStream objectOutputStream = new ObjectOutputStream (byteOutputStream);
+        objectOutputStream.writeObject(serviceName);
+        objectOutputStream.close();
+        byte[] bytes = byteOutputStream.toByteArray();
+        ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(bytes));
+        assertEquals(serviceName, objectInputStream.readObject());
     }
 }
