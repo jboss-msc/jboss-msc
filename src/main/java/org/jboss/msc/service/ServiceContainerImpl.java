@@ -549,14 +549,16 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 final ServiceRegistrationImpl reg = current.getPrimaryRegistration();
                 IdentityHashSet<Dependent> dependents = null;
                 synchronized (reg) {
+                    // concurrent removal, skip this one entirely
+                    if (reg.getInstance() == null) {
+                        continue;
+                    }
                     dependents = reg.getDependents();
                     synchronized (dependents) {
                         detectCircularity(reg.getDependents(), instance, visited, remaining);
                     }
-                    if (reg.getInstance() != null) {
-                        synchronized (current) {
-                            detectCircularity(current.getChildren(), instance, visited, remaining);
-                        }
+                    synchronized (current) {
+                        detectCircularity(current.getChildren(), instance, visited, remaining);
                     }
                 }
                 for (ServiceRegistrationImpl alias: current.getAliasRegistrations()) {
