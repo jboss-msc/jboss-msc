@@ -283,8 +283,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             return null;
         }
         switch (state) {
-            case NEW:
-                throw new IllegalStateException("Service " + getName() + " in NEW state");
             case DOWN: {
                 if (mode == ServiceController.Mode.REMOVE) {
                     return Transition.DOWN_to_REMOVING;
@@ -407,13 +405,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             case START_FAILED_to_DOWN: {
                 startException = null;
                 failCount--;
-                if (failCount == 0) {
-                    tasks = getListenerTasks(transition.getAfter().getState(), new DependencyRetryingTask(getDependents()),
+                assert failCount == 0;
+                tasks = getListenerTasks(transition.getAfter().getState(), new DependencyRetryingTask(getDependents()),
                         new StopTask(true), new DependentStoppedTask());
-                }
-                else {
-                    tasks = new Runnable[] {new StopTask(true), new DependentStoppedTask()};
-                }
                 break;
             }
             case STOP_REQUESTED_to_UP: {
@@ -795,7 +789,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void dependencyFailureCleared() {
         Runnable[] tasks = null;
         synchronized (this) {
-            if (--failCount != 0 || state.compareTo(Substate.CANCELLED) <= 0) {
+            if (--failCount != 0 || state == Substate.CANCELLED) {
                 return;
             }
             // we dropped it to 0
@@ -804,10 +798,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             asyncTasks += tasks.length;
         }
         doExecute(tasks);
-    }
-
-    Dependency[] getDependencies() {
-        return dependencies;
     }
 
     void dependentStarted() {
