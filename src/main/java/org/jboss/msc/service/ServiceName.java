@@ -189,11 +189,11 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
             final ServiceName mn = mi.next();
             final ServiceName on = oi.next();
             if (! mn.equals(on)) {
-                return i;
+                break;
             }
             i = mn;
         }
-        return null;
+        return i;
     }
 
     /**
