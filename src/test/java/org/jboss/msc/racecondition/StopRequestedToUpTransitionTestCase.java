@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2010, Red Hat, Inc., and individual contributors
+ * Copyright 2011, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -27,20 +27,23 @@ import static org.junit.Assert.assertSame;
 
 import java.util.concurrent.Future;
 
-import org.jboss.msc.service.AbstractServiceTest;
+import org.jboss.byteman.contrib.bmunit.BMScript;
+import org.jboss.byteman.contrib.bmunit.BMUnitRunner;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.util.TestServiceListener;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
  * Tests the service transition from {@code STOP_REQUESTED} state to {@code UP} state.
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
- *
  */
-public class StopRequestedToUpTransitionTestCase extends AbstractServiceTest {
+@RunWith(BMUnitRunner.class)
+@BMScript(dir="src/test/resources")
+public class StopRequestedToUpTransitionTestCase extends AbstractRaceConditionTest {
   
     /*
      * In order to test this specific scenario, we use Byteman to insert a monitor in the specific moment
@@ -49,8 +52,8 @@ public class StopRequestedToUpTransitionTestCase extends AbstractServiceTest {
      */
     @Test
     public void test() throws Exception {
-       ServiceName serviceName = ServiceName.of("service");
-        TestServiceListener serviceListener = new TestServiceListener();
+        final ServiceName serviceName = ServiceName.of("service");
+        final TestServiceListener serviceListener = new TestServiceListener();
 
         // install service as usual
         Future<ServiceController<?>> serviceStart = serviceListener.expectServiceStart(serviceName);

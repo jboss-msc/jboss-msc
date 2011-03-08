@@ -41,7 +41,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.target>1.6</maven.compiler.target>
         <maven.compiler.source>1.6</maven.compiler.source>
-        <byteman-version>1.4.1</byteman-version>
+        <byteman-version>1.5.1</byteman-version>
     </properties>
 
     <dependencies>
@@ -108,7 +108,19 @@
         <dependency>
             <groupId>org.jboss.byteman</groupId>
             <artifactId>byteman</artifactId>
-            <version>1.4.1</version>
+            <version>${byteman-version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.byteman</groupId>
+            <artifactId>byteman-bmunit</artifactId>
+            <version>${byteman-version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.byteman</groupId>
+            <artifactId>byteman-install</artifactId>
+            <version>${byteman-version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -150,7 +162,15 @@
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <skip>true</skip>
+                    <goals><goal>test</goal></goals>
+                    <!--  uncomment this to enable byteman rule debug messages 
+                    <argLine>-Dorg.jboss.byteman.debug</argLine> -->
+                    <includes>
+                        <include>**/*TestCase.java</include>
+                    </includes>
+                    <excludes>
+                        <exclude>org/jboss/msc/bench/*.java</exclude>
+                    </excludes>
                     <systemProperties>
                         <property>
                             <name>jboss.msc.profile.output</name>
@@ -160,31 +180,40 @@
                             <name>java.util.logging.manager</name>
                             <value>org.jboss.logmanager.LogManager</value>
                         </property>
+                        <property>
+                            <name>racecondition.dir</name>
+                            <value>${project.build.testOutputDirectory}</value>
+                        </property>
+                        <property>
+                            <name>org.jboss.byteman.transform.all</name>
+                            <value>true</value>
+                        </property>
                     </systemProperties>
                 </configuration>
                 <executions>
                     <execution>
-                        <id>all</id>
+                        <id>rejected-execution-test</id>
                         <goals><goal>test</goal></goals>
                         <configuration>
-                            <skip>false</skip>
+                            <systemProperties>
+                                <property>
+                                    <name>org.jboss.byteman.transform.all</name>
+                                    <value>true</value>
+                                </property>
+                            </systemProperties>
+                            <!-- add this to agent parameter list to enable debug ,prop:org.jboss.byteman.debug=true -->
+                            <argLine>-javaagent:${settings.localRepository}/org/jboss/byteman/byteman/${byteman-version}/byteman-${byteman-version}.jar=boot:${settings.localRepository}/org/jboss/byteman/byteman/${byteman-version}/byteman-${byteman-version}.jar,script:${project.build.testOutputDirectory}/org/jboss/msc/racecondition/RejectedExecutionTestCase.btm</argLine>
                             <includes>
-                                <include>**/*TestCase.java</include>
+                                <include>org/jboss/msc/racecondition/RejectedExecutionTestSuite.java</include>
                             </includes>
-                            <excludes>
-                                <exclude>org/jboss/msc/bench/*.java</exclude>
-                                <exclude>org/jboss/msc/racecondition/*.java</exclude>
-                            </excludes>
                         </configuration>
                     </execution>
                     <execution>
-                        <id>race-condition-tests</id>
+                        <id>removal-during-cycle-detection-test</id>
                         <goals><goal>test</goal></goals>
                         <configuration>
-                            <skip>false</skip>
-                            <argLine>-javaagent:${settings.localRepository}/org/jboss/byteman/byteman/${byteman-version}/byteman-${byteman-version}.jar=script:${project.build.testOutputDirectory}/org/jboss/msc/racecondition/StopRequestedToUpTransitionTestCase.txt</argLine>
                             <includes>
-                                <include>org/jboss/msc/racecondition/StopRequestedToUpTransitionTestCase.java</include>
+                                <include>org/jboss/msc/racecondition/RemovalDuringCycleDetectionTest.java</include>
                             </includes>
                         </configuration>
                     </execution>
