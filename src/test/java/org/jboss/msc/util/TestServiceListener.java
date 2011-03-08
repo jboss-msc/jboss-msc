@@ -222,6 +222,12 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         return future;
     }
 
+    public Future<ServiceController<?>> expectNoDependencyFailureCleared(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(200);
+        expectedDependencyRetryings.put(serviceName, future);
+        return future;
+    }
+
     public Future<ServiceController<?>> expectNoDependencyInstall(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture(200);
         expectedDependencyInstalls.put(serviceName, future);

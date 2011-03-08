@@ -66,6 +66,16 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
     }
 
     @Test
+    public void testStartNullService() throws Exception {
+        final TestServiceListener listener = new TestServiceListener();
+        serviceContainer.addListener(listener);
+
+        final Future<StartException> serviceFuture = listener.expectServiceFailure(ServiceName.of("service"));
+        serviceContainer.addService(ServiceName.of("service"), null).install();
+        assertFailure(ServiceName.of("service"), serviceFuture);
+    }
+
+    @Test
     public void testAutomatic() throws Exception {
         final TestServiceListener listener = new TestServiceListener();
         serviceContainer.addListener(listener);

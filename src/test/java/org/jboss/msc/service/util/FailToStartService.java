@@ -50,9 +50,9 @@ public class FailToStartService implements Service<Void> {
 
     @Override
     public void start(StartContext context) throws StartException {
+        context.asynchronous();
         if (fail) {
             fail = false;
-            context.asynchronous();
             Logger logger = Logger.getLogger("org.jboss.msc.service.fail");
             Level level = logger.getLevel();
             try {
@@ -61,11 +61,29 @@ public class FailToStartService implements Service<Void> {
             } finally {
                 logger.setLevel(level);
             }
+            // a second attempt to mark a context as asynchronous should result in
+            // an IllegalStateException
+            try {
+                context.asynchronous();
+                logger.info("IllegalStateException expected");
+            } catch (IllegalStateException e) {}
+        }
+        else {
+            context.complete();
+            try {
+                context.complete();
+                Logger.getLogger("org.jboss.msc.service.fail").info("IllegalStateException expected");
+            } catch (IllegalStateException e) {}
         }
     }
 
     @Override
     public void stop(StopContext context) {
+        context.asynchronous();
+        try {
+            context.asynchronous();
+        } catch (IllegalStateException e) {}
+        context.complete();
     }
 
     @Override

@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2010, Red Hat, Inc., and individual contributors
+ * Copyright 2011, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -23,6 +23,7 @@
 package org.jboss.msc.service;
 
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,9 +58,9 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
     public void initializeServiceTarget() throws Exception {
         parentService = new ParentService();
         parentListener = new TestServiceListener();
-        Future<ServiceController<?>> parentStart = parentListener.expectServiceStart(ServiceName.of("parent"));
-        serviceContainer.addService(ServiceName.of("parent"), parentService).addListener(parentListener).install();
-        assertController(ServiceName.of("parent"), parentStart);
+        final Future<ServiceController<?>> parentStart = parentListener.expectServiceStart(parentServiceName);
+        serviceContainer.addService(parentServiceName, parentService).addListener(parentListener).install();
+        assertController(parentServiceName, parentStart);
         serviceTarget = getServiceTarget(serviceContainer);
     }
 
@@ -83,9 +84,10 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
         serviceTarget.addDependency(secondServiceName);
         serviceTarget.addListener(testListener);
         ServiceBuilder<?> serviceBuilder = serviceTarget.addService(fourthServiceName, Service.NULL);
-        // until we try to install service into it, then it fails wit an InvalidStateException
+        // until we try to install service into it, then it fails wit an IllegalStateException
         try {
             serviceBuilder.install();
+            fail("IllegalStateException expected");
         } catch (IllegalStateException e) {}
     }
 
@@ -346,18 +348,17 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
 
         // install third service; dependent second service is supposed to start 
         final Future<ServiceController<?>> thirdServiceStart = testListener.expectServiceStart(thirdServiceName);
-//        Future<ServiceController<?>> secondServiceDepInstall = testListener.expectDependencyInstall(secondServiceName);
-//        Future<ServiceController<?>> secondServiceDepInstall1_1 = testListener1_1.expectDependencyInstall(secondServiceName);
-//        Future<ServiceController<?>> secondServiceDepInstall1_3 = testListener1_3.expectDependencyInstall(secondServiceName);
-        final Future<ServiceController<?>> secondServiceStart = testListener.expectDependencyInstall(secondServiceName);
-        final Future<ServiceController<?>> secondServiceStart1_1 = testListener1_1.expectDependencyInstall(secondServiceName);
-        final Future<ServiceController<?>> secondServiceStart1_3 = testListener1_3.expectDependencyInstall(secondServiceName);
+        Future<ServiceController<?>> secondServiceDepInstall = testListener.expectDependencyInstall(secondServiceName);
+        Future<ServiceController<?>> secondServiceDepInstall1_1 = testListener1_1.expectDependencyInstall(secondServiceName);
+        Future<ServiceController<?>> secondServiceDepInstall1_3 = testListener1_3.expectDependencyInstall(secondServiceName);
+        final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
+        final Future<ServiceController<?>> secondServiceStart1_1 = testListener1_1.expectServiceStart(secondServiceName);
+        final Future<ServiceController<?>> secondServiceStart1_3 = testListener1_3.expectServiceStart(secondServiceName);
         serviceContainer.addService(thirdServiceName, Service.NULL).addListener(testListener).install();
         final ServiceController<?> thirdController = assertController(thirdServiceName, thirdServiceStart);
-        // FIXME
-//        assertController(secondController, secondServiceDepInstall);
-//        assertController(secondController, secondServiceDepInstall1_1);
-//        assertController(secondController, secondServiceDepInstall1_3);
+        assertController(secondController, secondServiceDepInstall);
+        assertController(secondController, secondServiceDepInstall1_1);
+        assertController(secondController, secondServiceDepInstall1_3);
         assertController(secondController, secondServiceStart);
         assertController(secondController, secondServiceStart1_1);
         assertController(secondController, secondServiceStart1_3);
@@ -555,9 +556,35 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
         assertController(fifthController, fifthServiceRemoval);
     }
 
+    @Test
+    public void illegalChildTarget() throws Throwable{
+        final ServiceController<?> parentController = serviceContainer.getService(parentServiceName);
+        assertSame(State.UP, parentController.getState());
+
+        try {
+            parentService.getStartContext().getChildTarget();
+            fail("IllegalStateException expected");
+        } catch (IllegalStateException e) {}
+
+        final Future<ServiceController<?>> parentStop = parentListener.expectServiceStop(parentServiceName);
+        parentController.setMode(Mode.NEVER);
+        assertController(parentController, parentStop);
+
+        parentService.failNextTime();
+        final Future<StartException> parentFailure = parentListener.expectServiceFailure(parentServiceName);
+        parentController.setMode(Mode.ACTIVE);
+        assertFailure(parentController, parentFailure);
+
+        try {
+            parentService.getStartContext().getChildTarget();
+            fail("IllegalStateException expected");
+        } catch (IllegalStateException e) {}
+    }
+
     public static class ParentService extends FailToStartService {
 
         private ServiceTarget childTarget;
+        private StartContext startContext;
         private List<ServiceName> children = new ArrayList<ServiceName>();
         private List<ServiceListener<Object>> listeners = new ArrayList<ServiceListener<Object>>();
 
@@ -576,7 +603,9 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
 
         @Override
         public void start(StartContext context) throws StartException {
+            startContext = context;
             childTarget = context.getChildTarget();
+            assertSame(childTarget, context.getChildTarget());
             childTarget.addListener(listeners);
             for (ServiceName childName: children) {
                 childTarget.addService(childName, Service.NULL).install();
@@ -586,9 +615,13 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
 
         @Override
         public void stop(StopContext context) {}
-        
+
         public ServiceTarget getChildTarget() {
             return this.childTarget;
+        }
+
+        public StartContext getStartContext() {
+            return this.startContext;
         }
 
         public ParentService addChild(ServiceName childName) {

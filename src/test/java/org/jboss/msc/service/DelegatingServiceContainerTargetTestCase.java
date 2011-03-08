@@ -23,15 +23,16 @@
 package org.jboss.msc.service;
 
 /**
- * Test for {@link DelegatingServiceRegistry}.
+ * Runs all tests in {@link AbstractServiceTargetTest} against {@link DelegatingServiceContainer}.
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
+ *
  */
-public class DelegatingServiceRegistryTestCase extends AbstractServiceRegistryTest {
+public class DelegatingServiceContainerTargetTestCase extends AbstractServiceTargetTest {
 
     @Override
-    protected ServiceRegistry getServiceRegistry(ServiceContainer container) {
-        return new DelegatingServiceRegistry(container);
+    protected ServiceTarget getServiceTarget(ServiceTarget serviceTarget) {
+        return new DelegatingServiceContainer(serviceTarget, serviceContainer);
     }
 
 }

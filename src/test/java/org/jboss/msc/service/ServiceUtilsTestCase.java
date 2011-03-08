@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2010, Red Hat, Inc., and individual contributors
+ * Copyright 2011, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -24,7 +24,6 @@ package org.jboss.msc.service;
 
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -123,6 +122,9 @@ public class ServiceUtilsTestCase extends AbstractServiceTest {
         // try to undeploy a null service... NPE is expected
         final TestTask completeTask = new TestTask();
         ServiceUtils.undeployAll(completeTask, (ServiceController<?>) null);
+        
+        // try to undeploy a null service array, it should be ignored
+        ServiceUtils.undeployAll(completeTask, (ServiceController<?>[]) null);
 
         // now remove the service with a null complete task
         Future<ServiceController<?>> serviceRemoval = testListener.expectServiceRemoval(serviceName);

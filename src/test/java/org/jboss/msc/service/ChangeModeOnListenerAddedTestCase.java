@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2010, Red Hat, Inc., and individual contributors
+ * Copyright 2011, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -120,32 +120,30 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         assertController(firstController, firstServiceRemoved);
     }
 
-    @Test
-    public void changeRemoveToNever() throws Exception {
+    private void changeRemoveToNewModeFails(Mode newMode) throws Exception {
         final Future<ServiceController<?>> firstServiceRemoval = testListener.expectServiceRemoval(firstServiceName);
-        ServiceController<?> serviceController = assertChangeModeFails(getRemovedFirstBuilder(), firstServiceName, Mode.NEVER);
+        final ServiceController<?> serviceController = assertChangeModeFails(getRemovedFirstBuilder(), firstServiceName, newMode);
         assertController(serviceController, firstServiceRemoval);
     }
 
     @Test
+    public void changeRemoveToNever() throws Exception {
+        changeRemoveToNewModeFails(Mode.NEVER);
+    }
+
+    @Test
     public void changeRemoveToOnDemand() throws Exception {
-        final Future<ServiceController<?>> firstServiceRemoval = testListener.expectServiceRemoval(firstServiceName);
-        ServiceController<?> firstController = assertChangeModeFails(getRemovedFirstBuilder(), firstServiceName, Mode.ON_DEMAND);
-        assertController(firstController, firstServiceRemoval);
+        changeRemoveToNewModeFails(Mode.ON_DEMAND);
     }
 
     @Test
     public void changeRemoveToPassive() throws Exception {
-        final Future<ServiceController<?>> firstServiceRemoval = testListener.expectServiceRemoval(firstServiceName);
-        ServiceController<?> firstController = assertChangeModeFails(getRemovedFirstBuilder(), firstServiceName, Mode.PASSIVE);
-        assertController(firstController, firstServiceRemoval);
+        changeRemoveToNewModeFails(Mode.PASSIVE);
     }
 
     @Test
     public void changeRemoveToActive() throws Exception {
-        final Future<ServiceController<?>> firstServiceRemoval = testListener.expectServiceRemoval(firstServiceName);
-        ServiceController<?> firstController = assertChangeModeFails(getRemovedFirstBuilder(), firstServiceName, Mode.ACTIVE);
-        assertController(firstController, firstServiceRemoval);
+        changeRemoveToNewModeFails(Mode.ACTIVE);
     }
 
     @Test

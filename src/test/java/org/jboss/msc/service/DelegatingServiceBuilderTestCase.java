@@ -23,15 +23,16 @@
 package org.jboss.msc.service;
 
 /**
- * Test for {@link DelegatingServiceRegistry}.
+ * Test for {@link DelegatingServiceBuilder}.
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
+ *
  */
-public class DelegatingServiceRegistryTestCase extends AbstractServiceRegistryTest {
+public class DelegatingServiceBuilderTestCase extends AbstractServiceBuilderTest {
 
     @Override
-    protected ServiceRegistry getServiceRegistry(ServiceContainer container) {
-        return new DelegatingServiceRegistry(container);
+    protected <T> ServiceBuilder<T> getServiceBuilder(ServiceBuilder<T> serviceBuilder) {
+        return new DelegatingServiceBuilder<T>(serviceBuilder);
     }
 
 }

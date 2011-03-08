@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2010, Red Hat, Inc., and individual contributors
+ * Copyright 2011, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -72,12 +72,14 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> serviceDStart = testListener.expectServiceStart(serviceNameD);
         final ServiceController<?> serviceDController = serviceContainer.addService(serviceNameD, serviceD)
             .addInjection(new SetMethodInjector<SomeService>(Values.immediateValue(serviceD), ServiceD.class,"setSomeService", SomeService.class), serviceC)
+            .addInjection(new SetMethodInjector<ServiceD>(Values.immediateValue(serviceD), ServiceD.class.getDeclaredMethod("setService", ServiceD.class)))
             .addListener(testListener)
             .install();
         assertController(serviceNameD, serviceDController);
         assertController(serviceDController, serviceDStart);
         assertSame(serviceD, serviceDController.getValue());
         assertSame(serviceC, serviceD.service);
+        assertSame(serviceD, serviceD.getService());
 
         final Future<ServiceController<?>> serviceBStart = testListener.expectServiceStart(serviceNameB);
         final ServiceController<?> serviceBController = serviceContainer.addService(serviceNameB, serviceBWrapper)
@@ -378,6 +380,77 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         assertNull(serviceD.service);
     }
 
+    @Test
+    public void testServiceWithInvalidInjection() throws Exception {
+        final TestServiceListener testListener = new TestServiceListener();
+        final ServiceC serviceC = new ServiceC();
+        final ServiceD serviceD = new ServiceD(NullPointerException.class);
+
+        // install service D, with service C injected, but with a typo
+        final Future<StartException> serviceFailure = testListener.expectServiceFailure(serviceNameD);
+        final ServiceController<?> serviceDController = serviceContainer.addService(serviceNameD, serviceD)
+            .addInjection(new SetMethodInjector<SomeService>(Values.immediateValue(serviceD), ServiceD.class,"setSomeService", SomeService.class), serviceC)
+            .addInjection(new SetMethodInjector(serviceD, ServiceD.class.getDeclaredMethod("setInjectionException", Class.class)), IllegalStateException.class)
+            .addListener(testListener)
+            .install();
+        assertController(serviceNameD, serviceDController);
+        assertFailure(serviceDController, serviceFailure);
+        assertNull(serviceD.service);
+
+        serviceD.setInjectionException(null);
+        serviceDController.setMode(Mode.NEVER);
+        Thread.sleep(30);
+
+        final Future<ServiceController<?>> serviceStart = testListener.expectServiceStart(serviceNameD); 
+        serviceDController.setMode(Mode.ACTIVE);
+        assertController(serviceDController, serviceStart);
+        assertSame(IllegalStateException.class, serviceD.getInjectionException());
+        assertSame(serviceC, serviceD.getSomeService());
+
+        final Future<ServiceController<?>> serviceStop = testListener.expectServiceStop(serviceNameD);
+        serviceDController.setMode(Mode.NEVER);
+        assertController(serviceDController, serviceStop);
+        assertNull(serviceD.getInjectionException());
+        assertTrue(serviceD.getSomeService() == null || serviceD.getSomeService() == serviceC);
+    }
+
+    @Test
+    public void testServiceWithInvalidUninjection() throws Exception {
+        final TestServiceListener testListener = new TestServiceListener();
+        final ServiceC serviceC = new ServiceC();
+        final ServiceD serviceD = new ServiceD();
+
+        // install service D, with service C injected
+        final Future<ServiceController<?>> serviceStart = testListener.expectServiceStart(serviceNameD);
+        final ServiceController<?> serviceDController = serviceContainer.addService(serviceNameD, serviceD)
+            .addInjection(new SetMethodInjector<SomeService>(Values.immediateValue(serviceD), ServiceD.class,"setSomeService", SomeService.class), serviceC)
+            .addListener(testListener)
+            .install();
+        assertController(serviceNameD, serviceDController);
+        assertController(serviceDController, serviceStart);
+        assertSame(serviceC, serviceD.service);
+
+        serviceD.setInjectionException(UnknownError.class);
+        final Future<ServiceController<?>> serviceStop = testListener.expectServiceStop(serviceNameD);
+        serviceDController.setMode(Mode.NEVER);
+        assertController(serviceDController, serviceStop);
+        assertSame(serviceC, serviceD.service);
+    }
+
+    @Test
+    public void temporaryServiceValue() throws Throwable {
+        final TestServiceListener testListener = new TestServiceListener();
+        final ServiceValue<ServiceA> serviceValue = new ServiceValue<ServiceA>(new ServiceA());
+        final Future<ServiceController<?>> serviceAStart = testListener.expectServiceStart(serviceNameA);
+        serviceContainer.addServiceValue(serviceNameA, serviceValue).addListener(testListener).install();
+        final ServiceController<?> serviceAController = assertController(serviceNameA, serviceAStart);
+
+        serviceValue.setService(null);
+        final Future<ServiceController<?>> serviceAStop = testListener.expectServiceStop(serviceNameA);
+        serviceAController.setMode(Mode.NEVER);
+        assertController(serviceAController, serviceAStop);
+    }
+
     public static class ServiceA implements Service<ServiceA> {
         public String description;
         public int initialParameter;
@@ -462,6 +535,8 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
     public static class ServiceD implements Service<ServiceD> {
         private SomeService service;
         private boolean failToStop = false;
+        private Class<? extends Throwable> injectionException = null;
+        private ServiceD serviceD; // should contain this 
 
         public ServiceD() {}
 
@@ -469,10 +544,31 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
             this.failToStop = failToStop;
         }
 
+        public ServiceD(Class<? extends Throwable> injectionException) {
+            this.injectionException = injectionException;
+        }
+
+        public Class<? extends Throwable> getInjectionException() {
+            return injectionException;
+        }
+
+        public void setInjectionException(Class<? extends Throwable> injectionException) {
+            this.injectionException = injectionException;
+        }
+
         /**
          * @param serviceC the serviceC to set
          */
-        public void setSomeService(SomeService service) {
+        public void setSomeService(SomeService service) throws Throwable {
+            if (injectionException != null) {
+                try {
+                    throw injectionException.newInstance();
+                } catch (InstantiationException e) {
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+            }
             this.service = service;
         }
 
@@ -486,6 +582,14 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         @Override
         public ServiceD getValue() throws IllegalStateException {
             return this;
+        }
+
+        public void setService(ServiceD serviceD) {
+            this.serviceD = serviceD;
+        }
+
+        public ServiceD getService() {
+            return serviceD;
         }
 
         @Override
@@ -523,5 +627,23 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         public void stop(StopContext context) {
             assertTrue(context.getElapsedTime() > 0L);
         }
+    }
+
+    public static class ServiceValue<T> implements Value<Service<T>> {
+        private Service<T> service;
+
+        public ServiceValue (Service<T> service) {
+            this.service = service;
+        }
+
+        @Override
+        public Service<T> getValue() throws IllegalStateException, IllegalArgumentException {
+            return service;
+        }
+
+        public void setService(Service<T> service) {
+            this.service = service;
+        }
+        
     }
 }

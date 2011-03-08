@@ -29,6 +29,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Future;
 
@@ -62,16 +63,25 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
     @Test
     public void addService() throws Exception {
         Future<ServiceController<?>> serviceStart = testListener.expectServiceStart(serviceName);
+        // adding and removing listener is ok
         serviceTarget.addListener(testListener);
+        serviceTarget.removeListener(testListener);
+        serviceTarget.addListener(testListener);
+        // adding null will be ignored
+        serviceTarget.addListener((ServiceListener<Object>) null);
         ServiceController<?> serviceController = serviceTarget.addService(serviceName, Service.NULL).install();
         assertController(serviceName, serviceController);
         assertController(serviceController, serviceStart);
+        // removing null will be ignored
+        serviceTarget.removeListener(null);
     }
 
     @Test
     public void addServiceValue() throws Exception {
         Future<ServiceController<?>> serviceStart = testListener.expectServiceStart(serviceName);
-        serviceTarget.addListener(testListener);
+        List<ServiceListener<Object>> listeners = new ArrayList<ServiceListener<Object>>();
+        listeners.add(testListener);
+        serviceTarget.addListener(listeners);
         ServiceController<?> serviceController = serviceTarget.addServiceValue(serviceName, Values.immediateValue(Service.NULL)).install();
         assertController(serviceName, serviceController);
         assertController(serviceController, serviceStart);
@@ -94,6 +104,7 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
         serviceTarget.addListener(testListener);
         serviceTarget.addService(anotherServiceName, Service.NULL).install();
         serviceTarget.addDependency(anotherServiceName);
+        serviceTarget.addDependency((ServiceName) null);// null dependency should be ignored
         serviceTarget.addServiceValue(serviceName, Values.immediateValue(Service.NULL)).install();
 
         assertController(serviceName, serviceStart);
@@ -113,7 +124,10 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
         serviceTarget.addListener(testListener);
         serviceTarget.addService(oneMoreServiceName, Service.NULL).install();
         serviceTarget.addService(anotherServiceName, Service.NULL).install();
-        subTarget.addDependency(anotherServiceName, oneMoreServiceName);
+        List<ServiceName> dependencies = new ArrayList<ServiceName>();
+        dependencies.add(anotherServiceName);
+        dependencies.add(oneMoreServiceName);
+        subTarget.addDependency(dependencies);
         subTarget.addServiceValue(serviceName, Values.immediateValue(Service.NULL)).install();
         subTarget.addServiceValue(extraServiceName, Values.immediateValue(Service.NULL)).install();
 
@@ -123,7 +137,57 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
         assertController(extraServiceName, extraServiceStart);
     }
 
+    @Test
+    public void addRemoveDependency() throws Exception {
+        // container target has a dependency on anotherSerivce
+        final ServiceTarget containerTarget = getServiceTarget(serviceContainer);
+        containerTarget.addDependency(anotherServiceName);
+        // install service; it is expected to complain of the missing anotherService dependency
+        Future<ServiceController<?>> missingDependency = testListener.expectDependencyUninstall(serviceName);
+        containerTarget.addService(serviceName, Service.NULL).addListener(testListener).install();
+        ServiceController<?> serviceController = assertController(serviceName, missingDependency);
+        // remove service
+        Future<ServiceController<?>> serviceRemoval = testListener.expectServiceRemoval(serviceName);
+        serviceController.setMode(Mode.REMOVE);
+        assertController(serviceController, serviceRemoval);
+        // removing null dependency should be ignored
+        containerTarget.removeDependency(null);
+        // remove the dependency on anotherService from the container
+        containerTarget.removeDependency(anotherServiceName);
+        // install service; this time, it is expected to start normally as it does not depend on anotherService
+        Future<ServiceController<?>> serviceStart = testListener.expectServiceStart(serviceName);
+        containerTarget.addService(serviceName, Service.NULL).addListener(testListener).install();
+        serviceController = assertController(serviceName, serviceStart);
+        // remove service
+        serviceRemoval = testListener.expectServiceRemoval(serviceName);
+        serviceController.setMode(Mode.REMOVE);
+        assertController(serviceController, serviceRemoval);
+        // add dependencies on anotherService and extraService
+        containerTarget.addDependency(anotherServiceName, extraServiceName);
+        // install service; it should complain of the missing another/extraService dependencies
+        missingDependency = testListener.expectDependencyUninstall(serviceName);
+        containerTarget.addService(serviceName, Service.NULL).addListener(testListener).install();
+        serviceController = assertController(serviceName, missingDependency);
+        // remove the extraService dependency from container
+        containerTarget.removeDependency(extraServiceName);
+        // install anotherService
+        final Future<ServiceController<?>> anotherServiceStart = testListener.expectServiceStart(anotherServiceName);
+        containerTarget.addService(anotherServiceName, Service.NULL).addListener(testListener).install();
+        assertController(anotherServiceName, anotherServiceStart);
+        // service should still be down, as the removal of extraService as a dependency from the container...
+        // ... didn't affect service
+        assertSame(State.DOWN, serviceController.getState());
+        // install extra service
+        final Future<ServiceController<?>> extraServiceStart = testListener.expectServiceStart(extraServiceName);
+        serviceStart = testListener.expectServiceStart(serviceName);
+        containerTarget.addService(extraServiceName, Service.NULL).addListener(testListener).install();
+        assertController(extraServiceName, extraServiceStart);
+        // this time, service is expected to start
+        assertController(serviceController, serviceStart);
+    }
+
     @SuppressWarnings("unchecked")
+    @Test
     public void addServicesAfterShutdown() {
         final ServiceTarget containerTarget = getServiceTarget(serviceContainer);
         final ServiceBuilder<?> builderFromContainer = containerTarget.addService(anotherServiceName, Service.NULL);
@@ -133,50 +197,27 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
         containerTarget.addDependency(serviceName);
         shutdownContainer();
 
-        try {
-            containerTarget.addDependency(new ArrayList<ServiceName>());
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-
-        try {
-            containerTarget.addDependency(oneMoreServiceName);
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-
-        try {
-            containerTarget.addDependency(serviceName, anotherServiceName);
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-
-        try {
-            containerTarget.addListener(new ArrayList<ServiceListener<Object>>());
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-
-        try {
-            containerTarget.addListener(new TestServiceListener());
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-
-        try {
-            containerTarget.addListener(new TestServiceListener(), new TestServiceListener());
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-        
-        try {
-            containerTarget.addService(extraServiceName, Service.NULL);
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
+        // should be ok
+        containerTarget.addDependency(new ArrayList<ServiceName>());
+        containerTarget.addDependency(oneMoreServiceName);
+        containerTarget.addDependency(serviceName, anotherServiceName);
+        containerTarget.addListener(new ArrayList<ServiceListener<Object>>());
+        containerTarget.addListener(new TestServiceListener());
+        containerTarget.addListener(new TestServiceListener(), new TestServiceListener());
+        containerTarget.addService(extraServiceName, Service.NULL);
 
         Set<ServiceListener<Object>> listeners = containerTarget.getListeners();
         assertNotNull(listeners);
-        assertEquals(1, listeners.size());
-        assertSame(testListener, listeners.iterator().next());
+        assertEquals(4, listeners.size());
+        // should contain testListener plus the three previously created listeners
+        assertTrue(listeners.contains(testListener));
 
         Set<ServiceName> dependencies = containerTarget.getDependencies();
         assertNotNull(dependencies);
-        assertEquals(1, dependencies.size());
-        assertSame(serviceName, listeners.iterator().next());
+        assertEquals(3, dependencies.size());
+        assertTrue(dependencies.contains(serviceName));
+        assertTrue(dependencies.contains(oneMoreServiceName));
+        assertTrue(dependencies.contains(anotherServiceName));
 
         try {
             builderFromContainer.install();
@@ -223,8 +264,8 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
         // this call should take no effect, as no new services have been added so far
         batchTarget.removeServices(); 
 
-        // add testListener to containerTaget
-        containerTarget.addListener(testListener);
+        // add duplicate testListener to containerTaget... it should be ignored
+        containerTarget.addListener(testListener, testListener);
         // and 3 testListeners to batchTarget
         final TestServiceListener testListener1 = new TestServiceListener();
         final TestServiceListener testListener2 = new TestServiceListener();
@@ -363,7 +404,8 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
         final TestServiceListener testListener3 = new TestServiceListener();
         batchSubTarget.addListener(testListener1, testListener2, testListener3);
         // plus one dependency on oneMoreServiceName
-        batchSubTarget.addDependency(oneMoreServiceName);
+        batchSubTarget.addDependency(oneMoreServiceName, extraServiceName);
+        batchSubTarget.removeDependency(extraServiceName);
         // containerTarget should have no dependencies
         assertTrue(containerTarget.getDependencies() == null || containerTarget.getDependencies().isEmpty());
         assertTrue(batchTarget.getDependencies() == null || batchTarget.getDependencies().isEmpty());

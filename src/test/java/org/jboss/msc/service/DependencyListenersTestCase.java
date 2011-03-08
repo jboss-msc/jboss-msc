@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2010, Red Hat, Inc., and individual contributors
+ * Copyright 2011, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -269,6 +269,74 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
     }
 
     @Test
+    public void testFailedServiceWithFailedDependencies() throws Throwable {
+        final FailToStartService secondService = new FailToStartService(true);
+        final FailToStartService thirdService = new FailToStartService(true);
+
+        // install third service, a service set to fail on start
+        Future<StartException> thirdServiceFailure = testListener.expectServiceFailure(thirdServiceName); 
+        serviceContainer.addService(thirdServiceName, thirdService).addListener(testListener).install();
+        final ServiceController<?> thirdController = assertFailure(thirdServiceName, thirdServiceFailure);
+
+        // install second service, set to fail on start, and with a dependency on third service
+        // second service is expected to notify the dependency failure
+        final Future<ServiceController<?>> secondServiceInstall = testListener.expectListenerAdded(secondServiceName); 
+        Future<ServiceController<?>> secondServiceDepFailed = testListener.expectDependencyFailure(secondServiceName);
+        serviceContainer.addService(secondServiceName, secondService).addListener(testListener).addDependency(thirdServiceName).install();
+        final ServiceController<?> secondController = assertController(secondServiceName, secondServiceInstall);
+        assertController(secondController, secondServiceDepFailed);
+
+        // install first service, with a dependency on second service; it is expected to notify the failed dependency
+        Future<ServiceController<?>> firstServiceDepFailed =testListener.expectDependencyFailure(firstServiceName);
+        serviceContainer.addService(firstServiceName, Service.NULL).addListener(testListener).addDependency(secondServiceName).install();
+        final ServiceController<?> firstController = assertController(firstServiceName, firstServiceDepFailed);
+
+        // set third service mode to NEVER, the dep failure will be cleared
+        Future<ServiceController<?>> secondServiceDepFailureCleared = testListener.expectDependencyFailureCleared(secondServiceName);
+        Future<ServiceController<?>> firstServiceDepFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
+        thirdController.setMode(Mode.NEVER);
+        assertController(secondController, secondServiceDepFailureCleared);
+        assertController(firstController, firstServiceDepFailureCleared);
+
+        // set third service mode to ACTIVE, it should start without problems this time
+        // however, second service will fail
+        final Future<ServiceController<?>> thirdServiceStart = testListener.expectServiceStart(thirdServiceName);
+        final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
+        firstServiceDepFailed = testListener.expectDependencyFailure(firstServiceName);
+        thirdController.setMode(Mode.ACTIVE);
+        assertController(thirdController, thirdServiceStart);
+        assertFailure(secondController, secondServiceFailure);
+        assertController(firstController, firstServiceDepFailed);
+
+        // set third service mode to NEVER, it should stop
+        final Future<ServiceController<?>> thirdServiceStop = testListener.expectServiceStop(thirdServiceName);
+        thirdController.setMode(Mode.NEVER);
+        assertController(thirdController, thirdServiceStop);
+
+        // set third service to fail next attempt to start, and set its mode to ACTIVE; it will fail to start
+        thirdService.failNextTime();
+        secondServiceDepFailed = testListener.expectDependencyFailure(secondServiceName);
+        thirdServiceFailure = testListener.expectServiceFailure(thirdServiceName);
+        thirdController.setMode(Mode.ACTIVE);
+        assertFailure(thirdController, thirdServiceFailure);
+        assertController(secondController, secondServiceDepFailed);
+
+        // the main goal of this test:
+        // we don't expect a dependency failure cleared notification to firstController
+        // because secondController failCount is still > 0
+        secondController.setMode(Mode.NEVER);
+        Thread.sleep(5000); // sleep because there is no way to be notified a service failure cleared
+
+        // set third service mode to NEVER, now second controller will have a failCount of 0, and will
+        // notify of the dep failure cleared
+        secondServiceDepFailureCleared = testListener.expectDependencyFailureCleared(secondServiceName);
+        firstServiceDepFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
+        thirdController.setMode(Mode.NEVER);
+        assertController(secondServiceName, secondServiceDepFailureCleared);
+        assertController(firstServiceName, firstServiceDepFailureCleared);
+    }
+
+    @Test
     public void testFailedDependencyInstalledFirst() throws Exception {
         final FailToStartService thirdService = new FailToStartService(true);
         final Future<StartException> thirdServiceFailed = testListener.expectServiceFailure(thirdServiceName);
@@ -399,7 +467,7 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
         // remove second service.
         secondController.setMode(Mode.REMOVE);
         assertController(secondController, secondServiceRemoved);
-        // depending on the order that asynchronous tasks are executed, we may end up with two opposit notifications
+        // depending on the order that asynchronous tasks are executed, we may end up with two opposite notifications
         // of installed and missing dependencies, or no notification at all
         assertOppositeNotifications(firstController, firstServiceDependencyInstalled, firstServiceDependencyMissing);
         firstController.setMode(Mode.ACTIVE);
