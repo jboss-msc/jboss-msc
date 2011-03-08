@@ -76,6 +76,9 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
         
         ServiceName current = parent;
         for (String part : parts) {
+            if (part == null) {
+                throw new IllegalArgumentException("Name segment is null");
+            }
             if (part.isEmpty()) {
                 throw new IllegalArgumentException("Empty name segment is not allowed");
             }
@@ -85,9 +88,6 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
     }
 
     private ServiceName(final ServiceName parent, final String name) {
-        if (name == null) {
-            throw new IllegalArgumentException("name is null");
-        }
         this.name = name;
         this.parent = parent;
 
