@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Service name class.
@@ -43,6 +44,7 @@ import java.util.List;
 public final class ServiceName implements Comparable<ServiceName>, Serializable {
 
     private static final long serialVersionUID = 2336190201880964151L;
+    private static final Pattern validNameSegmentPattern = Pattern.compile("[\\u0000-\\u10FFFF&&[^\\u0000-\\u001F]&&[^\\u007F-\\u009F]&&[^ ]]+");
 
     private final String name;
     private final ServiceName parent;
@@ -255,6 +257,16 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
      */
     public String getCanonicalName() {
         return getCanonicalName(new StringBuilder()).toString();
+    }
+
+    /**
+     * Indicates if the name segment is valid.
+     * 
+     * @param  part a name segment
+     * @return {@code true} if {@code part} is valid
+     */
+    public static boolean isValidNameSegment(String part) {
+        return part != null && validNameSegmentPattern.matcher(part).matches();
     }
 
     /**
