@@ -485,9 +485,13 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         final Map<ServiceName, ServiceBuilderImpl.Dependency> dependencyMap = serviceBuilder.getDependencies();
         final int dependencyCount = dependencyMap.size();
         final Dependency[] dependencies = new Dependency[dependencyCount];
-        final List<ValueInjection<?>> valueInjections = new ArrayList<ValueInjection<?>>();
-        final List<Injector<? super T>> outInjections = serviceBuilder.getOutInjections();
-
+        final List<ValueInjection<?>> valueInjections = serviceBuilder.getValueInjections();
+        final List<ValueInjection<?>> outInjections = new ArrayList<ValueInjection<?>>();
+        // set up outInjections with an InjectedValue
+        final InjectedValue<T> serviceValue = new InjectedValue<T>();
+        for (final Injector<? super T> outInjection : serviceBuilder.getOutInjections()) {
+            outInjections.add(new ValueInjection<T>(serviceValue, outInjection));
+        }
 
         // Dependencies
         int i = 0;
@@ -502,18 +506,13 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 valueInjections.add(new ValueInjection<Object>(registration, injector));
             }
         }
-        // Other injections
-        final InjectedValue<T> serviceValue = new InjectedValue<T>();
-        for (final Injector<? super T> outInjection : outInjections) {
-            valueInjections.add(new ValueInjection<T>(serviceValue, outInjection));
-        }
-
-        valueInjections.addAll(serviceBuilder.getValueInjections());
-
-        final ValueInjection<?>[] injections = valueInjections.toArray(new ValueInjection<?>[valueInjections.size()]);
+        final ValueInjection<?>[] valueInjectionArray = valueInjections.toArray(new ValueInjection<?>[valueInjections.size()]);
+        final ValueInjection<?>[] outInjectionArray = outInjections.toArray(new ValueInjection<?>[outInjections.size()]);
 
         // Next create the actual controller
-        final ServiceControllerImpl<T> instance = new ServiceControllerImpl<T>(serviceBuilder.getServiceValue(), serviceBuilder.getLocation(), dependencies, injections, primaryRegistration, aliasRegistrations, serviceBuilder.getListeners(), serviceBuilder.getParent());
+        final ServiceControllerImpl<T> instance = new ServiceControllerImpl<T>(serviceBuilder.getServiceValue(),
+                serviceBuilder.getLocation(), dependencies, valueInjectionArray, outInjectionArray, primaryRegistration, aliasRegistrations,
+                serviceBuilder.getListeners(), serviceBuilder.getParent());
         boolean ok = false;
         try {
             serviceValue.setValue(instance);

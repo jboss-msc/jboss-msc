@@ -252,8 +252,10 @@ public interface ServiceBuilder<T> {
     <I> ServiceBuilder<T> addInjectionValue(Injector<? super I> target, Value<I> value);
 
     /**
-     * Add an injection of this service into another target.  The given injector will be given this service upon
+     * Add an injection of this service into another target.  The given injector will be given this service after
      * start, and uninjected when this service stops.
+     * <p> Differently from other injection types, failures to perform an outward injection will not result in a failure
+     * to start the service.
      *
      * @param target the injector target
      * @return this builder

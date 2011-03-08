@@ -22,6 +22,8 @@
 
 package org.jboss.msc.service;
 
+import static java.lang.Thread.holdsLock;
+
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Set;
@@ -30,8 +32,6 @@ import java.util.concurrent.RejectedExecutionException;
 
 import org.jboss.msc.service.management.ServiceStatus;
 import org.jboss.msc.value.Value;
-
-import static java.lang.Thread.holdsLock;
 
 /**
  * The service controller implementation.
@@ -61,6 +61,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * The injections of this service.
      */
     private final ValueInjection<?>[] injections;
+    /**
+     * The out injections of this service.
+     */
+    private final ValueInjection<?>[] outInjections;
     /**
      * The set of registered service listeners.
      */
@@ -158,11 +162,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private static final Dependent[] NO_DEPENDENTS = new Dependent[0];
     private static final String[] NO_STRINGS = new String[0];
 
-    ServiceControllerImpl(final Value<? extends Service<? extends S>> serviceValue, final Location location, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<? extends ServiceListener<? super S>> listeners, final ServiceControllerImpl<?> parent) {
+    ServiceControllerImpl(final Value<? extends Service<? extends S>> serviceValue, final Location location, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<? extends ServiceListener<? super S>> listeners, final ServiceControllerImpl<?> parent) {
         this.serviceValue = serviceValue;
         this.location = location;
         this.dependencies = dependencies;
         this.injections = injections;
+        this.outInjections = outInjections;
         this.primaryRegistration = primaryRegistration;
         this.aliasRegistrations = aliasRegistrations;
         this.listeners =  new IdentityHashSet<ServiceListener<? super S>>(listeners);
@@ -1341,25 +1346,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final long startNanos = System.nanoTime();
             final StartContextImpl context = new StartContextImpl(startNanos);
             try {
-                if (doInjection) {
-                    final ValueInjection<?>[] injections = ServiceControllerImpl.this.injections;
-                    final int injectionsLength = injections.length;
-                    boolean ok = false;
-                    int i = 0;
-                    try {
-                        for (; i < injectionsLength; i++) {
-                            final ValueInjection<?> injection = injections[i];
-                            doInject(injection);
-                        }
-                        ok = true;
-                    } finally {
-                        if (! ok) {
-                            for (; i >= 0; i--) {
-                                injections[i].getTarget().uninject();
-                            }
-                        }
-                    }
-                }
+                performInjections();
                 final Service<? extends S> service = serviceValue.getValue();
                 if (service == null) {
                     throw new IllegalArgumentException("Service is null");
@@ -1377,6 +1364,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                     tasks = transition();
                 }
+                performOutInjections(serviceName);
                 doExecute(tasks);
             } catch (StartException e) {
                 e.setServiceName(serviceName);
@@ -1417,6 +1405,43 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 doExecute(tasks);
             }
         }
+
+        private void performInjections() {
+            if (doInjection) {
+                final int injectionsLength = injections.length;
+                boolean ok = false;
+                int i = 0;
+                try {
+                    for (; i < injectionsLength; i++) {
+                        final ValueInjection<?> injection = injections[i];
+                        doInject(injection);
+                    }
+                    ok = true;
+                } finally {
+                    if (! ok) {
+                        for (; i >= 0; i--) {
+                            injections[i].getTarget().uninject();
+                        }
+                    }
+                }
+            }
+        }
+
+        private void performOutInjections(final ServiceName serviceName) {
+            if (doInjection) {
+                final int injectionsLength = outInjections.length;
+                int i = 0;
+                for (; i < injectionsLength; i++) {
+                    final ValueInjection<?> injection = outInjections[i];
+                    try {
+                        doInject(injection);
+                    } catch (Throwable t) {
+                        ServiceLogger.SERVICE.exceptionAfterComplete(t, serviceName);
+                    }
+                }
+            }
+        }
+
     }
 
     private class StopTask implements Runnable {
@@ -1456,11 +1481,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                     context.state = ContextState.COMPLETE;
                 }
-                for (ValueInjection<?> injection : injections) try {
-                    injection.getTarget().uninject();
-                } catch (Throwable t) {
-                    ServiceLogger.ROOT.uninjectFailed(t, serviceName, injection);
-                }
+                uninject(serviceName, injections);
+                uninject(serviceName, outInjections);
                 synchronized (ServiceControllerImpl.this) {
                     asyncTasks--;
                     if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
@@ -1469,6 +1491,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     tasks = transition();
                 }
                 doExecute(tasks);
+            }
+        }
+
+        private void uninject(final ServiceName serviceName, ValueInjection<?>[] injections) {
+            for (ValueInjection<?> injection : injections) try {
+                injection.getTarget().uninject();
+            } catch (Throwable t) {
+                ServiceLogger.ROOT.uninjectFailed(t, serviceName, injection);
             }
         }
     }
