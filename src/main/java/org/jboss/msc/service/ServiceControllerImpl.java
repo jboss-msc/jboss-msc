@@ -1718,11 +1718,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             this.startNanos = startNanos;
         }
 
-        public void failed(final StartException reason) throws IllegalStateException {
+        public void failed(StartException reason) throws IllegalStateException {
             final Runnable[] tasks;
             synchronized (ServiceControllerImpl.this) {
                 if (state != ContextState.ASYNC) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
+                }
+                if (reason == null) {
+                    reason = new StartException("Start failed, and additionally, a null cause was supplied");
                 }
                 state = ContextState.FAILED;
                 final ServiceName serviceName = getName();
