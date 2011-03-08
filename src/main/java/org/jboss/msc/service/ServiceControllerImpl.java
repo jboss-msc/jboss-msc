@@ -1368,41 +1368,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 doExecute(tasks);
             } catch (StartException e) {
                 e.setServiceName(serviceName);
-                ServiceLogger.FAIL.startFailed(e, serviceName);
-                final Runnable[] tasks;
-                synchronized (ServiceControllerImpl.this) {
-                    final ContextState oldState = context.state;
-                    if (oldState != ContextState.SYNC && oldState != ContextState.ASYNC) {
-                        ServiceLogger.FAIL.exceptionAfterComplete(e, serviceName);
-                        return;
-                    }
-                    context.state = ContextState.FAILED;
-                    asyncTasks--;
-                    startException = e;
-                    if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
-                        writeProfileInfo('F', startNanos, System.nanoTime());
-                    }
-                    failCount++;
-                    tasks = transition();
-                }
-                doExecute(tasks);
+                startFailed(e, serviceName, context, startNanos);
             } catch (Throwable t) {
-                final Runnable[] tasks;
-                synchronized (ServiceControllerImpl.this) {
-                    final ContextState oldState = context.state;
-                    if (oldState != ContextState.SYNC && oldState != ContextState.ASYNC) {
-                        ServiceLogger.FAIL.exceptionAfterComplete(t, serviceName);
-                        return;
-                    }
-                    context.state = ContextState.FAILED;
-                    asyncTasks--;
-                    ServiceLogger.FAIL.startFailed(startException = new StartException("Failed to start service", t, location, serviceName), serviceName);
-                    if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
-                        writeProfileInfo('F', startNanos, System.nanoTime());
-                    }
-                    tasks = transition();
-                }
-                doExecute(tasks);
+                StartException e = new StartException("Failed to start service", t, location, serviceName);
+                startFailed(e, serviceName, context, startNanos);
             }
         }
 
@@ -1442,6 +1411,26 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
         }
 
+        private void startFailed(StartException e, ServiceName serviceName, StartContextImpl context, long startNanos) {
+            ServiceLogger.FAIL.startFailed(e, serviceName);
+            final Runnable[] tasks;
+            synchronized (ServiceControllerImpl.this) {
+                final ContextState oldState = context.state;
+                if (oldState != ContextState.SYNC && oldState != ContextState.ASYNC) {
+                    ServiceLogger.FAIL.exceptionAfterComplete(e, serviceName);
+                    return;
+                }
+                context.state = ContextState.FAILED;
+                asyncTasks--;
+                startException = e;
+                if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
+                    writeProfileInfo('F', startNanos, System.nanoTime());
+                }
+                failCount++;
+                tasks = transition();
+            }
+            doExecute(tasks);
+        }
     }
 
     private class StopTask implements Runnable {
