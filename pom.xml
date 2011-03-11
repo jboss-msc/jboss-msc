@@ -34,7 +34,7 @@
 
     <groupId>org.jboss.msc</groupId>
     <artifactId>jboss-msc</artifactId>
-    <version>1.0.0.Beta7</version>
+    <version>1.0.0.Beta8-SNAPSHOT</version>
     <name>JBoss Modular Service Container</name>
 
     <properties>
