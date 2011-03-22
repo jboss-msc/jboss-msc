@@ -49,7 +49,7 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     private final Value<? extends Service<T>> serviceValue;
     private final ServiceName serviceName;
     private Location location;
-    private ServiceController.Mode initialMode;
+    private ServiceController.Mode initialMode = ServiceController.Mode.ACTIVE;
     private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
     private final Map<ServiceName, Dependency> dependencies = new HashMap<ServiceName, Dependency>(0);
     private final Set<ServiceListener<? super T>> listeners = new IdentityHashSet<ServiceListener<? super T>>(0);
@@ -123,6 +123,12 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     @Override
     public ServiceBuilderImpl<T> setInitialMode(final ServiceController.Mode mode) {
         checkAlreadyInstalled();
+        if (mode == null) {
+            throw new IllegalArgumentException("Initial mode is null");
+        }
+        if (mode == ServiceController.Mode.REMOVE) {
+            throw new IllegalArgumentException("Initial mode cannot be set to REMOVE");
+        }
         initialMode = mode;
         return this;
     }
