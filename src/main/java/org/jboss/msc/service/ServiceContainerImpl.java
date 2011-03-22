@@ -22,8 +22,20 @@
 
 package org.jboss.msc.service;
 
-import static org.jboss.modules.management.ObjectProperties.property;
+import org.jboss.modules.management.ObjectProperties;
+import org.jboss.modules.ref.Reaper;
+import org.jboss.modules.ref.Reference;
+import org.jboss.modules.ref.WeakReference;
+import org.jboss.msc.Version;
+import org.jboss.msc.inject.Injector;
+import org.jboss.msc.service.ServiceController.Mode;
+import org.jboss.msc.service.ServiceControllerImpl.Substate;
+import org.jboss.msc.service.management.ServiceContainerMXBean;
+import org.jboss.msc.service.management.ServiceStatus;
+import org.jboss.msc.value.InjectedValue;
 
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -47,6 +59,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -55,20 +68,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
-
-import org.jboss.modules.management.ObjectProperties;
-import org.jboss.modules.ref.Reaper;
-import org.jboss.modules.ref.Reference;
-import org.jboss.modules.ref.WeakReference;
-import org.jboss.msc.Version;
-import org.jboss.msc.inject.Injector;
-import org.jboss.msc.service.ServiceController.Mode;
-import org.jboss.msc.service.ServiceControllerImpl.Substate;
-import org.jboss.msc.service.management.ServiceContainerMXBean;
-import org.jboss.msc.service.management.ServiceStatus;
-import org.jboss.msc.value.InjectedValue;
+import static org.jboss.modules.management.ObjectProperties.property;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -89,7 +89,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         ServiceLogger.ROOT.greeting(Version.getVersionString());
     }
 
-    private final Map<ServiceName, ServiceRegistrationImpl> registry = new UnlockedReadHashMap<ServiceName, ServiceRegistrationImpl>(512);
+    private final ConcurrentMap<ServiceName, ServiceRegistrationImpl> registry = new UnlockedReadHashMap<ServiceName, ServiceRegistrationImpl>(512);
 
     private final long start = System.nanoTime();
     private long shutdownInitiated;
@@ -417,19 +417,23 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     }
 
     /**
-     * Atomically get or create a registration.  Call with lock held.
+     * Atomically get or create a registration.
      *
      * @param name the service name
      * @return the registration
      */
     private ServiceRegistrationImpl getOrCreateRegistration(final ServiceName name) {
-        final Map<ServiceName, ServiceRegistrationImpl> registry = this.registry;
+        final ConcurrentMap<ServiceName, ServiceRegistrationImpl> registry = this.registry;
         ServiceRegistrationImpl registration;
         registration = registry.get(name);
         if (registration == null) {
             registration = new ServiceRegistrationImpl(this, name);
-            registry.put(name, registration);
-            return registration;
+            ServiceRegistrationImpl existing = registry.putIfAbsent(name, registration);
+            if(existing != null) {
+                return existing;
+            } else {
+                return registration;
+            }
         } else {
             return registration;
         }
