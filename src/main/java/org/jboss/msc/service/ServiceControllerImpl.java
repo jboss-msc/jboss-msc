@@ -954,6 +954,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return this.children;
     }
 
+    public ServiceController<?> getParent() {
+        return parent;
+    }
+
     public ServiceContainerImpl getServiceContainer() {
         return primaryRegistration.getContainer();
     }

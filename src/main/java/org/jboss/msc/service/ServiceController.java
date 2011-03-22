@@ -34,6 +34,13 @@ import org.jboss.msc.value.Value;
 public interface ServiceController<S> extends Value<S> {
 
     /**
+     * Get this service's parent service, or {@code null} if there is none.
+     *
+     * @return the parent service or {@code null} if this service has no parent
+     */
+    ServiceController<?> getParent();
+
+    /**
      * Get the service container associated with this controller.
      *
      * @return the container
