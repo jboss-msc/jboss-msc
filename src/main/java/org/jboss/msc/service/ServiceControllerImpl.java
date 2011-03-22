@@ -196,7 +196,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * All notifications from dependencies, parents, and registrations will be ignored until the
      * installation is {@link #commitInstallation(org.jboss.msc.service.ServiceController.Mode) committed}.
      */
-    final void startInstallation() {
+    void startInstallation() {
         for (Dependency dependency : dependencies) {
             dependency.addDependent(this);
         }
@@ -215,7 +215,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      *
      * @param initialMode the initial service mode
      */
-    final void commitInstallation(Mode initialMode) {
+    void commitInstallation(Mode initialMode) {
         assert (state == Substate.NEW);
         final Runnable[] listenerAddedTasks;
         final Runnable specialTask;
@@ -262,7 +262,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * Roll back the service install.
      *
      */
-    final void rollbackInstallation() {
+    void rollbackInstallation() {
         synchronized(this) {
             mode = Mode.REMOVE;
             asyncTasks ++;
@@ -951,7 +951,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     IdentityHashSet<ServiceControllerImpl<?>> getChildren() {
         assert holdsLock(this);
-        return this.children;
+        return children;
     }
 
     public ServiceController<?> getParent() {
