@@ -77,6 +77,13 @@ public interface ServiceListener<S> {
     void serviceStopped(ServiceController<? extends S> controller);
 
     /**
+     * The service is going to be removed.  Called when the service mode is changed to {@code REMOVE}.
+     *
+     * @param controller the controller
+     */
+    void serviceRemoveRequested(ServiceController<? extends S> controller);
+
+    /**
      * The service has been removed.  The listener will automatically be unregistered after this call.  Called
      * after the state transitions from {@code DOWN} to {@code REMOVED}.
      *

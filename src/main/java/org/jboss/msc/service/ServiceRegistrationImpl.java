@@ -22,6 +22,8 @@
 
 package org.jboss.msc.service;
 
+import java.util.ArrayList;
+
 import static java.lang.Thread.holdsLock;
 
 /**
@@ -81,7 +83,7 @@ final class ServiceRegistrationImpl implements Dependency {
         assert !holdsLock(this);
         assert !holdsLock(dependent);
         final ServiceControllerImpl<?> instance;
-        Runnable[] tasks;
+        final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
         synchronized (this) {
             synchronized (dependents) {
                 if (dependents.contains(dependent)) {
@@ -97,18 +99,20 @@ final class ServiceRegistrationImpl implements Dependency {
                 return;
             }
             synchronized (instance) {
-                instance.addAsyncTask();
-                tasks = instance.newDependent(dependent);
+                instance.newDependent(dependent, tasks);
                 synchronized (dependents) {
                     dependents.add(dependent);
                 }
+                instance.addAsyncTasks(tasks.size() + 1);
             }
         }
         instance.doExecute(tasks);
+        tasks.clear();
         synchronized(this) {
             synchronized (instance) {
                 instance.removeAsyncTask();
-                tasks = instance.transition();
+                instance.transition(tasks);
+                instance.addAsyncTasks(tasks.size());
             }
         }
         instance.doExecute(tasks);

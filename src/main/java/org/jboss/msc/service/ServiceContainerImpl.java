@@ -22,20 +22,6 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.modules.management.ObjectProperties;
-import org.jboss.modules.ref.Reaper;
-import org.jboss.modules.ref.Reference;
-import org.jboss.modules.ref.WeakReference;
-import org.jboss.msc.Version;
-import org.jboss.msc.inject.Injector;
-import org.jboss.msc.service.ServiceController.Mode;
-import org.jboss.msc.service.ServiceControllerImpl.Substate;
-import org.jboss.msc.service.management.ServiceContainerMXBean;
-import org.jboss.msc.service.management.ServiceStatus;
-import org.jboss.msc.value.InjectedValue;
-
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -67,6 +53,21 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+
+import org.jboss.modules.management.ObjectProperties;
+import org.jboss.modules.ref.Reaper;
+import org.jboss.modules.ref.Reference;
+import org.jboss.modules.ref.WeakReference;
+import org.jboss.msc.Version;
+import org.jboss.msc.inject.Injector;
+import org.jboss.msc.service.ServiceController.Mode;
+import org.jboss.msc.service.ServiceControllerImpl.Substate;
+import org.jboss.msc.service.management.ServiceContainerMXBean;
+import org.jboss.msc.service.management.ServiceStatus;
+import org.jboss.msc.value.InjectedValue;
 
 import static org.jboss.modules.management.ObjectProperties.property;
 

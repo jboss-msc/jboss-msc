@@ -62,38 +62,6 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
     }
 
     /**
-     * Installs and removes the controller of a service named
-     * {@code firstServiceName}.
-     * 
-     * @return the ServiceController of the removed service.
-     */
-    private ServiceBuilder<?> getRemovedFirstBuilder() throws Exception {
-        return serviceContainer.addService(firstServiceName, Service.NULL).addListener(testListener, setModeListener)
-                .setInitialMode(Mode.REMOVE);
-    }
-
-    /**
-     * Install {@code serviceBuilder}, asserts that {@link setModeListener} failed to set the mode to {@code newMode} on
-     * {@link SetModeListener#listenerAdded(ServiceController) listenerAdded} execution, receiving an
-     * {@code IllegalStateException}.
-     * </p>
-     * This method asserts listener added has been called on {@link testListener}.
-     * 
-     * @param serviceBuilder the serviceBuilder that will be installed
-     * @param serviceName the serviceName
-     * @param newMode     the new mode to be set on service during installation
-     */
-    private final ServiceController<?> assertChangeModeFails(ServiceBuilder<?> serviceBuilder, ServiceName serviceName,
-            Mode newMode) throws Exception {
-        final Future<ServiceController<?>> listenerAdded = testListener.expectListenerAdded(serviceName);
-        setModeListener.setMode(newMode);
-        ServiceController<?> serviceController = serviceBuilder.install();
-        setModeListener.assertFailure(IllegalStateException.class);
-        assertController(serviceController, listenerAdded);
-        return serviceController;
-    }
-
-    /**
      * Install {@code serviceBuilder}, asserts that {@link setModeListener} failed to set the mode to {@code null} on
      * {@link SetModeListener#listenerAdded(ServiceController) listenerAdded} execution, receiving an
      * {@code IllegalArgumentException}.
@@ -110,47 +78,6 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         setModeListener.assertFailure(IllegalArgumentException.class);
         assertController(serviceController, listenerAdded);
         return serviceController;
-    }
-
-    @Test
-    public void changeRemoveToRemove() throws Exception {
-        setModeListener.setMode(Mode.REMOVE);
-        final Future<ServiceController<?>> firstServiceRemoved = testListener.expectServiceRemoval(firstServiceName);
-        final ServiceController<?> firstController = getRemovedFirstBuilder().install();
-        assertController(firstController, firstServiceRemoved);
-    }
-
-    private void changeRemoveToNewModeFails(Mode newMode) throws Exception {
-        final Future<ServiceController<?>> firstServiceRemoval = testListener.expectServiceRemoval(firstServiceName);
-        final ServiceController<?> serviceController = assertChangeModeFails(getRemovedFirstBuilder(), firstServiceName, newMode);
-        assertController(serviceController, firstServiceRemoval);
-    }
-
-    @Test
-    public void changeRemoveToNever() throws Exception {
-        changeRemoveToNewModeFails(Mode.NEVER);
-    }
-
-    @Test
-    public void changeRemoveToOnDemand() throws Exception {
-        changeRemoveToNewModeFails(Mode.ON_DEMAND);
-    }
-
-    @Test
-    public void changeRemoveToPassive() throws Exception {
-        changeRemoveToNewModeFails(Mode.PASSIVE);
-    }
-
-    @Test
-    public void changeRemoveToActive() throws Exception {
-        changeRemoveToNewModeFails(Mode.ACTIVE);
-    }
-
-    @Test
-    public void changeRemoveToNull() throws Exception {
-        final Future<ServiceController<?>> firstServiceRemoval = testListener.expectServiceRemoval(firstServiceName);
-        ServiceController<?> firstController = assertChangeModeToNullFails(getRemovedFirstBuilder(), firstServiceName);
-        assertController(firstController, firstServiceRemoval);
     }
 
     /**
@@ -1105,6 +1032,11 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         @Override
         public void serviceStopped(ServiceController<?> controller) {
             unexpectedCalls.append("serviceStopped\n");
+        }
+
+        @Override
+        public void serviceRemoveRequested(final ServiceController<?> controller) {
+            unexpectedCalls.append("serviceRemoving\n");
         }
 
         @Override

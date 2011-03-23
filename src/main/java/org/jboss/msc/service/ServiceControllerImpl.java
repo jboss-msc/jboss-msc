@@ -26,6 +26,7 @@ import static java.lang.Thread.holdsLock;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -185,8 +186,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         asyncTasks++;
     }
 
+    void addAsyncTasks(final int size) {
+        asyncTasks += size;
+    }
+
     void removeAsyncTask() {
         asyncTasks--;
+    }
+
+    void removeAsyncTasks(final int size) {
+        asyncTasks -= size;
     }
 
     /**
@@ -217,50 +226,42 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     void commitInstallation(Mode initialMode) {
         assert (state == Substate.NEW);
-        final Runnable[] listenerAddedTasks;
-        final Runnable specialTask;
+        assert initialMode != null;
+        assert ! holdsLock(this);
+        final ArrayList<Runnable> listenerAddedTasks = new ArrayList<Runnable>(16);
+        final ArrayList<Runnable> tasks = new ArrayList<Runnable>(16);
         synchronized(this) {
-            listenerAddedTasks = getListenerTasks(ListenerNotification.LISTENER_ADDED);
-            asyncTasks += listenerAddedTasks.length + 1;
-            specialTask = internalSetMode(initialMode == null ? ServiceController.Mode.ACTIVE : initialMode);
+            getListenerTasks(ListenerNotification.LISTENER_ADDED, listenerAddedTasks);
+            internalSetMode(initialMode, tasks);
+            // placeholder async task for running listener added tasks
+            asyncTasks += listenerAddedTasks.size() + tasks.size() + 1;
         }
-        doExecute(specialTask);
+        doExecute(tasks);
+        tasks.clear();
         for (Runnable listenerAddedTask : listenerAddedTasks) {
             listenerAddedTask.run();
         }
-        final Runnable[] asyncListenerTasks;
-        final Runnable[] transitionTasks;
         synchronized (this) {
+            Dependent[][] dependents = getDependents();
             if (failCount > 0) {
-                if (missingDepCount > 0) {
-                    asyncListenerTasks = getListenerTasks(new ListenerNotification[] { ListenerNotification.DEPENDENCY_FAILURE,
-                            ListenerNotification.MISSING_DEPENDENCY},
-                            new DependencyFailedTask(getDependents()), new DependencyUninstalledTask(getDependents()));
-                    asyncTasks += asyncListenerTasks.length;
-                }
-                else {
-                    asyncListenerTasks = getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, new DependencyFailedTask(getDependents()));
-                    asyncTasks += asyncListenerTasks.length;
-                }
+                getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
+                tasks.add(new DependencyFailedTask(dependents));
             }
-            else if (missingDepCount > 0) {
-                asyncListenerTasks = getListenerTasks(ListenerNotification.MISSING_DEPENDENCY, new DependencyUninstalledTask(getDependents()));
-                asyncTasks += asyncListenerTasks.length;
-            }
-            else {
-                asyncListenerTasks = null;
+            if (missingDepCount > 0) {
+                getListenerTasks(ListenerNotification.MISSING_DEPENDENCY, tasks);
+                tasks.add(new DependencyUninstalledTask(dependents));
             }
             state = Substate.DOWN;
+            // subtract one to compensate for +1 above
             asyncTasks --;
-            transitionTasks = transition();
+            transition(tasks);
+            asyncTasks += tasks.size();
         }
-        doExecute(asyncListenerTasks);
-        doExecute(transitionTasks);
+        doExecute(tasks);
     }
 
     /**
      * Roll back the service install.
-     *
      */
     void rollbackInstallation() {
         synchronized(this) {
@@ -351,35 +352,37 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     /**
      * Run the locked portion of a transition.  Call under lock.
      *
-     * @return the async tasks to start when the lock is not held, {@code null} for none
+     * @param tasks the list to which async tasks should be appended
      */
-    Runnable[] transition() {
+    void transition(final ArrayList<Runnable> tasks) {
         assert holdsLock(this);
         final Transition transition = getTransition();
         if (transition == null) {
-            return null;
+            return;
         }
-        final Runnable[] tasks;
         switch (transition) {
             case STOPPING_to_DOWN: {
-                tasks = getListenerTasks(transition.getAfter().getState(), new DependentStoppedTask());
+                getListenerTasks(transition.getAfter().getState(), tasks);
+                tasks.add(new DependentStoppedTask());
                 break;
             }
             case START_REQUESTED_to_DOWN: {
-                tasks = new Runnable[] { new DependentStoppedTask() };
+                tasks.add(new DependentStoppedTask());
                 break;
             }
             case START_REQUESTED_to_STARTING: {
-                tasks = getListenerTasks(transition.getAfter().getState(), new StartTask(true));
+                getListenerTasks(transition.getAfter().getState(), tasks);
+                tasks.add(new StartTask(true));
                 break;
             }
             case UP_to_STOP_REQUESTED: {
                 lifecycleTime = System.nanoTime();
-                tasks = new Runnable[] { new DependencyStoppedTask(getDependents()) };
+                tasks.add(new DependencyStoppedTask(getDependents()));
                 break;
             }
             case STARTING_to_UP: {
-                tasks = getListenerTasks(transition.getAfter().getState(), new DependencyStartedTask(getDependents()));
+                getListenerTasks(transition.getAfter().getState(), tasks);
+                tasks.add(new DependencyStartedTask(getDependents()));
                 break;
             }
             case STARTING_to_START_FAILED: {
@@ -389,29 +392,34 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     this.childTarget = null;
                 }
                 if (! children.isEmpty()) {
+                    // placeholder async task for child removal; last removed child will decrement this count
                     asyncTasks++;
                     for (ServiceControllerImpl<?> child : children) {
                         child.setMode(Mode.REMOVE);
                     }
                 }
-                tasks = getListenerTasks(transition.getAfter().getState(), new DependencyFailedTask(getDependents()));
+                getListenerTasks(transition.getAfter().getState(), tasks);
+                tasks.add(new DependencyFailedTask(getDependents()));
                 break;
             }
             case START_FAILED_to_STARTING: {
-                tasks = getListenerTasks(transition.getAfter().getState(), new DependencyRetryingTask(getDependents()),
-                        new StartTask(false));
+                getListenerTasks(transition.getAfter().getState(), tasks);
+                tasks.add(new DependencyRetryingTask(getDependents()));
+                tasks.add(new StartTask(false));
                 break;
             }
             case START_FAILED_to_DOWN: {
                 startException = null;
                 failCount--;
                 assert failCount == 0;
-                tasks = getListenerTasks(transition.getAfter().getState(), new DependencyRetryingTask(getDependents()),
-                        new StopTask(true), new DependentStoppedTask());
+                getListenerTasks(transition.getAfter().getState(), tasks);
+                tasks.add(new DependencyRetryingTask(getDependents()));
+                tasks.add(new StopTask(true));
+                tasks.add(new DependentStoppedTask());
                 break;
             }
             case STOP_REQUESTED_to_UP: {
-                tasks = new Runnable[] { new DependencyStartedTask(getDependents()) };
+                tasks.add(new DependencyStartedTask(getDependents()));
                 break;
             }
             case STOP_REQUESTED_to_STOPPING: {
@@ -421,44 +429,35 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     this.childTarget = null;
                 }
                 if (! children.isEmpty()) {
+                    // placeholder async task for child removal; last removed child will decrement this count
                     asyncTasks++;
                     for (ServiceControllerImpl<?> child : children) {
                         child.setMode(Mode.REMOVE);
                     }
                 }
-                tasks = getListenerTasks(transition.getAfter().getState(), new StopTask(false));
+                getListenerTasks(transition.getAfter().getState(), tasks);
+                tasks.add(new StopTask(false));
                 break;
             }
             case DOWN_to_REMOVING: {
                 Dependent[][] dependents = getDependents();
+                if (missingDepCount > 0) {
+                    tasks.add(new DependencyInstalledTask(dependents));
+                }
                 if (failCount > 0) {
-                    if (missingDepCount > 0) {
-                        tasks = new Runnable[3];
-                        tasks[1] = new DependencyInstalledTask(dependents);
-                    }
-                    else {
-                        tasks = new Runnable[2];
-                    }
-                    tasks[0] = new DependencyRetryingTask(dependents);
+                    tasks.add(new DependencyRetryingTask(dependents));
                 }
-                else if (missingDepCount > 0) {
-                    tasks = new Runnable[2];
-                    tasks [0] = new DependencyInstalledTask(dependents);
-                }
-                else {
-                    tasks = new Runnable[1];
-                }
-                tasks[tasks.length -1] = new RemoveTask();
+                tasks.add(new RemoveTask());
                 break;
             }
             case REMOVING_to_REMOVED: {
-                tasks = getListenerTasks(transition.getAfter().getState());
+                getListenerTasks(transition.getAfter().getState(), tasks);
                 listeners.clear();
                 break;
             }
             case DOWN_to_START_REQUESTED: {
                 lifecycleTime = System.nanoTime();
-                tasks = new Runnable[] { new DependentStartedTask() };
+                tasks.add(new DependentStartedTask());
                 break;
             }
             default: {
@@ -466,58 +465,20 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
         }
         state = transition.getAfter();
-        asyncTasks += tasks.length;
-        return tasks;
     }
 
-    private Runnable[] getListenerTasks(final ServiceController.State newState, final Runnable... extraTasks) {
+    private void getListenerTasks(final ServiceController.State newState, final ArrayList<Runnable> tasks) {
         final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
-        final int size = listeners.size();
-        final Runnable[] tasks = new Runnable[size + extraTasks.length];
-        int i = 0;
         for (ServiceListener<? super S> listener : listeners) {
-            tasks[i++] = new ListenerTask(listener, newState);
+            tasks.add(new ListenerTask(listener, newState));
         }
-        for (Runnable extraTask: extraTasks) {
-            tasks[i++] = extraTask;
-        }
-        return tasks;
     }
 
-    private Runnable[] getListenerTasks(final ListenerNotification notification, final Runnable extraTask) {
+    private void getListenerTasks(final ListenerNotification notification, final ArrayList<Runnable> tasks) {
         final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
-        final Runnable[] tasks = new Runnable[listeners.size() + 1];
-        int i = 0;
         for (ServiceListener<? super S> listener : listeners) {
-            tasks[i++] = new ListenerTask(listener, notification);
+            tasks.add(new ListenerTask(listener, notification));
         }
-        tasks[i] = extraTask;
-        return tasks;
-    }
-
-    private Runnable[] getListenerTasks(final ListenerNotification notification) {
-        final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
-        final Runnable[] tasks = new Runnable[listeners.size()];
-        int i = 0;
-        for (ServiceListener<? super S> listener : listeners) {
-            tasks[i++] = new ListenerTask(listener, notification);
-        }
-        return tasks;
-    }
-
-    private Runnable[] getListenerTasks(final ListenerNotification[] notifications, final Runnable... extraTasks) {
-        final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
-        final Runnable[] tasks = new Runnable[listeners.size() * notifications.length + extraTasks.length];
-        int i = 0;
-        for (ListenerNotification notification: notifications) {
-            for (ServiceListener<? super S> listener : listeners) {
-                tasks[i++] = new ListenerTask(listener, notification);
-            }
-        }
-        for (Runnable extraTask: extraTasks) {
-            tasks[i++] = extraTask;
-        }
-        return tasks;
     }
 
     void doExecute(final Runnable task) {
@@ -530,7 +491,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    void doExecute(final Runnable... tasks) {
+    void doExecute(final ArrayList<Runnable> tasks) {
         assert !holdsLock(this);
         if (tasks == null) return;
         final Executor executor = primaryRegistration.getContainer().getExecutor();
@@ -555,26 +516,28 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         if (newMode != Mode.REMOVE && primaryRegistration.getContainer().isShutdown()) {
             throw new IllegalArgumentException("Container is shutting down");
         }
-        final Runnable[] tasks;
-        Runnable specialTask = null;
+        final ArrayList<Runnable> tasks = new ArrayList<Runnable>(4);
         synchronized (this) {
-            if (expectedMode != null && expectedMode != mode) {
+            final Mode oldMode = mode;
+            if (expectedMode != null && expectedMode != oldMode) {
                 return false;
             }
-            if (mode == newMode) {
+            if (oldMode == newMode) {
                 return true;
             }
-            specialTask = internalSetMode(newMode);
-            tasks = transition();
+            internalSetMode(newMode, tasks);
+            if (tasks.isEmpty()) {
+                // if not empty, don't bother since transition should do nothing until tasks are done
+                transition(tasks);
+            }
+            asyncTasks += tasks.size();
         }
         doExecute(tasks);
-        doExecute(specialTask);
         return true;
     }
 
-    private Runnable internalSetMode(final ServiceController.Mode newMode) {
+    private void internalSetMode(final Mode newMode, final ArrayList<Runnable> taskList) {
         assert holdsLock(this);
-        Runnable specialTask = null;
         final ServiceController.Mode oldMode = mode;
         switch (oldMode) {
             case REMOVE: {
@@ -590,25 +553,29 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             case NEVER: {
                 switch (newMode) {
+                    case REMOVE: {
+                        getListenerTasks(ListenerNotification.REMOVE_REQUESTED, taskList);
+                        break;
+                    }
                     case ON_DEMAND: {
                         if (demandedByCount > 0) {
+                            assert upperCount < 1;
                             upperCount++;
-                            specialTask = new DemandParentsTask();
-                            asyncTasks++;
+                            taskList.add(new DemandParentsTask());
                         }
                         break;
                     }
                     case PASSIVE: {
+                        assert upperCount < 1;
                         upperCount++;
                         if (demandedByCount > 0) {
-                            specialTask = new DemandParentsTask();
-                            asyncTasks++;
+                            taskList.add(new DemandParentsTask());
                         }
                         break;
                     }
                     case ACTIVE: {
-                        specialTask = new DemandParentsTask();
-                        asyncTasks++;
+                        taskList.add(new DemandParentsTask());
+                        assert upperCount < 1;
                         upperCount++;
                         break;
                     }
@@ -617,25 +584,28 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             case ON_DEMAND: {
                 switch (newMode) {
-                    case REMOVE:
+                    case REMOVE: {
+                        getListenerTasks(ListenerNotification.REMOVE_REQUESTED, taskList);
+                        // fall thru!
+                    }
                     case NEVER: {
                         if (demandedByCount > 0) {
                             upperCount--;
-                            specialTask = new UndemandParentsTask();
-                            asyncTasks++;
+                            taskList.add(new UndemandParentsTask());
                         }
                         break;
                     }
                     case PASSIVE: {
                         if (demandedByCount == 0) {
+                            assert upperCount < 1;
                             upperCount++;
                         }
                         break;
                     }
                     case ACTIVE: {
-                        specialTask = new DemandParentsTask();
-                        asyncTasks++;
+                        taskList.add(new DemandParentsTask());
                         if (demandedByCount == 0) {
+                            assert upperCount < 1;
                             upperCount++;
                         }
                         break;
@@ -645,11 +615,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             case PASSIVE: {
                 switch (newMode) {
-                    case REMOVE:
+                    case REMOVE: {
+                        getListenerTasks(ListenerNotification.REMOVE_REQUESTED, taskList);
+                        // fall thru!
+                    }
                     case NEVER: {
                         if (demandedByCount > 0) {
-                            specialTask = new UndemandParentsTask();
-                            asyncTasks++;
+                            taskList.add(new UndemandParentsTask());
                         }
                         upperCount--;
                         break;
@@ -661,8 +633,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         break;
                     }
                     case ACTIVE: {
-                        specialTask = new DemandParentsTask();
-                        asyncTasks++;
+                        taskList.add(new DemandParentsTask());
                         break;
                     }
                 }
@@ -670,25 +641,25 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             case ACTIVE: {
                 switch (newMode) {
-                    case REMOVE:
+                    case REMOVE: {
+                        getListenerTasks(ListenerNotification.REMOVE_REQUESTED, taskList);
+                        // fall thru!
+                    }
                     case NEVER: {
-                        specialTask = new UndemandParentsTask();
-                        asyncTasks++;
+                        taskList.add(new UndemandParentsTask());
                         upperCount--;
                         break;
                     }
                     case ON_DEMAND: {
                         if (demandedByCount == 0) {
                             upperCount--;
-                            specialTask = new UndemandParentsTask();
-                            asyncTasks++;
+                            taskList.add(new UndemandParentsTask());
                         }
                         break;
                     }
                     case PASSIVE: {
                         if (demandedByCount == 0) {
-                            specialTask = new UndemandParentsTask();
-                            asyncTasks++;
+                            taskList.add(new UndemandParentsTask());
                         }
                         break;
                     }
@@ -697,7 +668,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
         }
         mode = newMode;
-        return specialTask;
     }
 
     @Override
@@ -712,15 +682,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     @Override
     public void dependencyInstalled() {
-        final Runnable[] tasks;
+        final ArrayList<Runnable> tasks;
         synchronized (this) {
             if (--missingDepCount != 0 || state.compareTo(Substate.CANCELLED) <= 0) {
                 return;
             }
             // we dropped it to 0
-            tasks = getListenerTasks(ListenerNotification.DEPENDENCY_INSTALLED,
-                    new DependencyInstalledTask(getDependents()));
-            asyncTasks += tasks.length;
+            tasks = new ArrayList<Runnable>(16);
+            getListenerTasks(ListenerNotification.DEPENDENCY_INSTALLED, tasks);
+            tasks.add(new DependencyInstalledTask(getDependents()));
+            asyncTasks += tasks.size();
         }
         doExecute(tasks);
     }
@@ -732,70 +703,79 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     @Override
     public void dependencyUninstalled() {
-        final Runnable[] tasks;
+        final ArrayList<Runnable> tasks;
         synchronized (this) {
             if (++missingDepCount != 1 || state.compareTo(Substate.CANCELLED) <= 0) {
                 return;
             }
             // we raised it to 1
-            tasks = getListenerTasks(ListenerNotification.MISSING_DEPENDENCY,
-                    new DependencyUninstalledTask(getDependents()));
-            asyncTasks += tasks.length;
+            tasks = new ArrayList<Runnable>(16);
+            getListenerTasks(ListenerNotification.MISSING_DEPENDENCY, tasks);
+            tasks.add(new DependencyUninstalledTask(getDependents()));
+            asyncTasks += tasks.size();
         }
         doExecute(tasks);
     }
 
     @Override
     public void immediateDependencyUp() {
-        Runnable[] tasks = null;
+        final ArrayList<Runnable> tasks;
         synchronized (this) {
+            assert upperCount < 1;
             if (++upperCount != 1) {
                 return;
             }
             // we raised it to 1
-            tasks = transition();
+            tasks = new ArrayList<Runnable>();
+            transition(tasks);
+            asyncTasks += tasks.size();
         }
         doExecute(tasks);
     }
 
     @Override
     public void immediateDependencyDown() {
-        Runnable[] tasks = null;
+        final ArrayList<Runnable> tasks;
         synchronized (this) {
             if (--upperCount != 0) {
                 return;
             }
             // we dropped it below 0
-            tasks = transition();
+            tasks = new ArrayList<Runnable>();
+            transition(tasks);
+            asyncTasks += tasks.size();
         }
         doExecute(tasks);
     }
 
     @Override
     public void dependencyFailed() {
-        Runnable[] tasks = null;
+        final ArrayList<Runnable> tasks;
         synchronized (this) {
             if (++failCount != 1 || state.compareTo(Substate.CANCELLED) <= 0) {
                 return;
             }
             // we raised it to 1
-            tasks = getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, new DependencyFailedTask(getDependents()));
-            asyncTasks += tasks.length;
+            tasks = new ArrayList<Runnable>();
+            getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
+            tasks.add(new DependencyFailedTask(getDependents()));
+            asyncTasks += tasks.size();
         }
         doExecute(tasks);
     }
 
     @Override
     public void dependencyFailureCleared() {
-        Runnable[] tasks = null;
+        final ArrayList<Runnable> tasks;
         synchronized (this) {
             if (--failCount != 0 || state == Substate.CANCELLED) {
                 return;
             }
             // we dropped it to 0
-            tasks = getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR,
-                    new DependencyRetryingTask(getDependents()));
-            asyncTasks += tasks.length;
+            tasks = new ArrayList<Runnable>();
+            getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
+            tasks.add(new DependencyRetryingTask(getDependents()));
+            asyncTasks += tasks.size();
         }
         doExecute(tasks);
     }
@@ -809,41 +789,31 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     void dependentStopped() {
         assert !holdsLock(this);
-        final Runnable[] tasks;
+        final ArrayList<Runnable> tasks;
         synchronized (this) {
             if (--runningDependents != 0) {
                 return;
             }
-            tasks = transition();
+            tasks = new ArrayList<Runnable>();
+            transition(tasks);
+            asyncTasks += tasks.size();
         }
         doExecute(tasks);
     }
 
-    Runnable[] newDependent(final Dependent dependent) {
+    void newDependent(final Dependent dependent, final ArrayList<Runnable> tasks) {
         assert holdsLock(this);
-        final Runnable[] tasks;
-        synchronized (this) {
-            if (failCount > 0) {
-                final Dependent[][] dependents = new Dependent[][] { { dependent } };
-                if (missingDepCount > 0) {
-                    tasks = new Runnable[2];
-                    tasks[1] = new DependencyUninstalledTask(dependents);
-                } else {
-                    tasks = new Runnable[1];
-                }
-                tasks[0] = new DependencyFailedTask(dependents);
-                asyncTasks += tasks.length;
-            } else if (missingDepCount > 0) {
-                tasks = new Runnable[] { new DependencyUninstalledTask(new Dependent[][] { { dependent } }) };
-                asyncTasks++;
-            } else if (state == Substate.UP) {
-                tasks = new Runnable[] { new DependencyStartedTask(new Dependent[][] { { dependent } }) };
-                asyncTasks++;
-            } else {
-                tasks = null;
+        if (failCount > 0) {
+            final Dependent[][] dependents = new Dependent[][] { { dependent } };
+            if (missingDepCount > 0) {
+                tasks.add(new DependencyUninstalledTask(dependents));
             }
+            tasks.add(new DependencyFailedTask(dependents));
+        } else if (missingDepCount > 0) {
+            tasks.add(new DependencyUninstalledTask(new Dependent[][] { { dependent } }));
+        } else if (state == Substate.UP) {
+            tasks.add(new DependencyStartedTask(new Dependent[][] { { dependent } }));
         }
-        return tasks;
     }
 
     private void doDemandParents() {
@@ -870,74 +840,75 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     void addDemands(final int demandedByCount) {
         assert !holdsLock(this);
-        final Runnable[] tasks;
+        final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
         final boolean propagate;
         synchronized (this) {
             final int cnt = this.demandedByCount;
             this.demandedByCount += demandedByCount;
             propagate = cnt == 0 && mode.compareTo(Mode.NEVER) > 0;
             if (cnt == 0 && mode == Mode.ON_DEMAND) {
+                assert upperCount < 1;
                 upperCount++;
-                tasks = transition();
-            } else {
-                // no change
-                tasks = null;
+                transition(tasks);
             }
-            if (propagate) asyncTasks++;
+            if (propagate) {
+                tasks.add(new DemandParentsTask());
+            }
+            asyncTasks += tasks.size();
         }
         doExecute(tasks);
-        if (propagate) doExecute(new DemandParentsTask());
     }
 
     void removeDemand() {
         assert !holdsLock(this);
-        final Runnable[] tasks;
+        final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
         final boolean propagate;
         synchronized (this) {
             final int cnt = --demandedByCount;
             propagate = cnt == 0 && (mode == Mode.ON_DEMAND || mode == Mode.PASSIVE);
             if (cnt == 0 && mode == Mode.ON_DEMAND) {
                 upperCount--;
-                tasks = transition();
-            } else {
-                // no change
-                tasks = null;
+                transition(tasks);
             }
-            if (propagate) asyncTasks++;
+            if (propagate) {
+                tasks.add(new UndemandParentsTask());
+            }
+            asyncTasks += tasks.size();
         }
         doExecute(tasks);
-        if (propagate) doExecute(new UndemandParentsTask());
     }
 
     void addChild(ServiceControllerImpl<?> child) {
         assert !holdsLock(this);
-        final Runnable[] tasks;
+        final ArrayList<Runnable> tasks;
         synchronized (this) {
             switch (state) {
                 case STARTING:
                 case UP:
                 case STOP_REQUESTED: {
                     children.add(child);
-                    tasks = newDependent(child);
+                    newDependent(child, tasks = new ArrayList<Runnable>());
                     break;
                 }
                 default: throw new IllegalStateException("Children cannot be added in state " + state.getState());
             }
+            asyncTasks += tasks.size();
         }
         doExecute(tasks);
     }
 
     void removeChild(ServiceControllerImpl<?> child) {
         assert !holdsLock(this);
-        final Runnable[] tasks;
+        final ArrayList<Runnable> tasks;
         synchronized (this) {
             children.remove(child);
             if (children.isEmpty()) {
                 switch (state) {
                     case START_FAILED:
                     case STOPPING:
+                        // last child was removed; drop async count
                         asyncTasks--;
-                        tasks = transition();
+                        transition(tasks = new ArrayList<Runnable>());
                         break;
                     default:
                         return;
@@ -945,6 +916,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             } else {
                 return;
             }
+            asyncTasks += tasks.size();
         }
         doExecute(tasks);
     }
@@ -1032,14 +1004,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     public void retry() {
         assert !holdsLock(this);
-        final Runnable[] tasks;
+        final ArrayList<Runnable> tasks;
         synchronized (this) {
             if (state.getState() != ServiceController.State.START_FAILED) {
                 return;
             }
             failCount--;
+            assert failCount == 0;
             startException = null;
-            tasks = transition();
+            transition(tasks = new ArrayList<Runnable>());
+            asyncTasks += tasks.size();
         }
         doExecute(tasks);
     }
@@ -1106,7 +1080,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private static enum ListenerNotification {
+    private enum ListenerNotification {
         /** Notify the listener that is has been added. */
         LISTENER_ADDED,
         /** Notifications related to the current state.  */
@@ -1118,7 +1092,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         /** Notify the listener that a dependency is missing (uninstalled). */
         MISSING_DEPENDENCY,
         /** Notify the listener that all missing dependencies are now installed. */
-        DEPENDENCY_INSTALLED}
+        DEPENDENCY_INSTALLED,
+        /** Notify the listener that the service is going to be removed. */
+        REMOVE_REQUESTED
+    }
 
     /**
      * Invokes the listener, performing the notification specified.
@@ -1175,14 +1152,19 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 case DEPENDENCY_INSTALLED:
                     listener.dependencyInstalled(this);
                     break;
+                case REMOVE_REQUESTED:
+                    listener.serviceRemoveRequested(this);
+                    break;
             }
         } catch (Throwable t) {
             ServiceLogger.SERVICE.listenerFailed(t, listener);
         } finally {
-            final Runnable[] tasks;
+            final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
             synchronized (this) {
-                asyncTasks--;
-                tasks = transition();
+                // Subtract one for this executing listener
+                asyncTasks --;
+                transition(tasks);
+                asyncTasks += tasks.size();
             }
             doExecute(tasks);
         }
@@ -1251,10 +1233,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         public void run() {
             try {
                 doDemandParents();
-                final Runnable[] tasks;
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    asyncTasks--;
-                    tasks = transition();
+                    // Subtract one for this task
+                    asyncTasks --;
+                    transition(tasks);
+                    asyncTasks += tasks.size();
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1268,10 +1252,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         public void run() {
             try {
                 doUndemandParents();
-                final Runnable[] tasks;
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    asyncTasks--;
-                    tasks = transition();
+                    // Subtract one for this task
+                    asyncTasks --;
+                    transition(tasks);
+                    asyncTasks += tasks.size();
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1291,10 +1277,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 if (parent != null) {
                     parent.dependentStopped();
                 }
-                final Runnable[] tasks;
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    asyncTasks--;
-                    tasks = transition();
+                    // Subtract one for this task
+                    asyncTasks --;
+                    transition(tasks);
+                    asyncTasks += tasks.size();
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1314,10 +1302,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 if (parent != null) {
                     parent.dependentStarted();
                 }
-                final Runnable[] tasks;
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    asyncTasks--;
-                    tasks = transition();
+                    // Subtract one for this task
+                    asyncTasks --;
+                    transition(tasks);
+                    asyncTasks += tasks.size();
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1346,17 +1336,19 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     throw new IllegalArgumentException("Service is null");
                 }
                 service.start(context);
-                final Runnable[] tasks;
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
                     if (context.state != ContextState.SYNC) {
                         return;
                     }
                     context.state = ContextState.COMPLETE;
-                    asyncTasks--;
                     if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                         writeProfileInfo('S', startNanos, System.nanoTime());
                     }
-                    tasks = transition();
+                    // Subtract one for this task
+                    asyncTasks --;
+                    transition(tasks);
+                    asyncTasks += tasks.size();
                 }
                 performOutInjections(serviceName);
                 doExecute(tasks);
@@ -1407,7 +1399,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
         private void startFailed(StartException e, ServiceName serviceName, StartContextImpl context, long startNanos) {
             ServiceLogger.FAIL.startFailed(e, serviceName);
-            final Runnable[] tasks;
+            final ArrayList<Runnable> tasks;
             synchronized (ServiceControllerImpl.this) {
                 final ContextState oldState = context.state;
                 if (oldState != ContextState.SYNC && oldState != ContextState.ASYNC) {
@@ -1415,13 +1407,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     return;
                 }
                 context.state = ContextState.FAILED;
-                asyncTasks--;
                 startException = e;
                 if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                     writeProfileInfo('F', startNanos, System.nanoTime());
                 }
                 failCount++;
-                tasks = transition();
+                // Subtract one for this task
+                asyncTasks --;
+                transition(tasks = new ArrayList<Runnable>());
+                asyncTasks += tasks.size();
             }
             doExecute(tasks);
         }
@@ -1455,7 +1449,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                 }
             } finally {
-                Runnable[] tasks = null;
+                final ArrayList<Runnable> tasks;
                 synchronized (ServiceControllerImpl.this) {
                     if (ok && context.state != ContextState.SYNC) {
                         // We want to discard the exception anyway, if there was one.  Which there can't be.
@@ -1467,11 +1461,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 uninject(serviceName, injections);
                 uninject(serviceName, outInjections);
                 synchronized (ServiceControllerImpl.this) {
-                    asyncTasks--;
                     if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                         writeProfileInfo('X', startNanos, System.nanoTime());
                     }
-                    tasks = transition();
+                    // Subtract one for this task
+                    asyncTasks --;
+                    transition(tasks = new ArrayList<Runnable>());
+                    asyncTasks += tasks.size();
                 }
                 doExecute(tasks);
             }
@@ -1534,10 +1530,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         if (dependent != null) dependent.immediateDependencyUp();
                     }
                 }
-                final Runnable[] tasks;
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    asyncTasks--;
-                    tasks = transition();
+                    // Subtract one for this task
+                    asyncTasks --;
+                    transition(tasks);
+                    asyncTasks += tasks.size();
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1561,10 +1559,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         if (dependent != null) dependent.immediateDependencyDown();
                     }
                 }
-                final Runnable[] tasks;
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    asyncTasks--;
-                    tasks = transition();
+                    // Subtract one for this task
+                    asyncTasks --;
+                    transition(tasks);
+                    asyncTasks += tasks.size();
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1588,10 +1588,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         if (dependent != null) dependent.dependencyFailed();
                     }
                 }
-                final Runnable[] tasks;
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    asyncTasks--;
-                    tasks = transition();
+                    // Subtract one for this task
+                    asyncTasks --;
+                    transition(tasks);
+                    asyncTasks += tasks.size();
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1615,10 +1617,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         if (dependent != null) dependent.dependencyFailureCleared();
                     }
                 }
-                final Runnable[] tasks;
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    asyncTasks--;
-                    tasks = transition();
+                    // Subtract one for this task
+                    asyncTasks --;
+                    transition(tasks);
+                    asyncTasks += tasks.size();
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1642,10 +1646,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         if (dependent != null) dependent.dependencyInstalled();
                     }
                 }
-                final Runnable[] tasks;
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    asyncTasks--;
-                    tasks = transition();
+                    // Subtract one for this task
+                    asyncTasks --;
+                    transition(tasks);
+                    asyncTasks += tasks.size();
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1670,10 +1676,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         if (dependent != null) dependent.dependencyUninstalled();
                     }
                 }
-                final Runnable[] tasks;
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    asyncTasks--;
-                    tasks = transition();
+                    // Subtract one for this task
+                    asyncTasks --;
+                    transition(tasks);
+                    asyncTasks += tasks.size();
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1700,10 +1708,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 final ServiceControllerImpl<?> parent = ServiceControllerImpl.this.parent;
                 if (parent != null) parent.removeChild(ServiceControllerImpl.this);
-                final Runnable[] tasks;
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    asyncTasks--;
-                    tasks = transition();
+                    // Subtract one for this task
+                    asyncTasks --;
+                    transition(tasks);
+                    asyncTasks += tasks.size();
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1723,7 +1733,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public void failed(StartException reason) throws IllegalStateException {
-            final Runnable[] tasks;
+            final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
             synchronized (ServiceControllerImpl.this) {
                 if (state != ContextState.ASYNC) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
@@ -1737,11 +1747,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 ServiceLogger.FAIL.startFailed(reason, serviceName);
                 startException = reason;
                 failCount ++;
-                asyncTasks--;
                 if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                     writeProfileInfo('F', startNanos, System.nanoTime());
                 }
-                tasks = transition();
+                // Subtract one for this task
+                asyncTasks --;
+                transition(tasks);
+                asyncTasks += tasks.size();
             }
             doExecute(tasks);
         }
@@ -1769,17 +1781,19 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public void complete() throws IllegalStateException {
-            final Runnable[] tasks;
+            final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
             synchronized (ServiceControllerImpl.this) {
                 if (state != ContextState.ASYNC) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 } else {
                     state = ContextState.COMPLETE;
-                    asyncTasks--;
                     if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                         writeProfileInfo('S', startNanos, System.nanoTime());
                     }
-                    tasks = transition();
+                    // Subtract one for this task
+                    asyncTasks --;
+                    transition(tasks);
+                    asyncTasks += tasks.size();
                 }
             }
             doExecute(tasks);
@@ -1870,13 +1884,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             for (ValueInjection<?> injection : injections) {
                 injection.getTarget().uninject();
             }
-            final Runnable[] tasks;
+            final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
             synchronized (ServiceControllerImpl.this) {
-                asyncTasks--;
                 if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                     writeProfileInfo('X', startNanos, System.nanoTime());
                 }
-                tasks = transition();
+                // Subtract one for this task
+                asyncTasks --;
+                transition(tasks);
+                asyncTasks += tasks.size();
             }
             doExecute(tasks);
         }
