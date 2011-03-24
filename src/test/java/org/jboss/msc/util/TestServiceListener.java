@@ -46,6 +46,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     private final Map<ServiceName, ServiceFuture> expectedStops = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedStoppings = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFutureWithValidation> expectedStopsOnly = new HashMap<ServiceName, ServiceFutureWithValidation>();
+    private final Map<ServiceName, ServiceFuture> expectedRemovalRequests = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedRemovals = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFailureFuture> expectedFailures = new HashMap<ServiceName, ServiceFailureFuture>();
     private final Map<ServiceName, ServiceFuture> expectedDependencyFailures = new HashMap<ServiceName, ServiceFuture>();
@@ -91,6 +92,13 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
 
     public void serviceRemoved(ServiceController<? extends Object> serviceController) {
         final ServiceFuture future = expectedRemovals.remove(serviceController.getName());
+        if(future != null) {
+            future.setServiceController(serviceController);
+        }
+    }
+
+    public void serviceRemoveRequested(final ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedRemovalRequests.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
         }
@@ -183,6 +191,18 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     public Future<ServiceController<?>> expectNoServiceStopping(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture(200);
         expectedStoppings.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectServiceRemovalRequest(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedRemovalRequests.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectNoServiceRemovalRequest(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(200);
+        expectedRemovalRequests.put(serviceName, future);
         return future;
     }
 

@@ -217,12 +217,16 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
 
         final Future<ServiceController<?>> removeFutureOne = listener.expectNoServiceRemoval(ServiceName.of("serviceOne"));
         final Future<ServiceController<?>> removeFutureTwo = listener.expectServiceRemoval(ServiceName.of("serviceTwo"));
+        final Future<ServiceController<?>> removeReqFutureOne = listener.expectNoServiceRemovalRequest(ServiceName.of("serviceOne"));
+        final Future<ServiceController<?>> removeReqFutureTwo = listener.expectServiceRemovalRequest(ServiceName.of("serviceTwo"));
 
         serviceContainer.getService(ServiceName.of("serviceTwo")).setMode(ServiceController.Mode.REMOVE);
 
+        assertNull(removeReqFutureOne.get());
         ServiceController<?> removeController = removeFutureOne.get();
         assertNull(removeController);
 
+        assertNotNull(removeReqFutureTwo.get());
         removeController = removeFutureTwo.get();
         assertNotNull(removeController);
         removeController.addListener(listener); // no errors should occur; the operation is ignored
