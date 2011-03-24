@@ -162,8 +162,7 @@
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <goals><goal>test</goal></goals>
-                    <!--  uncomment this to enable byteman rule debug messages 
+                    <!--  uncomment this to enable byteman rule debug messages
                     <argLine>-Dorg.jboss.byteman.debug</argLine> -->
                     <includes>
                         <include>**/*TestCase.java</include>
