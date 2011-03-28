@@ -367,6 +367,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case START_REQUESTED_to_DOWN: {
+                getListenerTasks(ListenerNotification.START_REQUEST_CLEARED, tasks);
                 tasks.add(new DependentStoppedTask());
                 break;
             }
@@ -376,6 +377,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case UP_to_STOP_REQUESTED: {
+                getListenerTasks(ListenerNotification.STOP_REQUESTED, tasks);
                 lifecycleTime = System.nanoTime();
                 tasks.add(new DependencyStoppedTask(getDependents()));
                 break;
@@ -419,6 +421,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case STOP_REQUESTED_to_UP: {
+                getListenerTasks(ListenerNotification.STOP_REQUEST_CLEARED, tasks);
                 tasks.add(new DependencyStartedTask(getDependents()));
                 break;
             }
@@ -456,6 +459,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case DOWN_to_START_REQUESTED: {
+                getListenerTasks(ListenerNotification.START_REQUESTED, tasks);
                 lifecycleTime = System.nanoTime();
                 tasks.add(new DependentStartedTask());
                 break;
@@ -1085,6 +1089,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         LISTENER_ADDED,
         /** Notifications related to the current state.  */
         STATE,
+        START_REQUESTED,
+        START_REQUEST_CLEARED,
+        STOP_REQUESTED,
+        STOP_REQUEST_CLEARED,
         /** Notify the listener that a dependency failure occurred. */
         DEPENDENCY_FAILURE,
         /** Notify the listener that all dependency failures are cleared. */
@@ -1105,7 +1113,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * @param state         the state to be notified, only relevant if {@code notification} is
      *                      {@link ListenerNotification#STATE}
      */
-    private void invokeListener(final ServiceListener<? super S> listener, final ListenerNotification notification, final State state ) {
+    private void invokeListener(final ServiceListener<? super S> listener, final ListenerNotification notification, final State state) {
         assert !holdsLock(this);
         try {
             switch (notification) {
@@ -1154,6 +1162,18 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 case REMOVE_REQUESTED:
                     listener.serviceRemoveRequested(this);
+                    break;
+                case START_REQUESTED:
+                    listener.serviceStartRequested(this);
+                    break;
+                case START_REQUEST_CLEARED:
+                    listener.serviceStartRequestCleared(this);
+                    break;
+                case STOP_REQUESTED:
+                    listener.serviceStopRequested(this);
+                    break;
+                case STOP_REQUEST_CLEARED:
+                    listener.serviceStopRequestCleared(this);
                     break;
             }
         } catch (Throwable t) {

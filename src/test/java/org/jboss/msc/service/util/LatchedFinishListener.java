@@ -43,6 +43,26 @@ public class LatchedFinishListener implements ServiceListener<Object> {
     });
 
     @Override
+    public void serviceStartRequested(final ServiceController<? extends Object> controller) {
+        timingServiceListener.serviceStartRequested(controller);
+    }
+
+    @Override
+    public void serviceStartRequestCleared(final ServiceController<? extends Object> controller) {
+        timingServiceListener.serviceStartRequestCleared(controller);
+    }
+
+    @Override
+    public void serviceStopRequested(final ServiceController<? extends Object> controller) {
+        timingServiceListener.serviceStopRequested(controller);
+    }
+
+    @Override
+    public void serviceStopRequestCleared(final ServiceController<? extends Object> controller) {
+        timingServiceListener.serviceStopRequestCleared(controller);
+    }
+
+    @Override
     public void listenerAdded(ServiceController<? extends Object> serviceController) {
         timingServiceListener.listenerAdded(serviceController);
     }

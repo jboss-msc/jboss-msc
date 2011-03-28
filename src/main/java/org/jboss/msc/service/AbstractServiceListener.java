@@ -37,6 +37,14 @@ public abstract class AbstractServiceListener<S> implements ServiceListener<S> {
     }
 
     /** {@inheritDoc} */
+    public void serviceStartRequested(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
+    public void serviceStartRequestCleared(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
     public void serviceStarting(final ServiceController<? extends S> controller) {
     }
 
@@ -46,6 +54,14 @@ public abstract class AbstractServiceListener<S> implements ServiceListener<S> {
 
     /** {@inheritDoc} */
     public void serviceFailed(final ServiceController<? extends S> controller, final StartException reason) {
+    }
+
+    /** {@inheritDoc} */
+    public void serviceStopRequested(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
+    public void serviceStopRequestCleared(final ServiceController<? extends S> controller) {
     }
 
     /** {@inheritDoc} */

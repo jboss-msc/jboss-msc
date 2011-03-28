@@ -41,6 +41,20 @@ public interface ServiceListener<S> {
     void listenerAdded(ServiceController<? extends S> controller);
 
     /**
+     * The (currently DOWN) service was requested to start.
+     *
+     * @param controller the controller
+     */
+    void serviceStartRequested(ServiceController<? extends S> controller);
+
+    /**
+     * The (currently DOWN) service was requested to not start after all.
+     *
+     * @param controller the controller
+     */
+    void serviceStartRequestCleared(ServiceController<? extends S> controller);
+
+    /**
      * The service is starting.  Called after the state transitions from {@code DOWN} to {@code STARTING}.
      *
      * @param controller the controller
@@ -61,6 +75,20 @@ public interface ServiceListener<S> {
      * @param reason the reason for failure
      */
     void serviceFailed(ServiceController<? extends S> controller, StartException reason);
+
+    /**
+     * The (currently UP) service was requested to stop.
+     *
+     * @param controller the controller
+     */
+    void serviceStopRequested(ServiceController<? extends S> controller);
+
+    /**
+     * The (currently UP) service was requested to not stop after all.
+     *
+     * @param controller the controller
+     */
+    void serviceStopRequestCleared(ServiceController<? extends S> controller);
 
     /**
      * The service is stopping.  Called after the state transitions from {@code UP} to {@code STOPPING}.

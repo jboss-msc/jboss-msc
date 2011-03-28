@@ -1010,6 +1010,16 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         }
 
         @Override
+        public void serviceStartRequested(final ServiceController<?> controller) {
+            unexpectedCalls.append("serviceStartRequested\n");
+        }
+
+        @Override
+        public void serviceStartRequestCleared(final ServiceController<?> controller) {
+            unexpectedCalls.append("serviceStartRequestCleared\n");
+        }
+
+        @Override
         public void serviceStarting(ServiceController<?> controller) {
             unexpectedCalls.append("serviceStarting\n");
         }
@@ -1022,6 +1032,16 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         @Override
         public void serviceFailed(ServiceController<?> controller, StartException reason) {
             unexpectedCalls.append("serviceFailed\n");
+        }
+
+        @Override
+        public void serviceStopRequested(final ServiceController<?> controller) {
+            unexpectedCalls.append("serviceStopRequested\n");
+        }
+
+        @Override
+        public void serviceStopRequestCleared(final ServiceController<?> controller) {
+            unexpectedCalls.append("serviceStopRequestCleared\n");
         }
 
         @Override
