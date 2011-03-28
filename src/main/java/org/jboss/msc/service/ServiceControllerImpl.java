@@ -446,9 +446,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 Dependent[][] dependents = getDependents();
                 if (missingDepCount > 0) {
                     tasks.add(new DependencyInstalledTask(dependents));
+                    // Clear all dependency uninstalled flags from the target service
+                    getListenerTasks(ListenerNotification.DEPENDENCY_INSTALLED, tasks);
                 }
                 if (failCount > 0) {
                     tasks.add(new DependencyRetryingTask(dependents));
+                    // Clear all failure counts from the target service
+                    getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
                 }
                 tasks.add(new RemoveTask());
                 break;
