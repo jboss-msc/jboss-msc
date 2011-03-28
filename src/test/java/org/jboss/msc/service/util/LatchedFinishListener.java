@@ -73,6 +73,11 @@ public class LatchedFinishListener implements ServiceListener<Object> {
     }
 
     @Override
+    public void failedServiceStarting(final ServiceController<? extends Object> serviceController) {
+        timingServiceListener.failedServiceStarting(serviceController);
+    }
+
+    @Override
     public void serviceStarted(ServiceController<? extends Object> serviceController) {
         timingServiceListener.serviceStarted(serviceController);
     }
@@ -90,6 +95,11 @@ public class LatchedFinishListener implements ServiceListener<Object> {
     @Override
     public void serviceStopped(ServiceController<? extends Object> serviceController) {
         timingServiceListener.serviceStopped(serviceController);
+    }
+
+    @Override
+    public void failedServiceStopped(final ServiceController<? extends Object> controller) {
+        timingServiceListener.failedServiceStopped(controller);
     }
 
     @Override

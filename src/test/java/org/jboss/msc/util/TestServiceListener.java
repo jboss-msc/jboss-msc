@@ -45,6 +45,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     private final Map<ServiceName, ServiceFuture> expectedStarts = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedStops = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedStoppings = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedFailedStops = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFutureWithValidation> expectedStopsOnly = new HashMap<ServiceName, ServiceFutureWithValidation>();
     private final Map<ServiceName, ServiceFuture> expectedRemovalRequests = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedRemovals = new HashMap<ServiceName, ServiceFuture>();
@@ -108,6 +109,13 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         final ServiceFailureFuture future = expectedFailures.remove(serviceController.getName());
         if(future != null) {
             future.setStartException(reason);
+        }
+    }
+
+    public void failedServiceStopped(final ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedFailedStops.remove(serviceController.getName());
+        if(future != null) {
+            future.setServiceController(serviceController);
         }
     }
 
@@ -179,6 +187,12 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         final ServiceFutureWithValidation future = new ServiceFutureWithValidation();
         expectedStops.put(serviceName, future);
         expectedStopsOnly.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectFailedServiceStopped(final ServiceName serviceName) {
+        final ServiceFutureWithValidation future = new ServiceFutureWithValidation();
+        expectedFailedStops.put(serviceName, future);
         return future;
     }
 

@@ -45,6 +45,10 @@ public abstract class AbstractServiceListener<S> implements ServiceListener<S> {
     }
 
     /** {@inheritDoc} */
+    public void failedServiceStarting(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
     public void serviceStarting(final ServiceController<? extends S> controller) {
     }
 
@@ -70,6 +74,10 @@ public abstract class AbstractServiceListener<S> implements ServiceListener<S> {
 
     /** {@inheritDoc} */
     public void serviceStopped(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
+    public void failedServiceStopped(final ServiceController<? extends S> controller) {
     }
 
     /** {@inheritDoc} */

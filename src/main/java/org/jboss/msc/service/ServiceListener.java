@@ -62,6 +62,13 @@ public interface ServiceListener<S> {
     void serviceStarting(ServiceController<? extends S> controller);
 
     /**
+     * The service is starting after a failure.  Called after the state transitions from {@code START_FAILED} to {@code STARTING}.
+     *
+     * @param controller the controller
+     */
+    void failedServiceStarting(final ServiceController<? extends S> controller);
+
+    /**
      * The service is started (up).  Called after the state transitions from {@code STARTING} to {@code UP}.
      *
      * @param controller the controller
@@ -103,6 +110,13 @@ public interface ServiceListener<S> {
      * @param controller the controller
      */
     void serviceStopped(ServiceController<? extends S> controller);
+
+    /**
+     * The (failed) service is stopped (down).  Called after the state transitions from {@code START_FAILED} to {@code DOWN}.
+     *
+     * @param controller the controller
+     */
+    void failedServiceStopped(ServiceController<? extends S> controller);
 
     /**
      * The service is going to be removed.  Called when the service mode is changed to {@code REMOVE}.

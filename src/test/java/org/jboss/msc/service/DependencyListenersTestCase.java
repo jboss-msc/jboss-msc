@@ -537,7 +537,7 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
         final ServiceController<?> secondController = assertController(secondServiceName, secondServiceDependencyFailure);
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceDependencyFailure);
 
-        final Future<ServiceController<?>> thirdServiceStop = testListener.expectServiceStop(thirdServiceName);
+        final Future<ServiceController<?>> thirdServiceStop = testListener.expectFailedServiceStopped(thirdServiceName);
         // disable third service
         thirdController.setMode(Mode.NEVER);
         assertController(thirdController, thirdServiceStop);
@@ -547,7 +547,7 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
         thirdController.setMode(Mode.ACTIVE);
         assertController(thirdController, thirdServiceStart);
 
-        final Future<ServiceController<?>> fourthServiceStop = testListener.expectServiceStop(fourthServiceName);
+        final Future<ServiceController<?>> fourthServiceStop = testListener.expectFailedServiceStopped(fourthServiceName);
         // disable fourth service
         fourthController.setMode(Mode.NEVER);
         assertController(fourthController, fourthServiceStop);
@@ -557,7 +557,7 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
         fourthController.setMode(Mode.ACTIVE);
         assertController(fourthController, fourthServiceStart);
 
-        final Future<ServiceController<?>> fifthServiceStop = testListener.expectServiceStop(fifthServiceName);
+        final Future<ServiceController<?>> fifthServiceStop = testListener.expectFailedServiceStopped(fifthServiceName);
         final Future<ServiceController<?>> secondServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
         // disable fifth service

@@ -405,7 +405,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case START_FAILED_to_STARTING: {
-                getListenerTasks(transition.getAfter().getState(), tasks);
+                getListenerTasks(ListenerNotification.FAILED_STARTING, tasks);
                 tasks.add(new DependencyRetryingTask(getDependents()));
                 tasks.add(new StartTask(false));
                 break;
@@ -414,7 +414,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 startException = null;
                 failCount--;
                 assert failCount == 0;
-                getListenerTasks(transition.getAfter().getState(), tasks);
+                getListenerTasks(ListenerNotification.FAILED_STOPPED, tasks);
                 tasks.add(new DependencyRetryingTask(getDependents()));
                 tasks.add(new StopTask(true));
                 tasks.add(new DependentStoppedTask());
@@ -1102,7 +1102,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         /** Notify the listener that all missing dependencies are now installed. */
         DEPENDENCY_INSTALLED,
         /** Notify the listener that the service is going to be removed. */
-        REMOVE_REQUESTED
+        REMOVE_REQUESTED,
+        FAILED_STARTING,
+        FAILED_STOPPED
     }
 
     /**
@@ -1174,6 +1176,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 case STOP_REQUEST_CLEARED:
                     listener.serviceStopRequestCleared(this);
+                    break;
+                case FAILED_STARTING:
+                    listener.failedServiceStarting(this);
+                    break;
+                case FAILED_STOPPED:
+                    listener.failedServiceStopped(this);
                     break;
             }
         } catch (Throwable t) {
