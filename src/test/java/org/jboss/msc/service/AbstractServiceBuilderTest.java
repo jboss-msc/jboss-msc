@@ -292,9 +292,9 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         // inject a description into description property of dummy manager
         serviceBuilder.addInjection(new SetMethodInjector<String>(dummyManager, DummyManager.class, "setDescription", String.class), "real description");
 
-        Future<ServiceController<?>> dummyServiceMissingDependency1 = testListener1.expectDependencyUninstall(serviceName);
-        Future<ServiceController<?>> dummyServiceMissingDependency2 = testListener2.expectDependencyUninstall(serviceName);
-        Future<ServiceController<?>> dummyServiceMissingDependency3 = testListener3.expectDependencyUninstall(serviceName);
+        Future<ServiceController<?>> dummyServiceMissingDependency1 = testListener1.expectImmediateDependencyUninstall(serviceName);
+        Future<ServiceController<?>> dummyServiceMissingDependency2 = testListener2.expectImmediateDependencyUninstall(serviceName);
+        Future<ServiceController<?>> dummyServiceMissingDependency3 = testListener3.expectImmediateDependencyUninstall(serviceName);
         // finally install the service
         ServiceController<?> dummyController = assertController(serviceName, serviceBuilder.install());
         // three notifications expected, one from each listener
@@ -476,7 +476,7 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         assertEquals("final description", dummyManager.getDescription());
 
         Future<ServiceController<?>> uninstalledServiceRemoval = testListener.expectServiceRemoval(uninstalledServiceName);
-        Future<ServiceController<?>> dummyServiceDependencyMissing = testListener.expectDependencyUninstall(serviceName);
+        Future<ServiceController<?>> dummyServiceDependencyMissing = testListener.expectImmediateDependencyUninstall(serviceName);
         Future<ServiceController<?>> dummyServiceStop = testListener.expectServiceStop(serviceName);
         // remove uninstalled service
         uninstalledController.setMode(Mode.REMOVE);

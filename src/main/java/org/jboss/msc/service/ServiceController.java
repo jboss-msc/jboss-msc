@@ -22,6 +22,8 @@
 
 package org.jboss.msc.service;
 
+import java.util.Set;
+
 import org.jboss.msc.value.Value;
 
 /**
@@ -136,6 +138,13 @@ public interface ServiceController<S> extends Value<S> {
      * Retry a failed service.  Does nothing if the state is not {@link State#START_FAILED}.
      */
     void retry();
+
+    /**
+     * Get the complete list of immediate dependencies that are uninstalled.
+     * 
+     * @return a set containing the names of all missing immediate dependencies
+     */
+    Set<ServiceName> getImmediateMissingDependencies();
 
     /**
      * A possible state for a service controller.

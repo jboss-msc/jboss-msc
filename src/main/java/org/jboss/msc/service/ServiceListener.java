@@ -152,19 +152,38 @@ public interface ServiceListener<S> {
     void dependencyFailureCleared(ServiceController<? extends S> controller);
 
     /**
-     * A dependency of the service is uninstalled.
-     * <p> Dependencies that are subsequently uninstalled do not result in new {@code dependencyUninstalled}
-     * notifications. A new call to this method will only be made to notify newly found uninstalled dependencies if
-     * the previously missing dependencies have been {@link #dependencyInstalled(ServiceController) installed}.
-     * <p> The scope of this method includes both immediate and transitive dependencies.
+     * An immediate dependency of the service is uninstalled.
+     * <p> Immediate dependencies that are subsequently uninstalled do not result in new {@code
+     * immediateDependencyUninstalled} notifications. A new call to this method will only be made to notify newly found
+     * uninstalled dependencies if the previously missing dependencies have been {@link
+     * #immediateDependencyInstalled(ServiceController) installed}.
      * @param controller the controller
      */
-    void dependencyUninstalled(ServiceController<? extends S> controller);
+    void immediateDependencyUninstalled(ServiceController<? extends S> controller);
 
     /**
-     * All {@link #dependencyUninstalled(ServiceController) uninstalled} dependencies of the service are now installed.
-     * <br>This method will be invoked only after {@link #dependencyUninstalled(ServiceController)} is called.
+     * All {@link #immediateDependencyUninstalled(ServiceController) uninstalled} immediate dependencies of the service
+     * are now installed.
+     * <br>This method will be invoked only after {@link #immediateDependencyUninstalled(ServiceController)} is called.
      * @param controller the controller
      */
-    void dependencyInstalled(ServiceController<? extends S> controller);
+    void immediateDependencyInstalled(ServiceController<? extends S> controller);
+
+    /**
+     * A transitive dependency of the service is uninstalled.
+     * <p> Transitive dependencies that are subsequently uninstalled do not result in new {@code
+     * transitiveDependencyUninstalled} notifications. A new call to this method will only be made to notify newly found
+     * uninstalled dependencies if the previously missing dependencies have been {@link
+     * #transitiveDependencyInstalled(ServiceController) installed}.
+     * @param controller the controller
+     */
+    void transitiveDependencyUninstalled(ServiceController<? extends S> controller);
+
+    /**
+     * All {@link #transitiveDependencyUninstalled(ServiceController) uninstalled} transitive dependencies of the
+     * service are now installed.
+     * <br>This method will be invoked only after {@link #transitiveDependencyUninstalled(ServiceController)} is called.
+     * @param controller the controller
+     */
+    void transitiveDependencyInstalled(ServiceController<? extends S> controller);
 }

@@ -33,14 +33,18 @@ interface Dependent {
     /**
      * Notify this dependent that one of its immediate dependencies is installed.
      * <p> This method must not be called under a lock.
+     *
+     * @param dependencyName the name of the immediate dependency that is now installed
      */
-    void immediateDependencyInstalled();
+    void immediateDependencyInstalled(ServiceName dependencyName);
 
     /**
      * Notify this dependent that one of its immediate dependencies is uninstalled.
      * <p> This method must not be called under a lock.
+     *
+     * @param dependencyName the name of the immediate dependency that is now uninstalled
      */
-    void immediateDependencyUninstalled();
+    void immediateDependencyUninstalled(ServiceName dependencyName);
 
     /**
      * Notify this dependent that one of its immediate dependencies entered {@link ServiceControllerImpl.Substate#UP UP}
@@ -81,17 +85,17 @@ interface Dependent {
      * Dependencies that are uninstalled after the notified one do not result in new {@code dependencyUninstalled}
      * notifications, as the dependent will never receive two or more dependencyUninstalled calls in a row. A {@code
      * dependencyUninstall} notification is only invoked again to notify of newly found uninstalled dependencies if the
-     * previously missing dependencies have been {@link #dependencyInstalled() installed}.
+     * previously missing dependencies have been {@link #transitiveDependencyInstalled() installed}.
      * <p> This method must not be called under a lock.
      */
-    void dependencyUninstalled();
+    void transitiveDependencyUninstalled();
 
     /**
-     * Notify this dependent that all {@link #dependencyUninstalled() uninstalled} transitive dependencies are now
-     * installed.
+     * Notify this dependent that all {@link #transitiveDependencyUninstalled() uninstalled} transitive dependencies are
+     * now installed.
      * <p> This method must not be called under a lock.
      */
-    void dependencyInstalled();
+    void transitiveDependencyInstalled();
 
     /**
      * Get the controller of this dependent.

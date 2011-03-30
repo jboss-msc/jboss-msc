@@ -22,13 +22,17 @@
 
 package org.jboss.msc.service;
 
+import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.Collection;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+
+import junit.framework.Assert;
 
 import org.junit.After;
 import org.junit.Before;
@@ -192,5 +196,25 @@ public class AbstractServiceTest {
         ServiceController<?> serviceController2 = notification2.get();
         assertTrue((serviceController == serviceController1 && serviceController == serviceController2) ||
                 (serviceController1 == null && serviceController2 == null));
+    }
+
+    /**
+     * Asserts that {@code serviceController} has the specified missing dependencies.
+     *
+     * @param serviceController   the service controller to test
+     * @param missingDependencies a complete list of all missing dependencies expected. The assertion will succeed only
+     *                            if {@link ServiceController#getImmediateMissingDependencies()
+     *                            serviceController.getImmediateMissingDependencies} returns a set containing all
+     *                            service names specified by this parameter. If no missing dependency is provided,
+     *                            the test asserts that {@code serviceController} has no immediate missing dependencies
+     */
+    protected final void assertImmediateMissingDependencies(ServiceController<?> serviceController, ServiceName... missingDependencies) {
+        assertNotNull(serviceController);
+        Collection<ServiceName> result = serviceController.getImmediateMissingDependencies();
+        assertEquals(missingDependencies.length, result.size());
+        for (ServiceName missingDependency: missingDependencies) {
+            assertTrue("Missing dependency " + missingDependency + " not found in controller missing immediate dependency set",
+                    result.contains(missingDependency));
+        }
     }
 }

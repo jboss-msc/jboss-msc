@@ -143,7 +143,7 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
         parentService.addChild(secondServiceName);
 
         // install parent as first service, with a dependency on its child secondService
-        final Future<ServiceController<?>> firstServiceDepMissing = testListener.expectDependencyUninstall(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDepMissing = testListener.expectImmediateDependencyUninstall(firstServiceName);
         serviceContainer.addService(firstServiceName, parentService).addDependency(secondServiceName)
             .addListener(testListener).install();
         assertController(firstServiceName, firstServiceDepMissing);
@@ -166,7 +166,7 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
         parentService.addChild(thirdServiceName);
 
         // install parent as first service, with a dependency on secondService
-        final Future<ServiceController<?>> firstServiceDepMissing = testListener.expectDependencyUninstall(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDepMissing = testListener.expectImmediateDependencyUninstall(firstServiceName);
         serviceContainer.addService(firstServiceName, parentService).addDependency(secondServiceName)
             .addListener(testListener).install();
         assertController(firstServiceName, firstServiceDepMissing);
@@ -334,9 +334,9 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
 
         // install second service as child of grand parent; it won't start because it has a dependency on
         // missing third service
-        final Future<ServiceController<?>> secondServiceDepMissing = testListener.expectDependencyUninstall(secondServiceName);
-        final Future<ServiceController<?>> secondServiceDepMissing1_1 = testListener1_1.expectDependencyUninstall(secondServiceName);
-        final Future<ServiceController<?>> secondServiceDepMissing1_3 = testListener1_3.expectDependencyUninstall(secondServiceName);
+        final Future<ServiceController<?>> secondServiceDepMissing = testListener.expectImmediateDependencyUninstall(secondServiceName);
+        final Future<ServiceController<?>> secondServiceDepMissing1_1 = testListener1_1.expectImmediateDependencyUninstall(secondServiceName);
+        final Future<ServiceController<?>> secondServiceDepMissing1_3 = testListener1_3.expectImmediateDependencyUninstall(secondServiceName);
         final ServiceController<?> secondController = grandParentService.getChildTarget()
             .addService(secondServiceName, Service.NULL).addDependency(thirdServiceName)
             .addListener(testListener1_3).install();
@@ -348,9 +348,9 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
 
         // install third service; dependent second service is supposed to start 
         final Future<ServiceController<?>> thirdServiceStart = testListener.expectServiceStart(thirdServiceName);
-        Future<ServiceController<?>> secondServiceDepInstall = testListener.expectDependencyInstall(secondServiceName);
-        Future<ServiceController<?>> secondServiceDepInstall1_1 = testListener1_1.expectDependencyInstall(secondServiceName);
-        Future<ServiceController<?>> secondServiceDepInstall1_3 = testListener1_3.expectDependencyInstall(secondServiceName);
+        Future<ServiceController<?>> secondServiceDepInstall = testListener.expectImmediateDependencyInstall(secondServiceName);
+        Future<ServiceController<?>> secondServiceDepInstall1_1 = testListener1_1.expectImmediateDependencyInstall(secondServiceName);
+        Future<ServiceController<?>> secondServiceDepInstall1_3 = testListener1_3.expectImmediateDependencyInstall(secondServiceName);
         final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
         final Future<ServiceController<?>> secondServiceStart1_1 = testListener1_1.expectServiceStart(secondServiceName);
         final Future<ServiceController<?>> secondServiceStart1_3 = testListener1_3.expectServiceStart(secondServiceName);
@@ -397,10 +397,10 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
 
         // remove third service, this will cause parent service to stop, and fourth and fifth services to be removed
         final Future<ServiceController<?>> thirdServiceRemoval = testListener.expectServiceRemoval(thirdServiceName);
-        final Future<ServiceController<?>> parentServiceDepMissing = testListener.expectDependencyUninstall(parentName);
-        final Future<ServiceController<?>> parentServiceDepMissing1_1 = testListener1_1.expectDependencyUninstall(parentName);
-        final Future<ServiceController<?>> parentServiceDepMissing2_1 = testListener2_1.expectDependencyUninstall(parentName);
-        final Future<ServiceController<?>> parentServiceDepMissing2_2 = testListener2_2.expectDependencyUninstall(parentName);
+        final Future<ServiceController<?>> parentServiceDepMissing = testListener.expectImmediateDependencyUninstall(parentName);
+        final Future<ServiceController<?>> parentServiceDepMissing1_1 = testListener1_1.expectImmediateDependencyUninstall(parentName);
+        final Future<ServiceController<?>> parentServiceDepMissing2_1 = testListener2_1.expectImmediateDependencyUninstall(parentName);
+        final Future<ServiceController<?>> parentServiceDepMissing2_2 = testListener2_2.expectImmediateDependencyUninstall(parentName);
         final Future<ServiceController<?>> parentServiceStop = testListener.expectServiceStop(parentName);
         final Future<ServiceController<?>> parentServiceStop1_1 = testListener1_1.expectServiceStop(parentName);
         final Future<ServiceController<?>> parentServiceStop2_1 = testListener2_1.expectServiceStop(parentName);

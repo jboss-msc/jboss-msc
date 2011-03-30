@@ -87,6 +87,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private final IdentityHashSet<ServiceControllerImpl<?>> children;
     /**
+     * The immediate missing dependencies of this service.
+     */
+    private final IdentityHashSet<ServiceName> immediateMissingDependencies;
+    /**
      * The start exception.
      */
     private StartException startException;
@@ -133,16 +137,27 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private int failCount;
     /**
-     * Indicates if this service has one or more (possibly transitive)
-     * dependencies that are not installed. Count for notification of missing
-     * (uninstalled) dependencies. Its value indicates how many dependencies are
+     * Indicates if this service has one or more immediate dependencies that
+     * are not installed. Count for notification of missing (uninstalled)
+     * dependencies. Its value indicates how many immediate dependencies are
      * missing. When incremented from 0 to 1, dependents and listeners are
      * notified of the missing dependency. When decremented from 1 to 0, a
      * notification that the missing dependencies are now installed is sent to
      * dependents and listeners. Values larger than 1 are ignored to avoid
      * multiple notifications.
      */
-    private int missingDepCount;
+    private int immediateMissingDepCount;
+    /**
+     * Indicates if this service has one or more transitive dependencies that
+     * are not installed. Count for notification of missing (uninstalled)
+     * dependencies. Its value indicates how many transitive dependencies are
+     * missing. When incremented from 0 to 1, dependents and listeners are
+     * notified of the missing dependency. When decremented from 1 to 0, a
+     * notification that the missing dependencies are now installed is sent to
+     * dependents and listeners. Values larger than 1 are ignored to avoid
+     * multiple notifications.
+     */
+    private int transitiveMissingDepCount;
     /**
      * The number of asynchronous tasks that are currently running. This
      * includes listeners, start/stop methods, outstanding asynchronous
@@ -176,6 +191,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         int depCount = dependencies.length;
         upperCount = parent == null ? -depCount : -depCount - 1;
         children = new IdentityHashSet<ServiceControllerImpl<?>>();
+        immediateMissingDependencies = new IdentityHashSet<ServiceName>();
     }
 
     Substate getSubstateLocked() {
@@ -247,8 +263,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
                 tasks.add(new DependencyFailedTask(dependents));
             }
-            if (missingDepCount > 0) {
-                getListenerTasks(ListenerNotification.MISSING_DEPENDENCY, tasks);
+            if (immediateMissingDepCount > 0) {
+                getListenerTasks(ListenerNotification.IMMEDIATE_MISSING_DEPENDENCY, tasks);
+                tasks.add(new DependencyUninstalledTask(dependents));
+                if (transitiveMissingDepCount > 0) {
+                    getListenerTasks(ListenerNotification.TRANSITIVE_MISSING_DEPENDENCY, tasks);
+                }
+            } else if (transitiveMissingDepCount > 0) {
+                getListenerTasks(ListenerNotification.TRANSITIVE_MISSING_DEPENDENCY, tasks);
                 tasks.add(new DependencyUninstalledTask(dependents));
             }
             state = Substate.DOWN;
@@ -444,10 +466,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             case DOWN_to_REMOVING: {
                 Dependent[][] dependents = getDependents();
-                if (missingDepCount > 0) {
+                // Clear all dependency uninstalled flags from the target service
+                if (immediateMissingDepCount > 0) {
+                    getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_INSTALLED, tasks);
+                    if (transitiveMissingDepCount > 0) {
+                        getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_INSTALLED, tasks);
+                    }
                     tasks.add(new DependencyInstalledTask(dependents));
-                    // Clear all dependency uninstalled flags from the target service
-                    getListenerTasks(ListenerNotification.DEPENDENCY_INSTALLED, tasks);
+                } else if (transitiveMissingDepCount > 0) {
+                    getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_INSTALLED, tasks);
+                    tasks.add(new DependencyInstalledTask(dependents));
                 }
                 if (failCount > 0) {
                     tasks.add(new DependencyRetryingTask(dependents));
@@ -679,26 +707,80 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     @Override
-    public void immediateDependencyInstalled() {
-        dependencyInstalled();
-    }
-
-    @Override
-    public void immediateDependencyUninstalled() {
-        dependencyUninstalled();
-    }
-
-    @Override
-    public void dependencyInstalled() {
+    public void immediateDependencyInstalled(ServiceName dependencyName) {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            if (--missingDepCount != 0 || state.compareTo(Substate.CANCELLED) <= 0) {
+            immediateMissingDependencies.remove(dependencyName);
+            if (-- immediateMissingDepCount != 0 || state.compareTo(Substate.CANCELLED) <= 0) {
                 return;
             }
             // we dropped it to 0
             tasks = new ArrayList<Runnable>(16);
-            getListenerTasks(ListenerNotification.DEPENDENCY_INSTALLED, tasks);
-            tasks.add(new DependencyInstalledTask(getDependents()));
+            getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_INSTALLED, tasks);
+            // both missing dep counts are 0
+            if (transitiveMissingDepCount == 0) {
+                tasks.add(new DependencyInstalledTask(getDependents()));
+            }
+            asyncTasks += tasks.size();
+        }
+        doExecute(tasks);
+    }
+
+    @Override
+    public void immediateDependencyUninstalled(ServiceName dependencyName) {
+        final ArrayList<Runnable> tasks;
+        synchronized (this) {
+            immediateMissingDependencies.add(dependencyName);
+            if (++ immediateMissingDepCount != 1 || state.compareTo(Substate.CANCELLED) <= 0) {
+                return;
+            }
+            // we raised it to 1
+            tasks = new ArrayList<Runnable>(16);
+            getListenerTasks(ListenerNotification.IMMEDIATE_MISSING_DEPENDENCY, tasks);
+            // if this is the first missing dependency, we need to notify dependents;
+            // otherwise, they have already been notified
+            if (transitiveMissingDepCount == 0) {
+                tasks.add(new DependencyUninstalledTask(getDependents()));
+            }
+            asyncTasks += tasks.size();
+        }
+        doExecute(tasks);
+    }
+
+    @Override
+    public void transitiveDependencyInstalled() {
+        final ArrayList<Runnable> tasks;
+        synchronized (this) {
+            if (-- transitiveMissingDepCount != 0 || state.compareTo(Substate.CANCELLED) <= 0) {
+                return;
+            }
+            // we dropped it to 0
+            tasks = new ArrayList<Runnable>(16);
+            getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_INSTALLED, tasks);
+            // both missing dep counts are 0
+            if (immediateMissingDepCount == 0) {
+                tasks.add(new DependencyInstalledTask(getDependents()));
+            }
+            asyncTasks += tasks.size();
+        }
+        doExecute(tasks);
+    }
+
+    @Override
+    public void transitiveDependencyUninstalled() {
+        final ArrayList<Runnable> tasks;
+        synchronized (this) {
+            if (++ transitiveMissingDepCount != 1 || state.compareTo(Substate.CANCELLED) <= 0) {
+                return;
+            }
+            // we raised it to 1
+            tasks = new ArrayList<Runnable>(16);
+            getListenerTasks(ListenerNotification.TRANSITIVE_MISSING_DEPENDENCY, tasks);
+            // if this is the first missing dependency, we need to notify dependents;
+            // otherwise, they have already been notified
+            if (immediateMissingDepCount == 0) {
+                tasks.add(new DependencyUninstalledTask(getDependents()));
+            }
             asyncTasks += tasks.size();
         }
         doExecute(tasks);
@@ -707,22 +789,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     /** {@inheritDoc} */
     public ServiceControllerImpl<?> getController() {
         return this;
-    }
-
-    @Override
-    public void dependencyUninstalled() {
-        final ArrayList<Runnable> tasks;
-        synchronized (this) {
-            if (++missingDepCount != 1 || state.compareTo(Substate.CANCELLED) <= 0) {
-                return;
-            }
-            // we raised it to 1
-            tasks = new ArrayList<Runnable>(16);
-            getListenerTasks(ListenerNotification.MISSING_DEPENDENCY, tasks);
-            tasks.add(new DependencyUninstalledTask(getDependents()));
-            asyncTasks += tasks.size();
-        }
-        doExecute(tasks);
     }
 
     @Override
@@ -811,16 +877,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     void newDependent(final Dependent dependent, final ArrayList<Runnable> tasks) {
         assert holdsLock(this);
+        final Dependent[][] dependents = new Dependent[][] { { dependent } };
         if (failCount > 0) {
-            final Dependent[][] dependents = new Dependent[][] { { dependent } };
-            if (missingDepCount > 0) {
-                tasks.add(new DependencyUninstalledTask(dependents));
-            }
             tasks.add(new DependencyFailedTask(dependents));
-        } else if (missingDepCount > 0) {
-            tasks.add(new DependencyUninstalledTask(new Dependent[][] { { dependent } }));
+        }
+        if (immediateMissingDepCount > 0 || transitiveMissingDepCount > 0) {
+            tasks.add(new DependencyUninstalledTask(dependents));
         } else if (state == Substate.UP) {
-            tasks.add(new DependencyStartedTask(new Dependent[][] { { dependent } }));
+            tasks.add(new DependencyStartedTask(dependents));
         }
     }
 
@@ -1004,12 +1068,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
+    @Override
     public StartException getStartException() {
         synchronized (this) {
             return startException;
         }
     }
 
+    @Override
     public void retry() {
         assert !holdsLock(this);
         final ArrayList<Runnable> tasks;
@@ -1024,6 +1090,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             asyncTasks += tasks.size();
         }
         doExecute(tasks);
+    }
+
+    @Override
+    public synchronized Set<ServiceName> getImmediateMissingDependencies() {
+        return immediateMissingDependencies.clone();
     }
 
     public ServiceController.Mode getMode() {
@@ -1083,7 +1154,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     state.name(),
                     dependencyNames,
                     failCount != 0,
-                    missingDepCount != 0
+                    immediateMissingDepCount != 0 || transitiveMissingDepCount != 0
             );
         }
     }
@@ -1101,10 +1172,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         DEPENDENCY_FAILURE,
         /** Notify the listener that all dependency failures are cleared. */
         DEPENDENCY_FAILURE_CLEAR,
-        /** Notify the listener that a dependency is missing (uninstalled). */
-        MISSING_DEPENDENCY,
-        /** Notify the listener that all missing dependencies are now installed. */
-        DEPENDENCY_INSTALLED,
+        /** Notify the listener that an immediate dependency is missing (uninstalled). */
+        IMMEDIATE_MISSING_DEPENDENCY,
+        /** Notify the listener that all missing immediate dependencies are now installed. */
+        IMMEDIATE_DEPENDENCY_INSTALLED,
+        /** Notify the listener that a transitive dependency is missing (uninstalled). */
+        TRANSITIVE_MISSING_DEPENDENCY,
+        /** Notify the listener that all missing transitive dependencies are now installed. */
+        TRANSITIVE_DEPENDENCY_INSTALLED,
         /** Notify the listener that the service is going to be removed. */
         REMOVE_REQUESTED,
         FAILED_STARTING,
@@ -1160,11 +1235,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 case DEPENDENCY_FAILURE_CLEAR:
                     listener.dependencyFailureCleared(this);
                     break;
-                case MISSING_DEPENDENCY:
-                    listener.dependencyUninstalled(this);
+                case IMMEDIATE_MISSING_DEPENDENCY:
+                    listener.immediateDependencyUninstalled(this);
                     break;
-                case DEPENDENCY_INSTALLED:
-                    listener.dependencyInstalled(this);
+                case IMMEDIATE_DEPENDENCY_INSTALLED:
+                    listener.immediateDependencyInstalled(this);
+                    break;
+                case TRANSITIVE_MISSING_DEPENDENCY:
+                    listener.transitiveDependencyUninstalled(this);
+                    break;
+                case TRANSITIVE_DEPENDENCY_INSTALLED:
+                    listener.transitiveDependencyInstalled(this);
                     break;
                 case REMOVE_REQUESTED:
                     listener.serviceRemoveRequested(this);
@@ -1675,7 +1756,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             try {
                 for (Dependent[] dependentArray : dependents) {
                     for (Dependent dependent : dependentArray) {
-                        if (dependent != null) dependent.dependencyInstalled();
+                        if (dependent != null) dependent.transitiveDependencyInstalled();
                     }
                 }
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
@@ -1705,7 +1786,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             try {
                 for (Dependent[] dependentArray : dependents) {
                     for (Dependent dependent : dependentArray) {
-                        if (dependent != null) dependent.dependencyUninstalled();
+                        if (dependent != null) dependent.transitiveDependencyUninstalled();
                     }
                 }
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();

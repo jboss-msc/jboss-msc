@@ -52,8 +52,10 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     private final Map<ServiceName, ServiceFailureFuture> expectedFailures = new HashMap<ServiceName, ServiceFailureFuture>();
     private final Map<ServiceName, ServiceFuture> expectedDependencyFailures = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedDependencyRetryings = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedDependencyUninstalls = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedDependencyInstalls = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedImmediateDepUninstalls = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedImmediateDepInstalls = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedTransitiveDepUninstalls = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedTransitiveDepInstalls = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedListenerAddeds = new HashMap<ServiceName, ServiceFuture>();
 
     public void listenerAdded(final ServiceController<? extends Object> serviceController) {
@@ -133,15 +135,29 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         }
     }
 
-    public void dependencyInstalled(ServiceController<? extends Object> serviceController) {
-        final ServiceFuture future = expectedDependencyInstalls.remove(serviceController.getName());
+    public void immediateDependencyInstalled(ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedImmediateDepInstalls.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
         }
     }
 
-    public void dependencyUninstalled(ServiceController<? extends Object> serviceController) {
-        final ServiceFuture future = expectedDependencyUninstalls.remove(serviceController.getName());
+    public void immediateDependencyUninstalled(ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedImmediateDepUninstalls.remove(serviceController.getName());
+        if(future != null) {
+            future.setServiceController(serviceController);
+        }
+    }
+
+    public void transitiveDependencyInstalled(ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedTransitiveDepInstalls.remove(serviceController.getName());
+        if(future != null) {
+            future.setServiceController(serviceController);
+        }
+    }
+
+    public void transitiveDependencyUninstalled(ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedTransitiveDepUninstalls.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
         }
@@ -262,27 +278,51 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         return future;
     }
 
-    public Future<ServiceController<?>> expectNoDependencyInstall(final ServiceName serviceName) {
+    public Future<ServiceController<?>> expectImmediateDependencyInstall(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedImmediateDepInstalls.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectNoImmediateDependencyInstall(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture(200);
-        expectedDependencyInstalls.put(serviceName, future);
+        expectedImmediateDepInstalls.put(serviceName, future);
         return future;
     }
 
-    public Future<ServiceController<?>> expectDependencyInstall(final ServiceName serviceName) {
+    public Future<ServiceController<?>> expectImmediateDependencyUninstall(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
-        expectedDependencyInstalls.put(serviceName, future);
+        expectedImmediateDepUninstalls.put(serviceName, future);
         return future;
     }
 
-    public Future<ServiceController<?>> expectDependencyUninstall(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture();
-        expectedDependencyUninstalls.put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectNoDependencyUninstall(final ServiceName serviceName) {
+    public Future<ServiceController<?>> expectNoImmediateDependencyUninstall(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture(20);
-        expectedDependencyUninstalls.put(serviceName, future);
+        expectedImmediateDepUninstalls.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectTransitiveDependencyInstall(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedTransitiveDepInstalls.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectNoTransitiveDependencyInstall(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(200);
+        expectedTransitiveDepInstalls.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectTransitiveDependencyUninstall(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedTransitiveDepUninstalls.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectNoTransitiveDependencyUninstall(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(20);
+        expectedTransitiveDepUninstalls.put(serviceName, future);
         return future;
     }
 

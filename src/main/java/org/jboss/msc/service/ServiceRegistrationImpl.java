@@ -92,7 +92,7 @@ final class ServiceRegistrationImpl implements Dependency {
             }
             instance = this.instance;
             if (instance == null) {
-                dependent.immediateDependencyUninstalled();
+                dependent.immediateDependencyUninstalled(name);
                 synchronized (dependents) {
                     dependents.add(dependent);
                 }
@@ -151,7 +151,7 @@ final class ServiceRegistrationImpl implements Dependency {
         }
         synchronized (dependents) {
             for (Dependent dependent: dependents) {
-                dependent.immediateDependencyInstalled();
+                dependent.immediateDependencyInstalled(name);
             }
         }
     }
@@ -167,7 +167,7 @@ final class ServiceRegistrationImpl implements Dependency {
         }
         synchronized (dependents) {
             for (Dependent dependent: dependents) {
-                dependent.immediateDependencyUninstalled();
+                dependent.immediateDependencyUninstalled(name);
             }
         }
     }

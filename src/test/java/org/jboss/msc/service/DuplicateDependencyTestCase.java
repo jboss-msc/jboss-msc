@@ -88,7 +88,7 @@ public class DuplicateDependencyTestCase extends AbstractServiceTest {
         assertController(secondController, secondServiceStart);
 
         final Future<ServiceController<?>> firstServiceListenerAdded = testListener.expectListenerAdded(firstServiceName);
-        final Future<ServiceController<?>> firstServiceDependencyMissing = testListener.expectDependencyUninstall(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyMissing = testListener.expectImmediateDependencyUninstall(firstServiceName);
         final ServiceController<?> firstController = serviceContainer.addService(firstServiceName, Service.NULL)
             .addAliases(firstServiceAlias)
             .addDependencies(secondServiceName, secondServiceAlias2, thirdServiceName)

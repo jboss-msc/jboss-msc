@@ -141,7 +141,7 @@ class OptionalDependency implements Dependency, Dependent {
                     dependent.immediateDependencyUp();
             }
             if (notifyTransitiveDependencyMissing) {
-                dependent.dependencyUninstalled();
+                dependent.transitiveDependencyUninstalled();
             }
         }
         else {
@@ -204,7 +204,7 @@ class OptionalDependency implements Dependency, Dependent {
             // the status of missing and failed dependencies is changed now
             // that this optional dep is connected with the dependent
             if (transitiveDependencyMissing) {
-                dependent.dependencyUninstalled();
+                dependent.transitiveDependencyUninstalled();
             }
         } else if (notifyOptionalDependency) {
             optionalDependency.removeDemand();
@@ -256,7 +256,7 @@ class OptionalDependency implements Dependency, Dependent {
     }
 
     @Override
-    public void immediateDependencyInstalled() {
+    public void immediateDependencyInstalled(ServiceName dependencyName) {
         assert !holdsLock(this);
         final boolean notifyOptionalDependent;
         synchronized (this) {
@@ -270,7 +270,7 @@ class OptionalDependency implements Dependency, Dependent {
     }
 
     @Override
-    public void immediateDependencyUninstalled() {
+    public void immediateDependencyUninstalled(ServiceName dependencyName) {
         assert !holdsLock(this);
         final boolean notificationsForwarded;
         final boolean demandNotified;
@@ -291,7 +291,7 @@ class OptionalDependency implements Dependency, Dependent {
                     dependent.dependencyFailureCleared();
             }
             if (currentDependencyMissing) {
-                dependent.dependencyInstalled();
+                dependent.transitiveDependencyInstalled();
             }
             dependent.immediateDependencyUp();
             if (demandNotified) {
@@ -353,7 +353,7 @@ class OptionalDependency implements Dependency, Dependent {
     }
 
     @Override
-    public void dependencyInstalled() {
+    public void transitiveDependencyInstalled() {
         assert !holdsLock(this);
         final boolean notifyOptionalDependent;
         synchronized (this) {
@@ -362,7 +362,7 @@ class OptionalDependency implements Dependency, Dependent {
             dependencyMissing = false;
         }
         if (notifyOptionalDependent) {
-            dependent.dependencyInstalled();
+            dependent.transitiveDependencyInstalled();
         }
     }
 
@@ -372,7 +372,7 @@ class OptionalDependency implements Dependency, Dependent {
     }
 
     @Override
-    public void dependencyUninstalled() {
+    public void transitiveDependencyUninstalled() {
         assert !holdsLock(this);
         final boolean notifyOptionalDependent;
         synchronized (this) {
@@ -381,7 +381,7 @@ class OptionalDependency implements Dependency, Dependent {
             dependencyMissing = true;
         }
         if (notifyOptionalDependent) {
-            dependent.dependencyUninstalled();
+            dependent.transitiveDependencyUninstalled();
         }
     }
 }

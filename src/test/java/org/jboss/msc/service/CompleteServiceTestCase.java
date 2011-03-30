@@ -59,7 +59,7 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
     public void tearDown() {
         // do not shutdown the container
     }
-    
+
     @Test
     public void test1() throws Exception {
         final TestServiceListener testListener = new TestServiceListener();
@@ -202,7 +202,7 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         // remove service E, thus triggering the listener above
         final Future<ServiceController<?>> serviceERemoval = testListener.expectServiceRemoval(fooServiceName);
         final Future<ServiceController<?>> serviceAInstalledAsServiceE = testListener.expectListenerAdded(fooServiceName);
-        final Future<ServiceController<?>> serviceADependencyMissing = testListener.expectDependencyUninstall(fooServiceName);
+        final Future<ServiceController<?>> serviceADependencyMissing = testListener.expectImmediateDependencyUninstall(fooServiceName);
         serviceEController.setMode(Mode.REMOVE);
         assertController(serviceEController, serviceERemoval);
         assertNull(serviceE.serviceD);
@@ -261,11 +261,11 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
                 .addListener(testListener)
                 .addListener(new AbstractServiceListener<ServiceA>() {
                  @Override
-                 public void dependencyUninstalled(final ServiceController<? extends ServiceA> controller) {
+                 public void immediateDependencyUninstalled(final ServiceController<? extends ServiceA> controller) {
                      // remove foo service as soon as its dep is uninstalled
                      controller.setMode(Mode.REMOVE);
                  }
-                 
+
                  @Override
                  public void serviceRemoved(final ServiceController<? extends ServiceA> controller){
                      try {
@@ -481,14 +481,14 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
             }
         }
     }
-    
+
     public static class ServiceB {
         boolean startedService;
-        
+
         public void start(){
             startedService = true;
         }
-        
+
         public void stop() {
             startedService = false;
         }
@@ -501,7 +501,7 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
     public static class ServiceBWrapper implements Service<ServiceB> {
 
         private ServiceB serviceB;
-        
+
         public void setValue(ServiceB serviceB) {
             this.serviceB = serviceB;
         }

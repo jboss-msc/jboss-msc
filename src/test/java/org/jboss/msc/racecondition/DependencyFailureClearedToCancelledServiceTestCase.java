@@ -62,7 +62,7 @@ public class DependencyFailureClearedToCancelledServiceTestCase  extends Abstrac
         final ServiceName dependencyServiceName = ServiceName.of("dependency");
         final ServiceName dependentServiceName = ServiceName.of("dependent");
 
-        final Future<ServiceController<?>> dependentMissingDependency = testListener.expectDependencyUninstall(dependentServiceName);
+        final Future<ServiceController<?>> dependentMissingDependency = testListener.expectImmediateDependencyUninstall(dependentServiceName);
         serviceContainer.addService(dependentServiceName, Service.NULL).addDependencies(cancelledServiceName, dependencyServiceName).install();
         final ServiceController<?> dependentController = assertController(dependentServiceName, dependentMissingDependency);
 
