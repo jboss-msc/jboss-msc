@@ -52,10 +52,10 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     private final Map<ServiceName, ServiceFailureFuture> expectedFailures = new HashMap<ServiceName, ServiceFailureFuture>();
     private final Map<ServiceName, ServiceFuture> expectedDependencyFailures = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedDependencyRetryings = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedImmediateDepUninstalls = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedImmediateDepInstalls = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedTransitiveDepUninstalls = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedTransitiveDepInstalls = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedImmediateDepUnavailabilities = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedImmediateDepAvailabilities = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedTransitiveDepUnavailabilities = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedTransitiveDepAvailabilities = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedListenerAddeds = new HashMap<ServiceName, ServiceFuture>();
 
     public void listenerAdded(final ServiceController<? extends Object> serviceController) {
@@ -135,29 +135,29 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         }
     }
 
-    public void immediateDependencyInstalled(ServiceController<? extends Object> serviceController) {
-        final ServiceFuture future = expectedImmediateDepInstalls.remove(serviceController.getName());
+    public void immediateDependencyAvailable(ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedImmediateDepAvailabilities.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
         }
     }
 
-    public void immediateDependencyUninstalled(ServiceController<? extends Object> serviceController) {
-        final ServiceFuture future = expectedImmediateDepUninstalls.remove(serviceController.getName());
+    public void immediateDependencyUnavailable(ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedImmediateDepUnavailabilities.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
         }
     }
 
-    public void transitiveDependencyInstalled(ServiceController<? extends Object> serviceController) {
-        final ServiceFuture future = expectedTransitiveDepInstalls.remove(serviceController.getName());
+    public void transitiveDependencyAvailable(ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedTransitiveDepAvailabilities.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
         }
     }
 
-    public void transitiveDependencyUninstalled(ServiceController<? extends Object> serviceController) {
-        final ServiceFuture future = expectedTransitiveDepUninstalls.remove(serviceController.getName());
+    public void transitiveDependencyUnavailable(ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedTransitiveDepUnavailabilities.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
         }
@@ -170,7 +170,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     }
 
     public Future<ServiceController<?>> expectNoListenerAdded(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(200);
+        final ServiceFuture future = new ServiceFuture(100);
         expectedListenerAddeds.put(serviceName, future);
         return future;
     }
@@ -182,7 +182,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     }
 
     public Future<ServiceController<?>> expectNoServiceStart(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(200);
+        final ServiceFuture future = new ServiceFuture(100);
         expectedStarts.put(serviceName, future);
         return future;
     }
@@ -194,7 +194,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     }
 
     public Future<ServiceController<?>> expectNoServiceStop(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(200);
+        final ServiceFuture future = new ServiceFuture(100);
         expectedStops.put(serviceName, future);
         return future;
     }
@@ -219,7 +219,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     }
 
     public Future<ServiceController<?>> expectNoServiceStopping(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(200);
+        final ServiceFuture future = new ServiceFuture(100);
         expectedStoppings.put(serviceName, future);
         return future;
     }
@@ -231,7 +231,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     }
 
     public Future<ServiceController<?>> expectNoServiceRemovalRequest(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(200);
+        final ServiceFuture future = new ServiceFuture(100);
         expectedRemovalRequests.put(serviceName, future);
         return future;
     }
@@ -243,7 +243,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     }
 
     public Future<ServiceController<?>> expectNoServiceRemoval(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(200);
+        final ServiceFuture future = new ServiceFuture(100);
         expectedRemovals.put(serviceName, future);
         return future;
     }
@@ -261,7 +261,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     }
 
     public Future<ServiceController<?>> expectNoDependencyFailure(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(200);
+        final ServiceFuture future = new ServiceFuture(100);
         expectedDependencyFailures.put(serviceName, future);
         return future;
     }
@@ -273,56 +273,56 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     }
 
     public Future<ServiceController<?>> expectNoDependencyFailureCleared(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(200);
+        final ServiceFuture future = new ServiceFuture(100);
         expectedDependencyRetryings.put(serviceName, future);
         return future;
     }
 
-    public Future<ServiceController<?>> expectImmediateDependencyInstall(final ServiceName serviceName) {
+    public Future<ServiceController<?>> expectImmediateDependencyAvailable(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
-        expectedImmediateDepInstalls.put(serviceName, future);
+        expectedImmediateDepAvailabilities.put(serviceName, future);
         return future;
     }
 
-    public Future<ServiceController<?>> expectNoImmediateDependencyInstall(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(200);
-        expectedImmediateDepInstalls.put(serviceName, future);
+    public Future<ServiceController<?>> expectNoImmediateDependencyAvailable(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(100);
+        expectedImmediateDepAvailabilities.put(serviceName, future);
         return future;
     }
 
-    public Future<ServiceController<?>> expectImmediateDependencyUninstall(final ServiceName serviceName) {
+    public Future<ServiceController<?>> expectImmediateDependencyUnavailable(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
-        expectedImmediateDepUninstalls.put(serviceName, future);
+        expectedImmediateDepUnavailabilities.put(serviceName, future);
         return future;
     }
 
-    public Future<ServiceController<?>> expectNoImmediateDependencyUninstall(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(20);
-        expectedImmediateDepUninstalls.put(serviceName, future);
+    public Future<ServiceController<?>> expectNoImmediateDependencyUnavailable(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(100);
+        expectedImmediateDepUnavailabilities.put(serviceName, future);
         return future;
     }
 
-    public Future<ServiceController<?>> expectTransitiveDependencyInstall(final ServiceName serviceName) {
+    public Future<ServiceController<?>> expectTransitiveDependencyAvailable(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
-        expectedTransitiveDepInstalls.put(serviceName, future);
+        expectedTransitiveDepAvailabilities.put(serviceName, future);
         return future;
     }
 
-    public Future<ServiceController<?>> expectNoTransitiveDependencyInstall(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(200);
-        expectedTransitiveDepInstalls.put(serviceName, future);
+    public Future<ServiceController<?>> expectNoTransitiveDependencyAvailable(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(100);
+        expectedTransitiveDepAvailabilities.put(serviceName, future);
         return future;
     }
 
-    public Future<ServiceController<?>> expectTransitiveDependencyUninstall(final ServiceName serviceName) {
+    public Future<ServiceController<?>> expectTransitiveDependencyUnavailable(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
-        expectedTransitiveDepUninstalls.put(serviceName, future);
+        expectedTransitiveDepUnavailabilities.put(serviceName, future);
         return future;
     }
 
-    public Future<ServiceController<?>> expectNoTransitiveDependencyUninstall(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(20);
-        expectedTransitiveDepUninstalls.put(serviceName, future);
+    public Future<ServiceController<?>> expectNoTransitiveDependencyUnavailable(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(100);
+        expectedTransitiveDepUnavailabilities.put(serviceName, future);
         return future;
     }
 

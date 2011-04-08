@@ -202,7 +202,7 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         // remove service E, thus triggering the listener above
         final Future<ServiceController<?>> serviceERemoval = testListener.expectServiceRemoval(fooServiceName);
         final Future<ServiceController<?>> serviceAInstalledAsServiceE = testListener.expectListenerAdded(fooServiceName);
-        final Future<ServiceController<?>> serviceADependencyMissing = testListener.expectImmediateDependencyUninstall(fooServiceName);
+        final Future<ServiceController<?>> serviceADependencyMissing = testListener.expectImmediateDependencyUnavailable(fooServiceName);
         serviceEController.setMode(Mode.REMOVE);
         assertController(serviceEController, serviceERemoval);
         assertNull(serviceE.serviceD);
@@ -261,7 +261,7 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
                 .addListener(testListener)
                 .addListener(new AbstractServiceListener<ServiceA>() {
                  @Override
-                 public void immediateDependencyUninstalled(final ServiceController<? extends ServiceA> controller) {
+                 public void immediateDependencyUnavailable(final ServiceController<? extends ServiceA> controller) {
                      // remove foo service as soon as its dep is uninstalled
                      controller.setMode(Mode.REMOVE);
                  }
@@ -297,26 +297,26 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         assertSame(serviceC, serviceA.serviceC);
 
         // stop service B
-        final Future<ServiceController<?>> serviceAStop = testListener.expectServiceStop(fooServiceName);
         final Future<ServiceController<?>> serviceBStop = testListener.expectServiceStop(serviceNameB);
+        final Future<ServiceController<?>> serviceAStop = testListener.expectServiceStop(fooServiceName);
+        final Future<ServiceController<?>> serviceARemoval = testListener.expectServiceRemoval(fooServiceName);
+        Future<ServiceController<?>> serviceEStart = testListener.expectServiceStart(fooServiceName);
         serviceBController.setMode(Mode.NEVER);
-        assertController(serviceAController, serviceAStop);
         assertController(serviceBController, serviceBStop);
+        assertController(serviceAController, serviceAStop);
+        assertController(serviceAController, serviceARemoval);
         assertSame(serviceA, serviceAController.getValue());
         assertNull(serviceA.description);
         assertEquals(0, serviceA.initialParameter);
         assertNull(serviceA.serviceB);
         assertNull(serviceA.serviceC);
-
-        final Future<ServiceController<?>> serviceBRemoval = testListener.expectServiceRemoval(serviceNameB);
-        final Future<ServiceController<?>> serviceARemoval = testListener.expectServiceRemoval(fooServiceName);
-        Future<ServiceController<?>> serviceEStart = testListener.expectServiceStart(fooServiceName);
-        serviceBController.setMode(Mode.REMOVE);
-        assertController(serviceBController, serviceBRemoval);
-        assertController(serviceAController, serviceARemoval);
         ServiceController<?> serviceEController = assertController(fooServiceName, serviceEStart);
         assertNull(serviceEController.getValue());
         assertSame(serviceD, serviceE.serviceD);
+
+        final Future<ServiceController<?>> serviceBRemoval = testListener.expectServiceRemoval(serviceNameB);
+        serviceBController.setMode(Mode.REMOVE);
+        assertController(serviceBController, serviceBRemoval);
 
         final Future<ServiceController<?>> serviceDStop = testListener.expectServiceStop(serviceNameD);
         final Future<ServiceController<?>> serviceEStop = testListener.expectServiceStop(fooServiceName);

@@ -27,6 +27,8 @@ import static java.lang.Thread.holdsLock;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -87,9 +89,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private final IdentityHashSet<ServiceControllerImpl<?>> children;
     /**
-     * The immediate missing dependencies of this service.
+     * The immediate unavailable dependencies of this service.
      */
-    private final IdentityHashSet<ServiceName> immediateMissingDependencies;
+    private final IdentityHashSet<ServiceName> immediateUnavailableDependencies;
     /**
      * The start exception.
      */
@@ -119,6 +121,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private int upperCount;
     /**
+     * Count for dependencies that are DOWN.
+     */
+    private int downDependencies;
+    /**
      * The number of dependents that are currently running. The deployment will
      * not execute the {@code stop()} method (and subsequently leave the
      * {@link org.jboss.msc.service.ServiceController.State#STOPPING} state)
@@ -137,27 +143,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private int failCount;
     /**
-     * Indicates if this service has one or more immediate dependencies that
-     * are not installed. Count for notification of missing (uninstalled)
-     * dependencies. Its value indicates how many immediate dependencies are
-     * missing. When incremented from 0 to 1, dependents and listeners are
-     * notified of the missing dependency. When decremented from 1 to 0, a
-     * notification that the missing dependencies are now installed is sent to
-     * dependents and listeners. Values larger than 1 are ignored to avoid
-     * multiple notifications.
-     */
-    private int immediateMissingDepCount;
-    /**
      * Indicates if this service has one or more transitive dependencies that
-     * are not installed. Count for notification of missing (uninstalled)
-     * dependencies. Its value indicates how many transitive dependencies are
-     * missing. When incremented from 0 to 1, dependents and listeners are
-     * notified of the missing dependency. When decremented from 1 to 0, a
-     * notification that the missing dependencies are now installed is sent to
-     * dependents and listeners. Values larger than 1 are ignored to avoid
-     * multiple notifications.
+     * are not available. Count for notification of unavailable dependencies.
+     * Its value indicates how many transitive dependencies are unavailable.
+     * When incremented from 0 to 1, dependents are notified of the unavailable
+     * dependency unless immediateUnavailableDependencies is not empty. When
+     * decremented from 1 to 0, a notification that the unavailable dependencies
+     * are now available is sent to dependents, unless immediateUnavailableDependencies
+     * is not empty. Values larger than 1 are ignored to avoid multiple
+     * notifications.
      */
-    private int transitiveMissingDepCount;
+    private int transitiveUnavailableDepCount;
     /**
      * The number of asynchronous tasks that are currently running. This
      * includes listeners, start/stop methods, outstanding asynchronous
@@ -189,9 +185,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         this.listeners =  new IdentityHashSet<ServiceListener<? super S>>(listeners);
         this.parent = parent;
         int depCount = dependencies.length;
-        upperCount = parent == null ? -depCount : -depCount - 1;
+        upperCount = 0;
+        downDependencies = parent == null? depCount : depCount + 1;
         children = new IdentityHashSet<ServiceControllerImpl<?>>();
-        immediateMissingDependencies = new IdentityHashSet<ServiceName>();
+        immediateUnavailableDependencies = new IdentityHashSet<ServiceName>();
     }
 
     Substate getSubstateLocked() {
@@ -249,6 +246,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         synchronized(this) {
             getListenerTasks(ListenerNotification.LISTENER_ADDED, listenerAddedTasks);
             internalSetMode(initialMode, tasks);
+            tasks.add(new ServiceAvailableTask());
             // placeholder async task for running listener added tasks
             asyncTasks += listenerAddedTasks.size() + tasks.size() + 1;
         }
@@ -259,19 +257,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
         synchronized (this) {
             Dependent[][] dependents = getDependents();
-            if (failCount > 0) {
-                getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
-                tasks.add(new DependencyFailedTask(dependents));
+            if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
+                tasks.add(new DependencyUnavailableTask(dependents));
             }
-            if (immediateMissingDepCount > 0) {
-                getListenerTasks(ListenerNotification.IMMEDIATE_MISSING_DEPENDENCY, tasks);
-                tasks.add(new DependencyUninstalledTask(dependents));
-                if (transitiveMissingDepCount > 0) {
-                    getListenerTasks(ListenerNotification.TRANSITIVE_MISSING_DEPENDENCY, tasks);
-                }
-            } else if (transitiveMissingDepCount > 0) {
-                getListenerTasks(ListenerNotification.TRANSITIVE_MISSING_DEPENDENCY, tasks);
-                tasks.add(new DependencyUninstalledTask(dependents));
+            if (failCount > 0) {
+                tasks.add(new DependencyFailedTask(dependents));
             }
             state = Substate.DOWN;
             // subtract one to compensate for +1 above
@@ -309,18 +299,47 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             case DOWN: {
                 if (mode == ServiceController.Mode.REMOVE) {
                     return Transition.DOWN_to_REMOVING;
-                } else if (mode != ServiceController.Mode.NEVER) {
-                    if (upperCount > 0) {
+                } else if (mode == ServiceController.Mode.NEVER) {
+                    return Transition.DOWN_to_WONT_START;
+                } else if (upperCount > 0 && (mode != Mode.PASSIVE || downDependencies == 0)) {
+                    if (listeners.isEmpty()) {
+                        if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0 || failCount > 0) {
+                            return Transition.DOWN_to_PROBLEM;
+                        } else if (downDependencies == 0) {
+                            return Transition.DOWN_to_START_INITIATING;
+                        }
+                    } else {
                         return Transition.DOWN_to_START_REQUESTED;
                     }
                 }
                 break;
             }
+            case WONT_START: {
+                if (mode == ServiceController.Mode.REMOVE) {
+                    return Transition.WONT_START_to_REMOVING;
+                } else if (upperCount > 0 && (mode != Mode.PASSIVE || downDependencies == 0)) {
+                    if (listeners.isEmpty()) {
+                        if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0 || failCount > 0) {
+                            return Transition.WONT_START_to_PROBLEM;
+                        } else if (downDependencies == 0) {
+                            return Transition.WONT_START_to_START_INITIATING;
+                        }
+                    } else {
+                        return Transition.WONT_START_to_START_REQUESTED;
+                    }
+                } else if (mode != ServiceController.Mode.NEVER){
+                    return Transition.WONT_START_to_DOWN;
+                }
+                break;
+            }
             case STOPPING: {
+                if (mode == Mode.NEVER) {
+                    return Transition.STOPPING_to_WONT_START;
+                }
                 return Transition.STOPPING_to_DOWN;
             }
             case STOP_REQUESTED: {
-                if (upperCount > 0) {
+                if (upperCount > 0 && downDependencies == 0) {
                     return Transition.STOP_REQUESTED_to_UP;
                 }
                 if (runningDependents == 0) {
@@ -329,20 +348,29 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case UP: {
-                if (upperCount <= 0) {
+                if (upperCount <= 0 || downDependencies > 0) {
                     return Transition.UP_to_STOP_REQUESTED;
                 }
                 break;
             }
             case START_FAILED: {
                 if (upperCount > 0) {
-                    if (startException == null) {
-                        return Transition.START_FAILED_to_STARTING;
+                    if (downDependencies == 0) {
+                        if (startException == null) {
+                            return Transition.START_FAILED_to_STARTING;
+                        }
+                    } else {
+                        return Transition.START_FAILED_to_DOWN;
                     }
+                } else if (mode == Mode.NEVER) {
+                    return Transition.START_FAILED_to_WONT_START;
                 } else {
                     return Transition.START_FAILED_to_DOWN;
                 }
                 break;
+            }
+            case START_INITIATING: {
+                return Transition.START_INITIATING_to_STARTING;
             }
             case STARTING: {
                 if (startException == null) {
@@ -353,10 +381,41 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             case START_REQUESTED: {
                 if (upperCount > 0) {
-                    return Transition.START_REQUESTED_to_STARTING;
+                    if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0 || failCount > 0) {
+                        return Transition.START_REQUESTED_to_PROBLEM;
+                    }
+                    else if (downDependencies == 0) {
+                        return Transition.START_REQUESTED_to_START_INITIATING;
+                    }
+                } else if (mode == Mode.NEVER) {
+                    return Transition.START_REQUESTED_to_WONT_START;
                 } else {
+                    if (listeners.isEmpty() && mode == ServiceController.Mode.REMOVE) {
+                        return Transition.START_REQUESTED_to_REMOVING;
+                    }
                     return Transition.START_REQUESTED_to_DOWN;
                 }
+                break;
+            }
+            case PROBLEM: {
+                if (upperCount == 0) {
+                    if (mode == Mode.REMOVE && listeners.isEmpty()) {
+                        return Transition.PROBLEM_to_REMOVING;
+                    } else if (mode == Mode.NEVER) {
+                        return Transition.PROBLEM_to_WONT_START;
+                    }
+                    return Transition.PROBLEM_to_DOWN;
+                }
+                else if (immediateUnavailableDependencies.isEmpty() && transitiveUnavailableDepCount == 0 && failCount == 0) {
+                    if (listeners.isEmpty()) {
+                        if (downDependencies == 0) {
+                            return Transition.PROBLEM_to_START_INITIATING;
+                        } // if ndownDependencies > 0, go to START_REQUESTED, even when there are no listeners
+                    } else {
+                        return Transition.PROBLEM_to_START_REQUESTED;
+                    }
+                }
+                break;
             }
             case REMOVING: {
                 return Transition.REMOVING_to_REMOVED;
@@ -383,19 +442,69 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             return;
         }
         switch (transition) {
+            case DOWN_to_WONT_START: {
+                tasks.add(new ServiceUnavailableTask());
+                break;
+            }
+            case WONT_START_to_DOWN: {
+                tasks.add(new ServiceAvailableTask());
+                break;
+            }
+            case STOPPING_to_WONT_START: {
+                tasks.add(new ServiceUnavailableTask());
+            }
             case STOPPING_to_DOWN: {
                 getListenerTasks(transition.getAfter().getState(), tasks);
                 tasks.add(new DependentStoppedTask());
                 break;
             }
-            case START_REQUESTED_to_DOWN: {
-                getListenerTasks(ListenerNotification.START_REQUEST_CLEARED, tasks);
-                tasks.add(new DependentStoppedTask());
+            case PROBLEM_to_WONT_START: {
+                tasks.add(new ServiceUnavailableTask());
+            }
+            case PROBLEM_to_DOWN: {
+                if (!immediateUnavailableDependencies.isEmpty()) {
+                    getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_AVAILABLE, tasks);
+                }
+                if (transitiveUnavailableDepCount > 0) {
+                    getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_AVAILABLE, tasks);
+                }
+                if (failCount > 0) {
+                    getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
+                }
                 break;
             }
-            case START_REQUESTED_to_STARTING: {
-                getListenerTasks(transition.getAfter().getState(), tasks);
-                tasks.add(new StartTask(true));
+            case START_REQUESTED_to_WONT_START: {
+                tasks.add(new ServiceUnavailableTask());
+            }
+            case START_REQUESTED_to_DOWN: {
+                getListenerTasks(ListenerNotification.START_REQUEST_CLEARED, tasks);
+                break;
+            }
+            case WONT_START_to_START_INITIATING: {
+                tasks.add(new ServiceAvailableTask());
+            }
+            case PROBLEM_to_START_INITIATING:
+            case DOWN_to_START_INITIATING: {
+                lifecycleTime = System.nanoTime();
+            }
+            case START_REQUESTED_to_START_INITIATING: {
+                tasks.add(new DependentStartedTask());
+                break;
+            }
+            case WONT_START_to_PROBLEM: {
+                tasks.add(new ServiceAvailableTask());
+            }
+            case DOWN_to_PROBLEM:
+            case START_REQUESTED_to_PROBLEM: {
+                if (!immediateUnavailableDependencies.isEmpty()) {
+                    getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_UNAVAILABLE, tasks);
+                }
+                if (transitiveUnavailableDepCount > 0) {
+                    getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_UNAVAILABLE, tasks);
+                }
+                if (failCount > 0) {
+                    getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
+                }
                 break;
             }
             case UP_to_STOP_REQUESTED: {
@@ -429,13 +538,20 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             case START_FAILED_to_STARTING: {
                 getListenerTasks(ListenerNotification.FAILED_STARTING, tasks);
                 tasks.add(new DependencyRetryingTask(getDependents()));
-                tasks.add(new StartTask(false));
+                tasks.add(new DependentStartedTask());
                 break;
+            }
+            case START_INITIATING_to_STARTING: {
+                getListenerTasks(transition.getAfter().getState(), tasks);
+                tasks.add(new StartTask(true));
+                break;
+            }
+            case START_FAILED_to_WONT_START: {
+                tasks.add(new ServiceUnavailableTask());
             }
             case START_FAILED_to_DOWN: {
                 startException = null;
                 failCount--;
-                assert failCount == 0;
                 getListenerTasks(ListenerNotification.FAILED_STOPPED, tasks);
                 tasks.add(new DependencyRetryingTask(getDependents()));
                 tasks.add(new StopTask(true));
@@ -464,23 +580,29 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 tasks.add(new StopTask(false));
                 break;
             }
+            case PROBLEM_to_REMOVING: {
+                if (!immediateUnavailableDependencies.isEmpty()) {
+                    getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_AVAILABLE, tasks);
+                }
+                if (transitiveUnavailableDepCount > 0) {
+                    getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_AVAILABLE, tasks);
+                }
+                if (failCount > 0) {
+                    getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
+                }
+            }
+            case START_REQUESTED_to_REMOVING:
             case DOWN_to_REMOVING: {
+                tasks.add(new ServiceUnavailableTask());
+            }
+            case WONT_START_to_REMOVING: {
                 Dependent[][] dependents = getDependents();
-                // Clear all dependency uninstalled flags from the target service
-                if (immediateMissingDepCount > 0) {
-                    getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_INSTALLED, tasks);
-                    if (transitiveMissingDepCount > 0) {
-                        getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_INSTALLED, tasks);
-                    }
-                    tasks.add(new DependencyInstalledTask(dependents));
-                } else if (transitiveMissingDepCount > 0) {
-                    getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_INSTALLED, tasks);
-                    tasks.add(new DependencyInstalledTask(dependents));
+                // Clear all dependency uninstalled flags from dependents
+                if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
+                    tasks.add(new DependencyAvailableTask(dependents));
                 }
                 if (failCount > 0) {
                     tasks.add(new DependencyRetryingTask(dependents));
-                    // Clear all failure counts from the target service
-                    getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
                 }
                 tasks.add(new RemoveTask());
                 break;
@@ -490,10 +612,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 listeners.clear();
                 break;
             }
+            case WONT_START_to_START_REQUESTED: {
+                tasks.add(new ServiceAvailableTask());
+            }
+            case PROBLEM_to_START_REQUESTED:
             case DOWN_to_START_REQUESTED: {
                 getListenerTasks(ListenerNotification.START_REQUESTED, tasks);
                 lifecycleTime = System.nanoTime();
-                tasks.add(new DependentStartedTask());
                 break;
             }
             default: {
@@ -707,19 +832,22 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     @Override
-    public void immediateDependencyInstalled(ServiceName dependencyName) {
+    public void immediateDependencyAvailable(ServiceName dependencyName) {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            immediateMissingDependencies.remove(dependencyName);
-            if (-- immediateMissingDepCount != 0 || state.compareTo(Substate.CANCELLED) <= 0) {
+            assert immediateUnavailableDependencies.contains(dependencyName);
+            immediateUnavailableDependencies.remove(dependencyName);
+            if (!immediateUnavailableDependencies.isEmpty() || state.compareTo(Substate.CANCELLED) <= 0) {
                 return;
             }
             // we dropped it to 0
             tasks = new ArrayList<Runnable>(16);
-            getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_INSTALLED, tasks);
-            // both missing dep counts are 0
-            if (transitiveMissingDepCount == 0) {
-                tasks.add(new DependencyInstalledTask(getDependents()));
+            if (state == Substate.PROBLEM) {
+                getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_AVAILABLE, tasks);
+            }
+            // both unavailable dep counts are 0
+            if (transitiveUnavailableDepCount == 0) {
+                tasks.add(new DependencyAvailableTask(getDependents()));
             }
             asyncTasks += tasks.size();
         }
@@ -727,20 +855,22 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     @Override
-    public void immediateDependencyUninstalled(ServiceName dependencyName) {
+    public void immediateDependencyUnavailable(ServiceName dependencyName) {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            immediateMissingDependencies.add(dependencyName);
-            if (++ immediateMissingDepCount != 1 || state.compareTo(Substate.CANCELLED) <= 0) {
+            immediateUnavailableDependencies.add(dependencyName);
+            if (immediateUnavailableDependencies.size() != 1 || state.compareTo(Substate.CANCELLED) <= 0) {
                 return;
             }
             // we raised it to 1
             tasks = new ArrayList<Runnable>(16);
-            getListenerTasks(ListenerNotification.IMMEDIATE_MISSING_DEPENDENCY, tasks);
-            // if this is the first missing dependency, we need to notify dependents;
+            if (state == Substate.PROBLEM) {
+                getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_UNAVAILABLE, tasks);
+            }
+            // if this is the first unavailable dependency, we need to notify dependents;
             // otherwise, they have already been notified
-            if (transitiveMissingDepCount == 0) {
-                tasks.add(new DependencyUninstalledTask(getDependents()));
+            if (transitiveUnavailableDepCount == 0) {
+                tasks.add(new DependencyUnavailableTask(getDependents()));
             }
             asyncTasks += tasks.size();
         }
@@ -748,18 +878,20 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     @Override
-    public void transitiveDependencyInstalled() {
+    public void transitiveDependencyAvailable() {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            if (-- transitiveMissingDepCount != 0 || state.compareTo(Substate.CANCELLED) <= 0) {
+            if (-- transitiveUnavailableDepCount != 0 || state.compareTo(Substate.CANCELLED) <= 0) {
                 return;
             }
             // we dropped it to 0
             tasks = new ArrayList<Runnable>(16);
-            getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_INSTALLED, tasks);
-            // both missing dep counts are 0
-            if (immediateMissingDepCount == 0) {
-                tasks.add(new DependencyInstalledTask(getDependents()));
+            if (state == Substate.PROBLEM) {
+                getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_AVAILABLE, tasks);
+            }
+            // there are no immediate nor transitive unavailable dependencies
+            if (immediateUnavailableDependencies.isEmpty()) {
+                tasks.add(new DependencyAvailableTask(getDependents()));
             }
             asyncTasks += tasks.size();
         }
@@ -767,19 +899,21 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     @Override
-    public void transitiveDependencyUninstalled() {
+    public void transitiveDependencyUnavailable() {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            if (++ transitiveMissingDepCount != 1 || state.compareTo(Substate.CANCELLED) <= 0) {
+            if (++ transitiveUnavailableDepCount != 1 || state.compareTo(Substate.CANCELLED) <= 0) {
                 return;
             }
             // we raised it to 1
             tasks = new ArrayList<Runnable>(16);
-            getListenerTasks(ListenerNotification.TRANSITIVE_MISSING_DEPENDENCY, tasks);
-            // if this is the first missing dependency, we need to notify dependents;
+            if (state == Substate.PROBLEM) {
+                getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_UNAVAILABLE, tasks);
+            }
+            //if this is the first unavailable dependency, we need to notify dependents;
             // otherwise, they have already been notified
-            if (immediateMissingDepCount == 0) {
-                tasks.add(new DependencyUninstalledTask(getDependents()));
+            if (immediateUnavailableDependencies.isEmpty()) {
+                tasks.add(new DependencyUnavailableTask(getDependents()));
             }
             asyncTasks += tasks.size();
         }
@@ -795,11 +929,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void immediateDependencyUp() {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            assert upperCount < 1;
-            if (++upperCount != 1) {
+            if (--downDependencies != 0) {
                 return;
             }
-            // we raised it to 1
+            // we dropped it to 0
             tasks = new ArrayList<Runnable>();
             transition(tasks);
             asyncTasks += tasks.size();
@@ -811,7 +944,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void immediateDependencyDown() {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            if (--upperCount != 0) {
+            if (++downDependencies != 1) {
                 return;
             }
             // we dropped it below 0
@@ -831,7 +964,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             // we raised it to 1
             tasks = new ArrayList<Runnable>();
-            getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
+            if (state == Substate.PROBLEM) {
+                getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
+            }
             tasks.add(new DependencyFailedTask(getDependents()));
             asyncTasks += tasks.size();
         }
@@ -847,7 +982,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             // we dropped it to 0
             tasks = new ArrayList<Runnable>();
-            getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
+            if (state == Substate.PROBLEM) {
+                getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
+            }
             tasks.add(new DependencyRetryingTask(getDependents()));
             asyncTasks += tasks.size();
         }
@@ -875,17 +1012,20 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         doExecute(tasks);
     }
 
-    void newDependent(final Dependent dependent, final ArrayList<Runnable> tasks) {
+    void newDependent(final ServiceName dependencyName, final Dependent dependent, final ArrayList<Runnable> tasks) {
         assert holdsLock(this);
         final Dependent[][] dependents = new Dependent[][] { { dependent } };
         if (failCount > 0) {
             tasks.add(new DependencyFailedTask(dependents));
         }
-        if (immediateMissingDepCount > 0 || transitiveMissingDepCount > 0) {
-            tasks.add(new DependencyUninstalledTask(dependents));
+        if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
+            tasks.add(new DependencyUnavailableTask(dependents));
+        }
+        if (state == Substate.WONT_START) {
+            tasks.add(new ServiceUnavailableTask(dependencyName, dependent));
         } else if (state == Substate.UP) {
             tasks.add(new DependencyStartedTask(dependents));
-        }
+        } 
     }
 
     private void doDemandParents() {
@@ -955,11 +1095,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             switch (state) {
+                case START_INITIATING:
                 case STARTING:
                 case UP:
                 case STOP_REQUESTED: {
                     children.add(child);
-                    newDependent(child, tasks = new ArrayList<Runnable>());
+                    newDependent(primaryRegistration.getName(), child, tasks = new ArrayList<Runnable>());
                     break;
                 }
                 default: throw new IllegalStateException("Children cannot be added in state " + state.getState());
@@ -1093,8 +1234,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     @Override
-    public synchronized Set<ServiceName> getImmediateMissingDependencies() {
-        return immediateMissingDependencies.clone();
+    public synchronized Set<ServiceName> getImmediateUnavailableDependencies() {
+        return immediateUnavailableDependencies.clone();
     }
 
     public ServiceController.Mode getMode() {
@@ -1154,7 +1295,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     state.name(),
                     dependencyNames,
                     failCount != 0,
-                    immediateMissingDepCount != 0 || transitiveMissingDepCount != 0
+                    !immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount != 0
             );
         }
     }
@@ -1164,25 +1305,31 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         LISTENER_ADDED,
         /** Notifications related to the current state.  */
         STATE,
+        /** Notify the listener that the service was requested to start */
         START_REQUESTED,
+        /** Notify the listener that the service start request is cleared */
         START_REQUEST_CLEARED,
+        /** Notify the listener that the service was requested to stop */
         STOP_REQUESTED,
+        /** Notify the listener that the service stop request is cleared */
         STOP_REQUEST_CLEARED,
         /** Notify the listener that a dependency failure occurred. */
         DEPENDENCY_FAILURE,
         /** Notify the listener that all dependency failures are cleared. */
         DEPENDENCY_FAILURE_CLEAR,
-        /** Notify the listener that an immediate dependency is missing (uninstalled). */
-        IMMEDIATE_MISSING_DEPENDENCY,
-        /** Notify the listener that all missing immediate dependencies are now installed. */
-        IMMEDIATE_DEPENDENCY_INSTALLED,
-        /** Notify the listener that a transitive dependency is missing (uninstalled). */
-        TRANSITIVE_MISSING_DEPENDENCY,
-        /** Notify the listener that all missing transitive dependencies are now installed. */
-        TRANSITIVE_DEPENDENCY_INSTALLED,
+        /** Notify the listener that an immediate dependency is unavailable. */
+        IMMEDIATE_DEPENDENCY_UNAVAILABLE,
+        /** Notify the listener that all previously unavailable immediate dependencies are now available. */
+        IMMEDIATE_DEPENDENCY_AVAILABLE,
+        /** Notify the listener a transitive dependency is unavailable. */
+        TRANSITIVE_DEPENDENCY_UNAVAILABLE,
+        /** Notify the listener that all previously unavailable transitive dependencies are now available. */
+        TRANSITIVE_DEPENDENCY_AVAILABLE,
         /** Notify the listener that the service is going to be removed. */
         REMOVE_REQUESTED,
+        /** Notify the listener that the failed to start service is attempting to start again */
         FAILED_STARTING,
+        /** Notify the listener that the failed to start service is now stopped */
         FAILED_STOPPED
     }
 
@@ -1235,17 +1382,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 case DEPENDENCY_FAILURE_CLEAR:
                     listener.dependencyFailureCleared(this);
                     break;
-                case IMMEDIATE_MISSING_DEPENDENCY:
-                    listener.immediateDependencyUninstalled(this);
+                case IMMEDIATE_DEPENDENCY_UNAVAILABLE:
+                    listener.immediateDependencyUnavailable(this);
                     break;
-                case IMMEDIATE_DEPENDENCY_INSTALLED:
-                    listener.immediateDependencyInstalled(this);
+                case IMMEDIATE_DEPENDENCY_AVAILABLE:
+                    listener.immediateDependencyAvailable(this);
                     break;
-                case TRANSITIVE_MISSING_DEPENDENCY:
-                    listener.transitiveDependencyUninstalled(this);
+                case TRANSITIVE_DEPENDENCY_UNAVAILABLE:
+                    listener.transitiveDependencyUnavailable(this);
                     break;
-                case TRANSITIVE_DEPENDENCY_INSTALLED:
-                    listener.transitiveDependencyInstalled(this);
+                case TRANSITIVE_DEPENDENCY_AVAILABLE:
+                    listener.transitiveDependencyAvailable(this);
                     break;
                 case REMOVE_REQUESTED:
                     listener.serviceRemoveRequested(this);
@@ -1300,7 +1447,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     /**
      * Returns a compiled array of all dependents of this service instance.
      * 
-     * @return an array of dependents
+     * @return an array of dependents, including children
      */
     private Dependent[][] getDependents() {
         IdentityHashSet<Dependent> dependentSet = primaryRegistration.getDependents();
@@ -1323,6 +1470,31 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
         }
         return dependents;
+    }
+
+    /**
+     * Returns a compiled map of all dependents of this service mapped by the dependency name.
+     * This map can be used when it is necessary to perform notifications to these dependents that require
+     * the name of the dependency issuing notification.
+     * <br> The return result does not include children. 
+     * 
+     * @return an array of dependents, including children
+     */
+    // children are not included in this this result
+    private Map<ServiceName, Dependent[]> getDependentsByDependencyName() {
+        final Map<ServiceName, Dependent[]> dependents = new HashMap<ServiceName, Dependent[]>();
+        addDependentsByName(primaryRegistration, dependents);
+        for (ServiceRegistrationImpl aliasRegistration: aliasRegistrations) {
+            addDependentsByName(aliasRegistration, dependents);
+        }
+        return dependents;
+    }
+
+    private void addDependentsByName(ServiceRegistrationImpl registration, Map<ServiceName, Dependent[]> dependentsByName) {
+        IdentityHashSet<Dependent> registrationDependents = registration.getDependents();
+        synchronized(registrationDependents) {
+            dependentsByName.put(registration.getName(), registrationDependents.toScatteredArray(NO_DEPENDENTS));
+        }
     }
 
     enum ContextState {
@@ -1414,6 +1586,84 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 final ServiceControllerImpl<?> parent = ServiceControllerImpl.this.parent;
                 if (parent != null) {
                     parent.dependentStarted();
+                }
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
+                synchronized (ServiceControllerImpl.this) {
+                    // Subtract one for this task
+                    asyncTasks --;
+                    transition(tasks);
+                    asyncTasks += tasks.size();
+                }
+                doExecute(tasks);
+            } catch (Throwable t) {
+                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
+            }
+        }
+    }
+
+    private class ServiceUnavailableTask implements Runnable {
+
+        private final Map<ServiceName, Dependent[]> dependents;
+        private final Dependent[] children;
+
+        public ServiceUnavailableTask() {
+            dependents = getDependentsByDependencyName();
+            children = ServiceControllerImpl.this.children.toScatteredArray(NO_DEPENDENTS);
+        }
+
+        public ServiceUnavailableTask(ServiceName serviceName, Dependent dependent) {
+            dependents = new HashMap<ServiceName, Dependent[]>(1);
+            dependents.put(serviceName, new Dependent[]{dependent});
+            children = NO_DEPENDENTS;
+        }
+
+        public void run() {
+            try {
+                for (Map.Entry<ServiceName, Dependent[]> dependentEntry: dependents.entrySet()) {
+                    ServiceName serviceName = dependentEntry.getKey();
+                    for (Dependent dependent: dependentEntry.getValue()) {
+                        if (dependent != null) dependent.immediateDependencyUnavailable(serviceName);
+                    }
+                }
+                final ServiceName primaryRegistrationName = primaryRegistration.getName();
+                for (Dependent child: children) {
+                    if (child != null) child.immediateDependencyUnavailable(primaryRegistrationName);
+                }
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
+                synchronized (ServiceControllerImpl.this) {
+                    // Subtract one for this task
+                    asyncTasks --;
+                    transition(tasks);
+                    asyncTasks += tasks.size();
+                }
+                doExecute(tasks);
+            } catch (Throwable t) {
+                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
+            }
+        }
+    }
+
+    private class ServiceAvailableTask implements Runnable {
+
+        private final Map<ServiceName, Dependent[]> dependents;
+        private final Dependent[] children;
+
+        public ServiceAvailableTask() {
+            dependents = getDependentsByDependencyName();
+            children = ServiceControllerImpl.this.children.toScatteredArray(NO_DEPENDENTS);
+        }
+
+        public void run() {
+            try {
+                for (Map.Entry<ServiceName, Dependent[]> dependentEntry: dependents.entrySet()) {
+                    ServiceName serviceName = dependentEntry.getKey();
+                    for (Dependent dependent: dependentEntry.getValue()) {
+                        if (dependent != null) dependent.immediateDependencyAvailable(serviceName);
+                    }
+                }
+                final ServiceName primaryRegistrationName = primaryRegistration.getName();
+                for (Dependent child: children) {
+                    if (child != null) child.immediateDependencyAvailable(primaryRegistrationName);
                 }
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
@@ -1744,11 +1994,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class DependencyInstalledTask implements Runnable {
+    private class DependencyAvailableTask implements Runnable {
 
         private final Dependent[][] dependents;
 
-        DependencyInstalledTask(final Dependent[][] dependents) {
+        DependencyAvailableTask(final Dependent[][] dependents) {
             this.dependents = dependents;
         }
 
@@ -1756,7 +2006,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             try {
                 for (Dependent[] dependentArray : dependents) {
                     for (Dependent dependent : dependentArray) {
-                        if (dependent != null) dependent.transitiveDependencyInstalled();
+                        if (dependent != null) dependent.transitiveDependencyAvailable();
                     }
                 }
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
@@ -1774,11 +2024,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     }
 
-    private class DependencyUninstalledTask implements Runnable {
+    private class DependencyUnavailableTask implements Runnable {
 
         private final Dependent[][] dependents;
 
-        DependencyUninstalledTask(final Dependent[][] dependents) {
+        DependencyUnavailableTask(final Dependent[][] dependents) {
             this.dependents = dependents;
         }
 
@@ -1786,7 +2036,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             try {
                 for (Dependent[] dependentArray : dependents) {
                     for (Dependent dependent : dependentArray) {
-                        if (dependent != null) dependent.transitiveDependencyUninstalled();
+                        if (dependent != null) {
+                            dependent.transitiveDependencyUnavailable();
+                        }
                     }
                 }
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
@@ -2027,7 +2279,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         NEW(State.DOWN),
         CANCELLED(State.REMOVED),
         DOWN(State.DOWN),
+        WONT_START(State.DOWN),
+        PROBLEM(State.DOWN),
         START_REQUESTED(State.DOWN),
+        START_INITIATING(State.STARTING),
         STARTING(State.STARTING),
         START_FAILED(State.START_FAILED),
         UP(State.UP),
@@ -2049,19 +2304,37 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     enum Transition {
         START_REQUESTED_to_DOWN(Substate.START_REQUESTED, Substate.DOWN),
-        START_REQUESTED_to_STARTING(Substate.START_REQUESTED, Substate.STARTING),
+        START_REQUESTED_to_WONT_START(Substate.START_REQUESTED, Substate.WONT_START),
+        START_REQUESTED_to_PROBLEM(Substate.START_REQUESTED, Substate.PROBLEM),
+        START_REQUESTED_to_START_INITIATING(Substate.START_REQUESTED, Substate.START_INITIATING),
+        START_REQUESTED_to_REMOVING (Substate.START_REQUESTED, Substate.REMOVING),
+        PROBLEM_to_DOWN(Substate.PROBLEM, Substate.DOWN),
+        PROBLEM_to_WONT_START (Substate.PROBLEM, Substate.WONT_START),
+        PROBLEM_to_START_REQUESTED(Substate.PROBLEM, Substate.START_REQUESTED),
+        PROBLEM_to_START_INITIATING (Substate.PROBLEM, Substate.START_INITIATING),
+        PROBLEM_to_REMOVING(Substate.PROBLEM, Substate.REMOVING),
+        START_INITIATING_to_STARTING (Substate.START_INITIATING, Substate.STARTING),
         STARTING_to_UP(Substate.STARTING, Substate.UP),
         STARTING_to_START_FAILED(Substate.STARTING, Substate.START_FAILED),
-        START_FAILED_to_STARTING(Substate.START_FAILED, Substate.STARTING),
+        START_FAILED_to_STARTING(Substate.START_FAILED, Substate.START_INITIATING),
         START_FAILED_to_DOWN(Substate.START_FAILED, Substate.DOWN),
+        START_FAILED_to_WONT_START(Substate.START_FAILED, Substate.WONT_START),
         UP_to_STOP_REQUESTED(Substate.UP, Substate.STOP_REQUESTED),
         STOP_REQUESTED_to_UP(Substate.STOP_REQUESTED, Substate.UP),
         STOP_REQUESTED_to_STOPPING(Substate.STOP_REQUESTED, Substate.STOPPING),
         STOPPING_to_DOWN(Substate.STOPPING, Substate.DOWN),
+        STOPPING_to_WONT_START(Substate.STOPPING, Substate.WONT_START),
         REMOVING_to_REMOVED(Substate.REMOVING, Substate.REMOVED),
         DOWN_to_REMOVING(Substate.DOWN, Substate.REMOVING),
         DOWN_to_START_REQUESTED(Substate.DOWN, Substate.START_REQUESTED),
-        ;
+        DOWN_to_START_INITIATING (Substate.DOWN, Substate.START_INITIATING),
+        DOWN_to_PROBLEM(Substate.DOWN, Substate.PROBLEM),
+        DOWN_to_WONT_START(Substate.DOWN, Substate.WONT_START),
+        WONT_START_to_DOWN(Substate.WONT_START, Substate.DOWN),
+        WONT_START_to_PROBLEM(Substate.WONT_START, Substate.PROBLEM),
+        WONT_START_to_REMOVING(Substate.WONT_START, Substate.REMOVING),
+        WONT_START_to_START_REQUESTED(Substate.WONT_START, Substate.START_REQUESTED),
+        WONT_START_to_START_INITIATING (Substate.WONT_START, Substate.START_INITIATING);
 
         private final Substate before;
         private final Substate after;

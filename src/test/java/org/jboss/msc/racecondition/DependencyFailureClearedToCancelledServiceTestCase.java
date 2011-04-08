@@ -55,14 +55,13 @@ public class DependencyFailureClearedToCancelledServiceTestCase  extends Abstrac
      */
     @Test
     public void test() throws Throwable {
-        System.out.println(System.getProperty("racecondition.dir"));
         final TestServiceListener testListener = new TestServiceListener();
         serviceContainer.addListener(testListener);
         final ServiceName cancelledServiceName = ServiceName.of("cancelled");
         final ServiceName dependencyServiceName = ServiceName.of("dependency");
         final ServiceName dependentServiceName = ServiceName.of("dependent");
 
-        final Future<ServiceController<?>> dependentMissingDependency = testListener.expectImmediateDependencyUninstall(dependentServiceName);
+        final Future<ServiceController<?>> dependentMissingDependency = testListener.expectImmediateDependencyUnavailable(dependentServiceName);
         serviceContainer.addService(dependentServiceName, Service.NULL).addDependencies(cancelledServiceName, dependencyServiceName).install();
         final ServiceController<?> dependentController = assertController(dependentServiceName, dependentMissingDependency);
 

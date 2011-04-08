@@ -97,18 +97,18 @@ public abstract class AbstractServiceListener<S> implements ServiceListener<S> {
     }
 
     /** {@inheritDoc} */
-    public void immediateDependencyInstalled(ServiceController<? extends S> controller) {
+    public void immediateDependencyAvailable(ServiceController<? extends S> controller) {
     }
 
     /** {@inheritDoc} */
-    public void immediateDependencyUninstalled(ServiceController<? extends S> controller) {
+    public void immediateDependencyUnavailable(ServiceController<? extends S> controller) {
     }
 
     /** {@inheritDoc} */
-    public void transitiveDependencyInstalled(ServiceController<? extends S> controller) {
+    public void transitiveDependencyAvailable(ServiceController<? extends S> controller) {
     }
 
     /** {@inheritDoc} */
-    public void transitiveDependencyUninstalled(ServiceController<? extends S> controller) {
+    public void transitiveDependencyUnavailable(ServiceController<? extends S> controller) {
     }
 }

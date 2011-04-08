@@ -92,14 +92,14 @@ final class ServiceRegistrationImpl implements Dependency {
             }
             instance = this.instance;
             if (instance == null) {
-                dependent.immediateDependencyUninstalled(name);
+                dependent.immediateDependencyUnavailable(name);
                 synchronized (dependents) {
                     dependents.add(dependent);
                 }
                 return;
             }
             synchronized (instance) {
-                instance.newDependent(dependent, tasks);
+                instance.newDependent(name, dependent, tasks);
                 synchronized (dependents) {
                     dependents.add(dependent);
                 }
@@ -149,11 +149,6 @@ final class ServiceRegistrationImpl implements Dependency {
             this.instance = instance;
             if (demandedByCount > 0) instance.addDemands(demandedByCount);
         }
-        synchronized (dependents) {
-            for (Dependent dependent: dependents) {
-                dependent.immediateDependencyInstalled(name);
-            }
-        }
     }
 
     void clearInstance(final ServiceControllerImpl<?> oldInstance) {
@@ -164,11 +159,6 @@ final class ServiceRegistrationImpl implements Dependency {
                 return;
             }
             this.instance = null;
-        }
-        synchronized (dependents) {
-            for (Dependent dependent: dependents) {
-                dependent.immediateDependencyUninstalled(name);
-            }
         }
     }
 

@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import static junit.framework.Assert.assertNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
@@ -194,7 +195,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
      * @return the ServiceController of the specified service.
      */
     private final ServiceBuilder<?> getUpOnDemandSecondBuilder() throws Exception {
-        final Future<ServiceController<?>> firstServiceDepMissing = testListener.expectImmediateDependencyUninstall(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDepMissing = testListener.expectImmediateDependencyUnavailable(firstServiceName);
         serviceContainer.addService(firstServiceName, Service.NULL).addListener(testListener).addDependency(secondServiceName)
                 .install();
         assertController(firstServiceName, firstServiceDepMissing);
@@ -225,9 +226,11 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
      */
     private final ServiceBuilder<?> getFailedToStartOnDemandSecondBuilder() throws Exception {
         final Future<ServiceController<?>> firstServiceInstall = testListener.expectListenerAdded(firstServiceName);
+        final Future<ServiceController<?>> firstServiceMissingDep = testListener.expectImmediateDependencyUnavailable(firstServiceName);
         serviceContainer.addService(firstServiceName, new FailToStartService(true)).addListener(testListener)
                 .addDependency(secondServiceName).install();
-        assertController(firstServiceName, firstServiceInstall);
+        final ServiceController<?> firstController = assertController(firstServiceName, firstServiceInstall);
+        assertController(firstController, firstServiceMissingDep);
 
         return serviceContainer.addService(secondServiceName, new FailToStartService(true))
                 .addListener(testListener, setModeListener).setInitialMode(Mode.ON_DEMAND);
@@ -239,9 +242,9 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> secondServiceListenerAdded = testListener.expectListenerAdded(secondServiceName);
         final Future<ServiceController<?>> secondServiceRemoval = testListener.expectServiceRemoval(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyMissing = testListener
-                .expectImmediateDependencyUninstall(firstServiceName);
+                .expectImmediateDependencyUnavailable(firstServiceName);
         setModeListener.setMode(Mode.REMOVE);
         final ServiceController<?> secondController = secondBuilder.install();
         assertController(secondController, secondServiceListenerAdded);
@@ -262,9 +265,9 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
     public void changeFailedToStartOnDemandToRemove() throws Exception {
         final ServiceBuilder<?> secondBuilder = getFailedToStartOnDemandSecondBuilder();
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyMissing = testListener
-                .expectImmediateDependencyUninstall(firstServiceName);
+                .expectImmediateDependencyUnavailable(firstServiceName);
         final Future<ServiceController<?>> secondServiceRemoval = testListener.expectServiceRemoval(secondServiceName);
         setModeListener.setMode(Mode.REMOVE);
         final ServiceController<?> secondController = secondBuilder.install();
@@ -278,7 +281,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         final ServiceBuilder<?> secondBuilder = getUpOnDemandSecondBuilder();
         final Future<ServiceController<?>> secondServiceListenerAdded = testListener.expectListenerAdded(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         setModeListener.setMode(Mode.NEVER);
         final ServiceController<?> secondController = secondBuilder.install();
         assertController(secondController, secondServiceListenerAdded);
@@ -300,7 +303,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
     public void changeFailedToStartOnDemandToNever() throws Exception {
         final ServiceBuilder<?> secondBuilder = getFailedToStartOnDemandSecondBuilder();
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> secondServiceListenerAdded = testListener.expectListenerAdded(secondServiceName);
         setModeListener.setMode(Mode.NEVER);
         final ServiceController<?> secondController = secondBuilder.install();
@@ -314,7 +317,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> secondServiceListenerAdded = testListener.expectListenerAdded(secondServiceName);
         final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
         setModeListener.setMode(Mode.ON_DEMAND);
         final ServiceController<?> secondController = secondBuilder.install();
@@ -338,7 +341,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
     public void changeFailedToStartOnDemandToOnDemand() throws Exception {
         final ServiceBuilder<?> secondBuilder = getFailedToStartOnDemandSecondBuilder();
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailed = testListener
                 .expectDependencyFailure(firstServiceName);
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
@@ -355,7 +358,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> secondServiceListenerAdded = testListener.expectListenerAdded(secondServiceName);
         final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
         setModeListener.setMode(Mode.PASSIVE);
         final ServiceController<?> secondController = secondBuilder.install();
@@ -380,7 +383,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
     public void changeFailedToStartOnDemandToPassive() throws Exception {
         final ServiceBuilder<?> secondBuilder = getFailedToStartOnDemandSecondBuilder();
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailed = testListener
                 .expectDependencyFailure(firstServiceName);
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
@@ -397,7 +400,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> secondServiceListenerAdded = testListener.expectListenerAdded(secondServiceName);
         final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
         setModeListener.setMode(Mode.ACTIVE);
         final ServiceController<?> secondController = secondBuilder.install();
@@ -422,7 +425,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
     public void changeFailedToStartOnDemandToActive() throws Exception {
         final ServiceBuilder<?> secondBuilder = getFailedToStartOnDemandSecondBuilder();
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailed = testListener
                 .expectDependencyFailure(firstServiceName);
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
@@ -438,7 +441,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         final ServiceBuilder<?> secondBuilder = getUpOnDemandSecondBuilder();
         final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
         final ServiceController<?> secondController = assertChangeModeToNullFails(secondBuilder, secondServiceName);
         assertController(secondController, secondServiceStart);
@@ -457,7 +460,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
     public void changeFailedToStartOnDemandToNull() throws Exception {
         final ServiceBuilder<?> secondBuilder = getFailedToStartOnDemandSecondBuilder();
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailed = testListener
                 .expectDependencyFailure(firstServiceName);
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
@@ -500,9 +503,11 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
      */
     private final ServiceBuilder<?> getFailedToStartPassiveSecondBuilder() throws Exception {
         final Future<ServiceController<?>> firstServiceInstall = testListener.expectListenerAdded(firstServiceName);
+        final Future<ServiceController<?>> firstServiceMissingDep = testListener.expectImmediateDependencyUnavailable(firstServiceName);
         serviceContainer.addService(firstServiceName, new FailToStartService(true)).addListener(testListener)
                 .addDependency(secondServiceName).install();
-        assertController(firstServiceName, firstServiceInstall);
+        final ServiceController<?> firstController = assertController(firstServiceName, firstServiceInstall);
+        assertController(firstController, firstServiceMissingDep);
 
         return serviceContainer.addService(secondServiceName, new FailToStartService(true))
                 .addListener(testListener, setModeListener).setInitialMode(Mode.PASSIVE);
@@ -532,9 +537,9 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
 
         final Future<ServiceController<?>> secondServiceRemoval = testListener.expectServiceRemoval(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyUninstall = testListener
-                .expectImmediateDependencyUninstall(firstServiceName);
+                .expectImmediateDependencyUnavailable(firstServiceName);
         setModeListener.setMode(Mode.REMOVE);
         final ServiceController<?> secondController = secondBuilder.install();
 
@@ -567,7 +572,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
 
         final Future<ServiceController<?>> secondServiceListenerAdded = testListener.expectListenerAdded(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         setModeListener.setMode(Mode.NEVER);
         final ServiceController<?> secondController = secondBuilder.install();
 
@@ -600,7 +605,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> secondServiceListenerAdded = testListener.expectListenerAdded(secondServiceName);
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailed = testListener
                 .expectDependencyFailure(firstServiceName);
         setModeListener.setMode(Mode.ON_DEMAND);
@@ -639,7 +644,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> secondServiceListenerAdded = testListener.expectListenerAdded(secondServiceName);
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailed = testListener
                 .expectDependencyFailure(firstServiceName);
         setModeListener.setMode(Mode.PASSIVE);
@@ -678,7 +683,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> secondServiceListenerAdded = testListener.expectListenerAdded(secondServiceName);
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailed = testListener
                 .expectDependencyFailure(firstServiceName);
         setModeListener.setMode(Mode.ACTIVE);
@@ -710,7 +715,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
 
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-                .expectImmediateDependencyInstall(firstServiceName);
+                .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailed = testListener
                 .expectDependencyFailure(firstServiceName);
         final ServiceController<?> secondController = assertChangeModeToNullFails(secondBuilder, secondServiceName);
@@ -739,13 +744,13 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
      * 
      * @return the ServiceController of the specified service.
      */
-    private final ServiceBuilder<?> getDownActiveFirstBuilder() throws Exception {
+    private final ServiceBuilder<?> getProblemActiveFirstBuilder() throws Exception {
         final Future<ServiceController<?>> secondServiceInstall = testListener.expectListenerAdded(secondServiceName);
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
         serviceContainer.addService(secondServiceName, new FailToStartService(true)).addListener(testListener).install();
         final ServiceController<?> secondController = assertController(secondServiceName, secondServiceInstall);
         assertFailure(secondController, secondServiceFailure);
-        
+
         return serviceContainer.addService(firstServiceName, Service.NULL).addListener(testListener, setModeListener)
             .addDependency(secondServiceName).setInitialMode(Mode.ACTIVE);
     }
@@ -759,9 +764,11 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
      */
     private final ServiceBuilder<?> getFailedToStartActiveSecondBuilder() throws Exception {
         final Future<ServiceController<?>> firstServiceInstall = testListener.expectListenerAdded(firstServiceName);
+        final Future<ServiceController<?>> firstServiceMissingDep = testListener.expectImmediateDependencyUnavailable(firstServiceName);
         serviceContainer.addService(firstServiceName, new FailToStartService(true)).addListener(testListener)
         .addDependency(secondServiceName).install();
-        assertController(firstServiceName, firstServiceInstall);
+        final ServiceController<?> firstController = assertController(firstServiceName, firstServiceInstall);
+        assertController(firstController, firstServiceMissingDep);
 
         return serviceContainer.addService(secondServiceName, new FailToStartService(true))
             .addListener(testListener, setModeListener).setInitialMode(Mode.ACTIVE);
@@ -778,8 +785,8 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
     }
 
     @Test
-    public void changeDownActiveToRemove() throws Exception {
-        final ServiceBuilder<?> firstBuilder = getDownActiveFirstBuilder();
+    public void changeProblemActiveToRemove() throws Exception {
+        final ServiceBuilder<?> firstBuilder = getProblemActiveFirstBuilder();
         final Future<ServiceController<?>> firstServiceRemoval = testListener.expectServiceRemoval(firstServiceName);
         setModeListener.setMode(Mode.REMOVE);
         final ServiceController<?> firstController = firstBuilder.install();
@@ -793,9 +800,9 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> secondServiceListenerAdded = testListener.expectListenerAdded(secondServiceName);
         final Future<ServiceController<?>> secondServiceRemoval = testListener.expectServiceRemoval(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-            .expectImmediateDependencyInstall(firstServiceName);
+            .expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyUninstall = testListener
-            .expectImmediateDependencyUninstall(firstServiceName);
+            .expectImmediateDependencyUnavailable(firstServiceName);
         setModeListener.setMode(Mode.REMOVE);
         final ServiceController<?> secondController = secondBuilder.install();
         assertController(secondController, secondServiceListenerAdded);
@@ -814,13 +821,11 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
     }
 
     @Test
-    public void changeDownActiveToNever() throws Exception {
+    public void changeProblemActiveToNever() throws Exception {
         final Future<ServiceController<?>> firstServiceListenerAdded = testListener.expectListenerAdded(firstServiceName);
-        final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
         setModeListener.setMode(Mode.NEVER);
-        final ServiceController<?> firstController = getDownActiveFirstBuilder().install();
+        final ServiceController<?> firstController = getProblemActiveFirstBuilder().install();
         assertController(firstController, firstServiceListenerAdded);
-        assertController(firstController, firstServiceDependencyFailure);
         assertSame(State.DOWN, firstController.getState());
     }
 
@@ -830,7 +835,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
 
         final Future<ServiceController<?>> secondServiceListenerAdded = testListener.expectListenerAdded(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyInstall = testListener
-            .expectImmediateDependencyInstall(firstServiceName);
+            .expectImmediateDependencyAvailable(firstServiceName);
         setModeListener.setMode(Mode.NEVER);
         final ServiceController<?> secondController = secondBuilder.install();
         assertController(secondController, secondServiceListenerAdded);
@@ -847,13 +852,11 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
     }
 
     @Test
-    public void changeDownActiveToOnDemand() throws Exception {
+    public void changeProblemActiveToOnDemand() throws Exception {
         final Future<ServiceController<?>> firstServiceListenerAdded = testListener.expectListenerAdded(firstServiceName);
-        final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
         setModeListener.setMode(Mode.ON_DEMAND);
-        final ServiceController<?> firstController = getDownActiveFirstBuilder().install();
+        final ServiceController<?> firstController = getProblemActiveFirstBuilder().install();
         assertController(firstController, firstServiceListenerAdded);
-        assertController(firstController, firstServiceDependencyFailure);
         assertSame(State.DOWN, firstController.getState());
     }
 
@@ -863,7 +866,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
 
         final Future<ServiceController<?>> secondServiceListenerAdded = testListener.expectListenerAdded(secondServiceName);
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
-        final Future<ServiceController<?>> firstServiceDependencyInstall = testListener.expectImmediateDependencyInstall(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyInstall = testListener.expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
         setModeListener.setMode(Mode.ON_DEMAND);
         final ServiceController<?> secondController = secondBuilder.install();
@@ -884,13 +887,13 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
     }
 
     @Test
-    public void changeDownActiveToPassive() throws Exception {
+    public void changeProblemActiveToPassive() throws Exception {
         final Future<ServiceController<?>> firstServiceListenerAdded = testListener.expectListenerAdded(firstServiceName);
-        final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectNoDependencyFailure(firstServiceName);
         setModeListener.setMode(Mode.PASSIVE);
-        final ServiceController<?> firstController = getDownActiveFirstBuilder().install();
+        final ServiceController<?> firstController = getProblemActiveFirstBuilder().install();
         assertController(firstController, firstServiceListenerAdded);
-        assertController(firstController, firstServiceDependencyFailure);
+        assertNull(firstServiceDependencyFailure.get());
         assertSame(State.DOWN, firstController.getState());
     }
 
@@ -900,7 +903,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
 
         final Future<ServiceController<?>> secondServiceListenerAdded = testListener.expectListenerAdded(secondServiceName);
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
-        final Future<ServiceController<?>> firstServiceDependencyInstall = testListener.expectImmediateDependencyInstall(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyInstall = testListener.expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
         setModeListener.setMode(Mode.PASSIVE);
         final ServiceController<?> secondController = secondBuilder.install();
@@ -921,11 +924,11 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
     }
 
     @Test
-    public void changeDownActiveToActive() throws Exception {
+    public void changeProblemActiveToActive() throws Exception {
         final Future<ServiceController<?>> firstServiceListenerAdded = testListener.expectListenerAdded(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
         setModeListener.setMode(Mode.ACTIVE);
-        final ServiceController<?> firstController = getDownActiveFirstBuilder().install();
+        final ServiceController<?> firstController = getProblemActiveFirstBuilder().install();
         assertController(firstController, firstServiceListenerAdded);
         assertController(firstController, firstServiceDependencyFailure);
         assertSame(State.DOWN, firstController.getState());
@@ -937,7 +940,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
 
         final Future<ServiceController<?>> secondServiceListenerAdded = testListener.expectListenerAdded(secondServiceName);
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
-        final Future<ServiceController<?>> firstServiceDependencyInstall = testListener.expectImmediateDependencyInstall(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyInstall = testListener.expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
         setModeListener.setMode(Mode.ACTIVE);
         final ServiceController<?> secondController = secondBuilder.install();
@@ -955,9 +958,9 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
     }
 
     @Test
-    public void changeDownActiveToNull() throws Exception {
+    public void changeProblemActiveToNull() throws Exception {
         final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
-        final ServiceController<?> firstController = assertChangeModeToNullFails(getDownActiveFirstBuilder(), firstServiceName);
+        final ServiceController<?> firstController = assertChangeModeToNullFails(getProblemActiveFirstBuilder(), firstServiceName);
         assertController(firstController, firstServiceDependencyFailure);
         assertSame(State.DOWN, firstController.getState());
     }
@@ -967,7 +970,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         final ServiceBuilder<?> secondBuilder = getFailedToStartActiveSecondBuilder();
 
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
-        final Future<ServiceController<?>> firstServiceDependencyInstall = testListener.expectImmediateDependencyInstall(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyInstall = testListener.expectImmediateDependencyAvailable(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
         final ServiceController<?> secondController = assertChangeModeToNullFails(secondBuilder, secondServiceName);
         assertFailure(secondController, secondServiceFailure);
@@ -1085,22 +1088,22 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         }
 
         @Override
-        public void immediateDependencyUninstalled(ServiceController<?> controller) {
+        public void immediateDependencyUnavailable(ServiceController<?> controller) {
             unexpectedCalls.append("immediateDependencyUninstalled\n");
         }
 
         @Override
-        public void immediateDependencyInstalled(ServiceController<?> controller) {
+        public void immediateDependencyAvailable(ServiceController<?> controller) {
             unexpectedCalls.append("immediateDependencyInstalled\n");
         }
 
         @Override
-        public void transitiveDependencyUninstalled(ServiceController<?> controller) {
+        public void transitiveDependencyUnavailable(ServiceController<?> controller) {
             unexpectedCalls.append("transitiveDependencyUninstalled\n");
         }
 
         @Override
-        public void transitiveDependencyInstalled(ServiceController<?> controller) {
+        public void transitiveDependencyAvailable(ServiceController<?> controller) {
             unexpectedCalls.append("transitiveDependencyInstalled\n");
         }
     }

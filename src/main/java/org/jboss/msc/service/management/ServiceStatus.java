@@ -42,7 +42,7 @@ public class ServiceStatus implements Serializable {
     private final String substateName;
     private final String[] dependencies;
     private final boolean dependencyFailed;
-    private final boolean dependencyMissing;
+    private final boolean dependencyUnavailable;
     private final String parentName;
 
     /**
@@ -57,10 +57,10 @@ public class ServiceStatus implements Serializable {
      * @param substateName the internal service substate name
      * @param dependencies the list of dependencies for this service
      * @param dependencyFailed {@code true} if some dependency is failed
-     * @param dependencyMissing {@code true} if some dependency is missing
+     * @param dependencyUnavailable {@code true} if some dependency is unavailable
      */
-    @ConstructorProperties({"parentName", "serviceName", "serviceClassName", "modeName", "stateName", "substateName", "dependencies", "dependencyFailed", "dependencyMissing"})
-    public ServiceStatus(final String parentName, final String serviceName, final String[] aliases, final String serviceClassName, final String modeName, final String stateName, final String substateName, final String[] dependencies, final boolean dependencyFailed, final boolean dependencyMissing) {
+    @ConstructorProperties({"parentName", "serviceName", "serviceClassName", "modeName", "stateName", "substateName", "dependencies", "dependencyFailed", "dependencyUnavailable"})
+    public ServiceStatus(final String parentName, final String serviceName, final String[] aliases, final String serviceClassName, final String modeName, final String stateName, final String substateName, final String[] dependencies, final boolean dependencyFailed, final boolean dependencyUnavailable) {
         if (serviceName == null) {
             throw new IllegalArgumentException("serviceName is null");
         }
@@ -90,7 +90,7 @@ public class ServiceStatus implements Serializable {
         this.substateName = substateName;
         this.dependencies = dependencies;
         this.dependencyFailed = dependencyFailed;
-        this.dependencyMissing = dependencyMissing;
+        this.dependencyUnavailable = dependencyUnavailable;
         this.parentName = parentName;
     }
 
@@ -167,12 +167,12 @@ public class ServiceStatus implements Serializable {
     }
 
     /**
-     * Determine if some dependency was missing at the time of the query.
+     * Determine if some dependency was not available at the time of the query.
      *
-     * @return {@code true} if some dependency was missing
+     * @return {@code true} if some dependency was unavailable
      */
-    public boolean isDependencyMissing() {
-        return dependencyMissing;
+    public boolean isDependencyUnavailable() {
+        return dependencyUnavailable;
     }
 
     /**
@@ -219,8 +219,8 @@ public class ServiceStatus implements Serializable {
         if (dependencyFailed) {
             builder.append(" (has failed dependency)");
         }
-        if (dependencyMissing) {
-            builder.append(" (has missing dependency)");
+        if (dependencyUnavailable) {
+            builder.append(" (has unavailable dependency)");
         }
         return builder.toString();
     }

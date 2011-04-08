@@ -143,7 +143,7 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
         final ServiceTarget containerTarget = getServiceTarget(serviceContainer);
         containerTarget.addDependency(anotherServiceName);
         // install service; it is expected to complain of the missing anotherService dependency
-        Future<ServiceController<?>> missingDependency = testListener.expectImmediateDependencyUninstall(serviceName);
+        Future<ServiceController<?>> missingDependency = testListener.expectImmediateDependencyUnavailable(serviceName);
         containerTarget.addService(serviceName, Service.NULL).addListener(testListener).install();
         ServiceController<?> serviceController = assertController(serviceName, missingDependency);
         // remove service
@@ -165,7 +165,7 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
         // add dependencies on anotherService and extraService
         containerTarget.addDependency(anotherServiceName, extraServiceName);
         // install service; it should complain of the missing another/extraService dependencies
-        missingDependency = testListener.expectImmediateDependencyUninstall(serviceName);
+        missingDependency = testListener.expectImmediateDependencyUnavailable(serviceName);
         containerTarget.addService(serviceName, Service.NULL).addListener(testListener).install();
         serviceController = assertController(serviceName, missingDependency);
         // remove the extraService dependency from container
@@ -348,10 +348,10 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
         assertController(extraController, extraServiceRemoval3);
 
         // installing extraService is not successful because there is a missing dependency on oneMoreService
-        Future<ServiceController<?>> extraServiceDepMissing = testListener.expectImmediateDependencyUninstall(extraServiceName);
-        Future<ServiceController<?>> extraServiceDepMissing1 = testListener1.expectImmediateDependencyUninstall(extraServiceName);
-        Future<ServiceController<?>> extraServiceDepMissing2 = testListener2.expectImmediateDependencyUninstall(extraServiceName);
-        Future<ServiceController<?>> extraServiceDepMissing3 = testListener3.expectImmediateDependencyUninstall(extraServiceName);
+        Future<ServiceController<?>> extraServiceDepMissing = testListener.expectImmediateDependencyUnavailable(extraServiceName);
+        Future<ServiceController<?>> extraServiceDepMissing1 = testListener1.expectImmediateDependencyUnavailable(extraServiceName);
+        Future<ServiceController<?>> extraServiceDepMissing2 = testListener2.expectImmediateDependencyUnavailable(extraServiceName);
+        Future<ServiceController<?>> extraServiceDepMissing3 = testListener3.expectImmediateDependencyUnavailable(extraServiceName);
         extraController = batchTarget.addService(extraServiceName, Service.NULL).install();
         assertController(extraServiceName, extraController);
         assertController(extraController, extraServiceDepMissing);
@@ -372,10 +372,10 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
 
         // installing extraService on containerTarget is also not successful because there is the
         // dep on oneMoreService in containerTarget
-        extraServiceDepMissing = testListener.expectImmediateDependencyUninstall(extraServiceName);
-        extraServiceDepMissing1 = testListener1.expectImmediateDependencyUninstall(extraServiceName);
-        extraServiceDepMissing2 = testListener2.expectImmediateDependencyUninstall(extraServiceName);
-        extraServiceDepMissing3 = testListener3.expectImmediateDependencyUninstall(extraServiceName);
+        extraServiceDepMissing = testListener.expectImmediateDependencyUnavailable(extraServiceName);
+        extraServiceDepMissing1 = testListener1.expectImmediateDependencyUnavailable(extraServiceName);
+        extraServiceDepMissing2 = testListener2.expectImmediateDependencyUnavailable(extraServiceName);
+        extraServiceDepMissing3 = testListener3.expectImmediateDependencyUnavailable(extraServiceName);
         extraController = batchTarget.addService(extraServiceName, Service.NULL).install();
         assertController(extraServiceName, extraController);
         assertController(extraController, extraServiceDepMissing);
@@ -471,10 +471,10 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
         assertController(extraController, extraServiceRemoval);
 
         // installing extraService is not successful because there is a missing dependency on oneMoreService
-        final Future<ServiceController<?>> extraServiceDepMissing = testListener.expectImmediateDependencyUninstall(extraServiceName);
-        final Future<ServiceController<?>> extraServiceDepMissing1 = testListener1.expectImmediateDependencyUninstall(extraServiceName);
-        final Future<ServiceController<?>> extraServiceDepMissing2 = testListener2.expectImmediateDependencyUninstall(extraServiceName);
-        final Future<ServiceController<?>> extraServiceDepMissing3 = testListener3.expectImmediateDependencyUninstall(extraServiceName);
+        final Future<ServiceController<?>> extraServiceDepMissing = testListener.expectImmediateDependencyUnavailable(extraServiceName);
+        final Future<ServiceController<?>> extraServiceDepMissing1 = testListener1.expectImmediateDependencyUnavailable(extraServiceName);
+        final Future<ServiceController<?>> extraServiceDepMissing2 = testListener2.expectImmediateDependencyUnavailable(extraServiceName);
+        final Future<ServiceController<?>> extraServiceDepMissing3 = testListener3.expectImmediateDependencyUnavailable(extraServiceName);
         extraController = batchSubTarget.addService(extraServiceName, Service.NULL).install();
         assertController(extraServiceName, extraController);
         assertController(extraController, extraServiceDepMissing);

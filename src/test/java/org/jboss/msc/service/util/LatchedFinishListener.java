@@ -123,23 +123,23 @@ public class LatchedFinishListener implements ServiceListener<Object> {
     }
 
     @Override
-    public void immediateDependencyInstalled(ServiceController<? extends Object> controller) {
-        timingServiceListener.immediateDependencyInstalled(controller);
+    public void immediateDependencyAvailable(ServiceController<? extends Object> controller) {
+        timingServiceListener.immediateDependencyAvailable(controller);
     }
 
     @Override
-    public void immediateDependencyUninstalled(ServiceController<? extends Object> controller) {
-        timingServiceListener.immediateDependencyUninstalled(controller);
+    public void immediateDependencyUnavailable(ServiceController<? extends Object> controller) {
+        timingServiceListener.immediateDependencyUnavailable(controller);
     }
 
     @Override
-    public void transitiveDependencyInstalled(ServiceController<? extends Object> controller) {
-        timingServiceListener.transitiveDependencyInstalled(controller);
+    public void transitiveDependencyAvailable(ServiceController<? extends Object> controller) {
+        timingServiceListener.transitiveDependencyAvailable(controller);
     }
 
     @Override
-    public void transitiveDependencyUninstalled(ServiceController<? extends Object> controller) {
-        timingServiceListener.transitiveDependencyUninstalled(controller);
+    public void transitiveDependencyUnavailable(ServiceController<? extends Object> controller) {
+        timingServiceListener.transitiveDependencyUnavailable(controller);
     }
 
     public void await() throws Exception {

@@ -31,20 +31,23 @@ package org.jboss.msc.service;
 interface Dependent {
 
     /**
-     * Notify this dependent that one of its immediate dependencies is installed.
+     * Notify this dependent that one of its immediate dependencies is available, i.e., it is installed and, if not
+     * {@link ServiceController.State#STARTED started}, should start shortly.
      * <p> This method must not be called under a lock.
      *
-     * @param dependencyName the name of the immediate dependency that is now installed
+     * @param dependencyName the name of the immediate dependency that is now available
      */
-    void immediateDependencyInstalled(ServiceName dependencyName);
+    void immediateDependencyAvailable(ServiceName dependencyName);
 
     /**
-     * Notify this dependent that one of its immediate dependencies is uninstalled.
+     * Notify this dependent that one of its immediate dependencies is unavailable.<br>
+     * A dependency is unavailable when it is not installed or when it is in {@link ServiceController.Mode#NEVER NEVER}
+     * mode.
      * <p> This method must not be called under a lock.
      *
-     * @param dependencyName the name of the immediate dependency that is now uninstalled
+     * @param dependencyName the name of the immediate dependency that is now unavailable
      */
-    void immediateDependencyUninstalled(ServiceName dependencyName);
+    void immediateDependencyUnavailable(ServiceName dependencyName);
 
     /**
      * Notify this dependent that one of its immediate dependencies entered {@link ServiceControllerImpl.Substate#UP UP}
@@ -80,22 +83,24 @@ interface Dependent {
     void dependencyFailureCleared();
 
     /**
-     * Notify this dependent that one of its transitive dependencies is uninstalled or missing.
+     * Notify this dependent that one of its transitive dependencies is unavailable (either uninstalled, or in
+     * {@link ServiceController.Mode#NEVER NEVER mode}).
      * <p>
-     * Dependencies that are uninstalled after the notified one do not result in new {@code dependencyUninstalled}
-     * notifications, as the dependent will never receive two or more dependencyUninstalled calls in a row. A {@code
-     * dependencyUninstall} notification is only invoked again to notify of newly found uninstalled dependencies if the
-     * previously missing dependencies have been {@link #transitiveDependencyInstalled() installed}.
+     * New transitive dependencies that become unavailable after the notified one do not result in new {@code
+     * dependencyUnavailable} notifications, as the dependent will never receive two or more dependencyUnavailable calls
+     * in a row. A {@code dependencyUnavailable} notification is only invoked again to notify of newly found unavailable
+     * dependencies if all the previously unavailable dependencies have become {@link #transitiveDependencyAvailable()
+     * available}.
      * <p> This method must not be called under a lock.
      */
-    void transitiveDependencyUninstalled();
+    void transitiveDependencyUnavailable();
 
     /**
-     * Notify this dependent that all {@link #transitiveDependencyUninstalled() uninstalled} transitive dependencies are
-     * now installed.
+     * Notify this dependent that all {@link #transitiveDependencyUnavailable() unavailable} transitive dependencies are
+     * now available (i.e., they are installed and wlil perform an attempt to start shortly).
      * <p> This method must not be called under a lock.
      */
-    void transitiveDependencyInstalled();
+    void transitiveDependencyAvailable();
 
     /**
      * Get the controller of this dependent.

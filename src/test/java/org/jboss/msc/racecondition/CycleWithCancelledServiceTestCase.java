@@ -52,7 +52,6 @@ public class CycleWithCancelledServiceTestCase extends AbstractRaceConditionTest
     private static final ServiceName serviceBName = ServiceName.of("B");
     private static final ServiceName serviceCName = ServiceName.of("C");
 
-    
     /* Cycle scenario: A->B,C; B->A; C->A
      * Service B is first installed with success.
      * Next, ServiceA installation is canceled. The race condition is to hold service A in canceled state while

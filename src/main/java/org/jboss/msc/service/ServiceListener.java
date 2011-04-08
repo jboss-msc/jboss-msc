@@ -152,38 +152,45 @@ public interface ServiceListener<S> {
     void dependencyFailureCleared(ServiceController<? extends S> controller);
 
     /**
-     * An immediate dependency of the service is uninstalled.
-     * <p> Immediate dependencies that are subsequently uninstalled do not result in new {@code
-     * immediateDependencyUninstalled} notifications. A new call to this method will only be made to notify newly found
-     * uninstalled dependencies if the previously missing dependencies have been {@link
-     * #immediateDependencyInstalled(ServiceController) installed}.
+     * An immediate dependency of the service is uninstalled or administratively {@link ServiceController.Mode#NEVER
+     * disabled}.
+     * <p> Immediate dependencies that are subsequently unavailable do not result in new {@code
+     * immediateDependencyUnavailable} notifications. A new call to this method will only be made to notify newly found
+     * unavailable dependencies if the previously unavailable dependencies have been {@link
+     * #immediateDependencyAvailable(ServiceController) cleared}.
+     * 
      * @param controller the controller
      */
-    void immediateDependencyUninstalled(ServiceController<? extends S> controller);
+    void immediateDependencyUnavailable(ServiceController<? extends S> controller);
 
     /**
-     * All {@link #immediateDependencyUninstalled(ServiceController) uninstalled} immediate dependencies of the service
-     * are now installed.
-     * <br>This method will be invoked only after {@link #immediateDependencyUninstalled(ServiceController)} is called.
+     * All {@link #immediateDependencyUnavailable(ServiceController) unavailable} immediate dependencies of the service
+     * are now available, i.e., they are installed and are not administratively  {@link ServiceController.Mode#NEVER
+     * disabled}.
+     * <br>This method will be invoked only after {@link #immediateDependencyUnavailable(ServiceController)} is called.
+     * 
      * @param controller the controller
      */
-    void immediateDependencyInstalled(ServiceController<? extends S> controller);
+    void immediateDependencyAvailable(ServiceController<? extends S> controller);
 
     /**
-     * A transitive dependency of the service is uninstalled.
-     * <p> Transitive dependencies that are subsequently uninstalled do not result in new {@code
-     * transitiveDependencyUninstalled} notifications. A new call to this method will only be made to notify newly found
-     * uninstalled dependencies if the previously missing dependencies have been {@link
-     * #transitiveDependencyInstalled(ServiceController) installed}.
+     * A transitive dependency of the service is uninstalled or administratively {@link ServiceController.Mode#NEVER
+     * disabled}.
+     * <p> Transitive dependencies that are subsequently unavailable do not result in new {@code
+     * transitiveDependencyUnavailable} notifications. A new call to this method will only be made to notify newly found
+     * unavailable dependencies if the previously unavailable dependencies have all become {@link
+     * #transitiveDependencyAvailable(ServiceController) available}.
+     * 
      * @param controller the controller
      */
-    void transitiveDependencyUninstalled(ServiceController<? extends S> controller);
+    void transitiveDependencyUnavailable(ServiceController<? extends S> controller);
 
     /**
-     * All {@link #transitiveDependencyUninstalled(ServiceController) uninstalled} transitive dependencies of the
-     * service are now installed.
-     * <br>This method will be invoked only after {@link #transitiveDependencyUninstalled(ServiceController)} is called.
+     * All {@link #transitiveDependencyUnavailable(ServiceController) unavailable} transitive dependencies of the
+     * service are now available (installed and not administratively {@link ServiceController.Mode#NEVER disabled}).
+     * <br>This method will be invoked only after {@link #transitiveDependencyUnavailable(ServiceController)} is called.
+     * 
      * @param controller the controller
      */
-    void transitiveDependencyInstalled(ServiceController<? extends S> controller);
+    void transitiveDependencyAvailable(ServiceController<? extends S> controller);
 }

@@ -140,11 +140,11 @@ public interface ServiceController<S> extends Value<S> {
     void retry();
 
     /**
-     * Get the complete list of immediate dependencies that are uninstalled.
+     * Get the complete list of immediate dependencies that are unavailable.
      * 
-     * @return a set containing the names of all missing immediate dependencies
+     * @return a set containing the names of all unavailable immediate dependencies
      */
-    Set<ServiceName> getImmediateMissingDependencies();
+    Set<ServiceName> getImmediateUnavailableDependencies();
 
     /**
      * A possible state for a service controller.

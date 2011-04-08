@@ -343,7 +343,7 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> secondServiceStop = testListener.expectServiceStop(secondServiceName);
         final Future<ServiceController<?>> firstServiceStop = testListener.expectServiceStop(firstServiceName);
         final Future<ServiceController<?>> secondServiceRemoval = testListener.expectServiceRemoval(secondServiceName);
-        final Future<ServiceController<?>> firstServiceDependencyMissing = testListener.expectImmediateDependencyUninstall(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyMissing = testListener.expectImmediateDependencyUnavailable(firstServiceName);
         secondController.setMode(Mode.REMOVE);
         assertController(secondController, secondServiceStop);
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceStop);
@@ -363,7 +363,7 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     public void changeFailedToStartOnDemandToRemove() throws Exception {
         final ServiceController<?> secondController = getFailedToStartOnDemandSecondController();
         final Future<ServiceController<?>> firstServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
-        final Future<ServiceController<?>> firstServiceDependencyMissing = testListener.expectImmediateDependencyUninstall(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyMissing = testListener.expectImmediateDependencyUnavailable(firstServiceName);
         final Future<ServiceController<?>> secondServiceStop = testListener.expectFailedServiceStopped(secondServiceName);
         final Future<ServiceController<?>> secondServiceRemoval = testListener.expectServiceRemoval(secondServiceName);
         secondController.setMode(Mode.REMOVE);
@@ -581,7 +581,7 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     public void changeFailedToStartPassiveToRemove() throws Exception {
         final ServiceController<?> secondController = getFailedToStartPassiveSecondController();
         final Future<ServiceController<?>> firstServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
-        final Future<ServiceController<?>> firstServiceDependencyUninstall = testListener.expectImmediateDependencyUninstall(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyUninstall = testListener.expectImmediateDependencyUnavailable(firstServiceName);
         final Future<ServiceController<?>> secondServiceRemoval = testListener.expectServiceRemoval(secondServiceName);
         secondController.setMode(Mode.REMOVE);
         assertController(secondController, secondServiceRemoval);
@@ -805,7 +805,7 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     public void changeFailedToStartActiveToRemove() throws Exception {
         final ServiceController<?> secondController = getFailedToStartActiveSecondController();
         final Future<ServiceController<?>> firstServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
-        final Future<ServiceController<?>> firstServiceDependencyUninstall = testListener.expectImmediateDependencyUninstall(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyUninstall = testListener.expectImmediateDependencyUnavailable(firstServiceName);
         final Future<ServiceController<?>> secondServiceRemoval = testListener.expectServiceRemoval(secondServiceName);
         secondController.setMode(Mode.REMOVE);
         assertController(secondController, secondServiceRemoval);
