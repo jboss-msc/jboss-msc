@@ -111,4 +111,12 @@ public abstract class AbstractServiceListener<S> implements ServiceListener<S> {
     /** {@inheritDoc} */
     public void transitiveDependencyUnavailable(ServiceController<? extends S> controller) {
     }
+
+    /** {@inheritDoc} */
+    public void dependencyProblem(ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
+    public void dependencyProblemCleared(ServiceController<? extends S> controller) {
+    }
 }

@@ -142,6 +142,16 @@ public class LatchedFinishListener implements ServiceListener<Object> {
         timingServiceListener.transitiveDependencyUnavailable(controller);
     }
 
+    @Override
+    public void dependencyProblem(ServiceController<? extends Object> controller) {
+        timingServiceListener.dependencyProblem(controller);
+    }
+
+    @Override
+    public void dependencyProblemCleared(ServiceController<? extends Object> controller) {
+        timingServiceListener.dependencyProblemCleared(controller);
+    }
+
     public void await() throws Exception {
         timingServiceListener.finishBatch();
         latch.await(30L, TimeUnit.SECONDS);

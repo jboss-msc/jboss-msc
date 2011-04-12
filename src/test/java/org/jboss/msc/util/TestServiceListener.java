@@ -56,6 +56,8 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     private final Map<ServiceName, ServiceFuture> expectedImmediateDepAvailabilities = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedTransitiveDepUnavailabilities = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedTransitiveDepAvailabilities = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedDependencyProblems = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedDependencyProblemClears = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedListenerAddeds = new HashMap<ServiceName, ServiceFuture>();
 
     public void listenerAdded(final ServiceController<? extends Object> serviceController) {
@@ -64,7 +66,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
             future.setServiceController(serviceController);
         }
     }
-    
+
     public void serviceStarted(final ServiceController<? extends Object> serviceController) {
         final ServiceFuture future = expectedStarts.remove(serviceController.getName());
         if(future != null) {
@@ -159,6 +161,20 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     public void transitiveDependencyUnavailable(ServiceController<? extends Object> serviceController) {
         final ServiceFuture future = expectedTransitiveDepUnavailabilities.remove(serviceController.getName());
         if(future != null) {
+            future.setServiceController(serviceController);
+        }
+    }
+
+    public void dependencyProblem(ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedDependencyProblems.remove(serviceController.getName());
+        if (future != null) {
+            future.setServiceController(serviceController);
+        }
+    }
+
+    public void dependencyProblemCleared(ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedDependencyProblemClears.remove(serviceController.getName());
+        if (future != null) {
             future.setServiceController(serviceController);
         }
     }
@@ -326,6 +342,30 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         return future;
     }
 
+    public Future<ServiceController<?>> expectDependencyProblem(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedDependencyProblems.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectNoDependencyProblem(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(100);
+        expectedDependencyProblems.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectDependencyProblemCleared(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedDependencyProblemClears.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectNoDependencyProblemCleared(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(100);
+        expectedDependencyProblemClears.put(serviceName, future);
+        return future;
+    }
+
     private static class ServiceFuture implements Future<ServiceController<?>> {
         private ServiceController<?> serviceController;
         private final CountDownLatch countDownLatch = new CountDownLatch(1);
@@ -341,7 +381,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
             delay = timeInMs;
             delayTimeUnit = TimeUnit.MILLISECONDS;
         }
-        
+
         @Override
         public boolean cancel(boolean mayInterruptIfRunning) {
             return false;

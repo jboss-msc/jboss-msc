@@ -193,4 +193,26 @@ public interface ServiceListener<S> {
      * @param controller the controller
      */
     void transitiveDependencyAvailable(ServiceController<? extends S> controller);
+
+    /**
+     * A problem involving a service dependency occurred.
+     * The possible dependency problems are: {@link #dependencyFailed(ServiceController) start failures}, and
+     * unavailability (both {@link #immediateDependencyUnavailable(ServiceController) immediate} and {@link
+     * #transitiveDependencyUnavailable(ServiceController) transitive)}.
+     * <p>Dependency problems that are occur after this notification do not result in new {@code
+     * dependencyProblem} notifications. A new call to this method will only be made to notify newly found
+     * dependency problems if the previous problems have all been {@link #dependencyProblemCleared(ServiceController)
+     * cleared}.
+     * 
+     * @param controller the controller
+     */
+    void dependencyProblem(ServiceController<? extends S> controller);
+
+    /**
+     * All dependency problems are now cleared.
+     * <br>This method will be invoked only after {@link #dependencyProblem(ServiceController)} is called.
+     * 
+     * @param controller the controller
+     */
+    void dependencyProblemCleared(ServiceController<? extends S> controller);
 }

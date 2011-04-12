@@ -471,6 +471,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 if (failCount > 0) {
                     getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
                 }
+                getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
                 break;
             }
             case START_REQUESTED_to_WONT_START: {
@@ -505,6 +506,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 if (failCount > 0) {
                     getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
                 }
+                getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM, tasks);
                 break;
             }
             case UP_to_STOP_REQUESTED: {
@@ -590,6 +592,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 if (failCount > 0) {
                     getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
                 }
+                getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
             }
             case START_REQUESTED_to_REMOVING:
             case DOWN_to_REMOVING: {
@@ -844,6 +847,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             tasks = new ArrayList<Runnable>(16);
             if (state == Substate.PROBLEM) {
                 getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_AVAILABLE, tasks);
+                if (transitiveUnavailableDepCount == 0 && failCount == 0) {
+                    getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
+                }
             }
             // both unavailable dep counts are 0
             if (transitiveUnavailableDepCount == 0) {
@@ -888,6 +894,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             tasks = new ArrayList<Runnable>(16);
             if (state == Substate.PROBLEM) {
                 getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_AVAILABLE, tasks);
+                if (failCount == 0 && immediateUnavailableDependencies.isEmpty()) {
+                    getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
+                }
             }
             // there are no immediate nor transitive unavailable dependencies
             if (immediateUnavailableDependencies.isEmpty()) {
@@ -984,6 +993,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             tasks = new ArrayList<Runnable>();
             if (state == Substate.PROBLEM) {
                 getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
+                if (transitiveUnavailableDepCount == 0 && immediateUnavailableDependencies.isEmpty()) {
+                    getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
+                }
             }
             tasks.add(new DependencyRetryingTask(getDependents()));
             asyncTasks += tasks.size();
@@ -1325,6 +1337,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         TRANSITIVE_DEPENDENCY_UNAVAILABLE,
         /** Notify the listener that all previously unavailable transitive dependencies are now available. */
         TRANSITIVE_DEPENDENCY_AVAILABLE,
+        /** Notify the listener that one or more dependencies will not start due to a problem. */ 
+        DEPENDENCY_PROBLEM,
+        /** Notify the listener that all dependency problems are now cleared. */
+        DEPENDENCY_PROBLEM_CLEAR,
         /** Notify the listener that the service is going to be removed. */
         REMOVE_REQUESTED,
         /** Notify the listener that the failed to start service is attempting to start again */
@@ -1393,6 +1409,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 case TRANSITIVE_DEPENDENCY_AVAILABLE:
                     listener.transitiveDependencyAvailable(this);
+                    break;
+                case DEPENDENCY_PROBLEM:
+                    listener.dependencyProblem(this);
+                    break;
+                case DEPENDENCY_PROBLEM_CLEAR:
+                    listener.dependencyProblemCleared(this);
                     break;
                 case REMOVE_REQUESTED:
                     listener.serviceRemoveRequested(this);

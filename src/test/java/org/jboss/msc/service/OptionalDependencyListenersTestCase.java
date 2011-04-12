@@ -95,6 +95,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
     public void testOptionalFailedDependencyUninstalledOnNeverMode() throws Exception {
         final Future<StartException> secondServiceFailed = testListener.expectServiceFailure(secondServiceName);
         final Future<ServiceController<?>> firstServiceNoDependencyFailed = testListener.expectNoDependencyFailure(firstServiceName);
+        final Future<ServiceController<?>> firstServiceNoDependencyProblem = testListener.expectNoDependencyProblem(firstServiceName);
 
         //install second service, a fail to start service, set to fail at the first attempt to start
         serviceContainer.addService(secondServiceName, new FailToStartService(true))
@@ -124,12 +125,15 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertNull(firstServiceNoDependencyUninstalled.get());
         // still no immediate missing dependency for first service, as second service was an optional dependency
         assertImmediateUnavailableDependencies(firstController);
+        // no dependency problem should have been notified
+        assertNull(firstServiceNoDependencyProblem.get());
     }
 
     @Test
     public void testOptionalFailedDependencyUninstalled() throws Exception {
         final Future<StartException> secondServiceFailed = testListener.expectServiceFailure(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailed = testListener.expectDependencyFailure(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyProblem = testListener.expectDependencyProblem(firstServiceName);
 
         //install second service, a fail to start service, set to fail at the first attempt to start
         serviceContainer.addService(secondServiceName, new FailToStartService(true))
@@ -145,15 +149,18 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
             .install();
         // a dep failure notification should be send by first service
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceDependencyFailed);
+        assertController(firstController, firstServiceDependencyProblem);
         // no immediate missing dependency should be provided by first service, since second service is available
         assertImmediateUnavailableDependencies(firstController);
 
         final Future<ServiceController<?>> firstServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyProblemCleared = testListener.expectDependencyProblemCleared(firstServiceName);
         final Future<ServiceController<?>> firstServiceDependencyUninstalled = testListener.expectNoImmediateDependencyUnavailable(firstServiceName);
         // remove second service
         serviceContainer.getService(secondServiceName).setMode(Mode.REMOVE);
         // the dep failure should be cleared
-        assertSame(firstController, firstServiceDependencyFailureCleared.get());
+        assertController(firstController, firstServiceDependencyFailureCleared);
+        assertController(firstController, firstServiceDependencyProblemCleared);
         // and a new missing dep notification is expected
         assertNull(firstServiceDependencyUninstalled.get());
         // still no immediate missing dependency for first service, as second service was an optional dependency
@@ -163,6 +170,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
     @Test
     public void testOptionalDependencyUninstalled() throws Exception {
         final Future<ServiceController<?>> secondServiceImmDependencyMissing = testListener.expectImmediateDependencyUnavailable(secondServiceName);
+        final Future<ServiceController<?>> secondServiceDependencyProblem = testListener.expectDependencyProblem(secondServiceName);
         // install second service, that depends on the missing third service
         serviceContainer.addService(secondServiceName, Service.NULL)
             .addListener(testListener)
@@ -170,8 +178,10 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
             .install();
         // a missing dependency notification is expected from second services
         final ServiceController<?> secondController = assertController(secondServiceName, secondServiceImmDependencyMissing);
+        assertController(secondController, secondServiceDependencyProblem);
 
         final Future<ServiceController<?>> firstServiceTransDependencyMissing = testListener.expectTransitiveDependencyUnavailable(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyProblem = testListener.expectDependencyProblem(firstServiceName);
         // install first service, which has an optional dependency on second service
         serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
@@ -179,15 +189,18 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
             .install();
         // a missing dependency notification is also expected from first service
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceTransDependencyMissing);
+        assertController(firstController, firstServiceDependencyProblem);
         // no immediate missing dependency should be provided by first service
         assertImmediateUnavailableDependencies(firstController);
 
         final Future<ServiceController<?>> firstServiceTransDependencyInstall = testListener.expectTransitiveDependencyAvailable(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyProblemCleared = testListener.expectDependencyProblemCleared(firstServiceName);
         final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
         // removing second service is expected to cause its disconnection from the optional dependent first service
         secondController.setMode(Mode.REMOVE);
         // thus resulting in a dependency install notification, and in first service starting
         assertController(firstController, firstServiceTransDependencyInstall);
+        assertController(firstController, firstServiceDependencyProblemCleared);
         assertController(firstController, firstServiceStart);
         // still no immediate missing dependency for first service, as second service was an optional dependency
         assertImmediateUnavailableDependencies(firstController);
@@ -211,16 +224,21 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertImmediateUnavailableDependencies(secondController);
 
         final Future<ServiceController<?>> thirdServiceStop = testListener.expectServiceStop(thirdServiceName);
+        final Future<ServiceController<?>> thirdServiceRemoval = testListener.expectServiceRemoval(thirdServiceName);
         final Future<ServiceController<?>> secondServiceImmDependencyMissing = testListener.expectImmediateDependencyUnavailable(secondServiceName);
+        final Future<ServiceController<?>> secondServiceDependencyProblem = testListener.expectDependencyProblem(secondServiceName);
         // remove thirdService
         thirdController.setMode(Mode.REMOVE);
         // third service should stop, and second service should send a missing dep notification
         assertController(thirdController, thirdServiceStop);
+        assertController(thirdController, thirdServiceRemoval);
         assertController(secondController, secondServiceImmDependencyMissing);
+        assertController(secondController, secondServiceDependencyProblem);
         // second Controller now has one immediate missing dependency
         assertImmediateUnavailableDependencies(secondController, thirdServiceName);
 
         final Future<ServiceController<?>> firstServiceTransDependencyMissing = testListener.expectTransitiveDependencyUnavailable(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyProblem = testListener.expectDependencyProblem(firstServiceName);
         // install firstService, a dependent on second service
         serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
@@ -228,11 +246,14 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
             .install();
         // first service is expected to send a notification of missing dependency
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceTransDependencyMissing);
+        assertController(firstController, firstServiceDependencyProblem);
         assertImmediateUnavailableDependencies(firstController); // first service nas no immediate dependencies
 
         thirdServiceStart = testListener.expectServiceStart(thirdServiceName);
         final Future<ServiceController<?>> secondServiceImmDependencyInstalled = testListener.expectImmediateDependencyAvailable(secondServiceName);
         final Future<ServiceController<?>> firstServiceTransDependencyInstalled = testListener.expectTransitiveDependencyAvailable(firstServiceName);
+        final Future<ServiceController<?>> secondServiceDependencyProblemCleared = testListener.expectDependencyProblemCleared(secondServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyProblemCleared = testListener.expectDependencyProblemCleared(firstServiceName);
         final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
         final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
         // install third service
@@ -243,7 +264,9 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertController(thirdServiceName, thirdServiceStart);
         // second and first service should send a dep installed notification...
         assertController(secondController, secondServiceImmDependencyInstalled);
+        assertController(secondController, secondServiceDependencyProblemCleared);
         assertController(firstController, firstServiceTransDependencyInstalled);
+        assertController(firstController, firstServiceDependencyProblemCleared);
         // and start
         assertController(secondController, secondServiceStart);
         assertController(firstController, firstServiceStart);
@@ -270,6 +293,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertImmediateUnavailableDependencies(firstController);
 
         Future<ServiceController<?>> secondServiceImmDependencyMissing = testListener.expectImmediateDependencyUnavailable(secondServiceName);
+        Future<ServiceController<?>> secondServiceDependencyProblem = testListener.expectDependencyProblem(secondServiceName);
         // install second service with dependencies on the missing third and fourth services
         serviceContainer.addService(secondServiceName, Service.NULL)
             .addListener(testListener)
@@ -277,6 +301,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
             .install();
         // a dep missing notification is expected from second service
         ServiceController<?> secondController = assertController(secondServiceName, secondServiceImmDependencyMissing);
+        assertController(secondController, secondServiceDependencyProblem);
         // this are the services that second service is missing as immediate dependencies
         assertImmediateUnavailableDependencies(secondController, thirdServiceName, fourthServiceName);
         // while first controller continues disconnected from second service, and hence is still in the up state
@@ -325,6 +350,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
 
         final Future<ServiceController<?>> secondServiceDependencyFailure = testListener.expectDependencyFailure(secondServiceName);
         secondServiceImmDependencyMissing = testListener.expectImmediateDependencyUnavailable(secondServiceName);
+        secondServiceDependencyProblem = testListener.expectDependencyProblem(secondServiceName);
         // reinstall second service
         serviceContainer.addService(secondServiceName, Service.NULL)
             .addListener(testListener)
@@ -333,6 +359,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         // a dependency failure notification is expected now from second service
         secondController = assertController(secondServiceName, secondServiceDependencyFailure);
         assertController(secondController, secondServiceImmDependencyMissing);
+        assertController(secondController, secondServiceDependencyProblem);
         assertImmediateUnavailableDependencies(secondController, thirdServiceName);
 
         firstServiceStop = testListener.expectServiceStop(firstServiceName);
@@ -350,6 +377,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
     @Test
     public void testOptionalDependencyInstalledFirst() throws Exception {
         final Future<ServiceController<?>> thirdServiceDependencyFailed = testListener.expectDependencyFailure(thirdServiceName);
+        Future<ServiceController<?>> thirdServiceDependencyProblem = testListener.expectDependencyProblem(thirdServiceName);
         final Future<StartException> fourthServiceFailed = testListener.expectServiceFailure(fourthServiceName);
         // install thirdService and fourthService
         // thirdService depends on fourthService...
@@ -364,6 +392,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertFailure(fourthServiceName, fourthServiceFailed);
         // a dependencyFailure notification is expected by thirdService
         ServiceController<?> thirdController = assertController(thirdServiceName, thirdServiceDependencyFailed);
+        assertController(thirdController, thirdServiceDependencyProblem);
 
         final Future<ServiceController<?>> secondServiceNoDependencyFailed = testListener.expectNoDependencyFailure(secondServiceName);
         final Future<ServiceController<?>> firstServiceNoDependencyFailed = testListener.expectNoDependencyFailure(firstServiceName);
@@ -384,10 +413,12 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertNull(firstServiceNoDependencyFailed.get());
 
         final Future<ServiceController<?>> thirdServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(thirdServiceName);
+        Future<ServiceController<?>> thirdServiceDependencyProblemCleared = testListener.expectDependencyProblemCleared(thirdServiceName);
         // set third service mode to never
         thirdController.setMode(Mode.NEVER);
         // the failure is expected to be cleared
         assertController(thirdController, thirdServiceDependencyFailureCleared);
+        assertController(thirdController, thirdServiceDependencyProblemCleared);
 
         Future<ServiceController<?>> thirdServiceStart = testListener.expectServiceStart(thirdServiceName);
         Future<ServiceController<?>> fourthServiceStart = testListener.expectServiceStart(fourthServiceName);
@@ -405,14 +436,18 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
 
         Future<ServiceController<?>> thirdServiceStop = testListener.expectServiceStop(thirdServiceName);
         Future<ServiceController<?>> thirdServiceImmMissingDependency = testListener.expectImmediateDependencyUnavailable(thirdServiceName);
+        thirdServiceDependencyProblem = testListener.expectDependencyProblem(thirdServiceName);
         Future<ServiceController<?>> secondServiceStop = testListener.expectServiceStop(secondServiceName);
         Future<ServiceController<?>> secondServiceTransMissingDependency = testListener.expectTransitiveDependencyUnavailable(secondServiceName);
+        final Future<ServiceController<?>> secondServiceDependencyProblem = testListener.expectDependencyProblem(secondServiceName);
         // remove fourth service
         fourthController.setMode(Mode.REMOVE);
         assertController(thirdController, thirdServiceStop);
         // the missing dependency is expected to reach the entire dependency chain
         assertController(thirdController, thirdServiceImmMissingDependency);
+        assertController(thirdController, thirdServiceDependencyProblem);
         assertController(secondController, secondServiceTransMissingDependency);
+        assertController(secondController, secondServiceDependencyProblem);
         // and second service should stop
         assertController(secondController, secondServiceStop);
         // only third service has an immediate missing dependency
@@ -421,7 +456,9 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertImmediateUnavailableDependencies(firstController);
 
         Future<ServiceController<?>> secondServiceTransDependencyInstalled = testListener.expectTransitiveDependencyAvailable(secondServiceName);
+        final Future<ServiceController<?>> secondServiceDependencyProblemCleared = testListener.expectDependencyProblemCleared(secondServiceName);
         Future<ServiceController<?>> thirdServiceImmDependencyInstalled = testListener.expectImmediateDependencyAvailable(thirdServiceName);
+        thirdServiceDependencyProblemCleared = testListener.expectDependencyProblemCleared(thirdServiceName);
         fourthServiceStart = testListener.expectServiceStart(fourthServiceName);
         thirdServiceStart = testListener.expectServiceStart(thirdServiceName);
         secondServiceStart = testListener.expectServiceStart(secondServiceName);
@@ -430,7 +467,9 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         fourthController = assertController(fourthServiceName, fourthServiceStart);
         // all dep chain must send the dependency installed notification
         assertController(thirdController, thirdServiceImmDependencyInstalled);
+        assertController(thirdController, thirdServiceDependencyProblemCleared);
         assertController(secondController, secondServiceTransDependencyInstalled);
+        assertController(secondController, secondServiceDependencyProblemCleared);
         // and second and third service should both start
         assertController(thirdController, thirdServiceStart);
         assertController(secondController, secondServiceStart);
@@ -457,6 +496,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertController(fourthController, fourthServiceRemoval);
 
         final Future<ServiceController<?>> thirdServiceImmDependencyMissing = testListener.expectImmediateDependencyUnavailable(thirdServiceName);
+        thirdServiceDependencyProblem = testListener.expectDependencyProblem(thirdServiceName);
         final Future<ServiceController<?>> secondServiceTransDependencyMissing = testListener.expectNoTransitiveDependencyUnavailable(secondServiceName);
         // reinstall third service with dependency on missing fourth service
         serviceContainer.addService(thirdServiceName, Service.NULL)
@@ -466,6 +506,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
             .install();
         // dependency missing notification expected
         thirdController = assertController(thirdServiceName, thirdServiceImmDependencyMissing);
+        assertController(thirdController, thirdServiceDependencyProblem);
         // dependency missing notification is not expected from second service, as it is still disconnected from its
         // optional dependency
         assertNull(secondServiceTransDependencyMissing.get());
@@ -473,6 +514,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertImmediateUnavailableDependencies(thirdController, fourthServiceName);
 
         thirdServiceImmDependencyInstalled = testListener.expectImmediateDependencyAvailable(thirdServiceName);
+        thirdServiceDependencyProblemCleared = testListener.expectDependencyProblemCleared(thirdServiceName);
         fourthServiceStart = testListener.expectServiceStart(fourthServiceName);
         // reinstall fourth service
         serviceContainer.addService(fourthServiceName, Service.NULL)
@@ -482,6 +524,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         fourthController = assertController(fourthServiceName, fourthServiceStart);
         // and third service should send a notification that the missing deps are now installed
         assertController(thirdController, thirdServiceImmDependencyInstalled);
+        assertController(thirdController, thirdServiceDependencyProblemCleared);
         // third service has no longer an immediate missing dependency
         assertImmediateUnavailableDependencies(thirdController);
     }
@@ -489,7 +532,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
     @Test
     public void testFailedOptionalDependency() throws Exception {
         Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
-        Future<ServiceController<?>> firstServiceUninstalled = testListener.expectNoImmediateDependencyUnavailable(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDepUninstalled = testListener.expectNoImmediateDependencyUnavailable(firstServiceName);
         // add firstService with an optional dependency on missing secondService
         serviceContainer.addService(firstServiceName, Service.NULL)
             .addOptionalDependency(secondServiceName)
@@ -560,18 +603,22 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
 
         Future<StartException> secondServiceFailed = testListener.expectServiceFailure(secondServiceName);
         Future<ServiceController<?>> firstServiceDependencyFailed = testListener.expectDependencyFailure(firstServiceName);
+        Future<ServiceController<?>> firstServiceDependencyProblem = testListener.expectNoDependencyProblem(firstServiceName);
         // move firstService to ACTIVE mode, triggering the start process of secondService
         firstController.setMode(Mode.ACTIVE);
         // secondService is expected to fail
         assertFailure(secondServiceName, secondServiceFailed);
         // dependency failure notification is expected
         assertController(firstController, firstServiceDependencyFailed);
+        assertController(firstController, firstServiceDependencyProblem);
 
         Future<ServiceController<?>> firstServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
+        Future<ServiceController<?>> firstServiceDependencyProblemCleared = testListener.expectDependencyProblemCleared(firstServiceName);
         // retry firstService start
         firstController.setMode(Mode.NEVER);
         // firstService is supposed to receive a dependencyFailureCleared notification
         assertController(firstController, firstServiceDependencyFailureCleared);
+        assertController(firstController, firstServiceDependencyProblemCleared);
 
         firstServiceStart = testListener.expectServiceStart(firstServiceName);
         secondServiceStart = testListener.expectServiceStart(secondServiceName);
@@ -639,6 +686,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
 
         final Future<ServiceController<?>> secondServiceDependencyFailed = testListener.expectDependencyFailure(secondServiceName);
         firstServiceDependencyFailed = testListener.expectDependencyFailure(firstServiceName);
+        firstServiceDependencyProblem = testListener.expectDependencyProblem(firstServiceName);
         // install thridService, a failToStart service, set to fail on the first attempt to start it
         serviceContainer.addService(thirdServiceName, new FailToStartService(true)).install();
         // install secondService, that depends on thirdService...
@@ -654,8 +702,10 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         secondController = assertController(secondServiceName, secondServiceDependencyFailed);
         // and it is expected to reach the entire dependent chain, including firstService
         assertController(firstController, firstServiceDependencyFailed);
+        assertController(firstController, firstServiceDependencyProblem);
 
         firstServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
+        firstServiceDependencyProblemCleared = testListener.expectDependencyProblemCleared(firstServiceName);
         firstServiceStart = testListener.expectServiceStart(firstServiceName);
         secondServiceRemoval = testListener.expectServiceRemoval(secondServiceName);
         // remove secondService
@@ -663,11 +713,12 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertController(secondController, secondServiceRemoval);
         // a dependency retrying is expected
         assertController(firstController, firstServiceDependencyFailureCleared);
+        assertController(firstController, firstServiceDependencyProblemCleared);
         // firstService is expected to start
         assertController(firstController, firstServiceStart);
 
         // during the entire test, firstService is not expected to notify of an uninstalled dependency
-        assertNull(firstServiceUninstalled.get());
+        assertNull(firstServiceDepUninstalled.get());
     }
 
     @Test
@@ -676,6 +727,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
         final Future<ServiceController<?>> secondServiceDependencyFailed = testListener.expectNoDependencyFailure(secondServiceName);
         final Future<ServiceController<?>> secondServiceImmDependencyMissing = testListener.expectNoImmediateDependencyUnavailable(secondServiceName);
+        final Future<ServiceController<?>> secondServiceDependencyProblem = testListener.expectNoDependencyProblem(secondServiceName);
         // install first and second services; first service depends on second service...
         serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
@@ -694,8 +746,10 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
 
         Future<StartException> fourthServiceFailed = testListener.expectServiceFailure(fourthServiceName);
         Future<ServiceController<?>> fifthServiceImmDependencyMissing = testListener.expectImmediateDependencyUnavailable(fifthServiceName);
+        Future<ServiceController<?>> fifthServiceDependencyProblem = testListener.expectDependencyProblem(fifthServiceName);
         Future<ServiceController<?>> thirdServiceDependencyFailure = testListener.expectDependencyFailure(thirdServiceName);
         Future<ServiceController<?>> thirdServiceTransDependencyMissing = testListener.expectTransitiveDependencyUnavailable(thirdServiceName);
+        Future<ServiceController<?>> thirdServiceDependencyProblem = testListener.expectDependencyProblem(thirdServiceName);
         // install third service, with a dependency on fourth and fifth services
         serviceContainer.addService(thirdServiceName, Service.NULL)
             .addListener(testListener)
@@ -714,9 +768,11 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertNotNull(fourthServiceFailed.get());
         // the missing dependency notification (sixth service) should be sent by both fifth and third services 
         final ServiceController<?> fifthController = assertController(fifthServiceName, fifthServiceImmDependencyMissing);
+        assertController(fifthController, fifthServiceDependencyProblem);
         final ServiceController<?> thirdController = assertController(thirdServiceName, thirdServiceTransDependencyMissing);
         // and the dependency failure notification should be send by third service
         assertController(thirdController, thirdServiceDependencyFailure);
+        assertController(thirdController, thirdServiceDependencyProblem);
         // third service has no missing dependencies
         assertImmediateUnavailableDependencies(thirdController);
         // and fifth service has one missing dependency
@@ -728,6 +784,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
 
         Future<ServiceController<?>> sixthServiceStart = testListener.expectServiceStart(sixthServiceName);
         Future<ServiceController<?>> fifthServiceImmDependencyInstall = testListener.expectImmediateDependencyAvailable(fifthServiceName);
+        final Future<ServiceController<?>> fifthServiceDependencyProblemCleared = testListener.expectDependencyProblemCleared(fifthServiceName);
         Future<ServiceController<?>> fifthServiceStart = testListener.expectServiceStart(fifthServiceName);
         Future<ServiceController<?>> thirdServiceTransDependencyInstall = testListener.expectTransitiveDependencyAvailable(thirdServiceName);
         // install sixth service
@@ -737,6 +794,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         final ServiceController<?> sixthController = assertController(sixthServiceName, sixthServiceStart);
         // the dependency install notification is expected from fifth and third service
         assertController(fifthController, fifthServiceImmDependencyInstall);
+        assertController(fifthController, fifthServiceDependencyProblemCleared);
         assertController(thirdController, thirdServiceTransDependencyInstall);
         // fifth service can now start
         assertController(fifthController, fifthServiceStart);
@@ -748,14 +806,17 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
 
         final Future<ServiceController<?>> sixthServiceRemoval = testListener.expectServiceRemoval(sixthServiceName);
         fifthServiceImmDependencyMissing = testListener.expectImmediateDependencyUnavailable(fifthServiceName);
+        fifthServiceDependencyProblem = testListener.expectDependencyProblem(fifthServiceName);
         thirdServiceTransDependencyMissing = testListener.expectTransitiveDependencyUnavailable(thirdServiceName);
         // remove sixth service
         sixthController.setMode(Mode.REMOVE);
         assertController(sixthController, sixthServiceRemoval);
         // the dependency missing notification is expected from both third and fifth services
         assertController(fifthController, fifthServiceImmDependencyMissing);
+        assertController(fifthController, fifthServiceDependencyProblem);
         assertImmediateUnavailableDependencies(fifthController, sixthServiceName);
         assertController(thirdController, thirdServiceTransDependencyMissing);
+        assertController(thirdController, thirdServiceDependencyProblem);
         assertImmediateUnavailableDependencies(thirdController);
         // meanwhile, first and second services are in the up state
         assertSame(State.UP, firstController.getState());
@@ -764,19 +825,23 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertImmediateUnavailableDependencies(secondController);
 
         final Future<ServiceController<?>> thirdServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(thirdServiceName);
+        final Future<ServiceController<?>> thirdServiceImmDependencyUnavailable = testListener.expectImmediateDependencyUnavailable(thirdServiceName);
         ServiceController<?> fourthController = serviceContainer.getService(fourthServiceName);
         // move fourth service to never mode, thus clearing the failure to start
         fourthController.setMode(Mode.NEVER);
         // dependency failure cleared expected from third service 
         assertController(thirdController, thirdServiceDependencyFailureCleared);
+        assertController(thirdController, thirdServiceImmDependencyUnavailable);
         // first and second services are still in the up state
         assertSame(State.UP, firstController.getState());
         assertSame(State.UP, secondController.getState());
 
+        final Future<ServiceController<?>> thirdServiceImmDependencyAvailable = testListener.expectImmediateDependencyAvailable(thirdServiceName);
         final Future<ServiceController<?>> fourthServiceStart = testListener.expectServiceStart(fourthServiceName);
         // renable fourth service, thus making it start
         fourthController.setMode(Mode.ACTIVE);
         assertController(fourthController, fourthServiceStart);
+        assertController(thirdController, thirdServiceImmDependencyAvailable);
         // first and second services still in the up state
         assertSame(State.UP, firstController.getState());
         assertSame(State.UP, secondController.getState());
@@ -800,6 +865,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         fifthServiceStart = testListener.expectServiceStart(fifthServiceName);
         sixthServiceStart = testListener.expectServiceStart(sixthServiceName);
         final Future<ServiceController<?>> thirdServiceImmDependencyInstall = testListener.expectImmediateDependencyAvailable(thirdServiceName);
+        Future<ServiceController<?>> thirdServiceDependencyProblemCleared = testListener.expectDependencyProblemCleared(thirdServiceName);
         // reinstall fifth and sixth services
         serviceContainer.addService(fifthServiceName, Service.NULL)
             .addListener(testListener)
@@ -812,11 +878,12 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertController(fifthServiceName, fifthServiceStart);
         // a dependency install notification is expected from third service
         assertController(thirdController, thirdServiceImmDependencyInstall);
+        assertController(thirdController, thirdServiceDependencyProblemCleared);
         // third service has no missing dependencies this time
         assertImmediateUnavailableDependencies(thirdController);
         // which can now start
         assertController(thirdController, thirdServiceStart);
-        // depite that, nothing has changed with the state of first and second services
+        // despite that, nothing has changed with the state of first and second services
         assertSame(State.UP, firstController.getState());
         assertSame(State.UP, secondController.getState());
 
@@ -832,14 +899,17 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         // no notification of dependency failures or missing dependencies should have reached second service
         assertNull(secondServiceDependencyFailed.get());
         assertNull(secondServiceImmDependencyMissing.get());
+        assertNull(secondServiceDependencyProblem.get());
     }
 
     @Test
     public void testOptionalDependencyWithFailedAndMissingDependencies() throws Exception {
         Future<StartException> fourthServiceFailed = testListener.expectServiceFailure(fourthServiceName);
         Future<ServiceController<?>> fifthServiceImmDependencyMissing = testListener.expectImmediateDependencyUnavailable(fifthServiceName);
+        Future<ServiceController<?>> fifthServiceDependencyProblem = testListener.expectDependencyProblem(fifthServiceName);
         Future<ServiceController<?>> thirdServiceDependencyFailure = testListener.expectDependencyFailure(thirdServiceName);
         Future<ServiceController<?>> thirdServiceTransDependencyMissing = testListener.expectTransitiveDependencyUnavailable(thirdServiceName);
+        Future<ServiceController<?>> thirdServiceDependencyProblem = testListener.expectDependencyProblem(thirdServiceName);
         // install third service with dependency on fourth and fifth services
         serviceContainer.addService(thirdServiceName, Service.NULL)
             .addListener(testListener)
@@ -858,18 +928,22 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertFailure(fourthServiceName, fourthServiceFailed);
         // fifth service should notify of a missing dependency
         final ServiceController<?> fifthController = assertController(fifthServiceName, fifthServiceImmDependencyMissing);
+        assertController(fifthController, fifthServiceDependencyProblem);
         // and third service should notify of the dependency failure (fourth service)
         final ServiceController<?> thirdController = assertController(thirdServiceName, thirdServiceDependencyFailure);
         // plus, of the missing dependency (fifth service -> sixth service)
         assertController(thirdController, thirdServiceTransDependencyMissing);
+        assertController(thirdController, thirdServiceDependencyProblem);
         // fifth serivce have one immediate missing dependency, and third service has none
         assertImmediateUnavailableDependencies(fifthController, sixthServiceName);
         assertImmediateUnavailableDependencies(thirdController);
 
         Future<ServiceController<?>> firstServiceDependencyFailed = testListener.expectDependencyFailure(firstServiceName);
         Future<ServiceController<?>> firstServiceTransDependencyMissing = testListener.expectTransitiveDependencyUnavailable(firstServiceName);
+        Future<ServiceController<?>> firstServiceDependencyProblem = testListener.expectDependencyProblem(firstServiceName);
         Future<ServiceController<?>> secondServiceDependencyFailed = testListener.expectDependencyFailure(secondServiceName);
         Future<ServiceController<?>> secondServiceTransDependencyMissing = testListener.expectTransitiveDependencyUnavailable(secondServiceName);
+        Future<ServiceController<?>> secondServiceDependencyProblem = testListener.expectDependencyProblem(secondServiceName);
         // install second service with a dependency on third service...
         serviceContainer.addService(secondServiceName, Service.NULL)
             .addListener(testListener)
@@ -878,6 +952,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         // second service should notify the dependency failure and the missing dependency
         final ServiceController<?> secondController = assertController(secondServiceName, secondServiceDependencyFailed);
         assertController(secondController, secondServiceTransDependencyMissing);
+        assertController(secondController, secondServiceDependencyProblem);
 
         // ... and install first service with a dependency on second service
         serviceContainer.addService(firstServiceName, Service.NULL)
@@ -887,12 +962,14 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         // first service should also notify the missing/failed dependencies
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceDependencyFailed);
         assertController(firstController, firstServiceTransDependencyMissing);
+        assertController(firstController, firstServiceDependencyProblem);
         // neither first nor second service has any immediate missing dependencies 
         assertImmediateUnavailableDependencies(firstController);
         assertImmediateUnavailableDependencies(secondController);
 
         Future<ServiceController<?>> sixthServiceStart = testListener.expectServiceStart(sixthServiceName);
         Future<ServiceController<?>> fifthServiceImmDependencyInstall = testListener.expectImmediateDependencyAvailable(fifthServiceName);
+        final Future<ServiceController<?>> fifthServiceDependencyProblemCleared = testListener.expectDependencyProblemCleared(fifthServiceName);
         Future<ServiceController<?>> fifthServiceStart = testListener.expectServiceStart(fifthServiceName);
         Future<ServiceController<?>> thirdServiceTransDependencyInstall = testListener.expectTransitiveDependencyAvailable(thirdServiceName);
         Future<ServiceController<?>> secondServiceTransDependencyInstall = testListener.expectTransitiveDependencyAvailable(secondServiceName);
@@ -904,6 +981,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         final ServiceController<?> sixthController = assertController(sixthServiceName, sixthServiceStart);
         // the dependency install notification is supposed to reach the entire dependent chain
         assertController(fifthController, fifthServiceImmDependencyInstall);
+        assertController(fifthController, fifthServiceDependencyProblemCleared);
         assertController(thirdController, thirdServiceTransDependencyInstall);
         assertController(secondController, secondServiceTransDependencyInstall);
         assertController(firstController, firstServiceTransDependencyInstall);
@@ -919,6 +997,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> sixthServiceRemoval = testListener.expectServiceRemoval(sixthServiceName);
         final Future<ServiceController<?>> fifthServiceStop = testListener.expectServiceStop(fifthServiceName);
         fifthServiceImmDependencyMissing = testListener.expectImmediateDependencyUnavailable(fifthServiceName);
+        fifthServiceDependencyProblem = testListener.expectDependencyProblem(fifthServiceName);
         thirdServiceTransDependencyMissing = testListener.expectTransitiveDependencyUnavailable(thirdServiceName);
         secondServiceTransDependencyMissing = testListener.expectTransitiveDependencyUnavailable(secondServiceName);
         firstServiceTransDependencyMissing = testListener.expectTransitiveDependencyUnavailable(firstServiceName);
@@ -927,6 +1006,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertController(sixthController, sixthServiceRemoval);
         // the entire chain should send the dependency uninstalled notification
         assertController(fifthController, fifthServiceImmDependencyMissing);
+        assertController(fifthController, fifthServiceDependencyProblem);
         assertController(thirdController, thirdServiceTransDependencyMissing);
         assertController(secondController, secondServiceTransDependencyMissing);
         assertController(firstController, firstServiceTransDependencyMissing);
@@ -940,6 +1020,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertImmediateUnavailableDependencies(firstController);
 
         final Future<ServiceController<?>> thirdServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(thirdServiceName);
+        final Future<ServiceController<?>> thirdServiceImmDependencyUnavailable = testListener.expectImmediateDependencyUnavailable(thirdServiceName);
         final Future<ServiceController<?>> secondServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
         final ServiceController<?> fourthController = serviceContainer.getService(fourthServiceName);
@@ -947,14 +1028,17 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         fourthController.setMode(Mode.NEVER);
         // the failure should be cleared
         assertController(thirdController, thirdServiceDependencyFailureCleared);
+        assertController(thirdController, thirdServiceImmDependencyUnavailable);
         assertController(secondController, secondServiceDependencyFailureCleared);
         assertController(firstController, firstServiceDependencyFailureCleared);
 
         final Future<ServiceController<?>> fourthServiceStart = testListener.expectServiceStart(fourthServiceName);
+        final Future<ServiceController<?>> thirdServiceImmDependencyAvailable = testListener.expectImmediateDependencyAvailable(thirdServiceName);
         // move fourth service back to active mode triggers a new attempt to start
         fourthController.setMode(Mode.ACTIVE);
         // .. that is successful this time
         assertController(fourthController, fourthServiceStart);
+        assertController(thirdController, thirdServiceImmDependencyAvailable);
 
         thirdServiceTransDependencyInstall = testListener.expectTransitiveDependencyAvailable(thirdServiceName);
         final Future<ServiceController<?>> thirdServiceImmDependencyMissing = testListener.expectImmediateDependencyUnavailable(thirdServiceName);
@@ -979,14 +1063,17 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertImmediateUnavailableDependencies(secondController);
         assertImmediateUnavailableDependencies(firstController);
 
-        final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
-        final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
+        Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
+        Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
         final Future<ServiceController<?>> thirdServiceStart = testListener.expectServiceStart(thirdServiceName);
         fifthServiceStart = testListener.expectServiceStart(fifthServiceName);
         sixthServiceStart = testListener.expectServiceStart(sixthServiceName);
         final Future<ServiceController<?>> thirdServiceImmDependencyInstall = testListener.expectImmediateDependencyAvailable(thirdServiceName);
+        final Future<ServiceController<?>> thirdServiceDependencyProblemCleared = testListener.expectDependencyProblemCleared(thirdServiceName);
         secondServiceTransDependencyInstall = testListener.expectTransitiveDependencyAvailable(secondServiceName);
+        final Future<ServiceController<?>> secondServiceDependencyProblemCleared = testListener.expectDependencyProblemCleared(secondServiceName);
         firstServiceTransDependencyInstall = testListener.expectTransitiveDependencyAvailable(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyProblemCleared = testListener.expectDependencyProblemCleared(firstServiceName);
         // reinstall fifth and sixth services
         serviceContainer.addService(fifthServiceName, Service.NULL)
             .addListener(testListener)
@@ -1000,8 +1087,11 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         assertController(fifthServiceName, fifthServiceStart);
         // the same goes for the rest of the chain, that should also notify of the dependency install
         assertController(thirdController, thirdServiceImmDependencyInstall);
+        assertController(thirdController, thirdServiceDependencyProblemCleared);
         assertController(secondController, secondServiceTransDependencyInstall);
+        assertController(secondController, secondServiceDependencyProblemCleared);
         assertController(firstController, firstServiceTransDependencyInstall);
+        assertController(firstController, firstServiceDependencyProblemCleared);
         assertController(thirdController, thirdServiceStart);
         assertController(secondController, secondServiceStart);
         assertController(firstController, firstServiceStart);
@@ -1012,12 +1102,16 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
 
         final Future<ServiceController<?>> thirdServiceStop = testListener.expectServiceStop(thirdServiceName);
         final Future<ServiceController<?>> secondServiceStop = testListener.expectServiceStop(secondServiceName);
+        secondServiceStart = testListener.expectServiceStart(secondServiceName);
         final Future<ServiceController<?>> firstServiceStop = testListener.expectServiceStop(firstServiceName);
+        firstServiceStart = testListener.expectServiceStart(firstServiceName);
         // move third service to never mode
         thirdController.setMode(Mode.NEVER);
         // the dependents of third service are also expected to stop
         assertController(thirdController, thirdServiceStop);
         assertController(secondController, secondServiceStop);
         assertController(firstController, firstServiceStop);
+        assertController(secondController, secondServiceStart);
+        assertController(firstController, firstServiceStart);
     }
 }

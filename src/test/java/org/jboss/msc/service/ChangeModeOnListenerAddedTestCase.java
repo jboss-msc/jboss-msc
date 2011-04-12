@@ -1089,22 +1089,32 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
 
         @Override
         public void immediateDependencyUnavailable(ServiceController<?> controller) {
-            unexpectedCalls.append("immediateDependencyUninstalled\n");
+            unexpectedCalls.append("immediateDependencyUnavailable\n");
         }
 
         @Override
         public void immediateDependencyAvailable(ServiceController<?> controller) {
-            unexpectedCalls.append("immediateDependencyInstalled\n");
+            unexpectedCalls.append("immediateDependencyAvailable\n");
         }
 
         @Override
         public void transitiveDependencyUnavailable(ServiceController<?> controller) {
-            unexpectedCalls.append("transitiveDependencyUninstalled\n");
+            unexpectedCalls.append("transitiveDependencyUnavailable\n");
         }
 
         @Override
         public void transitiveDependencyAvailable(ServiceController<?> controller) {
-            unexpectedCalls.append("transitiveDependencyInstalled\n");
+            unexpectedCalls.append("transitiveDependencyAvailable\n");
+        }
+
+        @Override
+        public void dependencyProblem(ServiceController<?> controller) {
+            unexpectedCalls.append("dependencyProblem\n");
+        }
+
+        @Override
+        public void dependencyProblemCleared(ServiceController<?> controller) {
+            unexpectedCalls.append("dependencyProblemCleared\n");
         }
     }
 }
