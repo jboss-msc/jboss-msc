@@ -407,13 +407,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     return Transition.PROBLEM_to_DOWN;
                 }
                 else if (immediateUnavailableDependencies.isEmpty() && transitiveUnavailableDepCount == 0 && failCount == 0) {
-                    if (listeners.isEmpty()) {
-                        if (downDependencies == 0) {
-                            return Transition.PROBLEM_to_START_INITIATING;
-                        } // if ndownDependencies > 0, go to START_REQUESTED, even when there are no listeners
-                    } else {
+                    if (downDependencies > 0) {
                         return Transition.PROBLEM_to_START_REQUESTED;
                     }
+                    return Transition.PROBLEM_to_START_INITIATING;
                 }
                 break;
             }
@@ -594,7 +591,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
             }
-            case START_REQUESTED_to_REMOVING:
+            case START_REQUESTED_to_REMOVING: {
+                getListenerTasks(ListenerNotification.START_REQUEST_CLEARED, tasks);
+            }
             case DOWN_to_REMOVING: {
                 tasks.add(new ServiceUnavailableTask());
             }
@@ -618,9 +617,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             case WONT_START_to_START_REQUESTED: {
                 tasks.add(new ServiceAvailableTask());
             }
-            case PROBLEM_to_START_REQUESTED:
             case DOWN_to_START_REQUESTED: {
                 getListenerTasks(ListenerNotification.START_REQUESTED, tasks);
+            }
+            case PROBLEM_to_START_REQUESTED: {
                 lifecycleTime = System.nanoTime();
                 break;
             }
