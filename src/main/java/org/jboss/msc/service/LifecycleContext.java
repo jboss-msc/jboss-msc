@@ -63,8 +63,13 @@ public interface LifecycleContext extends Executor {
 
     /**
      * Execute a task asynchronously using the MSC task executor.
+     * <p>
+     * <strong>Note:</strong> This method should not be used for executing tasks that may block,
+     * particularly from within a service's {@link Service#start(StartContext)} or {@link Service#stop(StopContext)}
+     * methods. See {@link Service the Service class javadoc} for further details.
      *
      * @param command the command to execute
      */
+    @Override
     void execute(Runnable command);
 }
