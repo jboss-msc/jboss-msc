@@ -119,6 +119,42 @@ public interface ServiceListener<S> {
     void failedServiceStopped(ServiceController<? extends S> controller);
 
     /**
+     * The service is waiting for its dependencies to be {@link ServiceController.State#UP UP}.<P> Only services  in {@link
+     * ServiceController.Mode#PASSIVE PASSIVE} and {@link ServiceController.Mode#ON_DEMAND ON_DEMAND} mode wait
+     * for dependencies to start before being {@link #serviceStartRequested(ServiceController) requested to start}. For
+     * all the other modes, a service will be requested to start as soon as it is installed, regardless of its
+     * dependencies status. If one of the dependencies have any blocking issues preventing it from start, the service will notify a {@link
+     * #dependencyProblem(ServiceController) dependency problem} instead of {@code serviceWaiting}.
+     *
+     * @param controller the controller
+     */
+    void serviceWaiting(ServiceController<? extends S> controller);
+
+    /**
+     * The service is no longer waiting for its dependencies to be {@link ServiceController.State#UP UP}.<p>This
+     * notification can be sent in two occasions. The first one is when all down dependencies have started. A service
+     * will also notify it is no longer waiting for its dependencies whenever its mode is set to a value different than
+     * {@link ServiceController.Mode#PASSIVE PASSIVE} and {@link ServiceController.Mode#ON_DEMAND ON_DEMAND}.
+     *
+     * @param controller the controller
+     */
+    void serviceWaitingCleared(ServiceController<? extends S> controller);
+
+    /**
+     * The service is on {@link ServiceController.Mode.NEVER NEVER} mode and hence will not start.
+     *
+     * @param controller the controller
+     */
+    void serviceWontStart(ServiceController<? extends S> controller);
+
+    /**
+     * The service is no longer on {@link ServiceController.Mode.NEVER NEVER} mode.
+     *
+     * @param controller the controller
+     */
+    void serviceWontStartCleared(ServiceController<? extends S> controller);
+
+    /**
      * The service is going to be removed.  Called when the service mode is changed to {@code REMOVE}.
      *
      * @param controller the controller

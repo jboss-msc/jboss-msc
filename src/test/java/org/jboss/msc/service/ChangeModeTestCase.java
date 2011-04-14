@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import static junit.framework.Assert.assertNull;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
@@ -59,8 +60,10 @@ public class ChangeModeTestCase extends AbstractServiceTest {
      */
     private ServiceController<?> getRemovedFirstController() throws Exception {
         final ServiceController<?> firstController = getNeverModeFirstController();
+        final Future<ServiceController<?>> firstServiceWontStartCleared = testListener.expectServiceWontStartCleared(firstServiceName);
         final Future<ServiceController<?>> firstServiceRemoval = testListener.expectServiceRemoval(firstServiceName);
         assertTrue(firstController.compareAndSetMode(Mode.NEVER, Mode.REMOVE));
+        assertController(firstController, firstServiceWontStartCleared);
         assertController(firstController, firstServiceRemoval);
         return firstController;
     }
@@ -165,12 +168,14 @@ public class ChangeModeTestCase extends AbstractServiceTest {
      */
     private final ServiceController<?> getNeverModeFirstController() throws Exception {
         final Future<ServiceController<?>> firstServiceListenerAdded = testListener.expectListenerAdded(firstServiceName);
+        final Future<ServiceController<?>> firstServiceWontStart = testListener.expectServiceWontStart(firstServiceName);
         final ServiceController<?> firstController = serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
             .setInitialMode(Mode.NEVER)
             .install();
         assertController(firstServiceName, firstController);
         assertController(firstController, firstServiceListenerAdded);
+        assertController(firstController, firstServiceWontStart);
         assertSame(State.DOWN, firstController.getState());
         return firstController;
     }
@@ -190,15 +195,20 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     @Test
     public void changeNeverToOnDemand() throws Exception {
         final ServiceController<?> firstController = getNeverModeFirstController();
+        final Future<ServiceController<?>> firstServiceWontStartCleared = testListener.expectServiceWontStartCleared(firstServiceName);
+        final Future<ServiceController<?>> firstServiceWaiting = testListener.expectServiceWaiting(firstServiceName);
         firstController.setMode(Mode.ON_DEMAND);
-        assertSame(State.DOWN, firstController.getState());
+        assertController(firstController, firstServiceWontStartCleared);
+        assertController(firstController, firstServiceWaiting);
     }
 
     @Test
     public void changeNeverToPassive() throws Exception {
         final ServiceController<?> firstController = getNeverModeFirstController();
+        final Future<ServiceController<?>> firstServiceWontStartCleared = testListener.expectServiceWontStartCleared(firstServiceName);
         final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
         firstController.setMode(Mode.PASSIVE);
+        assertController(firstController, firstServiceWontStartCleared);
         assertController(firstController, firstServiceStart);
     }
 
@@ -210,9 +220,11 @@ public class ChangeModeTestCase extends AbstractServiceTest {
             .addDependency(firstServiceName).addListener(testListener).install();
         assertController(secondServiceName, secondController);
         assertController(secondController, secondServiceListenerAdded);
+        final Future<ServiceController<?>> firstServiceWontStartCleared = testListener.expectServiceWontStartCleared(firstServiceName);
         final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
         final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
         firstController.setMode(Mode.PASSIVE);
+        assertController(firstController, firstServiceWontStartCleared);
         assertController(firstController, firstServiceStart);
         assertController(secondController, secondServiceStart);
     }
@@ -226,10 +238,14 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         ServiceController<?> firstController = serviceContainer.getService(firstServiceName);
         assertNotNull(firstController);
         Future<ServiceController<?>> firstServiceStop = testListener.expectServiceStop(firstServiceName);
+        Future<ServiceController<?>> firstServiceWontStart = testListener.expectServiceWontStart(firstServiceName);
         Future<ServiceController<?>> secondServiceStop = testListener.expectServiceStop(secondServiceName);
+        Future<ServiceController<?>> secondServiceWaiting = testListener.expectServiceWaiting(secondServiceName);
         firstController.setMode(Mode.NEVER);
         assertController(firstController, firstServiceStop);
+        assertController(firstController, firstServiceWontStart);
         assertController(secondController, secondServiceStop);
+        assertController(secondController, secondServiceWaiting);
         final ServiceName dependentServiceName = ServiceName.of("dependent");
         final Future<ServiceController<?>> dependentServiceListenerAdded = testListener.expectListenerAdded(dependentServiceName);
         final ServiceController<?> dependentController = serviceContainer.addService(dependentServiceName, Service.NULL).addDependency(firstServiceName).addListener(testListener).install();
@@ -237,21 +253,27 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         assertController(dependentController, dependentServiceListenerAdded);
 
         //** now change mode, from never to passive
+        final Future<ServiceController<?>> firstServiceWontStartCleared = testListener.expectServiceWontStartCleared(firstServiceName);
         final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
         final Future<ServiceController<?>> dependentServiceStart = testListener.expectServiceStart(dependentServiceName);
+        final Future<ServiceController<?>> secondServiceWaitingCleared = testListener.expectServiceWaitingCleared(secondServiceName);
         final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
         firstController.setMode(Mode.PASSIVE);
         // notice that it is the demand from dependent that will trigger second service startup
+        assertController(firstController, firstServiceWontStartCleared);
         assertController(firstController, firstServiceStart);
         assertController(dependentController, dependentServiceStart);
+        assertController(secondController, secondServiceWaitingCleared);
         assertController(secondController, secondServiceStart);
     }
 
     @Test
     public void changeNeverToActive() throws Exception {
         final ServiceController<?> firstController = getNeverModeFirstController();
+        final Future<ServiceController<?>> firstServiceWontStartCleared = testListener.expectServiceWontStartCleared(firstServiceName);
         final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
         firstController.setMode(Mode.ACTIVE);
+        assertController(firstController, firstServiceWontStartCleared);
         assertController(firstController, firstServiceStart);
     }
 
@@ -269,21 +291,25 @@ public class ChangeModeTestCase extends AbstractServiceTest {
      * @return           the ServiceController of the specified service.
      */
     private final ServiceController<?> getUpOnDemandSecondController() throws Exception{
-        final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
-        final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
-
+        final Future<ServiceController<?>> secondServiceWaiting = testListener.expectServiceWaiting(secondServiceName);
         serviceContainer.addService(secondServiceName, Service.NULL)
         .addListener(testListener)
         .setInitialMode(Mode.ON_DEMAND)
         .install();
+        final ServiceController<?> secondController = assertController(secondServiceName, secondServiceWaiting);
 
+        final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
+        final Future<ServiceController<?>> secondServiceWaitingCleared = testListener.expectServiceWaitingCleared(secondServiceName);
+        final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
         serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
             .addDependency(secondServiceName)
             .install();
 
         assertController(firstServiceName, firstServiceStart);
-        return assertController(secondServiceName, secondServiceStart);
+        assertController(secondController, secondServiceWaitingCleared);
+        assertController(secondController, secondServiceStart);
+        return secondController;
     }
 
     /**
@@ -295,13 +321,14 @@ public class ChangeModeTestCase extends AbstractServiceTest {
      */
     private final ServiceController<?> getDownOnDemandFirstController() throws Exception {
         final Future<ServiceController<?>> firstServiceInstall = testListener.expectListenerAdded(firstServiceName);
+        final Future<ServiceController<?>> firstServiceWaiting = testListener.expectServiceWaiting(firstServiceName);
         final ServiceController<?> firstController = serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
             .setInitialMode(Mode.ON_DEMAND)
             .install();
         assertController(firstServiceName, firstController);
         assertController(firstController, firstServiceInstall);
-
+        assertController(firstController, firstServiceWaiting);
         assertSame(State.DOWN, firstController.getState());
         return firstController;
     }
@@ -314,22 +341,25 @@ public class ChangeModeTestCase extends AbstractServiceTest {
      * @return           the ServiceController of the specified service.
      */
     private final ServiceController<?> getFailedToStartOnDemandSecondController() throws Exception {
-        final Future<ServiceController<?>> firstServiceInstall = testListener.expectListenerAdded(firstServiceName);
         final Future<ServiceController<?>> secondServiceInstall = testListener.expectListenerAdded(secondServiceName);
-        final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
-        final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
-
+        final Future<ServiceController<?>> secondServiceWaiting = testListener.expectServiceWaiting(secondServiceName);
         serviceContainer.addService(secondServiceName, new FailToStartService(true))
             .addListener(testListener)
             .setInitialMode(Mode.ON_DEMAND)
             .install();
+        final ServiceController<?> secondController = assertController(secondServiceName, secondServiceInstall);
+        assertController(secondController, secondServiceWaiting);
+
+        final Future<ServiceController<?>> secondServiceWaitingCleared = testListener.expectServiceWaitingCleared(secondServiceName);
+        final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
+        final Future<ServiceController<?>> firstServiceInstall = testListener.expectListenerAdded(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
         serviceContainer.addService(firstServiceName, new FailToStartService(true))
             .addListener(testListener)
             .addDependency(secondServiceName)
             .install();
-
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceInstall);
-        final ServiceController<?> secondController = assertController(secondServiceName, secondServiceInstall);
+        assertController(secondController, secondServiceWaitingCleared);
         assertFailure(secondController, secondServiceFailure);
         assertController(firstController, firstServiceDependencyFailure);
 
@@ -377,17 +407,20 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     public void changeUpOnDemandToNever() throws Exception {
         final ServiceController<?> secondController = getUpOnDemandSecondController();
         final Future<ServiceController<?>> secondServiceStop = testListener.expectServiceStop(secondServiceName);
+        final Future<ServiceController<?>> secondServiceWontStart = testListener.expectServiceWontStart(secondServiceName);
         final Future<ServiceController<?>> firstServiceStop = testListener.expectServiceStop(firstServiceName);
         secondController.setMode(Mode.NEVER);
         assertController(secondController, secondServiceStop);
+        assertController(secondController, secondServiceWontStart);
         assertController(firstServiceName, firstServiceStop);
     }
 
     @Test
     public void changeDownOnDemandToNever() throws Exception {
         final ServiceController<?> firstController = getDownOnDemandFirstController();
+        final Future<ServiceController<?>> firstServiceWontStart = testListener.expectServiceWontStart(firstServiceName);
         firstController.setMode(Mode.NEVER);
-        assertSame(State.DOWN, firstController.getState());
+        assertController(firstController, firstServiceWontStart);
     }
 
     @Test
@@ -395,8 +428,10 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         final ServiceController<?> secondController = getFailedToStartOnDemandSecondController();
         final Future<ServiceController<?>> firstServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
         final Future<ServiceController<?>> secondServiceStop = testListener.expectFailedServiceStopped(secondServiceName);
+        final Future<ServiceController<?>> secondServiceWontStart = testListener.expectServiceWontStart(secondServiceName);
         secondController.setMode(Mode.NEVER);
         assertController(secondController, secondServiceStop);
+        assertController(secondController, secondServiceWontStart);
         assertController(firstServiceName, firstServiceDependencyFailureCleared);
     }
 
@@ -434,8 +469,10 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     @Test
     public void changeDownOnDemandToPassive() throws Exception {
         final ServiceController<?> firstController = getDownOnDemandFirstController();
+        final Future<ServiceController<?>> firstServiceWaitingCleared = testListener.expectServiceWaitingCleared(firstServiceName);
         final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
         firstController.setMode(Mode.PASSIVE);
+        assertController(firstController, firstServiceWaitingCleared);
         assertController(firstController, firstServiceStart);
     }
 
@@ -515,6 +552,7 @@ public class ChangeModeTestCase extends AbstractServiceTest {
      */
     private final ServiceController<?> getDownPassiveFirstController() throws Exception {
         final Future<ServiceController<?>> firstServiceInstall = testListener.expectListenerAdded(firstServiceName);
+        final Future<ServiceController<?>> firstServiceWaiting = testListener.expectServiceWaiting(firstServiceName);
         final ServiceController<?> firstController = serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
             .addDependency(secondServiceName)
@@ -522,6 +560,7 @@ public class ChangeModeTestCase extends AbstractServiceTest {
             .install();
         assertController(firstServiceName, firstController);
         assertController(firstController, firstServiceInstall);
+        assertController(firstController, firstServiceWaiting);
 
         assertSame(State.DOWN, firstController.getState());
         return firstController;
@@ -572,8 +611,10 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     @Test
     public void changeDownPassiveToRemove() throws Exception {
         final ServiceController<?> firstController = getDownPassiveFirstController();
+        final Future<ServiceController<?>> firstServiceWaitingCleared = testListener.expectServiceWaitingCleared(firstServiceName);
         final Future<ServiceController<?>> firstServiceRemoval = testListener.expectServiceRemoval(firstServiceName);
         firstController.setMode(Mode.REMOVE);
+        assertController(firstController, firstServiceWaitingCleared);
         assertController(firstController, firstServiceRemoval);
     }
 
@@ -593,15 +634,20 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     public void changeUpPassiveToNever() throws Exception {
         final ServiceController<?> firstController = getUpPassiveFirstController();
         final Future<ServiceController<?>> firstServiceStop = testListener.expectServiceStop(firstServiceName);
+        final Future<ServiceController<?>> firstServiceWontStart = testListener.expectServiceWontStart(firstServiceName);
         firstController.setMode(Mode.NEVER);
         assertController(firstController, firstServiceStop);
+        assertController(firstController, firstServiceWontStart);
     }
 
     @Test
     public void changeDownPassiveToNever() throws Exception {
         final ServiceController<?> firstController = getDownPassiveFirstController();
+        final Future<ServiceController<?>> firstServiceWaitingCleared = testListener.expectServiceWaitingCleared(firstServiceName);
+        final Future<ServiceController<?>> firstServiceWontStart = testListener.expectServiceWontStart(firstServiceName);
         firstController.setMode(Mode.NEVER);
-        assertSame(State.DOWN, firstController.getState());
+        assertController(firstController, firstServiceWaitingCleared);
+        assertController(firstController, firstServiceWontStart);
     }
 
     @Test
@@ -609,24 +655,31 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         final ServiceController<?> secondController = getFailedToStartPassiveSecondController();
         final Future<ServiceController<?>> secondServiceStop = testListener.expectFailedServiceStopped(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
+        final Future<ServiceController<?>> secondServiceWontStart = testListener.expectServiceWontStart(secondServiceName);
         secondController.setMode(Mode.NEVER);
         assertController(firstServiceName, firstServiceDependencyFailureCleared);
         assertSame(State.DOWN, secondController.getState());
         assertController(secondController, secondServiceStop);
+        assertController(secondController, secondServiceWontStart);
     }
 
     @Test
     public void changeUpPassiveToOnDemand() throws Exception {
         final ServiceController<?> firstController = getUpPassiveFirstController();
         final Future<ServiceController<?>> firstServiceStop = testListener.expectServiceStop(firstServiceName);
+        final Future<ServiceController<?>> firstServiceWaiting = testListener.expectServiceWaiting(firstServiceName);
         firstController.setMode(Mode.ON_DEMAND);
         assertController(firstController, firstServiceStop);
+        assertController(firstController, firstServiceWaiting);
     }
 
     @Test
     public void changeDownPassiveToOnDemand() throws Exception {
         final ServiceController<?> firstController = getDownPassiveFirstController();
+        final Future<ServiceController<?>> firstServiceNoWaiting = testListener.expectNoServiceWaiting(firstServiceName);
+        final Future<ServiceController<?>> firstServiceNoWaitingCleared = testListener.expectNoServiceWaitingCleared(firstServiceName);
         firstController.setMode(Mode.ON_DEMAND);
+        assertOppositeNotifications(firstController, firstServiceNoWaitingCleared, firstServiceNoWaiting);
         assertSame(State.DOWN, firstController.getState());
     }
 
@@ -674,7 +727,11 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     @Test
     public void changeDownPassiveToActive() throws Exception {
         final ServiceController<?> firstController = getDownPassiveFirstController();
+        final Future<ServiceController<?>> firstServiceWaitingCleared = testListener.expectServiceWaitingCleared(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyProblem = testListener.expectDependencyProblem(firstServiceName);
         firstController.setMode(Mode.ACTIVE);
+        assertController(firstController, firstServiceWaitingCleared);
+        assertController(firstController, firstServiceDependencyProblem);
         assertSame(State.DOWN, firstController.getState());
     }
 
@@ -818,15 +875,18 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         final ServiceController<?> firstController = getUpActiveFirstController();
         assertFalse(firstController.compareAndSetMode(Mode.ON_DEMAND, Mode.NEVER));
         final Future<ServiceController<?>> firstServiceStop = testListener.expectServiceStop(firstServiceName);
+        final Future<ServiceController<?>> firstServiceWontStart = testListener.expectServiceWontStart(firstServiceName);
         assertTrue(firstController.compareAndSetMode(Mode.ACTIVE, Mode.NEVER));
         assertController(firstController, firstServiceStop);
+        assertController(firstController, firstServiceWontStart);
     }
 
     @Test
     public void changeDownActiveToNever() throws Exception {
         final ServiceController<?> firstController = getDownActiveFirstController();
+        final Future<ServiceController<?>> firstServiceWontStart = testListener.expectServiceWontStart(firstServiceName);
         firstController.setMode(Mode.NEVER);
-        assertSame(State.DOWN, firstController.getState());
+        assertController(firstController, firstServiceWontStart);
     }
 
     @Test
@@ -834,25 +894,32 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         final ServiceController<?> secondController = getFailedToStartActiveSecondController();
         final Future<ServiceController<?>> secondServiceStop = testListener.expectFailedServiceStopped(secondServiceName);
         final Future<ServiceController<?>> firstServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
+        final Future<ServiceController<?>> secondServiceWontStart = testListener.expectServiceWontStart(secondServiceName);
         secondController.setMode(Mode.NEVER);
         assertController(firstServiceName, firstServiceDependencyFailureCleared);
         assertSame(State.DOWN, secondController.getState());
         assertController(secondController, secondServiceStop);
+        assertController(secondController, secondServiceWontStart);
     }
 
     @Test
     public void changeUpActiveToOnDemand() throws Exception {
         final ServiceController<?> firstController = getUpActiveFirstController();
         final Future<ServiceController<?>> firstServiceStop = testListener.expectServiceStop(firstServiceName);
+        final Future<ServiceController<?>> firstServiceWaiting = testListener.expectServiceWaiting(firstServiceName);
         firstController.setMode(Mode.ON_DEMAND);
         assertController(firstController, firstServiceStop);
+        assertController(firstController, firstServiceWaiting);
     }
 
     @Test
     public void changeDownActiveToOnDemand() throws Exception {
         final ServiceController<?> firstController = getDownActiveFirstController();
+        final Future<ServiceController<?>> firstServiceProblemCleared = testListener.expectDependencyProblemCleared(firstServiceName);
+        final Future<ServiceController<?>> firstServiceWaiting = testListener.expectServiceWaiting(firstServiceName);
         firstController.setMode(Mode.ON_DEMAND);
-        assertSame(State.DOWN, firstController.getState());
+        assertController(firstController, firstServiceProblemCleared);
+        assertController(firstController, firstServiceWaiting);
     }
 
     @Test
@@ -867,14 +934,18 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         final ServiceController<?> firstController = getUpActiveFirstController();
         assertFalse(firstController.compareAndSetMode(Mode.PASSIVE, Mode.PASSIVE));
         assertTrue(firstController.compareAndSetMode(Mode.ACTIVE, Mode.PASSIVE));
+        final Future<ServiceController<?>> firstServiceNoWaiting = testListener.expectNoServiceWaiting(firstServiceName);
         firstController.setMode(Mode.PASSIVE);
+        assertNull(firstServiceNoWaiting.get());
         assertSame(State.UP, firstController.getState());
     }
 
     @Test
     public void changeDownActiveToPassive() throws Exception {
         final ServiceController<?> firstController = getDownActiveFirstController();
+        final Future<ServiceController<?>> firstServiceWaiting = testListener.expectServiceWaiting(firstServiceName);
         firstController.setMode(Mode.PASSIVE);
+        assertController(firstController, firstServiceWaiting);
         assertSame(State.DOWN, firstController.getState());
     }
 

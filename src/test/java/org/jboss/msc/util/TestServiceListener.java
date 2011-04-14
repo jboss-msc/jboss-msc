@@ -45,6 +45,10 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     private final Map<ServiceName, ServiceFuture> expectedStarts = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedStops = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedStoppings = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedWaitings = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedWaitingClears = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedWontStarts = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedWontStartClears = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedFailedStops = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFutureWithValidation> expectedStopsOnly = new HashMap<ServiceName, ServiceFutureWithValidation>();
     private final Map<ServiceName, ServiceFuture> expectedRemovalRequests = new HashMap<ServiceName, ServiceFuture>();
@@ -92,6 +96,34 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
             if (future != null) {
                 future.setServiceController(serviceController);
             }
+        }
+    }
+
+    public void serviceWaiting(ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedWaitings.remove(serviceController.getName());
+        if (future != null) {
+            future.setServiceController(serviceController);
+        }
+    }
+
+    public void serviceWaitingCleared(ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedWaitingClears.remove(serviceController.getName());
+        if (future != null) {
+            future.setServiceController(serviceController);
+        }
+    }
+
+    public void serviceWontStart(ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedWontStarts.remove(serviceController.getName());
+        if (future != null) {
+            future.setServiceController(serviceController);
+        }
+    }
+
+    public void serviceWontStartCleared(ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedWontStartClears.remove(serviceController.getName());
+        if (future != null) {
+            future.setServiceController(serviceController);
         }
     }
 
@@ -237,6 +269,42 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     public Future<ServiceController<?>> expectNoServiceStopping(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture(100);
         expectedStoppings.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectServiceWaiting(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedWaitings.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectNoServiceWaiting(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(100);
+        expectedWaitings.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectServiceWaitingCleared(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedWaitingClears.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectNoServiceWaitingCleared(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture(100);
+        expectedWaitingClears.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectServiceWontStart(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedWontStarts.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectServiceWontStartCleared(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedWontStartClears.put(serviceName, future);
         return future;
     }
 

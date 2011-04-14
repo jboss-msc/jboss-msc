@@ -81,6 +81,22 @@ public abstract class AbstractServiceListener<S> implements ServiceListener<S> {
     }
 
     /** {@inheritDoc} */
+    public void serviceWaiting(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
+    public void serviceWaitingCleared(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
+    public void serviceWontStart(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
+    public void serviceWontStartCleared(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
     public void serviceRemoveRequested(final ServiceController<? extends S> controller) {
     }
 

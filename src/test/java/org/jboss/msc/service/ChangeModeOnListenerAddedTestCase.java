@@ -1068,6 +1068,26 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         }
 
         @Override
+        public void serviceWontStart(final ServiceController<? extends Object> controller) {
+            unexpectedCalls.append("serviceWontStart");
+        }
+
+        @Override
+        public void serviceWontStartCleared(final ServiceController<? extends Object> controller) {
+            unexpectedCalls.append("serviceWontStartCleared");
+        }
+
+        @Override
+        public void serviceWaiting(final ServiceController<? extends Object> controller) {
+            unexpectedCalls.append("serviceWontStart");
+        }
+
+        @Override
+        public void serviceWaitingCleared(final ServiceController<? extends Object> controller) {
+            unexpectedCalls.append("serviceWontStartCleared");
+        }
+
+        @Override
         public void serviceRemoveRequested(final ServiceController<?> controller) {
             unexpectedCalls.append("serviceRemoving\n");
         }

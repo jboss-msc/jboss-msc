@@ -705,6 +705,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
             .install();
         // at this point, firstService is connected to the new secondService as an optional dependency
         // move it to active mode, to make all three services start
+        Thread.sleep(100);
         firstController.setMode(Mode.ACTIVE); // FIXME check the need to wait for removeDemand/addDemand be called
         // a dependencyFailure notification is expected by secondService
         secondController = assertController(secondServiceName, secondServiceDependencyFailed);
