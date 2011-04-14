@@ -302,15 +302,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 } else if (mode == ServiceController.Mode.NEVER) {
                     return Transition.DOWN_to_WONT_START;
                 } else if (upperCount > 0 && (mode != Mode.PASSIVE || downDependencies == 0)) {
-                    if (listeners.isEmpty()) {
-                        if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0 || failCount > 0) {
-                            return Transition.DOWN_to_PROBLEM;
-                        } else if (downDependencies == 0) {
-                            return Transition.DOWN_to_START_INITIATING;
-                        }
-                    } else {
-                        return Transition.DOWN_to_START_REQUESTED;
-                    }
+                    return Transition.DOWN_to_START_REQUESTED;
                 }
                 break;
             }
@@ -318,15 +310,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 if (mode == ServiceController.Mode.REMOVE) {
                     return Transition.WONT_START_to_REMOVING;
                 } else if (upperCount > 0 && (mode != Mode.PASSIVE || downDependencies == 0)) {
-                    if (listeners.isEmpty()) {
-                        if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0 || failCount > 0) {
-                            return Transition.WONT_START_to_PROBLEM;
-                        } else if (downDependencies == 0) {
-                            return Transition.WONT_START_to_START_INITIATING;
-                        }
-                    } else {
-                        return Transition.WONT_START_to_START_REQUESTED;
-                    }
+                    return Transition.WONT_START_to_START_REQUESTED;
                 } else if (mode != ServiceController.Mode.NEVER){
                     return Transition.WONT_START_to_DOWN;
                 }
@@ -390,18 +374,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 } else if (mode == Mode.NEVER) {
                     return Transition.START_REQUESTED_to_WONT_START;
                 } else {
-                    if (listeners.isEmpty() && mode == ServiceController.Mode.REMOVE) {
-                        return Transition.START_REQUESTED_to_REMOVING;
-                    }
                     return Transition.START_REQUESTED_to_DOWN;
                 }
                 break;
             }
             case PROBLEM: {
                 if (upperCount == 0) {
-                    if (mode == Mode.REMOVE && listeners.isEmpty()) {
-                        return Transition.PROBLEM_to_REMOVING;
-                    } else if (mode == Mode.NEVER) {
+                    if (mode == Mode.NEVER) {
                         return Transition.PROBLEM_to_WONT_START;
                     }
                     return Transition.PROBLEM_to_DOWN;
@@ -418,6 +397,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 return Transition.REMOVING_to_REMOVED;
             }
             case CANCELLED:
+                // fall thru!
             case REMOVED:
             {
                 // no possible actions
@@ -434,204 +414,190 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     void transition(final ArrayList<Runnable> tasks) {
         assert holdsLock(this);
-        final Transition transition = getTransition();
-        if (transition == null) {
-            return;
-        }
-        switch (transition) {
-            case DOWN_to_WONT_START: {
-                tasks.add(new ServiceUnavailableTask());
-                break;
+        Transition transition = null;
+        do {
+            transition = getTransition();
+            if (transition == null) {
+                return;
             }
-            case WONT_START_to_DOWN: {
-                tasks.add(new ServiceAvailableTask());
-                break;
-            }
-            case STOPPING_to_WONT_START: {
-                tasks.add(new ServiceUnavailableTask());
-            }
-            case STOPPING_to_DOWN: {
-                getListenerTasks(transition.getAfter().getState(), tasks);
-                tasks.add(new DependentStoppedTask());
-                break;
-            }
-            case PROBLEM_to_WONT_START: {
-                tasks.add(new ServiceUnavailableTask());
-            }
-            case PROBLEM_to_DOWN: {
-                if (!immediateUnavailableDependencies.isEmpty()) {
-                    getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_AVAILABLE, tasks);
+            switch (transition) {
+                case DOWN_to_WONT_START: {
+                    tasks.add(new ServiceUnavailableTask());
+                    break;
                 }
-                if (transitiveUnavailableDepCount > 0) {
-                    getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_AVAILABLE, tasks);
+                case WONT_START_to_DOWN: {
+                    tasks.add(new ServiceAvailableTask());
+                    break;
                 }
-                if (failCount > 0) {
-                    getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
+                case STOPPING_to_WONT_START: {
+                    tasks.add(new ServiceUnavailableTask());
+                    // fall thru!
                 }
-                getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
-                break;
-            }
-            case START_REQUESTED_to_WONT_START: {
-                tasks.add(new ServiceUnavailableTask());
-            }
-            case START_REQUESTED_to_DOWN: {
-                getListenerTasks(ListenerNotification.START_REQUEST_CLEARED, tasks);
-                break;
-            }
-            case WONT_START_to_START_INITIATING: {
-                tasks.add(new ServiceAvailableTask());
-            }
-            case PROBLEM_to_START_INITIATING: {
-                getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
-            }
-            case DOWN_to_START_INITIATING: {
-                lifecycleTime = System.nanoTime();
-            }
-            case START_REQUESTED_to_START_INITIATING: {
-                tasks.add(new DependentStartedTask());
-                break;
-            }
-            case WONT_START_to_PROBLEM: {
-                tasks.add(new ServiceAvailableTask());
-            }
-            case DOWN_to_PROBLEM:
-            case START_REQUESTED_to_PROBLEM: {
-                if (!immediateUnavailableDependencies.isEmpty()) {
-                    getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_UNAVAILABLE, tasks);
+                case STOPPING_to_DOWN: {
+                    getListenerTasks(transition.getAfter().getState(), tasks);
+                    tasks.add(new DependentStoppedTask());
+                    break;
                 }
-                if (transitiveUnavailableDepCount > 0) {
-                    getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_UNAVAILABLE, tasks);
+                case PROBLEM_to_WONT_START: {
+                    tasks.add(new ServiceUnavailableTask());
+                    // fall thru!
                 }
-                if (failCount > 0) {
-                    getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
-                }
-                getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM, tasks);
-                break;
-            }
-            case UP_to_STOP_REQUESTED: {
-                getListenerTasks(ListenerNotification.STOP_REQUESTED, tasks);
-                lifecycleTime = System.nanoTime();
-                tasks.add(new DependencyStoppedTask(getDependents()));
-                break;
-            }
-            case STARTING_to_UP: {
-                getListenerTasks(transition.getAfter().getState(), tasks);
-                tasks.add(new DependencyStartedTask(getDependents()));
-                break;
-            }
-            case STARTING_to_START_FAILED: {
-                ChildServiceTarget childTarget = this.childTarget;
-                if (childTarget != null) {
-                    childTarget.valid = false;
-                    this.childTarget = null;
-                }
-                if (! children.isEmpty()) {
-                    // placeholder async task for child removal; last removed child will decrement this count
-                    asyncTasks++;
-                    for (ServiceControllerImpl<?> child : children) {
-                        child.setMode(Mode.REMOVE);
+                case PROBLEM_to_DOWN: {
+                    if (!immediateUnavailableDependencies.isEmpty()) {
+                        getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_AVAILABLE, tasks);
                     }
-                }
-                getListenerTasks(transition.getAfter().getState(), tasks);
-                tasks.add(new DependencyFailedTask(getDependents()));
-                break;
-            }
-            case START_FAILED_to_STARTING: {
-                getListenerTasks(ListenerNotification.FAILED_STARTING, tasks);
-                tasks.add(new DependencyRetryingTask(getDependents()));
-                tasks.add(new DependentStartedTask());
-                break;
-            }
-            case START_INITIATING_to_STARTING: {
-                getListenerTasks(transition.getAfter().getState(), tasks);
-                tasks.add(new StartTask(true));
-                break;
-            }
-            case START_FAILED_to_WONT_START: {
-                tasks.add(new ServiceUnavailableTask());
-            }
-            case START_FAILED_to_DOWN: {
-                startException = null;
-                failCount--;
-                getListenerTasks(ListenerNotification.FAILED_STOPPED, tasks);
-                tasks.add(new DependencyRetryingTask(getDependents()));
-                tasks.add(new StopTask(true));
-                tasks.add(new DependentStoppedTask());
-                break;
-            }
-            case STOP_REQUESTED_to_UP: {
-                getListenerTasks(ListenerNotification.STOP_REQUEST_CLEARED, tasks);
-                tasks.add(new DependencyStartedTask(getDependents()));
-                break;
-            }
-            case STOP_REQUESTED_to_STOPPING: {
-                ChildServiceTarget childTarget = this.childTarget;
-                if (childTarget != null) {
-                    childTarget.valid = false;
-                    this.childTarget = null;
-                }
-                if (! children.isEmpty()) {
-                    // placeholder async task for child removal; last removed child will decrement this count
-                    asyncTasks++;
-                    for (ServiceControllerImpl<?> child : children) {
-                        child.setMode(Mode.REMOVE);
+                    if (transitiveUnavailableDepCount > 0) {
+                        getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_AVAILABLE, tasks);
                     }
+                    if (failCount > 0) {
+                        getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
+                    }
+                    getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
+                    break;
                 }
-                getListenerTasks(transition.getAfter().getState(), tasks);
-                tasks.add(new StopTask(false));
-                break;
-            }
-            case PROBLEM_to_REMOVING: {
-                if (!immediateUnavailableDependencies.isEmpty()) {
-                    getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_AVAILABLE, tasks);
+                case START_REQUESTED_to_WONT_START: {
+                    tasks.add(new ServiceUnavailableTask());
+                    // fall thru!
                 }
-                if (transitiveUnavailableDepCount > 0) {
-                    getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_AVAILABLE, tasks);
+                case START_REQUESTED_to_DOWN: {
+                    getListenerTasks(ListenerNotification.START_REQUEST_CLEARED, tasks);
+                    break;
                 }
-                if (failCount > 0) {
-                    getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
+                case PROBLEM_to_START_INITIATING: {
+                    getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
+                    // fall thru!
                 }
-                getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
-            }
-            case START_REQUESTED_to_REMOVING: {
-                getListenerTasks(ListenerNotification.START_REQUEST_CLEARED, tasks);
-            }
-            case DOWN_to_REMOVING: {
-                tasks.add(new ServiceUnavailableTask());
-            }
-            case WONT_START_to_REMOVING: {
-                Dependent[][] dependents = getDependents();
-                // Clear all dependency uninstalled flags from dependents
-                if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
-                    tasks.add(new DependencyAvailableTask(dependents));
+                case START_REQUESTED_to_START_INITIATING: {
+                    tasks.add(new DependentStartedTask());
+                    break;
                 }
-                if (failCount > 0) {
-                    tasks.add(new DependencyRetryingTask(dependents));
+                case START_REQUESTED_to_PROBLEM: {
+                    if (!immediateUnavailableDependencies.isEmpty()) {
+                        getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_UNAVAILABLE, tasks);
+                    }
+                    if (transitiveUnavailableDepCount > 0) {
+                        getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_UNAVAILABLE, tasks);
+                    }
+                    if (failCount > 0) {
+                        getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
+                    }
+                    getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM, tasks);
+                    break;
                 }
-                tasks.add(new RemoveTask());
-                break;
+                case UP_to_STOP_REQUESTED: {
+                    getListenerTasks(ListenerNotification.STOP_REQUESTED, tasks);
+                    lifecycleTime = System.nanoTime();
+                    tasks.add(new DependencyStoppedTask(getDependents()));
+                    break;
+                }
+                case STARTING_to_UP: {
+                    getListenerTasks(transition.getAfter().getState(), tasks);
+                    tasks.add(new DependencyStartedTask(getDependents()));
+                    break;
+                }
+                case STARTING_to_START_FAILED: {
+                    ChildServiceTarget childTarget = this.childTarget;
+                    if (childTarget != null) {
+                        childTarget.valid = false;
+                        this.childTarget = null;
+                    }
+                    if (! children.isEmpty()) {
+                        // placeholder async task for child removal; last removed child will decrement this count
+                        asyncTasks++;
+                        for (ServiceControllerImpl<?> child : children) {
+                            child.setMode(Mode.REMOVE);
+                        }
+                    }
+                    getListenerTasks(transition.getAfter().getState(), tasks);
+                    tasks.add(new DependencyFailedTask(getDependents()));
+                    break;
+                }
+                case START_FAILED_to_STARTING: {
+                    getListenerTasks(ListenerNotification.FAILED_STARTING, tasks);
+                    tasks.add(new DependencyRetryingTask(getDependents()));
+                    tasks.add(new DependentStartedTask());
+                    break;
+                }
+                case START_INITIATING_to_STARTING: {
+                    getListenerTasks(transition.getAfter().getState(), tasks);
+                    tasks.add(new StartTask(true));
+                    break;
+                }
+                case START_FAILED_to_WONT_START: {
+                    tasks.add(new ServiceUnavailableTask());
+                    // fall thru!
+                }
+                case START_FAILED_to_DOWN: {
+                    startException = null;
+                    failCount--;
+                    getListenerTasks(ListenerNotification.FAILED_STOPPED, tasks);
+                    tasks.add(new DependencyRetryingTask(getDependents()));
+                    tasks.add(new StopTask(true));
+                    tasks.add(new DependentStoppedTask());
+                    break;
+                }
+                case STOP_REQUESTED_to_UP: {
+                    getListenerTasks(ListenerNotification.STOP_REQUEST_CLEARED, tasks);
+                    tasks.add(new DependencyStartedTask(getDependents()));
+                    break;
+                }
+                case STOP_REQUESTED_to_STOPPING: {
+                    ChildServiceTarget childTarget = this.childTarget;
+                    if (childTarget != null) {
+                        childTarget.valid = false;
+                        this.childTarget = null;
+                    }
+                    if (! children.isEmpty()) {
+                        // placeholder async task for child removal; last removed child will decrement this count
+                        asyncTasks++;
+                        for (ServiceControllerImpl<?> child : children) {
+                            child.setMode(Mode.REMOVE);
+                        }
+                    }
+                    getListenerTasks(transition.getAfter().getState(), tasks);
+                    tasks.add(new StopTask(false));
+                    break;
+                }
+                case DOWN_to_REMOVING: {
+                    tasks.add(new ServiceUnavailableTask());
+                    // fall thru!
+                }
+                case WONT_START_to_REMOVING: {
+                    Dependent[][] dependents = getDependents();
+                    // Clear all dependency uninstalled flags from dependents
+                    if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
+                        tasks.add(new DependencyAvailableTask(dependents));
+                    }
+                    if (failCount > 0) {
+                        tasks.add(new DependencyRetryingTask(dependents));
+                    }
+                    tasks.add(new RemoveTask());
+                    break;
+                }
+                case REMOVING_to_REMOVED: {
+                    getListenerTasks(transition.getAfter().getState(), tasks);
+                    listeners.clear();
+                    break;
+                }
+                case WONT_START_to_START_REQUESTED: {
+                    tasks.add(new ServiceAvailableTask());
+                    // fall thru!
+                }
+                case DOWN_to_START_REQUESTED: {
+                    getListenerTasks(ListenerNotification.START_REQUESTED, tasks);
+                    // fall thru!
+                }
+                case PROBLEM_to_START_REQUESTED: {
+                    getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
+                    lifecycleTime = System.nanoTime();
+                    break;
+                }
+                default: {
+                    throw new IllegalStateException();
+                }
             }
-            case REMOVING_to_REMOVED: {
-                getListenerTasks(transition.getAfter().getState(), tasks);
-                listeners.clear();
-                break;
-            }
-            case WONT_START_to_START_REQUESTED: {
-                tasks.add(new ServiceAvailableTask());
-            }
-            case DOWN_to_START_REQUESTED: {
-                getListenerTasks(ListenerNotification.START_REQUESTED, tasks);
-            }
-            case PROBLEM_to_START_REQUESTED: {
-                getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
-                lifecycleTime = System.nanoTime();
-                break;
-            }
-            default: {
-                throw new IllegalStateException();
-            }
-        }
-        state = transition.getAfter();
+            state = transition.getAfter();
+        } while (tasks.isEmpty());
     }
 
     private void getListenerTasks(final ServiceController.State newState, final ArrayList<Runnable> tasks) {
@@ -2323,12 +2289,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         START_REQUESTED_to_WONT_START(Substate.START_REQUESTED, Substate.WONT_START),
         START_REQUESTED_to_PROBLEM(Substate.START_REQUESTED, Substate.PROBLEM),
         START_REQUESTED_to_START_INITIATING(Substate.START_REQUESTED, Substate.START_INITIATING),
-        START_REQUESTED_to_REMOVING (Substate.START_REQUESTED, Substate.REMOVING),
         PROBLEM_to_DOWN(Substate.PROBLEM, Substate.DOWN),
         PROBLEM_to_WONT_START (Substate.PROBLEM, Substate.WONT_START),
         PROBLEM_to_START_REQUESTED(Substate.PROBLEM, Substate.START_REQUESTED),
         PROBLEM_to_START_INITIATING (Substate.PROBLEM, Substate.START_INITIATING),
-        PROBLEM_to_REMOVING(Substate.PROBLEM, Substate.REMOVING),
         START_INITIATING_to_STARTING (Substate.START_INITIATING, Substate.STARTING),
         STARTING_to_UP(Substate.STARTING, Substate.UP),
         STARTING_to_START_FAILED(Substate.STARTING, Substate.START_FAILED),
@@ -2343,14 +2307,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         REMOVING_to_REMOVED(Substate.REMOVING, Substate.REMOVED),
         DOWN_to_REMOVING(Substate.DOWN, Substate.REMOVING),
         DOWN_to_START_REQUESTED(Substate.DOWN, Substate.START_REQUESTED),
-        DOWN_to_START_INITIATING (Substate.DOWN, Substate.START_INITIATING),
-        DOWN_to_PROBLEM(Substate.DOWN, Substate.PROBLEM),
         DOWN_to_WONT_START(Substate.DOWN, Substate.WONT_START),
         WONT_START_to_DOWN(Substate.WONT_START, Substate.DOWN),
-        WONT_START_to_PROBLEM(Substate.WONT_START, Substate.PROBLEM),
         WONT_START_to_REMOVING(Substate.WONT_START, Substate.REMOVING),
-        WONT_START_to_START_REQUESTED(Substate.WONT_START, Substate.START_REQUESTED),
-        WONT_START_to_START_INITIATING (Substate.WONT_START, Substate.START_INITIATING);
+        WONT_START_to_START_REQUESTED(Substate.WONT_START, Substate.START_REQUESTED);
 
         private final Substate before;
         private final Substate after;
