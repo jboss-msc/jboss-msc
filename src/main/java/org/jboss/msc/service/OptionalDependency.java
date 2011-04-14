@@ -206,6 +206,9 @@ class OptionalDependency implements Dependency, Dependent {
             if (transitiveDependencyUnavailable) {
                 dependent.transitiveDependencyUnavailable();
             }
+            if (demandedByDependent) {
+                optionalDependency.addDemand();
+            }
         } else if (notifyOptionalDependency) {
             optionalDependency.removeDemand();
         }

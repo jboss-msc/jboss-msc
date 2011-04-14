@@ -194,7 +194,8 @@ public class AbstractServiceTest {
             Future<ServiceController<?>> notification1, Future<ServiceController<?>> notification2) throws Exception {
         ServiceController<?> serviceController1 = notification1.get();
         ServiceController<?> serviceController2 = notification2.get();
-        assertTrue((serviceController == serviceController1 && serviceController == serviceController2) ||
+        assertTrue("Notification1 resulted in " + serviceController1 + " while notification2 resulted in " + serviceController2,
+                (serviceController == serviceController1 && serviceController == serviceController2) ||
                 (serviceController1 == null && serviceController2 == null));
     }
 

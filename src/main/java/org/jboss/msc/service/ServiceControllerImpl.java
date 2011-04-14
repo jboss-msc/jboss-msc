@@ -481,7 +481,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             case WONT_START_to_START_INITIATING: {
                 tasks.add(new ServiceAvailableTask());
             }
-            case PROBLEM_to_START_INITIATING:
+            case PROBLEM_to_START_INITIATING: {
+                getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
+            }
             case DOWN_to_START_INITIATING: {
                 lifecycleTime = System.nanoTime();
             }
@@ -621,6 +623,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 getListenerTasks(ListenerNotification.START_REQUESTED, tasks);
             }
             case PROBLEM_to_START_REQUESTED: {
+                getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
                 lifecycleTime = System.nanoTime();
                 break;
             }
@@ -847,9 +850,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             tasks = new ArrayList<Runnable>(16);
             if (state == Substate.PROBLEM) {
                 getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_AVAILABLE, tasks);
-                if (transitiveUnavailableDepCount == 0 && failCount == 0) {
-                    getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
-                }
             }
             // both unavailable dep counts are 0
             if (transitiveUnavailableDepCount == 0) {
@@ -894,9 +894,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             tasks = new ArrayList<Runnable>(16);
             if (state == Substate.PROBLEM) {
                 getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_AVAILABLE, tasks);
-                if (failCount == 0 && immediateUnavailableDependencies.isEmpty()) {
-                    getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
-                }
             }
             // there are no immediate nor transitive unavailable dependencies
             if (immediateUnavailableDependencies.isEmpty()) {
@@ -993,9 +990,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             tasks = new ArrayList<Runnable>();
             if (state == Substate.PROBLEM) {
                 getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
-                if (transitiveUnavailableDepCount == 0 && immediateUnavailableDependencies.isEmpty()) {
-                    getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
-                }
             }
             tasks.add(new DependencyRetryingTask(getDependents()));
             asyncTasks += tasks.size();
