@@ -602,4 +602,24 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
             throw e2;
         }
     }
+
+    /**
+     * Convert this service name into an array of strings containing the segments of the name.  If this array
+     * is passed into {@link #of(String...)} it will yield a {@code ServiceName} which is equal to this one.
+     *
+     * @return the string array
+     */
+    public String[] toArray() {
+        return toArray(0);
+    }
+
+    private String[] toArray(final int idx) {
+        if (parent == null) {
+            return new String[idx];
+        } else {
+            String[] result = parent.toArray(idx + 1);
+            result[result.length - idx - 1] = name;
+            return result;
+        }
+    }
 }
