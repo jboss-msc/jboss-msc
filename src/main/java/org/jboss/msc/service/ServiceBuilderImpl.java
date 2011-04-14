@@ -96,8 +96,8 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     @Override
     public ServiceBuilder<T> addAliases(ServiceName... aliases) {
-        for(ServiceName alias : aliases) {
-            if(!alias.equals(serviceName)) {
+        if (aliases != null) for(ServiceName alias : aliases) {
+            if(alias != null && !alias.equals(serviceName)) {
                 this.aliases.add(alias);
             }
         }
@@ -141,7 +141,10 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     @Override
     public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final ServiceName... newDependencies) {
         checkAlreadyInstalled();
-        for (ServiceName dependency : newDependencies) {
+        if (newDependencies != null) for (ServiceName dependency : newDependencies) {
+            if (dependency == null) {
+                throw new IllegalArgumentException("dependency is null");
+            }
             if(!serviceName.equals(dependency)) {
                 doAddDependency(dependency, dependencyType);
             }
@@ -177,8 +180,8 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     }
 
     ServiceBuilder<T> addDependenciesNoCheck(final Iterable<ServiceName> newDependencies, final DependencyType dependencyType) {
-        for (ServiceName dependency : newDependencies) {
-            if(!serviceName.equals(dependency)) {
+        if (newDependencies != null) for (ServiceName dependency : newDependencies) {
+            if (dependency != null && !serviceName.equals(dependency)) {
                 doAddDependency(dependency, dependencyType);
             }
         }
@@ -242,6 +245,12 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     }
 
     private Dependency doAddDependency(final ServiceName name, final DependencyType type) {
+        if (name == null) {
+            throw new IllegalArgumentException("name is null");
+        }
+        if (type == null) {
+            throw new IllegalArgumentException("type is null");
+        }
         final Dependency existing = dependencies.get(name);
         if (existing != null) {
             if (type == DependencyType.REQUIRED) existing.setDependencyType(DependencyType.REQUIRED);
