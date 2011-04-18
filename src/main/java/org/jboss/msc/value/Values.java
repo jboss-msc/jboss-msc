@@ -227,26 +227,32 @@ public final class Values {
         return INJECTED;
     }
 
+    @Deprecated
     public static Value<Method> getSetterMethod(final Value<Class<?>> target, final String propertyName, final Value<Class<?>> type) {
         return cached(new LookupSetMethodValue(target, propertyName, type));
     }
 
+    @Deprecated
     public static Value<Method> getSetterMethod(final Class<?> target, final String propertyName, final Class<?> type) {
         return getSetterMethod(new ImmediateValue<Class<?>>(target), propertyName, new ImmediateValue<Class<?>>(type));
     }
 
+    @Deprecated
     public static Value<Method> getSetterMethod(final String propertyName, final Class<?> type) {
         return getSetterMethod(Inspector.INSTANCE.getCaller(), propertyName, type);
     }
 
+    @Deprecated
     public static Value<Method> getGetterMethod(final Value<Class<?>> target, final String propertyName) {
         return cached(new LookupGetMethodValue(target, propertyName));
     }
 
+    @Deprecated
     public static Value<Method> getGetterMethod(final Class<?> target, final String propertyName) {
         return getGetterMethod(new ImmediateValue<Class<?>>(target), propertyName);
     }
 
+    @Deprecated
     public static Value<Method> getGetterMethod(final String propertyName) {
         return getGetterMethod(Inspector.INSTANCE.getCaller(), propertyName);
     }
