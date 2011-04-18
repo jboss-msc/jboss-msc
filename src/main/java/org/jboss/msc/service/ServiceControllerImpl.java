@@ -1227,6 +1227,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     dependencyNames[i] = dependencies[i].getName().getCanonicalName();
                 }
             }
+            StartException startException = this.startException;
             return new ServiceStatus(
                     parentName,
                     name,
@@ -1237,6 +1238,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     state.name(),
                     dependencyNames,
                     failCount != 0,
+                    startException != null ? startException.toString() : null,
                     !immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount != 0
             );
         }

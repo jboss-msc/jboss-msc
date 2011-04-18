@@ -24,6 +24,7 @@ package org.jboss.msc.service.management;
 
 import java.beans.ConstructorProperties;
 import java.io.Serializable;
+import org.jboss.msc.service.StartException;
 
 /**
  * A representation of the current status of some service.
@@ -44,6 +45,7 @@ public class ServiceStatus implements Serializable {
     private final boolean dependencyFailed;
     private final boolean dependencyUnavailable;
     private final String parentName;
+    private final String exception;
 
     /**
      * Construct a new instance.
@@ -57,10 +59,11 @@ public class ServiceStatus implements Serializable {
      * @param substateName the internal service substate name
      * @param dependencies the list of dependencies for this service
      * @param dependencyFailed {@code true} if some dependency is failed
+     * @param exception the service start exception
      * @param dependencyUnavailable {@code true} if some dependency is unavailable
      */
-    @ConstructorProperties({"parentName", "serviceName", "serviceClassName", "modeName", "stateName", "substateName", "dependencies", "dependencyFailed", "dependencyUnavailable"})
-    public ServiceStatus(final String parentName, final String serviceName, final String[] aliases, final String serviceClassName, final String modeName, final String stateName, final String substateName, final String[] dependencies, final boolean dependencyFailed, final boolean dependencyUnavailable) {
+    @ConstructorProperties({"parentName", "serviceName", "serviceClassName", "modeName", "stateName", "substateName", "dependencies", "dependencyFailed", "exception", "dependencyUnavailable"})
+    public ServiceStatus(final String parentName, final String serviceName, final String[] aliases, final String serviceClassName, final String modeName, final String stateName, final String substateName, final String[] dependencies, final boolean dependencyFailed, final String exception, final boolean dependencyUnavailable) {
         if (serviceName == null) {
             throw new IllegalArgumentException("serviceName is null");
         }
@@ -92,6 +95,7 @@ public class ServiceStatus implements Serializable {
         this.dependencyFailed = dependencyFailed;
         this.dependencyUnavailable = dependencyUnavailable;
         this.parentName = parentName;
+        this.exception = exception;
     }
 
     /**
@@ -176,6 +180,15 @@ public class ServiceStatus implements Serializable {
     }
 
     /**
+     * Get the service start exception.
+     *
+     * @return the service start exception
+     */
+    public String getException() {
+        return exception;
+    }
+
+    /**
      * Get a string representation of the current status.
      *
      * @return a string representation
@@ -215,6 +228,10 @@ public class ServiceStatus implements Serializable {
                 }
             }
             builder.append(")");
+        }
+        String exception = this.exception;
+        if (exception != null && ! exception.isEmpty()) {
+            builder.append(" (failure cause: ").append(exception).append(')');
         }
         if (dependencyFailed) {
             builder.append(" (has failed dependency)");
