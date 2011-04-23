@@ -63,4 +63,25 @@ public final class ServiceUtils {
         }
         listener.done();
     }
+
+    /**
+     * Determine whether the given thread is a service thread.
+     *
+     * @param thread the thread to test
+     * @return {@code true} if it is a service thread, {@code false} otherwise
+     */
+    public static boolean isServiceThread(Thread thread) {
+        return thread instanceof ServiceContainerImpl.ServiceThread;
+    }
+
+    /**
+     * Determine whether the given thread is a service thread which is associated with the given container.
+     *
+     * @param thread the thread to test
+     * @param container the container to compare to
+     * @return {@code true} if it is a service thread, {@code false} otherwise
+     */
+    public static boolean isServiceThread(Thread thread, ServiceContainer container) {
+        return thread instanceof ServiceContainerImpl.ServiceThread && ((ServiceContainerImpl.ServiceThread) thread).getContainer() == container;
+    }
 }

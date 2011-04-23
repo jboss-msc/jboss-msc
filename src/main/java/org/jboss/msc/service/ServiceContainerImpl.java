@@ -605,6 +605,19 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     };
     private static final ThreadPoolExecutor.CallerRunsPolicy POLICY = new ThreadPoolExecutor.CallerRunsPolicy();
 
+    static class ServiceThread extends Thread {
+        private final ServiceContainerImpl container;
+
+        ServiceThread(final Runnable runnable, final ServiceContainerImpl container) {
+            super(runnable);
+            this.container = container;
+        }
+
+        ServiceContainerImpl getContainer() {
+            return container;
+        }
+    }
+
     final class ContainerExecutor extends ThreadPoolExecutor {
 
         ContainerExecutor(final int corePoolSize, final int maximumPoolSize, final long keepAliveTime, final TimeUnit unit) {
@@ -612,7 +625,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 private final int id = executorSeq.getAndIncrement();
                 private final AtomicInteger threadSeq = new AtomicInteger(1);
                 public Thread newThread(final Runnable r) {
-                    Thread thread = new Thread(r);
+                    Thread thread = new ServiceThread(r, ServiceContainerImpl.this);
                     thread.setName(String.format("MSC service thread %d-%d", Integer.valueOf(id), Integer.valueOf(threadSeq.getAndIncrement())));
                     thread.setUncaughtExceptionHandler(HANDLER);
                     return thread;
