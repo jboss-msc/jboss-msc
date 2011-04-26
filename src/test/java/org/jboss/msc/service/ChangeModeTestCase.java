@@ -142,6 +142,13 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     }
 
     @Test
+    public void changeRemoveToLazy() throws Exception {
+        final ServiceController<?> firstController = getRemovedFirstController();
+        assertChangeModeFails(firstController, Mode.LAZY);
+        assertSame(State.REMOVED, firstController.getState());
+    }
+
+    @Test
     public void changeRemoveToPassive() throws Exception {
         final ServiceController<?> firstController = getRemovedFirstController();
         assertChangeModeFails(firstController, Mode.PASSIVE);
@@ -198,6 +205,16 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> firstServiceWontStartCleared = testListener.expectServiceWontStartCleared(firstServiceName);
         final Future<ServiceController<?>> firstServiceWaiting = testListener.expectServiceWaiting(firstServiceName);
         firstController.setMode(Mode.ON_DEMAND);
+        assertController(firstController, firstServiceWontStartCleared);
+        assertController(firstController, firstServiceWaiting);
+    }
+
+    @Test
+    public void changeNeverToLazy() throws Exception {
+        final ServiceController<?> firstController = getNeverModeFirstController();
+        final Future<ServiceController<?>> firstServiceWontStartCleared = testListener.expectServiceWontStartCleared(firstServiceName);
+        final Future<ServiceController<?>> firstServiceWaiting = testListener.expectServiceWaiting(firstServiceName);
+        firstController.setMode(Mode.LAZY);
         assertController(firstController, firstServiceWontStartCleared);
         assertController(firstController, firstServiceWaiting);
     }
@@ -459,6 +476,35 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     }
 
     @Test
+    public void changeUpOnDemandToLazy() throws Exception {
+        final ServiceController<?> secondController = getUpOnDemandSecondController();
+        secondController.setMode(Mode.LAZY);
+        assertSame(State.UP, serviceContainer.getService(firstServiceName).getState());
+        assertSame(State.UP, secondController.getState());
+        // lazy won't stop with dependent removal
+        final Future<ServiceController<?>> firstControllerRemoval = testListener.expectServiceRemoval(firstServiceName);
+        final ServiceController<?> firstController = serviceContainer.getService(firstServiceName);
+        firstController.setMode(Mode.REMOVE);
+        assertController(firstController, firstControllerRemoval);
+        assertSame(State.UP, secondController.getState());
+    }
+
+    @Test
+    public void changeDownOnDemandToLazy() throws Exception {
+        final ServiceController<?> firstController = getDownOnDemandFirstController();
+        firstController.setMode(Mode.LAZY);
+        assertSame(State.DOWN, firstController.getState());
+    }
+
+    @Test
+    public void changeFailedToStartOnDemandToLazy() throws Exception {
+        final ServiceController<?> secondController = getFailedToStartOnDemandSecondController();
+        secondController.setMode(Mode.LAZY);
+        assertSame(State.DOWN, serviceContainer.getService(firstServiceName).getState());
+        assertSame(State.START_FAILED, secondController.getState());
+    }
+
+    @Test
     public void changeUpOnDemandToPassive() throws Exception {
         final ServiceController<?> secondController = getUpOnDemandSecondController();
         secondController.setMode(Mode.PASSIVE);
@@ -523,6 +569,360 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     @Test
     public void changeFailedToStartOnDemandToNull() throws Exception {
         final ServiceController<?> secondController = getFailedToStartOnDemandSecondController();
+        assertChangeModeToNullFails(secondController);
+    }
+
+    /**
+     * Installs and returns the controller of a service named {@code secondServiceName} with initial mode
+     * {@link Mode#LAZY LAZY}. The controller is returned in the {@code State#UP UP} state, as there is 
+     * an active service named {@code firstServiceName} with a dependency on the returned service.
+     * 
+     * @return           the ServiceController of the specified service.
+     */
+    private final ServiceController<?> getUpLazySecondController() throws Exception{
+        final Future<ServiceController<?>> secondServiceWaiting = testListener.expectServiceWaiting(secondServiceName);
+        serviceContainer.addService(secondServiceName, Service.NULL)
+        .addListener(testListener)
+        .setInitialMode(Mode.LAZY)
+        .install();
+        final ServiceController<?> secondController = assertController(secondServiceName, secondServiceWaiting);
+
+        final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
+        final Future<ServiceController<?>> secondServiceWaitingCleared = testListener.expectServiceWaitingCleared(secondServiceName);
+        final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
+        serviceContainer.addService(firstServiceName, Service.NULL)
+            .addListener(testListener)
+            .addDependency(secondServiceName)
+            .install();
+
+        assertController(firstServiceName, firstServiceStart);
+        assertController(secondController, secondServiceWaitingCleared);
+        assertController(secondController, secondServiceStart);
+        return secondController;
+    }
+
+    /**
+     * Installs and returns the controller of a service named {@code secondServiceName} with initial mode
+     * {@link Mode#LAZY LAZY}. The controller is returned in the {@code State#UP UP} state, as there has been 
+     * an active service named {@code firstServiceName} with a dependency on the returned service. First service is
+     * currently down in {@link Mode#NEVER NEVER} mode
+     * 
+     * @return           the ServiceController of the specified service.
+     */
+    private final ServiceController<?> getUpLazySecondControllerWithNoActiveDependents() throws Exception{
+        final ServiceController<?> secondController = getUpLazySecondController();
+
+        final ServiceController<?> firstController = serviceContainer.getService(firstServiceName);
+        final Future<ServiceController<?>> firstControllerStop = testListener.expectServiceStop(firstServiceName);
+        firstController.setMode(Mode.NEVER);
+
+        assertController(firstController, firstControllerStop);
+        Thread.sleep(200);
+        assertSame(State.UP, secondController.getState());
+        return secondController;
+    }
+
+    /**
+     * Installs and returns the controller of a service named {@code firstServiceName} with initial mode
+     * {@link Mode#LAZY LAZY}. The controller is returned in the {@code State#DOWN DOWN} state, as there is 
+     * no dependent services.
+     * 
+     * @return           the ServiceController of the specified service.
+     */
+    private final ServiceController<?> getDownLazyFirstController() throws Exception {
+        final Future<ServiceController<?>> firstServiceInstall = testListener.expectListenerAdded(firstServiceName);
+        final Future<ServiceController<?>> firstServiceWaiting = testListener.expectServiceWaiting(firstServiceName);
+        final ServiceController<?> firstController = serviceContainer.addService(firstServiceName, Service.NULL)
+            .addListener(testListener)
+            .setInitialMode(Mode.LAZY)
+            .install();
+        assertController(firstServiceName, firstController);
+        assertController(firstController, firstServiceInstall);
+        assertController(firstController, firstServiceWaiting);
+        assertSame(State.DOWN, firstController.getState());
+        return firstController;
+    }
+
+    /**
+     * Installs and returns the controller of a service named {@code secondServiceName} with initial mode
+     * {@link Mode#LAZY LAZY}. The returned controller is in the {@link State#START_FAILED START_FAILED} state,
+     * and it has a dependent named {@code firstServiceName}, waiting for the failure to be cleared so it can start.
+     * 
+     * @return           the ServiceController of the specified service.
+     */
+    private final ServiceController<?> getFailedToStartLazySecondController() throws Exception {
+        final Future<ServiceController<?>> firstServiceInstall = testListener.expectListenerAdded(firstServiceName);
+        final Future<ServiceController<?>> secondServiceInstall = testListener.expectListenerAdded(secondServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
+        final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
+
+        serviceContainer.addService(secondServiceName, new FailToStartService(true))
+            .addListener(testListener)
+            .setInitialMode(Mode.LAZY)
+            .install();
+
+        serviceContainer.addService(firstServiceName, new FailToStartService(true))
+            .addListener(testListener)
+            .addDependency(secondServiceName)
+            .install();
+
+        final ServiceController<?> firstController = assertController(firstServiceName, firstServiceInstall);
+        final ServiceController<?> secondController = assertController(secondServiceName, secondServiceInstall);
+        assertFailure(secondController, secondServiceFailure);
+        assertController(firstController, firstServiceDependencyFailure);
+
+        assertSame(State.START_FAILED, secondController.getState());
+        return secondController;
+    }
+
+    @Test
+    public void changeUpLazyToRemove() throws Exception {
+        final ServiceController<?> secondController = getUpLazySecondController();
+        final Future<ServiceController<?>> secondServiceStop = testListener.expectServiceStop(secondServiceName);
+        final Future<ServiceController<?>> firstServiceStop = testListener.expectServiceStop(firstServiceName);
+        final Future<ServiceController<?>> secondServiceRemoval = testListener.expectServiceRemoval(secondServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyMissing = testListener.expectImmediateDependencyUnavailable(firstServiceName);
+        secondController.setMode(Mode.REMOVE);
+        assertController(secondController, secondServiceStop);
+        final ServiceController<?> firstController = assertController(firstServiceName, firstServiceStop);
+        assertController(secondController, secondServiceRemoval);
+        assertController(firstController, firstServiceDependencyMissing);
+    }
+
+    @Test
+    public void changeUpLazyWithNoActiveDependentsToRemove() throws Exception {
+        final ServiceController<?> secondController = getUpLazySecondControllerWithNoActiveDependents();
+        final Future<ServiceController<?>> secondServiceStop = testListener.expectServiceStop(secondServiceName);
+        final Future<ServiceController<?>> secondServiceRemoval = testListener.expectServiceRemoval(secondServiceName);
+        secondController.setMode(Mode.REMOVE);
+        assertController(secondController, secondServiceStop);
+        assertController(secondController, secondServiceRemoval);
+    }
+
+    @Test
+    public void changeDownLazyToRemove() throws Exception {
+        final ServiceController<?> firstController = getDownLazyFirstController();
+        final Future<ServiceController<?>> firstServiceRemoval = testListener.expectServiceRemoval(firstServiceName);
+        firstController.setMode(Mode.REMOVE);
+        assertController(firstController, firstServiceRemoval);
+    }
+
+    @Test
+    public void changeFailedToStartLazyToRemove() throws Exception {
+        final ServiceController<?> secondController = getFailedToStartLazySecondController();
+        final Future<ServiceController<?>> firstServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
+        final Future<ServiceController<?>> firstServiceDependencyMissing = testListener.expectImmediateDependencyUnavailable(firstServiceName);
+        final Future<ServiceController<?>> secondServiceStop = testListener.expectFailedServiceStopped(secondServiceName);
+        final Future<ServiceController<?>> secondServiceRemoval = testListener.expectServiceRemoval(secondServiceName);
+        secondController.setMode(Mode.REMOVE);
+        assertController(secondController, secondServiceStop);
+        assertController(secondController, secondServiceRemoval);
+        ServiceController<?> firstController = assertController(firstServiceName, firstServiceDependencyFailureCleared);
+        assertController(firstController, firstServiceDependencyMissing);
+    }
+
+    @Test
+    public void changeUpLazyToNever() throws Exception {
+        final ServiceController<?> secondController = getUpLazySecondController();
+        final Future<ServiceController<?>> secondServiceStop = testListener.expectServiceStop(secondServiceName);
+        final Future<ServiceController<?>> secondServiceWontStart = testListener.expectServiceWontStart(secondServiceName);
+        final Future<ServiceController<?>> firstServiceStop = testListener.expectServiceStop(firstServiceName);
+        secondController.setMode(Mode.NEVER);
+        assertController(secondController, secondServiceStop);
+        assertController(secondController, secondServiceWontStart);
+        assertController(firstServiceName, firstServiceStop);
+    }
+
+    @Test
+    public void changeUpLazyWithNoActiveDependentsToNever() throws Exception {
+        final ServiceController<?> secondController = getUpLazySecondControllerWithNoActiveDependents();
+        final Future<ServiceController<?>> secondServiceStop = testListener.expectServiceStop(secondServiceName);
+        final Future<ServiceController<?>> secondServiceWontStart = testListener.expectServiceWontStart(secondServiceName);
+        secondController.setMode(Mode.NEVER);
+        assertController(secondController, secondServiceStop);
+        assertController(secondController, secondServiceWontStart);
+    }
+
+    @Test
+    public void changeDownLazyToNever() throws Exception {
+        final ServiceController<?> firstController = getDownLazyFirstController();
+        final Future<ServiceController<?>> firstServiceWontStart = testListener.expectServiceWontStart(firstServiceName);
+        firstController.setMode(Mode.NEVER);
+        assertController(firstController, firstServiceWontStart);
+    }
+
+    @Test
+    public void changeFailedToStartLazyToNever() throws Exception {
+        final ServiceController<?> secondController = getFailedToStartLazySecondController();
+        final Future<ServiceController<?>> firstServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
+        final Future<ServiceController<?>> secondServiceStop = testListener.expectFailedServiceStopped(secondServiceName);
+        final Future<ServiceController<?>> secondServiceWontStart = testListener.expectServiceWontStart(secondServiceName);
+        secondController.setMode(Mode.NEVER);
+        assertController(secondController, secondServiceStop);
+        assertController(secondController, secondServiceWontStart);
+        assertController(firstServiceName, firstServiceDependencyFailureCleared);
+    }
+
+    @Test
+    public void changeUpLazyToOnDemand() throws Exception {
+        final ServiceController<?> secondController = getUpLazySecondController();
+        secondController.setMode(Mode.ON_DEMAND);
+        assertSame(State.UP, serviceContainer.getService(firstServiceName).getState());
+        assertSame(State.UP, secondController.getState());
+    }
+
+    @Test
+    public void changeUpWithNoActiveDependentsLazyToOnDemand() throws Exception {
+        final ServiceController<?> secondController = getUpLazySecondControllerWithNoActiveDependents();
+        final Future<ServiceController<?>> secondServiceStop = testListener.expectServiceStop(secondServiceName);
+        final Future<ServiceController<?>> secondServiceWaiting = testListener.expectServiceWaiting(secondServiceName);
+        secondController.setMode(Mode.ON_DEMAND);
+        assertController(secondController, secondServiceStop);
+        assertController(secondController, secondServiceWaiting);
+    }
+
+    @Test
+    public void changeDownLazyToOnDemand() throws Exception {
+        final ServiceController<?> firstController = getDownLazyFirstController();
+        firstController.setMode(Mode.ON_DEMAND);
+        assertSame(State.DOWN, firstController.getState());
+    }
+
+    @Test
+    public void changeFailedToStartLazyToOnDemand() throws Exception {
+        final ServiceController<?> secondController = getFailedToStartLazySecondController();
+        secondController.setMode(Mode.ON_DEMAND);
+        assertSame(State.DOWN, serviceContainer.getService(firstServiceName).getState());
+        assertSame(State.START_FAILED, secondController.getState());
+    }
+
+    @Test
+    public void changeUpLazyToLazy() throws Exception {
+        final ServiceController<?> secondController = getUpLazySecondController();
+        secondController.setMode(Mode.LAZY);
+        assertSame(State.UP, serviceContainer.getService(firstServiceName).getState());
+        assertSame(State.UP, secondController.getState());
+    }
+
+    @Test
+    public void changeUpWithNoActiveDependentsLazyToLazy() throws Exception {
+        final ServiceController<?> secondController = getUpLazySecondControllerWithNoActiveDependents();
+        secondController.setMode(Mode.LAZY);
+        assertSame(State.UP, secondController.getState());
+    }
+
+    @Test
+    public void changeDownLazyToLazy() throws Exception {
+        final ServiceController<?> firstController = getDownLazyFirstController();
+        firstController.setMode(Mode.LAZY);
+        assertSame(State.DOWN, firstController.getState());
+    }
+
+    @Test
+    public void changeFailedToStartLazyToLazy() throws Exception {
+        final ServiceController<?> secondController = getFailedToStartLazySecondController();
+        secondController.setMode(Mode.LAZY);
+        assertSame(State.DOWN, serviceContainer.getService(firstServiceName).getState());
+        assertSame(State.START_FAILED, secondController.getState());
+    }
+
+    @Test
+    public void changeUpLazyToPassive() throws Exception {
+        final ServiceController<?> secondController = getUpLazySecondController();
+        final ServiceController<?> firstController = serviceContainer.getService(firstServiceName);
+        secondController.setMode(Mode.PASSIVE);
+        assertSame(State.UP, firstController.getState());
+        assertSame(State.UP, secondController.getState());
+        // remove first controller and second service won't stop
+        final Future<ServiceController<?>> firstServiceRemoval = testListener.expectServiceRemoval(firstServiceName);
+        firstController.setMode(Mode.REMOVE);
+        assertController(firstController, firstServiceRemoval);
+        assertSame(State.UP, secondController.getState());
+    }
+
+    @Test
+    public void changeUpLazyWithNoActiveDependentsToPassive() throws Exception {
+        final ServiceController<?> secondController = getUpLazySecondControllerWithNoActiveDependents();
+        secondController.setMode(Mode.PASSIVE);
+        assertSame(State.UP, secondController.getState());
+    }
+
+    @Test
+    public void changeDownLazyToPassive() throws Exception {
+        final ServiceController<?> firstController = getDownLazyFirstController();
+        final Future<ServiceController<?>> firstServiceWaitingCleared = testListener.expectServiceWaitingCleared(firstServiceName);
+        final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
+        firstController.setMode(Mode.PASSIVE);
+        assertController(firstController, firstServiceWaitingCleared);
+        assertController(firstController, firstServiceStart);
+    }
+
+    @Test
+    public void changeFailedToStartLazyToPassive() throws Exception {
+        final ServiceController<?> secondController = getFailedToStartLazySecondController();
+        secondController.setMode(Mode.PASSIVE);
+        assertSame(State.DOWN, serviceContainer.getService(firstServiceName).getState());
+        assertSame(State.START_FAILED, secondController.getState());
+    }
+
+    @Test
+    public void changeUpLazyToActive() throws Exception {
+        final ServiceController<?> secondController = getUpLazySecondController();
+        final ServiceController<?> firstController = serviceContainer.getService(firstServiceName);
+        secondController.setMode(Mode.ACTIVE);
+        assertSame(State.UP, firstController.getState());
+        assertSame(State.UP, secondController.getState());
+        // remove first controller and second service won't stop
+        final Future<ServiceController<?>> firstServiceRemoval = testListener.expectServiceRemoval(firstServiceName);
+        firstController.setMode(Mode.REMOVE);
+        assertController(firstController, firstServiceRemoval);
+        assertSame(State.UP, secondController.getState());
+    }
+
+    @Test
+    public void changeUpLazyWithNoActiveDependentsToActive() throws Exception {
+        final ServiceController<?> secondController = getUpLazySecondControllerWithNoActiveDependents();
+        secondController.setMode(Mode.ACTIVE);
+        assertSame(State.UP, secondController.getState());
+    }
+
+    @Test
+    public void changeDownLazyToActive() throws Exception {
+        final ServiceController<?> firstController = getDownLazyFirstController();
+        final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
+        firstController.setMode(Mode.ACTIVE);
+        assertController(firstController, firstServiceStart);
+    }
+
+    @Test
+    public void changeFailedToStartLazyToActive() throws Exception {
+        final ServiceController<?> secondController = getFailedToStartLazySecondController();
+        secondController.setMode(Mode.ACTIVE);
+        assertSame(State.DOWN, serviceContainer.getService(firstServiceName).getState());
+        assertSame(State.START_FAILED, secondController.getState());
+    }
+
+    @Test
+    public void changeUpLazyToNull() throws Exception {
+        final ServiceController<?> secondController = getUpLazySecondController();
+        assertChangeModeToNullFails(secondController);
+    }
+
+    @Test
+    public void changeUpLazyWithNoActiveDependentsToNull() throws Exception {
+        final ServiceController<?> secondController = getUpLazySecondControllerWithNoActiveDependents();
+        assertChangeModeToNullFails(secondController);
+    }
+
+    @Test
+    public void changeDownLazyToNull() throws Exception {
+        final ServiceController<?> firstController = getDownLazyFirstController();
+        assertChangeModeToNullFails(firstController);
+    }
+
+    @Test
+    public void changeFailedToStartLazyToNull() throws Exception {
+        final ServiceController<?> secondController = getFailedToStartLazySecondController();
         assertChangeModeToNullFails(secondController);
     }
 
@@ -688,6 +1088,36 @@ public class ChangeModeTestCase extends AbstractServiceTest {
         final ServiceController<?> secondController = getFailedToStartPassiveSecondController();
         Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
         secondController.setMode(Mode.ON_DEMAND);
+        if (secondController.getState() == State.DOWN) {
+            assertController(secondController, secondServiceStart);
+        }
+        else {
+            assertSame(State.START_FAILED, secondController.getState());
+        }
+    }
+
+    @Test
+    public void changeUpPassiveToLazy() throws Exception {
+        final ServiceController<?> firstController = getUpPassiveFirstController();
+        firstController.setMode(Mode.LAZY);
+        assertSame(State.UP, firstController.getState());
+    }
+
+    @Test
+    public void changeDownPassiveToLazy() throws Exception {
+        final ServiceController<?> firstController = getDownPassiveFirstController();
+        final Future<ServiceController<?>> firstServiceNoWaiting = testListener.expectNoServiceWaiting(firstServiceName);
+        final Future<ServiceController<?>> firstServiceNoWaitingCleared = testListener.expectNoServiceWaitingCleared(firstServiceName);
+        firstController.setMode(Mode.LAZY);
+        assertOppositeNotifications(firstController, firstServiceNoWaitingCleared, firstServiceNoWaiting);
+        assertSame(State.DOWN, firstController.getState());
+    }
+
+    @Test
+    public void changeFailedToStartPassiveToLazy() throws Exception {
+        final ServiceController<?> secondController = getFailedToStartPassiveSecondController();
+        Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
+        secondController.setMode(Mode.LAZY);
         if (secondController.getState() == State.DOWN) {
             assertController(secondController, secondServiceStart);
         }
@@ -926,6 +1356,30 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     public void changeFailedToStartActiveToOnDemand() throws Exception {
         final ServiceController<?> secondController = getFailedToStartActiveSecondController();
         secondController.setMode(Mode.ON_DEMAND);
+        assertSame(State.START_FAILED, secondController.getState());
+    }
+
+    @Test
+    public void changeUpActiveToLazy() throws Exception {
+        final ServiceController<?> firstController = getUpActiveFirstController();
+        firstController.setMode(Mode.LAZY);
+        assertSame(State.UP, firstController.getState());
+    }
+
+    @Test
+    public void changeDownActiveToLazy() throws Exception {
+        final ServiceController<?> firstController = getDownActiveFirstController();
+        final Future<ServiceController<?>> firstServiceProblemCleared = testListener.expectDependencyProblemCleared(firstServiceName);
+        final Future<ServiceController<?>> firstServiceWaiting = testListener.expectServiceWaiting(firstServiceName);
+        firstController.setMode(Mode.LAZY);
+        assertController(firstController, firstServiceProblemCleared);
+        assertController(firstController, firstServiceWaiting);
+    }
+
+    @Test
+    public void changeFailedToStartActiveToLazy() throws Exception {
+        final ServiceController<?> secondController = getFailedToStartActiveSecondController();
+        secondController.setMode(Mode.LAZY);
         assertSame(State.START_FAILED, secondController.getState());
     }
 
