@@ -25,7 +25,11 @@ package org.jboss.msc.service;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNull;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.jboss.msc.service.MultipleRemoveListener.Callback;
 import org.jboss.msc.service.ServiceController.Mode;
@@ -48,8 +52,8 @@ public class MultipleRemoveListenerTestCase extends AbstractServiceTest {
     @Test
     public void testDoneAfterRemoval() throws Exception {
         final IntegerValue integerValue = new IntegerValue(); 
-        final MultipleRemoveListener<Integer> removeListener = MultipleRemoveListener.create(new SetValueCallback(integerValue),
-                Integer.valueOf(1050));
+        final SetValueCallback callback = new SetValueCallback(integerValue);
+        final MultipleRemoveListener<Integer> removeListener = MultipleRemoveListener.create(callback, Integer.valueOf(1050));
         final TestServiceListener testListener = new TestServiceListener();
 
         final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
@@ -69,15 +73,15 @@ public class MultipleRemoveListenerTestCase extends AbstractServiceTest {
         assertNull(integerValue.getValue());
         // call done after removal
         removeListener.done();
-        assertEquals(Integer.valueOf(1050), integerValue.getValue());
+        assertEquals(Integer.valueOf(1050), callback.get());
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testDoneBeforeRemoval() throws Exception {
         final IntegerValue integerValue = new IntegerValue(); 
-        final MultipleRemoveListener<Integer> removeListener = MultipleRemoveListener.create(new SetValueCallback(integerValue),
-                Integer.valueOf(2457));
+        final SetValueCallback callback = new SetValueCallback(integerValue);
+        final MultipleRemoveListener<Integer> removeListener = MultipleRemoveListener.create(callback, Integer.valueOf(2457));
         final TestServiceListener testListener = new TestServiceListener();
 
         final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
@@ -109,8 +113,7 @@ public class MultipleRemoveListenerTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> thirdServiceRemoval = testListener.expectServiceRemoval(thirdServiceName);
         thirdController.setMode(Mode.REMOVE);
         assertController(thirdController, thirdServiceRemoval);
-        Thread.sleep(10);
-        assertEquals(Integer.valueOf(2457), integerValue.getValue());
+        assertEquals(Integer.valueOf(2457), callback.get());
     }
 
     private class IntegerValue implements Value<Integer> {
@@ -126,17 +129,54 @@ public class MultipleRemoveListenerTestCase extends AbstractServiceTest {
         }
     }
 
-    private class SetValueCallback implements Callback<Integer> {
+    private class SetValueCallback implements Callback<Integer>, Future<Integer> {
 
         private final IntegerValue value;
+        private final CountDownLatch countDownLatch;
 
         public SetValueCallback(IntegerValue value) {
             this.value = value;
+            countDownLatch = new CountDownLatch(1);
         }
 
         @Override
         public void handleDone(Integer parameter) {
-            value.setValue(parameter);
+            synchronized (this) {
+                value.setValue(parameter);
+            }
+            countDownLatch.countDown();
+        }
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            return false;
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return false;
+        }
+
+        @Override
+        public synchronized boolean isDone() {
+            return value.getValue() != null;
+        }
+
+        @Override
+        public Integer get() throws InterruptedException, ExecutionException {
+            try {
+                return get(50, TimeUnit.SECONDS);
+            } catch (TimeoutException e) {
+                throw new RuntimeException("Could not get value in 500 miliseconds timeout");
+            }
+        }
+
+        @Override
+        public Integer get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+            countDownLatch.await(timeout, unit);
+            synchronized( this) {
+                return value.getValue();
+            }
         }
     }
 }

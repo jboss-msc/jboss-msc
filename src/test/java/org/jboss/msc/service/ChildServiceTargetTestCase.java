@@ -249,9 +249,19 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
         // install parent as second service, firstService is supposed to send a dep failed notification
         final Future<ServiceController<?>> firstServiceDependencyFailed = testListener.expectDependencyFailure(firstServiceName);
         final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
+        final Future<ServiceController<?>> thirdServiceListenerAdded = testListener.expectListenerAdded(thirdServiceName);
+        Future<ServiceController<?>> thirdServiceRemoval = testListener.expectServiceRemoval(thirdServiceName);
+        final Future<ServiceController<?>> fourthServiceListenerAdded = testListener.expectListenerAdded(fourthServiceName);
+        Future<ServiceController<?>> fourthServiceRemoval = testListener.expectServiceRemoval(fourthServiceName);
+        final Future<ServiceController<?>> fifthServiceListenerAdded = testListener.expectListenerAdded(fifthServiceName);
+        Future<ServiceController<?>> fifthServiceRemoval = testListener.expectServiceRemoval(fifthServiceName);
         serviceContainer.addService(secondServiceName, parent).addListener(testListener).install();
         final ServiceController<?> secondController = assertFailure(secondServiceName, secondServiceFailure);
         assertController(firstController, firstServiceDependencyFailed);
+        // despite second service failures, third, fourth, and fifth services should have started
+        assertController(thirdServiceListenerAdded.get(), thirdServiceRemoval);
+        assertController(fourthServiceListenerAdded.get(), fourthServiceRemoval);
+        assertController(fifthServiceListenerAdded.get(), fifthServiceRemoval);
 
         // move parent to NEVER mode, and expect the process to finish by waiting for firstServiceDepFailureCleared notification
         final Future<ServiceController<?>> firstServiceDepFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
@@ -276,7 +286,7 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
         assertController(thirdController, thirdServiceStop);
 
         // remove fourth service
-        final Future<ServiceController<?>> fourthServiceRemoval = testListener.expectServiceRemoval(fourthServiceName);
+        fourthServiceRemoval = testListener.expectServiceRemoval(fourthServiceName);
         fourthController.setMode(Mode.REMOVE);
         assertController(fourthController, fourthServiceRemoval);
 
@@ -288,8 +298,8 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
 
         // remove parent, causing children third and fifth to be removed as well
         final Future<ServiceController<?>> secondServiceRemoval = testListener.expectServiceRemoval(secondServiceName);
-        final Future<ServiceController<?>> thirdServiceRemoval = testListener.expectServiceRemoval(thirdServiceName);
-        final Future<ServiceController<?>> fifthServiceRemoval = testListener.expectServiceRemoval(fifthServiceName);
+        thirdServiceRemoval = testListener.expectServiceRemoval(thirdServiceName);
+        fifthServiceRemoval = testListener.expectServiceRemoval(fifthServiceName);
         secondController.setMode(Mode.REMOVE);
         assertController(secondController, secondServiceRemoval);
         assertController(thirdController, thirdServiceRemoval);
