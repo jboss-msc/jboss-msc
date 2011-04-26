@@ -721,10 +721,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         break;
                     }
                     case ACTIVE: {
-                        taskList.add(new DemandParentsTask());
                         if (demandedByCount == 0) {
                             assert upperCount < 1;
                             upperCount++;
+                            taskList.add(new DemandParentsTask());
                         }
                         break;
                     }
@@ -797,7 +797,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         break;
                     }
                     case ACTIVE: {
-                        taskList.add(new DemandParentsTask());
+                        if (demandedByCount == 0) {
+                            taskList.add(new DemandParentsTask());
+                        }
                         break;
                     }
                 }
