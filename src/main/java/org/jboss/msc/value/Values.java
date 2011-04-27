@@ -23,9 +23,6 @@
 package org.jboss.msc.value;
 
 import java.lang.reflect.Array;
-import java.lang.reflect.Method;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -227,53 +224,4 @@ public final class Values {
         return INJECTED;
     }
 
-    @Deprecated
-    public static Value<Method> getSetterMethod(final Value<Class<?>> target, final String propertyName, final Value<Class<?>> type) {
-        return cached(new LookupSetMethodValue(target, propertyName, type));
-    }
-
-    @Deprecated
-    public static Value<Method> getSetterMethod(final Class<?> target, final String propertyName, final Class<?> type) {
-        return getSetterMethod(new ImmediateValue<Class<?>>(target), propertyName, new ImmediateValue<Class<?>>(type));
-    }
-
-    @Deprecated
-    public static Value<Method> getSetterMethod(final String propertyName, final Class<?> type) {
-        return getSetterMethod(Inspector.INSTANCE.getCaller(), propertyName, type);
-    }
-
-    @Deprecated
-    public static Value<Method> getGetterMethod(final Value<Class<?>> target, final String propertyName) {
-        return cached(new LookupGetMethodValue(target, propertyName));
-    }
-
-    @Deprecated
-    public static Value<Method> getGetterMethod(final Class<?> target, final String propertyName) {
-        return getGetterMethod(new ImmediateValue<Class<?>>(target), propertyName);
-    }
-
-    @Deprecated
-    public static Value<Method> getGetterMethod(final String propertyName) {
-        return getGetterMethod(Inspector.INSTANCE.getCaller(), propertyName);
-    }
-
-    private static final class Inspector extends SecurityManager {
-        private static final Inspector INSTANCE;
-
-        static {
-            INSTANCE = AccessController.doPrivileged(new PrivilegedAction<Inspector>() {
-                public Inspector run() {
-                    return new Inspector();
-                }
-            });
-        }
-
-        protected Class[] getClassContext() {
-            return super.getClassContext();
-        }
-
-        protected Class<?> getCaller() {
-            return getClassContext()[3];
-        }
-    }
 }

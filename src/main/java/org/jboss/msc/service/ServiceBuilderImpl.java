@@ -153,24 +153,12 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     }
 
     @Override
-    @Deprecated
-    public ServiceBuilder<T> addOptionalDependencies(final ServiceName... newDependencies) {
-        return addDependencies(DependencyType.OPTIONAL, newDependencies);
-    }
-
-    @Override
     public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> newDependencies) {
         return addDependencies(DependencyType.REQUIRED, newDependencies);
     }
 
     ServiceBuilder<T> addDependenciesNoCheck(final Iterable<ServiceName> newDependencies) {
         return addDependenciesNoCheck(newDependencies, DependencyType.REQUIRED);
-    }
-
-    @Override
-    @Deprecated
-    public ServiceBuilder<T> addOptionalDependencies(final Iterable<ServiceName> newDependencies) {
-        return addDependencies(DependencyType.OPTIONAL, newDependencies);
     }
 
     @Override
@@ -194,12 +182,6 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     }
 
     @Override
-    @Deprecated
-    public ServiceBuilder<T> addOptionalDependency(final ServiceName dependency) {
-        return addDependency(DependencyType.OPTIONAL, dependency);
-    }
-
-    @Override
     public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency) {
         checkAlreadyInstalled();
         if(!serviceName.equals(dependency)) {
@@ -214,12 +196,6 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     }
 
     @Override
-    @Deprecated
-    public ServiceBuilder<T> addOptionalDependency(final ServiceName dependency, final Injector<Object> target) {
-        return addDependency(DependencyType.OPTIONAL, dependency, target);
-    }
-
-    @Override
     public ServiceBuilder<T> addDependency(DependencyType dependencyType, final ServiceName dependency, final Injector<Object> target) {
         checkAlreadyInstalled();
         doAddDependency(dependency, dependencyType).getInjectorList().add(target);
@@ -229,12 +205,6 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     @Override
     public <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
         return addDependency(DependencyType.REQUIRED, dependency, type, target);
-    }
-
-    @Override
-    @Deprecated
-    public <I> ServiceBuilder<T> addOptionalDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
-        return addDependency(DependencyType.OPTIONAL, dependency, type, target);
     }
 
     @Override

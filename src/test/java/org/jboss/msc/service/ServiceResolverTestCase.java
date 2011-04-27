@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Future;
 
+import org.jboss.msc.service.ServiceBuilder.DependencyType;
 import org.jboss.msc.service.ServiceController.Mode;
 import org.jboss.msc.service.util.LatchedFinishListener;
 import org.jboss.msc.util.TestServiceListener;
@@ -128,7 +129,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
         Future<ServiceController<?>> startFuture = listener.expectServiceStart(ServiceName.of("7"));
 
         serviceContainer.addService(ServiceName.of("7"), Service.NULL)
-            .addOptionalDependencies(ServiceName.of("11"), ServiceName.of("8"))
+            .addDependencies(DependencyType.OPTIONAL, ServiceName.of("11"), ServiceName.of("8"))
             .install();
 
         ServiceController<?> service7Controller = startFuture.get();
@@ -148,7 +149,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
 
         startFuture = listener.expectServiceStart(ServiceName.of("7"));
         serviceContainer.addService(ServiceName.of("7"), Service.NULL)
-            .addOptionalDependencies(ServiceName.of("11"), ServiceName.of("8"))
+            .addDependencies(DependencyType.OPTIONAL, ServiceName.of("11"), ServiceName.of("8"))
             .addListener(listener)
             .install();
         assertEquals(ServiceController.State.UP, startFuture.get().getState());

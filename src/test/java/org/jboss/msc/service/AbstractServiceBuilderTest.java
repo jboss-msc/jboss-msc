@@ -31,6 +31,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -50,7 +51,6 @@ import org.junit.Test;
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
-@SuppressWarnings("deprecation")
 public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
 
     private final TestServiceListener testListener = new TestServiceListener();
@@ -144,7 +144,7 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         dependencies = new ArrayList<ServiceName>();
         // try to override previous action by making uninstalled service an optional dependency
         // adding service as its own dependent should be ignored
-        serviceBuilder.addOptionalDependencies(uninstalledServiceName, serviceName);
+        serviceBuilder.addDependencies(DependencyType.OPTIONAL, uninstalledServiceName, serviceName);
         // add optional dependency on helper service, with an injection on helper property
         serviceBuilder.addDependency(DependencyType.OPTIONAL, helperServiceName,
                 new SetMethodInjector<Object>(Values.immediateValue(dummyManager),
@@ -217,7 +217,7 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         dependencies = new ArrayList<ServiceName>();
         dependencies.add(uninstalledServiceName);
         dependencies.add(serviceName);
-        serviceBuilder.addOptionalDependencies(dependencies);
+        serviceBuilder.addDependencies(DependencyType.OPTIONAL, dependencies);
         // add three listeners, with a duplication addition for testListener1
         final TestServiceListener testListener1 = new TestServiceListener();
         final TestServiceListener testListener2 = new TestServiceListener();
@@ -226,7 +226,7 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         // set default location
         serviceBuilder.setLocation();
         // inject a description into description property of dummy manager
-        serviceBuilder.addInjection(new SetMethodInjector<String>(dummyManager, DummyManager.class, "setDescription", String.class), "real description");
+        serviceBuilder.addInjection(new SetMethodInjector<String>(Values.immediateValue(dummyManager), getMethod(DummyManager.class, "setDescription", String.class)), "real description");
 
         Future<ServiceController<?>> dummyServiceStart1 = testListener1.expectServiceStart(serviceName);
         Future<ServiceController<?>> dummyServiceStart2 = testListener2.expectServiceStart(serviceName);
@@ -281,7 +281,7 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         // overwrite dependencies on uninstalled and service as optional ones (the dependency on service should be
         // ignored  nonetheless; but the dependency on uninstalled won't be overriden) 
         serviceBuilder.addDependency(DependencyType.OPTIONAL, uninstalledServiceName);
-        serviceBuilder.addOptionalDependency(serviceName);
+        serviceBuilder.addDependency(DependencyType.OPTIONAL, serviceName);
         // add three listeners, with a duplication addition for testListener1
         final TestServiceListener testListener1 = new TestServiceListener();
         final TestServiceListener testListener2 = new TestServiceListener();
@@ -290,7 +290,7 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         // set default location
         serviceBuilder.setLocation();
         // inject a description into description property of dummy manager
-        serviceBuilder.addInjection(new SetMethodInjector<String>(dummyManager, DummyManager.class, "setDescription", String.class), "real description");
+        serviceBuilder.addInjection(new SetMethodInjector<String>(Values.immediateValue(dummyManager), getMethod(DummyManager.class, "setDescription", String.class)), "real description");
 
         Future<ServiceController<?>> dummyServiceMissingDependency1 = testListener1.expectImmediateDependencyUnavailable(serviceName);
         Future<ServiceController<?>> dummyServiceMissingDependency2 = testListener2.expectImmediateDependencyUnavailable(serviceName);
@@ -360,7 +360,7 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         // add dependency on another service with injection... its value should be injected into the description property
         // of dummy manager
         serviceBuilder.addDependency(anotherServiceName, String.class,
-                new SetMethodInjector<String>(dummyManager, DummyManager.class, "setDescription", String.class));
+                new SetMethodInjector<String>(Values.immediateValue(dummyManager), getMethod(DummyManager.class, "setDescription", String.class)));
         // add dependencies on another service (redundant given previous step), uninstalled service, and service
         // (notice that the last one is the service being installed itself)
         Collection<ServiceName> dependencies = new ArrayList<ServiceName>();
@@ -371,7 +371,7 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         dependencies = new ArrayList<ServiceName>();
         dependencies.add(uninstalledServiceName);
         dependencies.add(serviceName);
-        serviceBuilder.addOptionalDependencies(dependencies);
+        serviceBuilder.addDependencies(DependencyType.OPTIONAL, dependencies);
         // add test listener
         serviceBuilder.addListener(testListener);
         // create a location for service
@@ -427,7 +427,7 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         // add dependency on another service with injection... its value should be injected into the description property
         // of dummy manager
         serviceBuilder.addDependency(DependencyType.REQUIRED, anotherServiceName, String.class,
-                new SetMethodInjector<String>(dummyManager, DummyManager.class, "setDescription", String.class));
+                new SetMethodInjector<String>(Values.immediateValue(dummyManager), getMethod(DummyManager.class, "setDescription", String.class)));
         // add dependencies on another service (redundant given previous step), uninstalled service, and service
         // (notice that the last one is the service being installed itself)
         Collection<ServiceName> dependencies = new ArrayList<ServiceName>();
@@ -439,7 +439,7 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         dependencies = new ArrayList<ServiceName>();
         dependencies.add(uninstalledServiceName);
         dependencies.add(serviceName);
-        serviceBuilder.addOptionalDependencies(dependencies);
+        serviceBuilder.addDependencies(DependencyType.OPTIONAL, dependencies);
         // add test listener
         serviceBuilder.addListener(testListener);
         // create a location for service
@@ -522,11 +522,11 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         serviceBuilder.setInitialMode(Mode.PASSIVE);
         // with optional dependency on service description, whereas the service description value should be injected
         // into the description property of dummy service
-        serviceBuilder.addOptionalDependency(descriptionServiceName, String.class,
-                new SetMethodInjector<String>(dummyManager, DummyManager.class, "setDescription", String.class));
+        serviceBuilder.addDependency(DependencyType.OPTIONAL, descriptionServiceName, String.class,
+                new SetMethodInjector<String>(Values.immediateValue(dummyManager), getMethod(DummyManager.class, "setDescription", String.class)));
         // add also an optional dependency on service helper, whereas the service value should also be injected
         // into dummy service
-        serviceBuilder.addOptionalDependency(helperServiceName, new SetMethodInjector<Object>(Values.immediateValue(dummyManager),
+        serviceBuilder.addDependency(DependencyType.OPTIONAL, helperServiceName, new SetMethodInjector<Object>(Values.immediateValue(dummyManager),
                 DummyManager.class.getMethod("setHelper", DummyHelper.class)));
         serviceBuilder.addDependency(serviceName);
         // inject manager into managerInjected
@@ -615,8 +615,8 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         // setup dummy service installation
         serviceBuilder = getServiceBuilder(serviceContainer.addService(serviceName, service));
         // add optional dependency on description service, with an injection on description property
-        serviceBuilder.addOptionalDependency(descriptionServiceName, String.class,
-                new SetMethodInjector<String>(dummyManager, DummyManager.class, "setDescription", String.class));
+        serviceBuilder.addDependency(DependencyType.OPTIONAL, descriptionServiceName, String.class,
+                new SetMethodInjector<String>(Values.immediateValue(dummyManager), getMethod(DummyManager.class, "setDescription", String.class)));
         // add dependency on helper service, with an injection on helper property
         serviceBuilder.addDependency(helperServiceName, new SetMethodInjector<Object>(Values.immediateValue(dummyManager),
                 DummyManager.class.getMethod("setHelper", DummyHelper.class)));
@@ -789,5 +789,16 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         }
         
         public T injectedValue;
+    }
+
+    private static Method getMethod(final Class<?> clazz, final String methodName, final Class<?> paramType) {
+        final Method method;
+        try {
+            method = clazz.getMethod(methodName, paramType);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException("No such method found '" +  clazz + "." + methodName + "(" +
+                    paramType + ")'", e);
+        }
+        return method;
     }
 }

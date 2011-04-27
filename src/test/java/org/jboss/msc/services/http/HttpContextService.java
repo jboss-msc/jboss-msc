@@ -47,14 +47,6 @@ public final class HttpContextService implements Service<HttpContext> {
     private HttpServer server;
     private HttpContext httpContext;
 
-    public static final Value<Method> SERVER_SETTER = Values.getSetterMethod("server", HttpServer.class);
-    public static final Value<Method> HANDLER_SETTER = Values.getSetterMethod("handler", HttpHandler.class);
-    public static final Value<Method> PATH_SETTER = Values.getSetterMethod("path", String.class);
-
-    public final Injector<HttpServer> httpServerInjector = SetMethodInjector.create(Values.immediateValue(this), SERVER_SETTER);
-    public final Injector<HttpHandler> httpHandlerInjector = SetMethodInjector.create(Values.immediateValue(this), HANDLER_SETTER);
-    public final Injector<String> pathInjector = SetMethodInjector.create(Values.immediateValue(this), PATH_SETTER);
-
     public synchronized String getPath() {
         return path;
     }

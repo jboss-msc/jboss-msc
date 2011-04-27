@@ -48,19 +48,6 @@ public final class MethodInjector<T> implements Injector<T> {
     /**
      * Construct a new instance.
      *
-     * @param methodValue the value of the method to invoke
-     * @param targetValue the value of the invocation target (the object being called upon) - use {@link Values#nullValue()} for static methods
-     * @param injectedValue the value to use for {@link Values#injectedValue()} on uninjection (usually {@link Values#nullValue()})
-     * @param parameterList the list of parameter values (any {@code null} parameters should use {@link Values#nullValue()})
-     */
-    @Deprecated
-    public MethodInjector(final Value<Method> methodValue, final Value<?> targetValue, final Value<?> injectedValue, final List<? extends Value<?>> parameterList) {
-        this(methodValue.getValue(), targetValue, injectedValue, parameterList);
-    }
-
-    /**
-     * Construct a new instance.
-     *
      * @param method the method to invoke
      * @param targetValue the value of the invocation target (the object being called upon) - use {@link Values#nullValue()} for static methods
      * @param injectedValue the value to use for {@link Values#injectedValue()} on uninjection (usually {@link Values#nullValue()})

@@ -46,14 +46,14 @@ public class ConstructedValueTestCase {
 
     @Test
     public void defaultConstructor() throws Exception {
-        final Value<Constructor<ConstructedService>> constructor = getConstructor(ConstructedService.class);
+        final Constructor<ConstructedService> constructor = getConstructor(ConstructedService.class);
         final Value<ConstructedService> value = new ConstructedValue<ConstructedService>(constructor, Collections.<Value<?>>emptyList());
         assertServiceValuesCreated(value, Signature.DEFAULT);
     }
 
     @Test
     public void defaultConstructorWrongSignature() throws Exception {
-        final Value<Constructor<ConstructedService>> constructor = getConstructor(ConstructedService.class);
+        final Constructor<ConstructedService> constructor = getConstructor(ConstructedService.class);
         final List<Value<Integer>> params= new ArrayList<Value<Integer>>();
         params.add(new ImmediateValue<Integer>(5));
         final Value<ConstructedService> value = new ConstructedValue<ConstructedService>(constructor, params);
@@ -65,7 +65,7 @@ public class ConstructedValueTestCase {
 
     @Test
     public void constructorWithIntParam() throws Exception {
-        final Value<Constructor<ConstructedService>> constructor = getConstructor(ConstructedService.class, int.class);
+        final Constructor<ConstructedService> constructor = getConstructor(ConstructedService.class, int.class);
         final List<Value<Integer>> params= new ArrayList<Value<Integer>>();
         params.add(new ImmediateValue<Integer>(11));
         assertServiceValuesCreated(new ConstructedValue<ConstructedService>(constructor, params), Signature.INTEGER);
@@ -73,7 +73,7 @@ public class ConstructedValueTestCase {
 
     @Test
     public void constructorWithIntParamThrowsException() throws Exception {
-        final Value<Constructor<ConstructedService>> constructor = getConstructor(ConstructedService.class, int.class);
+        final Constructor<ConstructedService> constructor = getConstructor(ConstructedService.class, int.class);
         final List<Value<Integer>> params= new ArrayList<Value<Integer>>();
         params.add(new ImmediateValue<Integer>(0));
         final Value<ConstructedService> value = new ConstructedValue<ConstructedService>(constructor, params);
@@ -85,7 +85,7 @@ public class ConstructedValueTestCase {
 
     @Test
     public void constructorWithShortParam() throws Exception {
-        final Value<Constructor<ConstructedService>> constructor = getConstructor(ConstructedService.class, short.class);
+        final Constructor<ConstructedService> constructor = getConstructor(ConstructedService.class, short.class);
         final List<Value<Short>> params= new ArrayList<Value<Short>>();
         params.add(new ImmediateValue<Short>((short) 11));
         assertServiceValuesCreated(new ConstructedValue<ConstructedService>(constructor, params), Signature.SHORT);
@@ -93,7 +93,7 @@ public class ConstructedValueTestCase {
 
     @Test
     public void cachedConstructorWithShortParam() throws Exception {
-        final Value<Constructor<ConstructedService>> constructor = getConstructor(ConstructedService.class, short.class);
+        final Constructor<ConstructedService> constructor = getConstructor(ConstructedService.class, short.class);
         final List<Value<Short>> params= new ArrayList<Value<Short>>();
         params.add(new ImmediateValue<Short>((short) 11));
         assertCachedServiceValueCreated(new CachedValue<ConstructedService>(
@@ -102,7 +102,7 @@ public class ConstructedValueTestCase {
 
     @Test
     public void constructorWithStringParam() throws Exception {
-        final Value<Constructor<ConstructedService>> constructor = getConstructor(ConstructedService.class, String.class);
+        final Constructor<ConstructedService> constructor = getConstructor(ConstructedService.class, String.class);
         final List<Value<String>> params= new ArrayList<Value<String>>();
         params.add(new ImmediateValue<String>("param"));
         assertServiceValuesCreated(new ConstructedValue<ConstructedService>(constructor, params), Signature.STRING);
@@ -110,7 +110,7 @@ public class ConstructedValueTestCase {
 
     @Test
     public void cachedConstructorWithStringParam() throws Exception {
-        final Value<Constructor<ConstructedService>> constructor = getConstructor(ConstructedService.class, String.class);
+        final Constructor<ConstructedService> constructor = getConstructor(ConstructedService.class, String.class);
         final List<Value<String>> params= new ArrayList<Value<String>>();
         params.add(new ImmediateValue<String>("param"));
         assertCachedServiceValueCreated(new CachedValue<ConstructedService>(
@@ -119,7 +119,7 @@ public class ConstructedValueTestCase {
 
     @Test
     public void constructorWithStringStringParams() throws Exception {
-        final Value<Constructor<ConstructedService>> constructor = getConstructor(ConstructedService.class, String.class, String.class);
+        final Constructor<ConstructedService> constructor = getConstructor(ConstructedService.class, String.class, String.class);
         final List<Value<String>> params= new ArrayList<Value<String>>();
         params.add(new ImmediateValue<String>("par"));
         params.add(new ImmediateValue<String>("am"));
@@ -128,7 +128,7 @@ public class ConstructedValueTestCase {
 
     @Test
     public void constructorWithBooleanIntegerParams() throws Exception {
-        final Value<Constructor<ConstructedService>> constructor = getConstructor(ConstructedService.class, boolean.class, int.class);
+        final Constructor<ConstructedService> constructor = getConstructor(ConstructedService.class, boolean.class, int.class);
         final List<Value<? extends Object>> params= new ArrayList<Value<? extends Object>>();
         params.add(new ImmediateValue<Boolean>(false));
         params.add(new ImmediateValue<Integer>(10));
@@ -137,7 +137,7 @@ public class ConstructedValueTestCase {
 
     @Test
     public void invalidConstructor() throws Exception {
-        final Value<Constructor<AbstractService>> constructor = getConstructor(AbstractService.class);
+        final Constructor<AbstractService> constructor = getConstructor(AbstractService.class);
         final Value<AbstractService> value = new ConstructedValue<AbstractService> (constructor, Collections.<Value<AbstractService>>emptyList());
         try {
             value.getValue();
@@ -147,22 +147,17 @@ public class ConstructedValueTestCase {
 
     @Test
     public void nullConstructor() throws Exception {
-        final Value<Constructor<ConstructedService>> constructor = getConstructor(ConstructedService.class);
+        final Constructor<ConstructedService> constructor = getConstructor(ConstructedService.class);
 
         try {
-            new ConstructedValue<ConstructedService>((Constructor<ConstructedService>) null, Collections.<Value<?>>emptyList());
-            fail("IllegalArgumentException expected");
-        } catch (IllegalArgumentException e) {}
-
-        try {
-            new ConstructedValue<ConstructedService>(constructor.getValue(), null);
+            new ConstructedValue<ConstructedService>(constructor, null);
             fail("IllegalArgumentException expected");
         } catch (IllegalArgumentException e) {}
     }
 
     @Test
     public void inaccessibleConstructor() throws Exception {
-        final Value<Constructor<ConstructedService>> constructor = getConstructor(ConstructedService.class, boolean.class);
+        final Constructor<ConstructedService> constructor = getConstructor(ConstructedService.class, boolean.class);
         final List<Value<Boolean>> params = new ArrayList<Value<Boolean>>();
         params.add(new ImmediateValue<Boolean>(false));
         final Value<ConstructedService> value = new ConstructedValue<ConstructedService> (constructor, params);
@@ -197,7 +192,7 @@ public class ConstructedValueTestCase {
         return service;
     }
 
-    private final <T> Value<Constructor<T>> getConstructor(Class<T> targetClass, Class<?> ...params) throws Exception {
-        return new ImmediateValue<Constructor<T>>(targetClass.getDeclaredConstructor(params));
+    private final <T> Constructor<T> getConstructor(Class<T> targetClass, Class<?> ...params) throws Exception {
+        return targetClass.getDeclaredConstructor(params);
     }
 }

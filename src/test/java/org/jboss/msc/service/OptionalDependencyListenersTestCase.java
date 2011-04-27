@@ -28,6 +28,7 @@ import static org.junit.Assert.assertSame;
 
 import java.util.concurrent.Future;
 
+import org.jboss.msc.service.ServiceBuilder.DependencyType;
 import org.jboss.msc.service.ServiceController.Mode;
 import org.jboss.msc.service.ServiceController.State;
 import org.jboss.msc.service.util.FailToStartService;
@@ -65,7 +66,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         // install first service, with an optional dependency on missing second service
         serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
-            .addOptionalDependency(secondServiceName)
+            .addDependency(DependencyType.OPTIONAL, secondServiceName)
             .install();
         // first service is expected to start
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceStart);
@@ -107,7 +108,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         // and install first service on initialMode, with a dependency on second service
         final ServiceController<?> firstController = serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
-            .addOptionalDependency(secondServiceName)
+            .addDependency(DependencyType.OPTIONAL, secondServiceName)
             .setInitialMode(Mode.NEVER)
             .install();
         // a dep failure notification should not be send by first service, since it is NEVER mode
@@ -145,7 +146,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         // and install first service on initialMode, with a dependency on second service
         serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
-            .addOptionalDependency(secondServiceName)
+            .addDependency(DependencyType.OPTIONAL, secondServiceName)
             .install();
         // a dep failure notification should be send by first service
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceDependencyFailed);
@@ -185,7 +186,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         // install first service, which has an optional dependency on second service
         serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
-            .addOptionalDependency(secondServiceName)
+            .addDependency(DependencyType.OPTIONAL, secondServiceName)
             .install();
         // a missing dependency notification is also expected from first service
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceTransDependencyMissing);
@@ -242,7 +243,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         // install firstService, a dependent on second service
         serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
-            .addOptionalDependency(secondServiceName)
+            .addDependency(DependencyType.OPTIONAL, secondServiceName)
             .install();
         // first service is expected to send a notification of missing dependency
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceTransDependencyMissing);
@@ -285,7 +286,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         // install first service with an optional dependency on second service
         serviceContainer.addService(firstServiceName, Service.NULL)
             .addListener(testListener)
-            .addOptionalDependency(secondServiceName)
+            .addDependency(DependencyType.OPTIONAL, secondServiceName)
             .install();
         // first service is expected to start
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceStart);
@@ -403,7 +404,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
             .install();
         // add secondService with an optional dependency on thirdService
         final ServiceController<?> secondController = serviceContainer.addService(secondServiceName, Service.NULL)
-        .addOptionalDependency(thirdServiceName)
+        .addDependency(DependencyType.OPTIONAL, thirdServiceName)
         .setInitialMode(Mode.NEVER)
         .addListener(testListener)
         .install();
@@ -539,7 +540,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         final Future<ServiceController<?>> firstServiceDepUninstalled = testListener.expectNoImmediateDependencyUnavailable(firstServiceName);
         // add firstService with an optional dependency on missing secondService
         serviceContainer.addService(firstServiceName, Service.NULL)
-            .addOptionalDependency(secondServiceName)
+            .addDependency(DependencyType.OPTIONAL, secondServiceName)
             .addListener(testListener)
             .install();
         // firstService is expected to start
@@ -745,7 +746,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         // .. and second service has an optional dependency on third service
         serviceContainer.addService(secondServiceName, Service.NULL)
             .addListener(testListener)
-            .addOptionalDependency(thirdServiceName)
+            .addDependency(DependencyType.OPTIONAL, thirdServiceName)
             .install();
         // both services should start normally
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceStart);
@@ -956,7 +957,7 @@ public class OptionalDependencyListenersTestCase extends AbstractServiceTest {
         // install second service with a dependency on third service...
         serviceContainer.addService(secondServiceName, Service.NULL)
             .addListener(testListener)
-            .addOptionalDependency(thirdServiceName)
+            .addDependency(DependencyType.OPTIONAL, thirdServiceName)
             .install();
         // second service should notify the dependency failure and the missing dependency
         final ServiceController<?> secondController = assertController(secondServiceName, secondServiceDependencyFailed);

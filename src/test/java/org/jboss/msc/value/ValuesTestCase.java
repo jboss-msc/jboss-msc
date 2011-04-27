@@ -31,7 +31,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
-import java.lang.reflect.Method;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -39,7 +38,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.jboss.msc.value.util.AnotherService;
 import org.jboss.msc.value.util.AnyService;
 import org.junit.Test;
 
@@ -339,74 +337,5 @@ public class ValuesTestCase {
         final ThreadLocalValue<Object> injected1 = Values.injectedValue();
         final ThreadLocalValue<Object> injected2 = Values.injectedValue();
         assertSame(injected1, injected2); // makes sure that the same ThreadLocalValue is consistently returned
-    }
-
-    @Test
-    public void getSetterMethod() throws Exception {
-        final Value<Method> value1 = Values.getSetterMethod(AnotherService.class, "retry", int.class);
-        final Value<Method> value2 = Values.getSetterMethod(Values.<Class<?>>immediateValue(AnotherService.class), "retry",
-                Values.<Class<?>>immediateValue(int.class));
-        final Method method = value1.getValue();
-        assertNotNull(method);
-        assertEquals(method, value2.getValue());
-        final AnotherService anotherService = new AnotherService(0, false, "");
-        method.invoke(anotherService, 1);
-        assertEquals(1, anotherService.getRetry());
-        method.invoke(anotherService, 3);
-        assertEquals(3, anotherService.getRetry());
-        method.invoke(anotherService, 5);
-        assertEquals(5, anotherService.getRetry());
-        method.invoke(anotherService, 7);
-        assertEquals(7, anotherService.getRetry());
-    }
-
-    String field;
-    public void setField(String field) {
-        this.field = field;
-    }
-
-    @Test
-    public void getCallerSetterMethod() throws Exception {
-        final Value<Method> value = Values.getSetterMethod("field", String.class);
-        final Method method = value.getValue();
-        assertNotNull(method);
-        assertEquals(method, this.getClass().getDeclaredMethod("setField", String.class));
-        method.invoke(this, "getCallerSetterMethod");
-        assertEquals("getCallerSetterMethod", field);
-    }
-
-    @Test
-    public void getGetterMethod() throws Exception {
-        final Value<Method> value1 = Values.getGetterMethod(AnotherService.class, "retry");
-        final Value<Method> value2 = Values.getGetterMethod(Values.<Class<?>>immediateValue(AnotherService.class), "retry");
-        final Method method = value1.getValue();
-        assertNotNull(method);
-        assertEquals(method, value2.getValue());
-        final AnotherService anotherService = new AnotherService(17, false, "");
-        assertEquals(17, method.invoke(anotherService));
-        anotherService.setRetry(8);
-        assertEquals(8, method.invoke(anotherService));
-        anotherService.setRetry(4);
-        assertEquals(4, method.invoke(anotherService));
-        anotherService.setRetry(2);
-        assertEquals(2, method.invoke(anotherService));
-        anotherService.setRetry(1);
-        assertEquals(1, method.invoke(anotherService));
-        anotherService.setRetry(0);
-        assertEquals(0, method.invoke(anotherService));
-    }
-
-    public String getField() {
-        return field;
-    }
-
-    @Test
-    public void getCallerGetterMethod() throws Exception {
-        final Value<Method> value = Values.getGetterMethod("field");
-        Method method = value.getValue();
-        assertNotNull(method);
-        assertEquals(method, this.getClass().getDeclaredMethod("getField"));
-        field = "getCallerGetterMethod";
-        assertEquals("getCallerGetterMethod", method.invoke(this));
     }
 }

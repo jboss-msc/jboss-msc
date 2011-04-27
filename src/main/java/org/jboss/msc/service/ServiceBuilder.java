@@ -88,16 +88,6 @@ public interface ServiceBuilder<T> {
     ServiceBuilder<T> addDependencies(DependencyType dependencyType, ServiceName... dependencies);
 
     /**
-     * Add multiple, optional, non-injected dependencies.  If the dependencies do not exist,
-     * it will not stop the service from starting.
-     *
-     * @param dependencies the service names to depend on
-     * @return this builder
-     * @deprecated use {@link #addDependencies(DependencyType, ServiceName...)} instead
-     */
-    ServiceBuilder<T> addOptionalDependencies(ServiceName... dependencies);
-
-    /**
      * Add multiple, non-injected dependencies.
      *
      * @param dependencies the service names to depend on
@@ -113,16 +103,6 @@ public interface ServiceBuilder<T> {
      * @return this builder
      */
     ServiceBuilder<T> addDependencies(DependencyType dependencyType, Iterable<ServiceName> dependencies);
-
-    /**
-     * Add multiple, optional, non-injected dependencies.  If the dependencies do not exist,
-     * it will not stop the service from starting.
-     *
-     * @param dependencies the service names to depend on
-     * @return this builder
-     * @deprecated use {@link #addDependencies(DependencyType, Iterable<ServiceName>)} instead
-     */
-    ServiceBuilder<T> addOptionalDependencies(Iterable<ServiceName> dependencies);
 
     /**
      * Add a dependency.  Calling this method multiple times for the same service name will only add it as a
@@ -144,17 +124,6 @@ public interface ServiceBuilder<T> {
     ServiceBuilder<T> addDependency(DependencyType dependencyType, ServiceName dependency);
 
     /**
-     * Add an optional dependency.  Calling this method multiple times for the same service name will only add it as a
-     * dependency one time; however this may be useful to specify multiple injections for one dependency.
-     * If the dependencies do not exist, it will not stop the service from starting.
-     *
-     * @param dependency the name of the dependency
-     * @return an injection builder for optionally injecting the dependency
-     * @deprecated use {@link #addDependency(DependencyType, ServiceName)} instead
-     */
-    ServiceBuilder<T> addOptionalDependency(ServiceName dependency);
-
-    /**
      * Add a service dependency.  Calling this method multiple times for the same service name will only add it as a
      * dependency one time; however this may be useful to specify multiple injections for one dependency.
      *
@@ -174,18 +143,6 @@ public interface ServiceBuilder<T> {
      * @return this builder
      */
     ServiceBuilder<T> addDependency(DependencyType dependencyType, ServiceName dependency, Injector<Object> target);
-
-    /**
-     * Add an optional service dependency.  This will  Calling this method multiple times for the same service name will only add it as a
-     * dependency one time; however this may be useful to specify multiple injections for one dependency.
-     * If the dependencies do not exist, it will not stop the service from starting.
-     *
-     * @param dependency the name of the dependency
-     * @param target the injector into which the dependency should be stored
-     * @return this builder
-     * @deprecated use {@link #addDependency(DependencyType, ServiceName, Injector<Object>)} instead
-     */
-    ServiceBuilder<T> addOptionalDependency(ServiceName dependency, Injector<Object> target);
 
     /**
      * Add a service dependency.  The type of the dependency is checked before it is passed into the (type-safe) injector
@@ -213,21 +170,6 @@ public interface ServiceBuilder<T> {
      * @return this builder
      */
     <I> ServiceBuilder<T> addDependency(DependencyType dependencyType, ServiceName dependency, Class<I> type, Injector<I> target);
-
-    /**
-     * Add an optional service dependency.  The type of the dependency is checked before it is passed into the (type-safe) injector
-     * instance.  Calling this method multiple times for the same service name will only add it as a
-     * dependency one time; however this may be useful to specify multiple injections for one dependency.
-     * If the dependencies do not exist, it will not stop the service from starting.
-     *
-     * @param dependency the name of the dependency
-     * @param type the class of the value of the dependency
-     * @param target the injector into which the dependency should be stored
-     * @param <I> the type of the value of the dependency
-     * @return this builder
-     * @deprecated use {@link #addDependency(DependencyType, ServiceName, Class, Injector)} instead
-     */
-    <I> ServiceBuilder<T> addOptionalDependency(ServiceName dependency, Class<I> type, Injector<I> target);
 
     /**
      * Add an injection.  The given value will be injected into the given injector before service start, and uninjected

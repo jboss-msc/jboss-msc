@@ -76,12 +76,6 @@ public final class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     }
 
     /** {@inheritDoc} */
-    @Deprecated
-    public ServiceBuilder<T> addOptionalDependencies(final ServiceName... dependencies) {
-        return delegate.addOptionalDependencies(dependencies);
-    }
-
-    /** {@inheritDoc} */
     public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> dependencies) {
         return delegate.addDependencies(dependencies);
     }
@@ -89,12 +83,6 @@ public final class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final Iterable<ServiceName> dependencies) {
         return delegate.addDependencies(dependencyType, dependencies);
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    public ServiceBuilder<T> addOptionalDependencies(final Iterable<ServiceName> dependencies) {
-        return delegate.addOptionalDependencies(dependencies);
     }
 
     /** {@inheritDoc} */
@@ -108,12 +96,6 @@ public final class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     }
 
     /** {@inheritDoc} */
-    @Deprecated
-    public ServiceBuilder<T> addOptionalDependency(final ServiceName dependency) {
-        return delegate.addOptionalDependency(dependency);
-    }
-
-    /** {@inheritDoc} */
     public ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
         return delegate.addDependency(dependency, target);
     }
@@ -124,12 +106,6 @@ public final class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     }
 
     /** {@inheritDoc} */
-    @Deprecated
-    public ServiceBuilder<T> addOptionalDependency(final ServiceName dependency, final Injector<Object> target) {
-        return delegate.addOptionalDependency(dependency, target);
-    }
-
-    /** {@inheritDoc} */
     public <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
         return delegate.addDependency(dependency, type, target);
     }
@@ -137,12 +113,6 @@ public final class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     /** {@inheritDoc} */
     public <I> ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Class<I> type, final Injector<I> target) {
         return delegate.addDependency(dependencyType, dependency, type, target);
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    public <I> ServiceBuilder<T> addOptionalDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
-        return delegate.addOptionalDependency(dependency, type, target);
     }
 
     /** {@inheritDoc} */

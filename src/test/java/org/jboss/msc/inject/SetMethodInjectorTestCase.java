@@ -46,20 +46,12 @@ public class SetMethodInjectorTestCase {
     private static AnotherService service;
     private static Value<AnotherService> target;
     private static Method method;
-    private static Value<Method> methodValue;
 
     @BeforeClass
     public static void setUpStatic() throws Exception {
         service = new AnotherService(5, true, "JBoss");
         target = new ImmediateValue<AnotherService>(service);
         method = AnotherService.class.getMethod("setRetry", int.class);
-        methodValue = new ImmediateValue<Method>(method);
-    }
-
-    @Test
-    public void publicMethod1() throws Exception {
-        final Injector<Integer> injector = SetMethodInjector.<Integer>create(target, methodValue);
-        assertSetRetryInjector(injector);
     }
 
     @Test
@@ -70,20 +62,20 @@ public class SetMethodInjectorTestCase {
 
     @Test
     public void lookupAndInject1() throws Exception {
-        final Injector<Integer> injector = new SetMethodInjector<Integer>(service, AnotherService.class, "setRetry", int.class);
+        final Injector<Integer> injector = new SetMethodInjector<Integer>(Values.immediateValue(service), getMethod(AnotherService.class, "setRetry", int.class));
         assertSetRetryInjector(injector);
     }
 
     @Test
     public void lookupAndInject2() throws Exception {
-        final Injector<Integer> injector = new SetMethodInjector<Integer>(target, AnotherService.class, "setRetry", int.class);
+        final Injector<Integer> injector = new SetMethodInjector<Integer>(target, getMethod(AnotherService.class, "setRetry", int.class));
         assertSetRetryInjector(injector);
     }
 
     @Test
     public void lookupUnnaccessibleSetMethod() throws Exception {
         try {
-            new SetMethodInjector<String>(target, AnotherService.class, "setDefinedBy", String.class);
+            new SetMethodInjector<String>(target, getMethod(AnotherService.class, "setDefinedBy", String.class));
             fail("IllegalArgumentException expected");
         } catch (IllegalArgumentException e) {}
     }
@@ -91,7 +83,7 @@ public class SetMethodInjectorTestCase {
     @Test
     public void lookupInexistentSetMethod() throws Exception {
         try {
-            new SetMethodInjector<String>(target, AnotherService.class, "setDefinedFor", String.class);
+            new SetMethodInjector<String>(target, getMethod(AnotherService.class, "setDefinedFor", String.class));
             fail("IllegalArgumentException expected");
         } catch (IllegalArgumentException e) {}
     }
@@ -109,14 +101,14 @@ public class SetMethodInjectorTestCase {
     @Test
     public void publicMethodWithExceptionOnUninjection() throws Exception {
         final TargetWrapper<?> targetWrapper = new TargetWrapper<Object>(new StringBuffer());
-        Injector<Boolean> injector = new SetMethodInjector<Boolean>(targetWrapper, TargetWrapper.class, "readTarget", boolean.class);
+        Injector<Boolean> injector = new SetMethodInjector<Boolean>(Values.immediateValue(targetWrapper), getMethod(TargetWrapper.class, "readTarget", boolean.class));
         injector.uninject();
     }
 
     @Test
     public void unaccessibleMethod() throws Exception {
         final Method method = AnotherService.class.getDeclaredMethod("setDefinedBy", String.class);
-        final Injector<String> injector = new SetMethodInjector<String>(target, Values.immediateValue(method));
+        final Injector<String> injector = new SetMethodInjector<String>(target, method);
         try {
             injector.inject("unnaccessibleMethod");
             fail("IllegalExcpetion expected");
@@ -132,7 +124,7 @@ public class SetMethodInjectorTestCase {
 
     @Test
     public void methodWithException() throws Exception {
-        final Injector<Boolean> injector = new SetMethodInjector<Boolean>(service, AnotherService.class, "discoverDefinedBy", boolean.class);
+        final Injector<Boolean> injector = new SetMethodInjector<Boolean>(Values.immediateValue(service), getMethod(AnotherService.class, "discoverDefinedBy", boolean.class));
         try {
             injector.inject(true);
             fail("InjectionException expected");
@@ -161,5 +153,16 @@ public class SetMethodInjectorTestCase {
             injector.inject(0);
             fail("InjectionException expected");
         } catch (InjectionException e) {}
+    }
+
+    private static Method getMethod(final Class<?> clazz, final String methodName, final Class<?> paramType) {
+        final Method method;
+        try {
+            method = clazz.getMethod(methodName, paramType);
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException("No such method found '" +  clazz + "." + methodName + "(" +
+                    paramType + ")'", e);
+        }
+        return method;
     }
 }

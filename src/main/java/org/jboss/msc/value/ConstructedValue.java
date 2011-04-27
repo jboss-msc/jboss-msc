@@ -41,19 +41,6 @@ public final class ConstructedValue<T> implements Value<T> {
     /**
      * Construct a new instance.
      *
-     * @param constructorValue the constructor to use
-     * @param parameters the parameters to pass to the constructor
-     *
-     * @deprecated Will be removed before 1.0.0.GA
-     */
-    @Deprecated
-    public ConstructedValue(final Value<Constructor<T>> constructorValue, final List<? extends Value<?>> parameters) {
-        this(constructorValue.getValue(), parameters);
-    }
-
-    /**
-     * Construct a new instance.
-     *
      * @param constructor the constructor to use
      * @param parameters the parameters to pass to the constructor
      */

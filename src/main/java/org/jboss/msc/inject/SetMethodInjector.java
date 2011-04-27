@@ -23,7 +23,7 @@
 package org.jboss.msc.inject;
 
 import java.lang.reflect.Method;
-import org.jboss.msc.value.ImmediateValue;
+
 import org.jboss.msc.value.Value;
 
 /**
@@ -44,17 +44,6 @@ public final class SetMethodInjector<T> implements Injector<T> {
      * Construct a new instance.
      *
      * @param target the object upon which the method is to be called
-     * @param methodValue the method to invoke
-     */
-    @Deprecated
-    public SetMethodInjector(final Value<?> target, final Value<Method> methodValue) {
-        this(target, methodValue.getValue());
-    }
-
-    /**
-     * Construct a new instance.
-     *
-     * @param target the object upon which the method is to be called
      * @param method the method to invoke
      */
     public SetMethodInjector(final Value<?> target, final Method method) {
@@ -66,62 +55,11 @@ public final class SetMethodInjector<T> implements Injector<T> {
      * Construct a new instance.
      *
      * @param target the object upon which the method is to be called
-     * @param methodValue the method to invoke
-     * @return the new instance
-     */
-    @Deprecated
-    public static <T> Injector<T> create(final Value<?> target, Value<Method> methodValue) {
-        return new SetMethodInjector<T>(target, methodValue);
-    }
-
-    /**
-     * Construct a new instance.
-     *
-     * @param target the object upon which the method is to be called
      * @param method the method to invoke
      * @return the new instance
      */
     public static <T> Injector<T> create(final Value<?> target, final Method method) {
         return new SetMethodInjector<T>(target, method);
-    }
-
-    /**
-     * Construct a new instance.
-     *
-     * @param target the object upon which the method is to be called
-     * @param clazz the class upon which the method may be found
-     * @param methodName the setter method name
-     * @param paramType the parameter type
-     * @param <C> the type of the class upon which the method may be found
-     */
-    @Deprecated
-    public <C> SetMethodInjector(final Value<? extends C> target, final Class<C> clazz, final String methodName, final Class<? extends T> paramType) {
-        this(target, lookupMethod(clazz, methodName, paramType));
-    }
-
-    /**
-     * Construct a new instance.
-     *
-     * @param target the object upon which the method is to be called
-     * @param clazz the class upon which the method may be found
-     * @param methodName the setter method name
-     * @param paramType the parameter type
-     * @param <C> the type of the class upon which the method may be found
-     */
-    @Deprecated
-    public <C> SetMethodInjector(final C target, final Class<C> clazz, final String methodName, final Class<? extends T> paramType) {
-        this(new ImmediateValue<C>(target), clazz, methodName, paramType);
-    }
-
-    private static <C, T> Method lookupMethod(final Class<C> clazz, final String methodName, final Class<? extends T> paramType) {
-        final Method method;
-        try {
-            method = clazz.getMethod(methodName, paramType);
-        } catch (NoSuchMethodException e) {
-            throw new IllegalArgumentException("No such method found '" +  clazz + "." + methodName + "(" +
-                    paramType + ")'", e);
-        }
-        return method;
     }
 
     /** {@inheritDoc} */

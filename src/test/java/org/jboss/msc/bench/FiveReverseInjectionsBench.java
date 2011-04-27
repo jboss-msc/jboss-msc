@@ -22,25 +22,22 @@
 
 package org.jboss.msc.bench;
 
-import org.jboss.msc.service.ServiceBuilder;
+import static org.jboss.msc.value.Values.immediateValue;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.jboss.msc.service.Service;
+import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
 import org.jboss.msc.service.util.LatchedFinishListener;
-import org.jboss.msc.value.CachedValue;
-import org.jboss.msc.value.ImmediateValue;
-import org.jboss.msc.value.LookupFieldValue;
-import org.jboss.msc.value.LookupMethodValue;
 import org.jboss.msc.value.Value;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 public class FiveReverseInjectionsBench {
 
@@ -51,12 +48,12 @@ public class FiveReverseInjectionsBench {
 
         final LatchedFinishListener listener = new LatchedFinishListener();
 
-        final Value<Field> testFieldValue = new CachedValue<Field>(new LookupFieldValue(new ImmediateValue<Class<?>>(TestObject.class), "test"));
+        final Value<Field> testFieldValue = getField(TestObject.class, "test");
 
-        final List<Value<Class<?>>> params = Collections.singletonList((Value<Class<?>>)new ImmediateValue<Class<?>>(TestObject.class));
+        final Class<?>[] params = new Class<?>[] {TestObject.class};
         final List<Value<Method>> setterMethodValues = new ArrayList<Value<Method>>(5);
         for(int i = 0; i < 5; i++)
-            setterMethodValues.add(new CachedValue<Method>(new LookupMethodValue(new ImmediateValue<Class<?>>(TestObject.class), "setOther" + i, params)));
+            setterMethodValues.add(getMethod(TestObject.class, "setOther" + i, params));
 
         for (int i = 0; i < totalServiceDefinitions; i++) {
             final TestObject testObject = new TestObject("test" + i);
@@ -145,5 +142,13 @@ public class FiveReverseInjectionsBench {
         public TestObject getValue() throws IllegalStateException {
             return value;
         }
+    }
+
+    private static Value<Field> getField(final Class<?> clazz, final String name) throws NoSuchFieldException {
+    	return immediateValue(clazz.getField(name));
+    }
+    
+    private static Value<Method> getMethod(final Class<?> clazz, final String methodName, final Class<?>[] parameterTypes) throws NoSuchMethodException {
+    	return immediateValue(clazz.getMethod(methodName, parameterTypes));
     }
 }

@@ -23,18 +23,13 @@
 package org.jboss.msc.services.http;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executor;
-import org.jboss.msc.inject.Injector;
-import org.jboss.msc.inject.SetMethodInjector;
+
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
-import org.jboss.msc.value.ImmediateValue;
-import org.jboss.msc.value.Value;
-import org.jboss.msc.value.Values;
 
 import com.sun.net.httpserver.HttpContext;
 import com.sun.net.httpserver.HttpHandler;
@@ -52,10 +47,6 @@ public final class HttpServerService implements Service<HttpServer> {
     private int stopDelay = 5;
     private int backlog = 0;
     private InetSocketAddress bindAddress;
-
-    public static final Value<Method> EXECUTOR_SETTER = Values.getSetterMethod("executor", Executor.class);
-
-    public final Injector<Executor> executorInjector = new SetMethodInjector<Executor>(new ImmediateValue<Value<?>>(this), EXECUTOR_SETTER);
 
     public synchronized Executor getExecutor() {
         return executor;
