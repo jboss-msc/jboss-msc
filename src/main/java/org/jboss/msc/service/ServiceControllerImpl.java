@@ -1190,9 +1190,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     // Duplicates not allowed
                     throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + primaryRegistration.getName());
                 }
-                if (state == Substate.NEW) {
-                    return;
-                }
                 asyncTasks ++;
             } else {
                 asyncTasks += 2;

@@ -124,6 +124,17 @@ public class MultipleListenersTestCase extends AbstractServiceTest {
         assertTrue(listener2.startedServices.contains(secondServiceName));
     }
 
+    @Test
+    public void testAddListenerOnListenerAdded() throws Exception {
+        final LatchedFinishListener latch = new LatchedFinishListener();
+        MockListener listener1 = new MockListener(latch);
+        ListenerAdder listener2 = new ListenerAdder(listener1);
+
+        serviceContainer.addService(firstServiceName, Service.NULL).addListener(listener2).install();
+        latch.await();
+        assertTrue(listener1.startedServices.contains(firstServiceName));
+    }
+
     private static class MockListener extends AbstractServiceListener<Object> {
 
         private final LatchedFinishListener latch;
@@ -142,6 +153,20 @@ public class MultipleListenersTestCase extends AbstractServiceTest {
         public void serviceStarted(ServiceController<? extends Object> serviceController) {
             startedServices.add(serviceController.getName());
             latch.serviceStarted(serviceController);
+        }
+    }
+
+    private static class ListenerAdder extends AbstractServiceListener<Object> {
+
+        private ServiceListener<Object> listener;
+
+        public ListenerAdder(ServiceListener<Object> listenerToAdd) {
+            listener = listenerToAdd;
+        }
+
+        @Override
+        public void listenerAdded(ServiceController<? extends Object> serviceController) {
+            serviceController.addListener(listener);
         }
     }
 }
