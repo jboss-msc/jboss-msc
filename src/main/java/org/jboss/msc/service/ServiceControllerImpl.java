@@ -199,10 +199,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return state;
     }
 
-    void addAsyncTask() {
-        asyncTasks++;
-    }
-
     void addAsyncTasks(final int size) {
         asyncTasks += size;
     }
@@ -303,12 +299,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     return Transition.DOWN_to_WONT_START;
                 } else if (upperCount > 0 && (mode != Mode.PASSIVE || downDependencies == 0)) {
                     return Transition.DOWN_to_START_REQUESTED;
-                } else if ((mode == Mode.ON_DEMAND && demandedByCount == 0) ||
-                        (mode == Mode.LAZY && demandedByCount == 0) ||
-                        (mode == Mode.PASSIVE && downDependencies > 0)) {
+                } else {
+                    // mode is either LAZY or ON_DEMAND with demandedByCount == 0, or mode is PASSIVE and downDep > 0
                     return Transition.DOWN_to_WAITING;
                 }
-                break;
             }
             case WAITING: {
                 if (((mode != Mode.ON_DEMAND && mode != Mode.LAZY) || demandedByCount > 0) &&
@@ -452,8 +446,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
             }
-
-
             transition = getTransition();
             if (transition == null) {
                 return;

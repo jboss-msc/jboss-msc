@@ -100,6 +100,95 @@ public class DependencyListenersTestCase extends AbstractServiceTest {
     }
 
     @Test
+    public final void testLazyServiceWithMissingDependencies() throws Exception {
+        final Future<ServiceController<?>> thirdServiceStart = testListener.expectServiceStart(thirdServiceName);
+        serviceContainer.addService(thirdServiceName, Service.NULL).addListener(testListener).install();
+        final ServiceController<?> thirdController = assertController(thirdServiceName, thirdServiceStart);
+
+        Future<ServiceController<?>> secondServiceWaiting = testListener.expectServiceWaiting(secondServiceName);
+        serviceContainer.addService(secondServiceName, Service.NULL)
+            .addListener(testListener)
+            .addDependency(thirdServiceName)
+            .setInitialMode(Mode.LAZY)
+            .install();
+        final ServiceController<?> secondController = assertController(secondServiceName, secondServiceWaiting);
+
+        final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
+        final Future<ServiceController<?>> secondServiceWaitingCleared = testListener.expectServiceWaitingCleared(secondServiceName);
+        final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
+        serviceContainer.addService(firstServiceName, Service.NULL)
+            .addListener(testListener)
+            .addDependency(secondServiceName)
+            .install();
+
+        assertController(firstServiceName, firstServiceStart);
+        assertController(secondController, secondServiceWaitingCleared);
+        assertController(secondController, secondServiceStart);
+
+        // remove demand
+        final ServiceController<?> firstController = serviceContainer.getService(firstServiceName);
+        final Future<ServiceController<?>> firstControllerStop = testListener.expectServiceStop(firstServiceName);
+        firstController.setMode(Mode.NEVER);
+        assertController(firstController, firstControllerStop);
+        assertSame(State.UP, secondController.getState());
+
+        final Future<ServiceController<?>> secondServiceStop = testListener.expectServiceStop(secondServiceName);
+        secondServiceWaiting = testListener.expectServiceWaiting(secondServiceName);
+        thirdController.setMode(Mode.REMOVE);
+        assertController(secondController, secondServiceStop);
+        assertController(secondController, secondServiceWaiting);
+    }
+
+    @Test
+    public final void testDemandedServiceWithMissingDependencies() throws Exception {
+        final Future<ServiceController<?>> fourthServiceStart = testListener.expectServiceStart(fourthServiceName);
+        serviceContainer.addService(fourthServiceName, Service.NULL).addListener(testListener).install();
+        final ServiceController<?> fourthController = assertController(fourthServiceName, fourthServiceStart);
+
+        final Future<ServiceController<?>> secondServiceWaiting = testListener.expectServiceWaiting(secondServiceName);
+        serviceContainer.addService(secondServiceName, Service.NULL)
+            .addListener(testListener)
+            .addDependency(fourthServiceName)
+            .setInitialMode(Mode.LAZY)
+            .install();
+        final ServiceController<?> secondController = assertController(secondServiceName, secondServiceWaiting);
+
+        final Future<ServiceController<?>> thirdServiceWaiting = testListener.expectServiceWaiting(thirdServiceName);
+        serviceContainer.addService(thirdServiceName, Service.NULL)
+            .addListener(testListener)
+            .addDependency(fourthServiceName)
+            .setInitialMode(Mode.ON_DEMAND)
+            .install();
+        final ServiceController<?> thirdController = assertController(thirdServiceName, thirdServiceWaiting);
+
+        final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
+        final Future<ServiceController<?>> secondServiceWaitingCleared = testListener.expectServiceWaitingCleared(secondServiceName);
+        final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
+        final Future<ServiceController<?>> thirdServiceWaitingCleared = testListener.expectServiceWaitingCleared(thirdServiceName);
+        final Future<ServiceController<?>> thirdServiceStart = testListener.expectServiceStart(thirdServiceName);
+        serviceContainer.addService(firstServiceName, Service.NULL)
+            .addListener(testListener)
+            .addDependency(secondServiceName)
+            .addDependency(thirdServiceName)
+            .install();
+
+        assertController(firstServiceName, firstServiceStart);
+        assertController(secondController, secondServiceWaitingCleared);
+        assertController(secondController, secondServiceStart);
+        assertController(thirdController, thirdServiceWaitingCleared);
+        assertController(thirdController, thirdServiceStart);
+
+        final Future<ServiceController<?>> secondServiceStop = testListener.expectServiceStop(secondServiceName);
+        final Future<ServiceController<?>> secondServiceDepProblem = testListener.expectDependencyProblem(secondServiceName);
+        final Future<ServiceController<?>> thirdServiceStop = testListener.expectServiceStop(thirdServiceName);
+        final Future<ServiceController<?>> thirdServiceDepProblem = testListener.expectDependencyProblem(thirdServiceName);
+        fourthController.setMode(Mode.REMOVE);
+        assertController(secondController, secondServiceStop);
+        assertController(secondController, secondServiceDepProblem);
+        assertController(thirdController, thirdServiceStop);
+        assertController(thirdController, thirdServiceDepProblem);}
+
+    @Test
     public void testTransitiveMissingDependencies() throws Exception {
         Future<ServiceController<?>> firstServiceImmMissingDependency = testListener.expectImmediateDependencyUnavailable(firstServiceName);
         Future<ServiceController<?>> firstServiceDependencyProblem = testListener.expectDependencyProblem(firstServiceName);
