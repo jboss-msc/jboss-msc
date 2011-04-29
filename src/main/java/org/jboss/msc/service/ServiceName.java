@@ -456,9 +456,11 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
                 // End of string unexpected.
                 throw unexpectedEnd();
             }
-            case 1:
-            case 9: {
+            case 1: {
                 segments.add(builder.toString());
+                // fall thru
+            }
+            case 9: {
                 break;
             }
             default: throw new IllegalStateException();

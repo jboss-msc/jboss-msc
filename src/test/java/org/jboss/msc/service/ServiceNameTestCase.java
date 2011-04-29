@@ -293,4 +293,12 @@ public final class ServiceNameTestCase {
         ObjectInputStream objectInputStream = new ObjectInputStream(new ByteArrayInputStream(bytes));
         assertEquals(serviceName, objectInputStream.readObject());
     }
+
+    @Test
+    public void testMsc76Parsing() {
+        assertEquals(ServiceName.parse("jboss.server.path.\"java.home\""), ServiceName.of("jboss", "server", "path", "java.home"));
+        assertEquals(ServiceName.parse("jboss.server.path.\"jboss.home.dir\""), ServiceName.of("jboss", "server", "path", "jboss.home.dir"));
+        assertEquals(ServiceName.parse("\"first.section\".\"second.section\".third.fourth"), ServiceName.of("first.section", "second.section", "third", "fourth"));
+        assertEquals(ServiceName.parse("\"all.in.one\""), ServiceName.of("all.in.one"));
+    }
 }
