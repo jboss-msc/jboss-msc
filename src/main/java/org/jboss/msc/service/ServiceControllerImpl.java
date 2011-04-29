@@ -155,6 +155,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private int transitiveUnavailableDepCount;
     /**
+     * Indicates whether parents have been demanded.
+     */
+    private boolean parentsDemanded = false;
+    /**
      * The number of asynchronous tasks that are currently running. This
      * includes listeners, start/stop methods, outstanding asynchronous
      * start/stops, and internal tasks.
@@ -291,10 +295,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private Transition getTransition() {
         assert holdsLock(this);
-        if (asyncTasks != 0) {
-            // no movement possible
-            return null;
-        }
         switch (state) {
             case DOWN: {
                 if (mode == ServiceController.Mode.REMOVE) {
@@ -410,6 +410,50 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert holdsLock(this);
         Transition transition = null;
         do {
+            if (asyncTasks != 0) {
+                // no movement possible
+                return;
+            }
+            // first of all, check if parents should be demanded/undemanded
+            switch (mode) {
+                case NEVER: 
+                case REMOVE:
+                    if (parentsDemanded) {
+                        tasks.add(new UndemandParentsTask());
+                        parentsDemanded = false;
+                    }
+                    break;
+                case LAZY: {
+                    if (state == Substate.UP) {
+                        if (!parentsDemanded) {
+                            tasks.add(new DemandParentsTask());
+                            parentsDemanded = true;
+                        }
+                        break;
+                    }
+                    // fall thru!
+                }
+                case ON_DEMAND:
+                case PASSIVE: {
+                    if (demandedByCount > 0 && parentsDemanded == false) {
+                        tasks.add(new DemandParentsTask());
+                        parentsDemanded = true;
+                    } else if (demandedByCount == 0 && parentsDemanded == true) {
+                        tasks.add(new UndemandParentsTask());
+                        parentsDemanded = false;
+                    }
+                    break;
+                }
+                case ACTIVE: {
+                    if (parentsDemanded == false) {
+                        tasks.add(new DemandParentsTask());
+                        parentsDemanded = true;
+                    }
+                    break;
+                }
+            }
+
+
             transition = getTransition();
             if (transition == null) {
                 return;
@@ -462,7 +506,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 case UP_to_STOP_REQUESTED: {
                     if (mode == Mode.LAZY && demandedByCount == 0) {
                         upperCount--;
+                        assert parentsDemanded == true;
                         tasks.add(new UndemandParentsTask());
+                        parentsDemanded = false;
                     }
                     getListenerTasks(ListenerNotification.STOP_REQUESTED, tasks);
                     lifecycleTime = System.nanoTime();
@@ -651,15 +697,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ServiceController.Mode oldMode = mode;
         switch (oldMode) {
             case REMOVE: {
-                switch (newMode) {
-                    case REMOVE: {
-                        break;
-                    }
-                    default: {
-                        throw new IllegalStateException("Service removed");
-                    }
-                }
-                break;
+                throw new IllegalStateException("Service removed");
             }
             case NEVER: {
                 switch (newMode) {
@@ -673,20 +711,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         if (demandedByCount > 0) {
                             assert upperCount < 1;
                             upperCount++;
-                            taskList.add(new DemandParentsTask());
                         }
                         break;
                     }
                     case PASSIVE: {
                         assert upperCount < 1;
                         upperCount++;
-                        if (demandedByCount > 0) {
-                            taskList.add(new DemandParentsTask());
-                        }
                         break;
                     }
                     case ACTIVE: {
-                        taskList.add(new DemandParentsTask());
                         assert upperCount < 1;
                         upperCount++;
                         break;
@@ -703,13 +736,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     case NEVER: {
                         if (demandedByCount > 0) {
                             upperCount--;
-                            taskList.add(new UndemandParentsTask());
-                        }
-                        break;
-                    }
-                    case LAZY: {
-                        if (state == Substate.UP) {
-                            taskList.add(new DemandParentsTask());
                         }
                         break;
                     }
@@ -724,7 +750,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         if (demandedByCount == 0) {
                             assert upperCount < 1;
                             upperCount++;
-                            taskList.add(new DemandParentsTask());
                         }
                         break;
                     }
@@ -740,14 +765,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     case NEVER: {
                         if (demandedByCount > 0 || state == Substate.UP) {
                             upperCount --;
-                            taskList.add(new UndemandParentsTask());
                         }
                         break;
                     }
                     case ON_DEMAND: {
                         if (demandedByCount == 0 && state == Substate.UP) {
                             upperCount --;
-                            taskList.add(new UndemandParentsTask());
                         }
                         break;
                     }
@@ -755,8 +778,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         if (demandedByCount == 0 && state != Substate.UP) {
                             assert upperCount < 1;
                             upperCount++;
-                        } else {
-                            taskList.add(new UndemandParentsTask());
                         }
                         break;
                     }
@@ -764,7 +785,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         if (demandedByCount == 0 && state != Substate.UP) {
                             assert upperCount < 1;
                             upperCount++;
-                            taskList.add(new DemandParentsTask());
                         }
                         break;
                     }
@@ -778,27 +798,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         // fall thru!
                     }
                     case NEVER: {
-                        if (demandedByCount > 0) {
-                            taskList.add(new UndemandParentsTask());
-                        }
                         upperCount--;
                         break;
                     }
-                    case LAZY: {
-                        if (state == Substate.UP) {
-                            taskList.add(new DemandParentsTask());
-                        }
-                        // fall thru!
-                    }
+                    case LAZY:
                     case ON_DEMAND: {
                         if (demandedByCount == 0) {
                             upperCount--;
-                        }
-                        break;
-                    }
-                    case ACTIVE: {
-                        if (demandedByCount == 0) {
-                            taskList.add(new DemandParentsTask());
                         }
                         break;
                     }
@@ -812,7 +818,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         // fall thru!
                     }
                     case NEVER: {
-                        taskList.add(new UndemandParentsTask());
                         upperCount--;
                         break;
                     }
@@ -825,13 +830,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     case ON_DEMAND: {
                         if (demandedByCount == 0) {
                             upperCount--;
-                            taskList.add(new UndemandParentsTask());
-                        }
-                        break;
-                    }
-                    case PASSIVE: {
-                        if (demandedByCount == 0) {
-                            taskList.add(new UndemandParentsTask());
                         }
                         break;
                     }
@@ -1070,13 +1068,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             this.demandedByCount += demandedByCount;
             boolean notStartedLazy = mode == Mode.LAZY && state != Substate.UP;
             propagate = cnt == 0 && (mode == Mode.ON_DEMAND || notStartedLazy || mode == Mode.PASSIVE);
-            if (cnt == 0 && (mode == Mode.ON_DEMAND || notStartedLazy)) {
-                assert upperCount < 1;
-                upperCount++;
-                transition(tasks);
-            }
             if (propagate) {
-                tasks.add(new DemandParentsTask());
+                if (mode != Mode.PASSIVE) {
+                    assert upperCount < 1;
+                    upperCount++;
+                }
+                transition(tasks);
             }
             asyncTasks += tasks.size();
         }
@@ -1091,12 +1088,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final int cnt = --demandedByCount;
             boolean notStartedLazy = mode == Mode.LAZY && state != Substate.UP;
             propagate = cnt == 0 && (mode == Mode.ON_DEMAND || notStartedLazy || mode == Mode.PASSIVE);
-            if (cnt == 0 && (mode == Mode.ON_DEMAND || notStartedLazy)) {
-                upperCount--;
-                transition(tasks);
-            }
             if (propagate) {
-                tasks.add(new UndemandParentsTask());
+                if (mode != Mode.PASSIVE) {
+                    upperCount--;
+                }
+                transition(tasks);
             }
             asyncTasks += tasks.size();
         }
