@@ -48,21 +48,6 @@ public interface ServiceBuilder<T> {
     ServiceBuilder<T> addAliases(ServiceName... aliases);
 
     /**
-     * Set the service definition location to be the caller's location.
-     *
-     * @return this builder
-     */
-    ServiceBuilder<T> setLocation();
-
-    /**
-     * Set the service definition location, if any.
-     *
-     * @param location the location
-     * @return this builder
-     */
-    ServiceBuilder<T> setLocation(Location location);
-
-    /**
      * Set the initial mode.
      *
      * @param mode the initial mode

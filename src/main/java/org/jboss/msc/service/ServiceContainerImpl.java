@@ -516,7 +516,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
         // Next create the actual controller
         final ServiceControllerImpl<T> instance = new ServiceControllerImpl<T>(serviceBuilder.getServiceValue(),
-                serviceBuilder.getLocation(), dependencies, valueInjectionArray, outInjectionArray, primaryRegistration, aliasRegistrations,
+                dependencies, valueInjectionArray, outInjectionArray, primaryRegistration, aliasRegistrations,
                 serviceBuilder.getListeners(), serviceBuilder.getParent());
         boolean ok = false;
         try {

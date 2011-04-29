@@ -51,16 +51,6 @@ public final class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     }
 
     /** {@inheritDoc} */
-    public ServiceBuilder<T> setLocation() {
-        return delegate.setLocation();
-    }
-
-    /** {@inheritDoc} */
-    public ServiceBuilder<T> setLocation(final Location location) {
-        return delegate.setLocation(location);
-    }
-
-    /** {@inheritDoc} */
     public ServiceBuilder<T> setInitialMode(final ServiceController.Mode mode) {
         return delegate.setInitialMode(mode);
     }

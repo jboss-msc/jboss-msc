@@ -107,13 +107,6 @@ public interface ServiceController<S> extends Value<S> {
     ServiceName[] getAliases();
 
     /**
-     * Get the location of this service.
-     * 
-     * @return the location
-     */
-    Location getLocation();
-
-    /**
      * Add a service listener.  The method corresponding to the current service state is called.
      *
      * @param serviceListener the service listener

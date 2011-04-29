@@ -31,7 +31,6 @@ public class StartException extends Exception {
 
     private static final long serialVersionUID = 239274385917008839L;
 
-    private final Location location;
     private volatile ServiceName serviceName;
 
     /**
@@ -39,7 +38,6 @@ public class StartException extends Exception {
      * initialized by a call to {@link #initCause(Throwable) initCause}.
      */
     public StartException() {
-        location = null;
         serviceName = null;
     }
 
@@ -51,7 +49,6 @@ public class StartException extends Exception {
      */
     public StartException(final String msg) {
         super(msg);
-        location = null;
         serviceName = null;
     }
 
@@ -64,7 +61,6 @@ public class StartException extends Exception {
      */
     public StartException(final Throwable cause) {
         super(cause);
-        location = null;
         serviceName = null;
     }
 
@@ -76,36 +72,11 @@ public class StartException extends Exception {
      */
     public StartException(final String msg, final Throwable cause) {
         super(msg, cause);
-        location = null;
         serviceName = null;
     }
 
-    public StartException(final Location location) {
-        this.location = location;
-        serviceName = null;
-    }
-
-    public StartException(final String message, final Location location) {
-        super(message);
-        this.location = location;
-        serviceName = null;
-    }
-
-    public StartException(final String message, final Throwable cause, final Location location) {
+    public StartException(final String message, final Throwable cause, final ServiceName serviceName) {
         super(message, cause);
-        this.location = location;
-        serviceName = null;
-    }
-
-    public StartException(final Throwable cause, final Location location) {
-        super(cause);
-        this.location = location;
-        serviceName = null;
-    }
-
-    public StartException(final String message, final Throwable cause, final Location location, final ServiceName serviceName) {
-        super(message, cause);
-        this.location = location;
         this.serviceName = serviceName;
     }
 
@@ -127,10 +98,6 @@ public class StartException extends Exception {
         final String m = getLocalizedMessage();
         if (m != null) {
             b.append(": ").append(m);
-        }
-        final Location location = this.location;
-        if (location != null) {
-            b.append("\n\tAt file ").append(location);
         }
         return b.toString();
     }

@@ -53,10 +53,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private final Value<? extends Service<? extends S>> serviceValue;
     /**
-     * The source location in which this service was defined.
-     */
-    private final Location location;
-    /**
      * The dependencies of this service.
      */
     private final Dependency[] dependencies;
@@ -178,9 +174,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private static final Dependent[] NO_DEPENDENTS = new Dependent[0];
     private static final String[] NO_STRINGS = new String[0];
 
-    ServiceControllerImpl(final Value<? extends Service<? extends S>> serviceValue, final Location location, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<? extends ServiceListener<? super S>> listeners, final ServiceControllerImpl<?> parent) {
+    ServiceControllerImpl(final Value<? extends Service<? extends S>> serviceValue, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<? extends ServiceListener<? super S>> listeners, final ServiceControllerImpl<?> parent) {
         this.serviceValue = serviceValue;
-        this.location = location;
         this.dependencies = dependencies;
         this.injections = injections;
         this.outInjections = outInjections;
@@ -1175,10 +1170,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return names;
     }
 
-    public Location getLocation() {
-        return location;
-    }
-
     public void addListener(final ServiceListener<? super S> listener) {
         assert !holdsLock(this);
         final Substate state;
@@ -1749,7 +1740,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 e.setServiceName(serviceName);
                 startFailed(e, serviceName, context, startNanos);
             } catch (Throwable t) {
-                StartException e = new StartException("Failed to start service", t, location, serviceName);
+                StartException e = new StartException("Failed to start service", t, serviceName);
                 startFailed(e, serviceName, context, startNanos);
             }
         }

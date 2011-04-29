@@ -48,7 +48,6 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     private final ServiceTargetImpl serviceTarget;
     private final Value<? extends Service<T>> serviceValue;
     private final ServiceName serviceName;
-    private Location location;
     private ServiceController.Mode initialMode = ServiceController.Mode.ACTIVE;
     private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
     private final Map<ServiceName, Dependency> dependencies = new HashMap<ServiceName, Dependency>(0);
@@ -101,22 +100,6 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
                 this.aliases.add(alias);
             }
         }
-        return this;
-    }
-
-    @Override
-    public ServiceBuilderImpl<T> setLocation() {
-        checkAlreadyInstalled();
-        final StackTraceElement element = new Throwable().getStackTrace()[1];
-        final String fileName = element.getFileName();
-        final int lineNumber = element.getLineNumber();
-        return setLocation(new Location(fileName, lineNumber, -1, null));
-    }
-
-    @Override
-    public ServiceBuilderImpl<T> setLocation(final Location location) {
-        checkAlreadyInstalled();
-        this.location = location;
         return this;
     }
 
@@ -321,10 +304,6 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     ServiceController.Mode getInitialMode() {
         return initialMode;
-    }
-
-    Location getLocation() {
-        return location;
     }
 
     ServiceTarget getTarget() {

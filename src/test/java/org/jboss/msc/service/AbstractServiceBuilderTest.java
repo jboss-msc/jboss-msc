@@ -23,7 +23,6 @@
 package org.jboss.msc.service;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
@@ -75,12 +74,11 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
     protected abstract <T> ServiceBuilder<T> getServiceBuilder(ServiceBuilder<T> serviceBuilder);
 
     @Test
-    // most test methods add services with alias, listeners, dependencies and location
+    // most test methods add services with alias, listeners, and dependencies
     public void addServiceWithoutInjection() throws Exception {
         // create dummyManager and dummyService
         final DummyManager dummyManager = new DummyManager();
         final Service<DummyManager> service = new DummyService(dummyManager);
-        final Location location = createLocation(null, 50, 23, null);
 
         // install dummy service
         ServiceBuilder<?> serviceBuilder = getServiceBuilder(serviceContainer.addService(serviceName, service));
@@ -94,14 +92,11 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         serviceBuilder.addDependencies(DependencyType.OPTIONAL, uninstalledServiceName, serviceName);
         // add test listener
         serviceBuilder.addListener(testListener);
-        // add a location
-        serviceBuilder.setLocation(location);
 
         Future<ServiceController<?>> dummyServiceListenerAdded = testListener.expectListenerAdded(ServiceName.of("service"));
         ServiceController<?> dummyController = serviceBuilder.install();
         assertController(serviceName, dummyController);
         assertController(dummyController, dummyServiceListenerAdded);
-        assertEquals(location,  dummyController.getLocation());
         ServiceName[] aliases = dummyController.getAliases();
         assertNotNull(aliases);
         assertEquals(1, aliases.length);
@@ -124,12 +119,11 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
     }
 
     @Test
-    // most test methods add services with alias, listeners, dependencies and location
+    // most test methods add services with alias, listeners, dependencies
     public void addServiceWithoutInjectionAndWithOptionalDepDoesNotOverride() throws Exception {
         // create dummyManager and dummyService
         final DummyManager dummyManager = new DummyManager();
         final Service<DummyManager> service = new DummyService(dummyManager);
-        final Location location = createLocation(null, 50, 23, null);
 
         // install dummy service
         ServiceBuilder<?> serviceBuilder = getServiceBuilder(serviceContainer.addService(serviceName, service));
@@ -151,14 +145,11 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
                         DummyManager.class.getMethod("setHelper", DummyHelper.class)));
         // add test listener
         serviceBuilder.addListener(testListener);
-        // add a location
-        serviceBuilder.setLocation(location);
 
         Future<ServiceController<?>> dummyServiceListenerAdded = testListener.expectListenerAdded(ServiceName.of("service"));
         ServiceController<?> dummyController = serviceBuilder.install();
         assertController(serviceName, dummyController);
         assertController(dummyController, dummyServiceListenerAdded);
-        assertEquals(location,  dummyController.getLocation());
         ServiceName[] aliases = dummyController.getAliases();
         assertNotNull(aliases);
         assertEquals(1, aliases.length);
@@ -189,7 +180,7 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void addServiceWithDefaultLocationAndInjection() throws Exception {
+    public void addServiceWithInjection() throws Exception {
         Future<ServiceController<?>> anotherServiceStart = testListener.expectServiceStart(anotherServiceName);
         // install another service
         ServiceController<?> anotherServiceController = getServiceBuilder(serviceContainer.addService(anotherServiceName, Service.NULL))
@@ -223,8 +214,6 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         final TestServiceListener testListener2 = new TestServiceListener();
         final TestServiceListener testListener3 = new TestServiceListener();
         serviceBuilder.addListener(testListener1, testListener2, testListener3, testListener1);
-        // set default location
-        serviceBuilder.setLocation();
         // inject a description into description property of dummy manager
         serviceBuilder.addInjection(new SetMethodInjector<String>(Values.immediateValue(dummyManager), getMethod(DummyManager.class, "setDescription", String.class)), "real description");
 
@@ -239,7 +228,6 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         assertController(dummyController, dummyServiceStart3);
         // the value of dummy controller should be dummy manager
         assertSame(dummyManager, dummyController.getValue());
-        assertNotNull(dummyController.getLocation());
         ServiceName[] aliases = dummyController.getAliases();
         assertEquals(3, aliases.length);
         assertTrue((serviceNameAlias1.equals(aliases[0]) && serviceNameAlias3.equals(aliases[1]) && serviceNameAlias4.equals(aliases[2])) ||
@@ -254,7 +242,7 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void addServiceWithDefaultLocationAndInjectionAndWithOptionalDepOverride() throws Exception {
+    public void addServiceWithInjectionAndWithOptionalDepOverride() throws Exception {
         Future<ServiceController<?>> anotherServiceStart = testListener.expectServiceStart(anotherServiceName);
         // install another service
         ServiceBuilder<?> serviceBuilder = getServiceBuilder(serviceContainer.addService(anotherServiceName, Service.NULL))
@@ -287,8 +275,6 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         final TestServiceListener testListener2 = new TestServiceListener();
         final TestServiceListener testListener3 = new TestServiceListener();
         serviceBuilder.addListener(testListener1, testListener2, testListener3, testListener1);
-        // set default location
-        serviceBuilder.setLocation();
         // inject a description into description property of dummy manager
         serviceBuilder.addInjection(new SetMethodInjector<String>(Values.immediateValue(dummyManager), getMethod(DummyManager.class, "setDescription", String.class)), "real description");
 
@@ -301,8 +287,6 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         assertController(dummyController, dummyServiceMissingDependency1);
         assertController(dummyController, dummyServiceMissingDependency2);
         assertController(dummyController, dummyServiceMissingDependency3);
-        // should have a non null location
-        assertNotNull(dummyController.getLocation());
         ServiceName[] aliases = dummyController.getAliases();
         assertNotNull(aliases);
         assertEquals(3, aliases.length);
@@ -331,16 +315,12 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         assertSame(dummyManager, dummyController.getValue());
         // the value of dummy controller should still be dummy manager
         assertSame(dummyManager, dummyController.getValue());
-        // location continues to exist as a non null value
-        assertNotNull(dummyController.getLocation());
         // and, at this point, the injection of description should have been performed
         assertEquals("real description", dummyManager.getDescription());
     }
 
     @Test
     public void addServiceWithDependencyInjection() throws Exception {
-        final Location location = createLocation("File", -1, -1, null);
-
         Future<ServiceController<?>> anotherServiceStart = testListener.expectServiceStart(anotherServiceName);
         // install another service, with a string value
         ServiceBuilder<?> serviceBuilder = serviceContainer.addService(anotherServiceName, new ValueService<String>(
@@ -374,14 +354,11 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         serviceBuilder.addDependencies(DependencyType.OPTIONAL, dependencies);
         // add test listener
         serviceBuilder.addListener(testListener);
-        // create a location for service
-        serviceBuilder.setLocation(location);
 
         Future<ServiceController<?>> dummyServiceStart = testListener.expectServiceStart(serviceName);
         // finally install dummy service
         ServiceController<?> dummyController = assertController(serviceName, serviceBuilder.install());
         assertController(dummyController, dummyServiceStart);
-        assertEquals(location, dummyController.getLocation());
         ServiceName[] aliases = dummyController.getAliases();
         assertNotNull(aliases);
         assertEquals(3, aliases.length);
@@ -406,8 +383,6 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
 
     @Test
     public void addServiceWithDependencyInjectionAndOptionalDependencyOverride() throws Exception {
-        final Location location = createLocation("File", -1, -1, null);
-
         Future<ServiceController<?>> anotherServiceStart = testListener.expectServiceStart(anotherServiceName);
         // install another service, with a string value
         ServiceBuilder<?> serviceBuilder = getServiceBuilder(serviceContainer.addService(anotherServiceName, new ValueService<String>(
@@ -442,8 +417,6 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         serviceBuilder.addDependencies(DependencyType.OPTIONAL, dependencies);
         // add test listener
         serviceBuilder.addListener(testListener);
-        // create a location for service
-        serviceBuilder.setLocation(location);
 
         Future<ServiceController<?>> dummyServiceStart = testListener.expectServiceStart(serviceName);
         Future<ServiceController<?>> dummyServiceListenerAdded = testListener.expectListenerAdded(serviceName);
@@ -451,7 +424,6 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         ServiceController<?> dummyController = assertController(serviceName, serviceBuilder.install());
         assertController(dummyController, dummyServiceListenerAdded);
         // the value of the installed controller should be dummy manager
-        assertEquals(location, dummyController.getLocation());
         ServiceName[] aliases = dummyController.getAliases();
         assertNotNull(aliases);
         assertEquals(3, aliases.length);
@@ -538,15 +510,11 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
         List<TestServiceListener> listeners = new ArrayList<TestServiceListener>();
         listeners.add(testListener);
         serviceBuilder.addListener(listeners);
-        final Location location = createLocation("~/file.txt", 10, 0, createLocation("~/file.txt", 20, 5, null));
-        // create a location
-        serviceBuilder.setLocation(location);
 
         Future<ServiceController<?>> dummyServiceStart = testListener.expectServiceStart(serviceName);
         // finally install
         ServiceController<?> dummyController = assertController(serviceName, serviceBuilder.install());
         assertController(dummyController, dummyServiceStart);
-        assertEquals(location, dummyController.getLocation());
         ServiceName[] aliases = dummyController.getAliases();
         assertTrue(aliases == null || aliases.length == 0);
         // expected value of dummy service is dummy manager
@@ -668,40 +636,6 @@ public abstract class AbstractServiceBuilderTest extends AbstractServiceTest {
             serviceBuilder.install();
             fail ("IllegalStateException expected");
         } catch (IllegalStateException e) {}
-    }
-
-    /**
-     * Create and assert location as specified.
-     * 
-     * @param fileName     the name of the file
-     * @param lineNumber   the number of line
-     * @param columnNumber the number of column
-     * @param parent       parent location if any
-     * @return             the created location
-     */
-    private final Location createLocation(String fileName, int lineNumber, int columnNumber, Location parent) {
-        Location location = new Location(fileName, lineNumber, columnNumber, parent);
-        if (fileName == null) {
-            assertNull(location.getFileName());
-        } else {
-            assertEquals(fileName, location.getFileName());
-        }
-        assertEquals(lineNumber, location.getLineNumber());
-        assertEquals(columnNumber, location.getColumnNumber());
-        assertEquals(location.hashCode(), location.hashCode());
-        assertEquals(location, location);
-        assertFalse(location.equals(null));
-        assertFalse(location.equals((Location) null));
-        assertFalse(location.equals("string"));
-        assertTrue(location.equals((Object) location));
-        assertFalse(location.equals(new Location(null, lineNumber, columnNumber -1, null)));
-        assertFalse(location.equals(new Location(fileName == null? "": fileName + " ", lineNumber, columnNumber, null)));
-        assertEquals(location, new Location(null, lineNumber, columnNumber, null));
-        assertEquals(location, new Location(null, lineNumber, columnNumber, parent));
-        assertFalse(location.equals((Object) new Location(fileName, lineNumber, columnNumber, new Location("", 0, 0, null))));
-        assertFalse(location.equals(new Location(null, lineNumber + 1, columnNumber -1, null)));
-        assertNotNull(location.toString());
-        return location;
     }
 
     /**
