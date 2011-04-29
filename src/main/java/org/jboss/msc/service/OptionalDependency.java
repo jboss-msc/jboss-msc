@@ -59,23 +59,13 @@ class OptionalDependency implements Dependency, Dependent {
          */
         AVAILABLE,
         /**
-         * The dependency failed; means the last notification received by this {@code OptionalDependency} (as a
-         * dependent of the real dependency) is {@link #dependencyFailed}.
-         */
-        FAILED,
-        /**
          * The dependency is up; means the last notification received by this {@code OptionalDependency} (as a
          * dependent of the real dependency) is {@link #dependencyUp}.
          */
         UP}
 
     /**
-     * Indicates if optional dependency has a transitive dependency unavailable.
-     */
-    private boolean dependencyUnavailable = false;
-
-    /**
-     * The real dependency.
+     * The actual dependency.
      */
     private final Dependency optionalDependency;
 
@@ -86,9 +76,14 @@ class OptionalDependency implements Dependency, Dependent {
     private DependencyState dependencyState;
 
     /**
-     * Indicates whether a transitive dependency is unavailable.
+     * Indicates if optional dependency has a transitive dependency unavailable.
      */
-    private boolean notifyTransitiveDependencyUnavailable;
+    private boolean transitiveDependencyUnavailable = false;
+
+    /**
+     * Indicates if optionalDependency notified a dependency failure.
+     */
+    private boolean dependencyFailed = false;
 
     /**
      * The dependent on this optional dependency
@@ -96,7 +91,7 @@ class OptionalDependency implements Dependency, Dependent {
     private Dependent dependent;
 
     /**
-     * Indicates if this dependency has been demanded by the dependent 
+     * Indicates if this dependency has been demanded by the dependent
      */
     private boolean demandedByDependent;
 
@@ -122,7 +117,9 @@ class OptionalDependency implements Dependency, Dependent {
         assert !holdsLock(this);
         assert !holdsLock(dependent);
         final boolean notifyDependent;
-        final DependencyState currentDependencyState;
+        final DependencyState depState;
+        final boolean transDepUnavailable;
+        final boolean depFailed;
         optionalDependency.addDependent(this);
         synchronized (this) {
             if (this.dependent != null) {
@@ -130,21 +127,21 @@ class OptionalDependency implements Dependency, Dependent {
             }
             this.dependent = dependent;
             notifyDependent = forwardNotifications = dependencyState.compareTo(DependencyState.AVAILABLE) >= 0;
-            currentDependencyState = dependencyState;
+            depState = dependencyState;
+            transDepUnavailable = transitiveDependencyUnavailable;
+            depFailed = dependencyFailed;
         }
         if (notifyDependent) {
-            switch (currentDependencyState) {
-                case FAILED:
-                    dependent.dependencyFailed();
-                    break;
-                case UP:
-                    dependent.immediateDependencyUp();
+            if (depState == DependencyState.UP) {
+                dependent.immediateDependencyUp();
             }
-            if (notifyTransitiveDependencyUnavailable) {
+            if (transDepUnavailable) {
                 dependent.transitiveDependencyUnavailable();
             }
-        }
-        else {
+            if (depFailed) {
+                dependent.dependencyFailed();
+            }
+        } else {
             dependent.immediateDependencyUp();
         }
     }
@@ -178,36 +175,33 @@ class OptionalDependency implements Dependency, Dependent {
         assert !holdsLock(this);
         final boolean startNotifying;
         final boolean notifyOptionalDependency;
-        final DependencyState currentDependencyState;
-        final boolean transitiveDependencyUnavailable;
+        final DependencyState depState;
+        final boolean transDepUnavailable;
+        final boolean depFailed;
         synchronized (this) {
             demandedByDependent = false;
-            currentDependencyState = dependencyState;
-            transitiveDependencyUnavailable = notifyTransitiveDependencyUnavailable;
+            depState = dependencyState;
+            transDepUnavailable = transitiveDependencyUnavailable;
+            depFailed = dependencyFailed;
             if (forwardNotifications) {
                 notifyOptionalDependency = true;
                 startNotifying = false;
             } else {
                 notifyOptionalDependency = false;
-                startNotifying = forwardNotifications = (dependencyState.compareTo(DependencyState.AVAILABLE) >= 0);
+                startNotifying = forwardNotifications = dependencyState.compareTo(DependencyState.AVAILABLE) >= 0;//);
             }
         }
         if (startNotifying) {
-            switch (currentDependencyState) {
-                case AVAILABLE:
-                    dependent.immediateDependencyDown();
-                    break;
-                case FAILED:
-                    dependent.dependencyFailed();
-                    break;
+            if (depState == DependencyState.AVAILABLE) {
+                dependent.immediateDependencyDown();
             }
             // the status of unavailable and failed dependencies is changed now
-            // that this optional dep is connected with the dependent
-            if (transitiveDependencyUnavailable) {
+            // given this optional dep is connected with the dependent
+            if (transDepUnavailable) {
                 dependent.transitiveDependencyUnavailable();
             }
-            if (demandedByDependent) {
-                optionalDependency.addDemand();
+            if (depFailed) {
+                dependent.dependencyFailed();
             }
         } else if (notifyOptionalDependency) {
             optionalDependency.removeDemand();
@@ -231,9 +225,9 @@ class OptionalDependency implements Dependency, Dependent {
         assert !holdsLock(this);
         final boolean notifyOptionalDependency;
         synchronized (this) {
-            // on some multi-thread scenarios, it can happen that forwardNotification become true as the result of a
+            // on some multi-threaded scenarios, it can happen that forwardNotification become true as the result of a
             // removeDemand call that is performed before dependentStopped. In this case, dependentStartedNotified
-            // will prevent us from notify the dependency of a dependentStopped without a corresponding
+            // will prevent us from notifying the dependency of a dependentStopped without a corresponding
             // previous dependentStarted notification
             notifyOptionalDependency = forwardNotifications && dependentStartedNotified;
             dependentStartedNotified = false;
@@ -262,13 +256,20 @@ class OptionalDependency implements Dependency, Dependent {
     public void immediateDependencyAvailable(ServiceName dependencyName) {
         assert !holdsLock(this);
         final boolean notifyOptionalDependent;
+        final boolean depFailed;
+        final boolean startNotifying;
         synchronized (this) {
+            depFailed = dependencyFailed;
+            startNotifying = !forwardNotifications;
             dependencyState = DependencyState.AVAILABLE;
             forwardNotifications = notifyOptionalDependent = !demandedByDependent && dependent != null;
         }
         if (notifyOptionalDependent) {
-            // need to update the dependent by telling it that the dependency is down
+            // need to update the dependent by telling it the dependency is down
             dependent.immediateDependencyDown();
+            if (startNotifying && depFailed) {
+                dependent.dependencyFailed();
+            }
         }
     }
 
@@ -277,25 +278,27 @@ class OptionalDependency implements Dependency, Dependent {
         assert !holdsLock(this);
         final boolean notificationsForwarded;
         final boolean demandNotified;
-        final DependencyState currentDependencyState;
-        final boolean currentDependencyUnavailable;
+        final DependencyState depState;
+        final boolean transpDepUnavailable;
+        final boolean depFailed;
         synchronized (this) {
-            currentDependencyState = this.dependencyState;
+            depState = dependencyState;
+            transpDepUnavailable = transitiveDependencyUnavailable;
+            depFailed = dependencyFailed;
             notificationsForwarded = forwardNotifications;
-            currentDependencyUnavailable = dependencyUnavailable;
             forwardNotifications = false;
             dependencyState = DependencyState.UNAVAILABLE;
             demandNotified = demandedByDependent;
         }
         if (notificationsForwarded) {
             // now that the optional dependency is unavailable, we enter automatically the up state
-            switch (currentDependencyState) {
-                case FAILED:
-                    dependent.dependencyFailureCleared();
-                case AVAILABLE:
-                    dependent.immediateDependencyUp();
+            if (depState == DependencyState.AVAILABLE) {
+                dependent.immediateDependencyUp();
             }
-            if (currentDependencyUnavailable) {
+            if (depFailed) {
+                dependent.dependencyFailureCleared();
+            }
+            if (transpDepUnavailable) {
                 dependent.transitiveDependencyAvailable();
             }
             if (demandNotified) {
@@ -335,8 +338,8 @@ class OptionalDependency implements Dependency, Dependent {
         assert !holdsLock(this);
         final boolean notifyOptionalDependent;
         synchronized (this) {
-            dependencyState = DependencyState.FAILED;
             notifyOptionalDependent = forwardNotifications;
+            dependencyFailed = true;
         }
         if (notifyOptionalDependent) {
             dependent.dependencyFailed();
@@ -348,8 +351,8 @@ class OptionalDependency implements Dependency, Dependent {
         assert !holdsLock(this);
         final boolean notifyOptionalDependent;
         synchronized (this) {
-            dependencyState = DependencyState.AVAILABLE;
             notifyOptionalDependent = forwardNotifications;
+            dependencyFailed = false;
         }
         if (notifyOptionalDependent) {
             dependent.dependencyFailureCleared();
@@ -362,8 +365,7 @@ class OptionalDependency implements Dependency, Dependent {
         final boolean notifyOptionalDependent;
         synchronized (this) {
             notifyOptionalDependent = forwardNotifications;
-            notifyTransitiveDependencyUnavailable = false;
-            dependencyUnavailable = false;
+            transitiveDependencyUnavailable = false;
         }
         if (notifyOptionalDependent) {
             dependent.transitiveDependencyAvailable();
@@ -381,8 +383,7 @@ class OptionalDependency implements Dependency, Dependent {
         final boolean notifyOptionalDependent;
         synchronized (this) {
             notifyOptionalDependent = forwardNotifications;
-            notifyTransitiveDependencyUnavailable = !notifyOptionalDependent;
-            dependencyUnavailable = true;
+            transitiveDependencyUnavailable = true;
         }
         if (notifyOptionalDependent) {
             dependent.transitiveDependencyUnavailable();
