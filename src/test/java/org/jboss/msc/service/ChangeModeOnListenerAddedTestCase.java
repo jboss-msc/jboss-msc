@@ -1601,6 +1601,11 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         }
 
         @Override
+        public void serviceRemoveRequestCleared(final ServiceController<?> controller) {
+            unexpectedCalls.append("serviceRemoveRequestCleared\n");
+        }
+
+        @Override
         public void serviceRemoved(ServiceController<?> controller) {
             unexpectedCalls.append("serviceRemoved\n");
         }

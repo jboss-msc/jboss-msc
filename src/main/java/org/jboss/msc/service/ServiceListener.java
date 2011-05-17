@@ -162,6 +162,15 @@ public interface ServiceListener<S> {
     void serviceRemoveRequested(ServiceController<? extends S> controller);
 
     /**
+     * The service removal is canceled. Called when the service mode is changed from {@code REMOVE} to any other
+     * mode.
+     * Such a mode change can only be succesfully performed if {@code setMode} is called before the service is removed.
+     * 
+     * @param controller the controller.
+     */
+    void serviceRemoveRequestCleared(ServiceController<? extends S> controller);
+
+    /**
      * The service has been removed.  The listener will automatically be unregistered after this call.  Called
      * after the state transitions from {@code DOWN} to {@code REMOVED}.
      *

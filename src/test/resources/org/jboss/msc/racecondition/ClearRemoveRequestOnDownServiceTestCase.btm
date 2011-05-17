@@ -1,0 +1,68 @@
+#
+# JBoss, Home of Professional Open Source.
+# Copyright 2011, Red Hat, Inc., and individual contributors
+# as indicated by the @author tags. See the copyright.txt file in the
+# distribution for a full listing of individual contributors.
+#
+# This is free software; you can redistribute it and/or modify it
+# under the terms of the GNU Lesser General Public License as
+# published by the Free Software Foundation; either version 2.1 of
+# the License, or (at your option) any later version.
+#
+# This software is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this software; if not, write to the Free
+# Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+#
+
+RULE setMode(Mode.ACTIVE) to DOWN service
+CLASS org.jboss.msc.service.ServiceControllerImpl
+METHOD setMode
+AT ENTRY
+IF $1 == org.jboss.msc.service.ServiceController$Mode.ACTIVE
+DO
+   # hold setMode until service is in DOWN state
+   debug("wait for service enter DOWN"),
+   waitFor("service DOWN", 100000),
+   debug("proceed with setMode(Mode.ACTIVE)")
+ENDRULE
+
+RULE after setMode(Mode.ACTIVE)
+CLASS org.jboss.msc.racecondition.ClearRemoveRequestOnDownServiceTestCase
+METHOD test
+AFTER INVOKE org.jboss.msc.service.ServiceController.setMode 2
+IF TRUE
+DO
+   # release RemoveTask lock
+   debug("signalling DependentStoppedTask"),
+   signalWake("DependentStoppedTask", true),
+   debug("signalled DependentStoppedTask");
+ENDRULE
+
+RULE service DOWN
+CLASS org.jboss.msc.service.ServiceControllerImpl
+METHOD transition
+AT EXIT
+BIND NOTHING
+IF $0.state.toString().equals("DOWN") AND $0.mode == org.jboss.msc.service.ServiceController$Mode.REMOVE AND incrementCounter("run service DOWN rule only once") == 1
+DO
+    # after service B enters DOWN, wake setMode(Mode.ACTIVE)
+    debug("signalling setMode(Mode.ACTIVE)"),
+    signalWake("service DOWN", true),
+    debug("signalled setMode(Mode.ACTIVE)");
+ENDRULE
+
+RULE service DependentStoppedTask
+CLASS org.jboss.msc.service.ServiceControllerImpl$DependentStoppedTask
+METHOD run
+AT ENTRY
+IF incrementCounter("run DependentStoppedTask rule only once") == 1
+DO
+    debug("DependentStoppedTask entry"),
+    waitFor("DependentStoppedTask");
+ENDRULE

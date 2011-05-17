@@ -377,7 +377,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case REMOVING: {
-                return Transition.REMOVING_to_REMOVED;
+                if (mode == Mode.REMOVE) { 
+                    return Transition.REMOVING_to_REMOVED;
+                } else {
+                    return Transition.REMOVING_to_DOWN;
+                }
             }
             case CANCELLED:
                 // fall thru!
@@ -584,6 +588,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     listeners.clear();
                     break;
                 }
+                case REMOVING_to_DOWN: {
+                    break;
+                }
                 case DOWN_to_START_REQUESTED: {
                     getListenerTasks(ListenerNotification.START_REQUESTED, tasks);
                     break;
@@ -684,7 +691,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ServiceController.Mode oldMode = mode;
         switch (oldMode) {
             case REMOVE: {
-                throw new IllegalStateException("Service removed");
+                if (state.compareTo(Substate.REMOVING) >= 0) {
+                    throw new IllegalStateException("Service removed" + state.toString());
+                }
+                getListenerTasks(ListenerNotification.REMOVE_REQUEST_CLEARED, taskList);
+                // fall thru!
             }
             case NEVER: {
                 switch (newMode) {
@@ -1330,6 +1341,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         DEPENDENCY_PROBLEM_CLEAR,
         /** Notify the listener that the service is going to be removed. */
         REMOVE_REQUESTED,
+        /** Notify the listener that the service is no longer going to be removed. */
+        REMOVE_REQUEST_CLEARED,
         /** Notify the listener that the failed to start service is attempting to start again */
         FAILED_STARTING,
         /** Notify the listener that the failed to start service is now stopped */
@@ -1405,6 +1418,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 case REMOVE_REQUESTED:
                     listener.serviceRemoveRequested(this);
+                    break;
+                case REMOVE_REQUEST_CLEARED:
+                    listener.serviceRemoveRequestCleared(this);
                     break;
                 case START_REQUESTED:
                     listener.serviceStartRequested(this);
@@ -2339,6 +2355,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         STOP_REQUESTED_to_STOPPING(Substate.STOP_REQUESTED, Substate.STOPPING),
         STOPPING_to_DOWN(Substate.STOPPING, Substate.DOWN),
         REMOVING_to_REMOVED(Substate.REMOVING, Substate.REMOVED),
+        REMOVING_to_DOWN(Substate.REMOVING, Substate.DOWN),
         DOWN_to_REMOVING(Substate.DOWN, Substate.REMOVING),
         DOWN_to_START_REQUESTED(Substate.DOWN, Substate.START_REQUESTED),
         DOWN_to_WAITING(Substate.DOWN, Substate.WAITING),

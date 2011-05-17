@@ -52,6 +52,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     private final Map<ServiceName, ServiceFuture> expectedFailedStops = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFutureWithValidation> expectedStopsOnly = new HashMap<ServiceName, ServiceFutureWithValidation>();
     private final Map<ServiceName, ServiceFuture> expectedRemovalRequests = new HashMap<ServiceName, ServiceFuture>();
+    private final Map<ServiceName, ServiceFuture> expectedRemovalRequestClears = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedRemovals = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFailureFuture> expectedFailures = new HashMap<ServiceName, ServiceFailureFuture>();
     private final Map<ServiceName, ServiceFuture> expectedDependencyFailures = new HashMap<ServiceName, ServiceFuture>();
@@ -136,6 +137,13 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
 
     public void serviceRemoveRequested(final ServiceController<? extends Object> serviceController) {
         final ServiceFuture future = expectedRemovalRequests.remove(serviceController.getName());
+        if(future != null) {
+            future.setServiceController(serviceController);
+        }
+    }
+
+    public void serviceRemoveRequestCleared(final ServiceController<? extends Object> serviceController) {
+        final ServiceFuture future = expectedRemovalRequestClears.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
         }
@@ -317,6 +325,12 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     public Future<ServiceController<?>> expectNoServiceRemovalRequest(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture(100);
         expectedRemovalRequests.put(serviceName, future);
+        return future;
+    }
+
+    public Future<ServiceController<?>> expectServiceRemovalRequestCleared(final ServiceName serviceName) {
+        final ServiceFuture future = new ServiceFuture();
+        expectedRemovalRequestClears.put(serviceName, future);
         return future;
     }
 

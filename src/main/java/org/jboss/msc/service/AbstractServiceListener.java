@@ -101,6 +101,10 @@ public abstract class AbstractServiceListener<S> implements ServiceListener<S> {
     }
 
     /** {@inheritDoc} */
+    public void serviceRemoveRequestCleared(final ServiceController<? extends S> controller) {
+    }
+
+    /** {@inheritDoc} */
     public void serviceRemoved(final ServiceController<? extends S> controller) {
     }
 

@@ -128,6 +128,11 @@ public class LatchedFinishListener implements ServiceListener<Object> {
     }
 
     @Override
+    public void serviceRemoveRequestCleared(final ServiceController<? extends Object> controller) {
+        timingServiceListener.serviceRemoveRequestCleared(controller);
+    }
+
+    @Override
     public void serviceRemoved(ServiceController<? extends Object> serviceController) {
         timingServiceListener.serviceRemoved(serviceController);
     }
