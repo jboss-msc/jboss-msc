@@ -692,7 +692,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         switch (oldMode) {
             case REMOVE: {
                 if (state.compareTo(Substate.REMOVING) >= 0) {
-                    throw new IllegalStateException("Service removed" + state.toString());
+                    throw new IllegalStateException("Service already removed");
                 }
                 getListenerTasks(ListenerNotification.REMOVE_REQUEST_CLEARED, taskList);
                 // fall thru!
