@@ -280,6 +280,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     /**
+     * Return {@code true} only if this service controller installation is committed.
+     */
+    boolean isInstallationCommitted() {
+        assert holdsLock(this);
+        // should not be NEW nor CANCELLED
+        return state.compareTo(Substate.CANCELLED) > 0;
+    }
+
+    /**
      * Identify the transition to take.  Call under lock.
      *
      * @return the transition or {@code null} if none is needed at this time

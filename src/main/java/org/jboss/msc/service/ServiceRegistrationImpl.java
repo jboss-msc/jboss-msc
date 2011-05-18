@@ -99,10 +99,17 @@ final class ServiceRegistrationImpl implements Dependency {
                 return;
             }
             synchronized (instance) {
-                instance.newDependent(name, dependent, tasks);
                 synchronized (dependents) {
                     dependents.add(dependent);
                 }
+                // if instance is not fully installed yet, we need to be on a synchronized(instance) block to avoid
+                // creation and execution of ServiceAvailableTask before immediateDependencyUnavailable is invoked on
+                // new dependent
+                if (!instance.isInstallationCommitted()) {
+                    dependent.immediateDependencyUnavailable(name);
+                    return;
+                }
+                instance.newDependent(name, dependent, tasks);
                 instance.addAsyncTasks(tasks.size() + 1);
             }
         }
