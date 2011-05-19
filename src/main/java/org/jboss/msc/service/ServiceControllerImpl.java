@@ -281,6 +281,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     /**
      * Return {@code true} only if this service controller installation is committed.
+     *
+     * @return true if this service controller installation is committed
      */
     boolean isInstallationCommitted() {
         assert holdsLock(this);
@@ -1652,12 +1654,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         private final Map<ServiceName, Dependent[]> dependents;
         private final Dependent[] children;
 
-        public ServiceUnavailableTask() {
+        ServiceUnavailableTask() {
             dependents = getDependentsByDependencyName();
             children = ServiceControllerImpl.this.children.toScatteredArray(NO_DEPENDENTS);
         }
 
-        public ServiceUnavailableTask(ServiceName serviceName, Dependent dependent) {
+        ServiceUnavailableTask(ServiceName serviceName, Dependent dependent) {
             dependents = new HashMap<ServiceName, Dependent[]>(1);
             dependents.put(serviceName, new Dependent[]{dependent});
             children = NO_DEPENDENTS;
@@ -1694,7 +1696,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         private final Map<ServiceName, Dependent[]> dependents;
         private final Dependent[] children;
 
-        public ServiceAvailableTask() {
+        ServiceAvailableTask() {
             dependents = getDependentsByDependencyName();
             children = ServiceControllerImpl.this.children.toScatteredArray(NO_DEPENDENTS);
         }
