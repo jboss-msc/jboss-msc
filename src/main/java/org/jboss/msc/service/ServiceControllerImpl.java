@@ -1174,6 +1174,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return serviceValue.getValue().getValue();
     }
 
+    public Service<? extends S> getService() throws IllegalStateException {
+        return serviceValue.getValue();
+    }
+
     public ServiceName getName() {
         return primaryRegistration.getName();
     }
