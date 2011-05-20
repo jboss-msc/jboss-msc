@@ -22,8 +22,9 @@
 
 package org.jboss.msc.util;
 
-import org.jboss.msc.service.AbstractServiceListener;
+import java.util.EnumMap;
 import org.jboss.msc.service.ServiceController;
+import org.jboss.msc.service.ServiceListener;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.StartException;
 
@@ -41,19 +42,10 @@ import java.util.concurrent.TimeoutException;
  *
  * @author John E. Bailey
  */
-public class TestServiceListener extends AbstractServiceListener<Object> {
-    private final Map<ServiceName, ServiceFuture> expectedStarts = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedStops = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedStoppings = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedWaitings = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedWaitingClears = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedWontStarts = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedWontStartClears = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedFailedStops = new HashMap<ServiceName, ServiceFuture>();
+public class TestServiceListener implements ServiceListener<Object> {
     private final Map<ServiceName, ServiceFutureWithValidation> expectedStopsOnly = new HashMap<ServiceName, ServiceFutureWithValidation>();
     private final Map<ServiceName, ServiceFuture> expectedRemovalRequests = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedRemovalRequestClears = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedRemovals = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFailureFuture> expectedFailures = new HashMap<ServiceName, ServiceFailureFuture>();
     private final Map<ServiceName, ServiceFuture> expectedDependencyFailures = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedDependencyRetryings = new HashMap<ServiceName, ServiceFuture>();
@@ -61,9 +53,15 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
     private final Map<ServiceName, ServiceFuture> expectedImmediateDepAvailabilities = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedTransitiveDepUnavailabilities = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedTransitiveDepAvailabilities = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedDependencyProblems = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedDependencyProblemClears = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedListenerAddeds = new HashMap<ServiceName, ServiceFuture>();
+
+    private final EnumMap<ServiceController.Transition, Map<ServiceName, ServiceFuture>> expectedTransitions = new EnumMap<ServiceController.Transition, Map<ServiceName, ServiceFuture>>(ServiceController.Transition.class);
+
+    public TestServiceListener() {
+        for (ServiceController.Transition transition : ServiceController.Transition.values()) {
+            expectedTransitions.put(transition, new HashMap<ServiceName, ServiceFuture>());
+        }
+    }
 
     public void listenerAdded(final ServiceController<? extends Object> serviceController) {
         final ServiceFuture future = expectedListenerAddeds.remove(serviceController.getName());
@@ -72,66 +70,42 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         }
     }
 
-    public void serviceStarted(final ServiceController<? extends Object> serviceController) {
-        final ServiceFuture future = expectedStarts.remove(serviceController.getName());
-        if(future != null) {
-            future.setServiceController(serviceController);
-        }
-    }
-
-    public void serviceStopped(ServiceController<? extends Object> serviceController) {
-        final ServiceFuture future = expectedStops.remove(serviceController.getName());
-        expectedStopsOnly.remove(serviceController.getName());
-        if(future != null) {
-            future.setServiceController(serviceController);
-        }
-    }
-
-    public void serviceStopping(ServiceController<? extends Object> serviceController) {
-        final ServiceFutureWithValidation invalidFuture = expectedStopsOnly.remove(serviceController.getName());
-        if(invalidFuture != null) {
-            invalidFuture.invalidate();
-        }
-        else {
-            final ServiceFuture future = expectedStoppings.remove(serviceController.getName());
-            if (future != null) {
-                future.setServiceController(serviceController);
+    public void transition(final ServiceController<? extends Object> serviceController, final ServiceController.Transition transition) {
+        switch (transition) {
+            case STARTING_to_START_FAILED: {
+                final ServiceFailureFuture future = expectedFailures.remove(serviceController.getName());
+                if(future != null) {
+                    future.setStartException(serviceController.getStartException());
+                }
+                break;
             }
-        }
-    }
-
-    public void serviceWaiting(ServiceController<? extends Object> serviceController) {
-        final ServiceFuture future = expectedWaitings.remove(serviceController.getName());
-        if (future != null) {
-            future.setServiceController(serviceController);
-        }
-    }
-
-    public void serviceWaitingCleared(ServiceController<? extends Object> serviceController) {
-        final ServiceFuture future = expectedWaitingClears.remove(serviceController.getName());
-        if (future != null) {
-            future.setServiceController(serviceController);
-        }
-    }
-
-    public void serviceWontStart(ServiceController<? extends Object> serviceController) {
-        final ServiceFuture future = expectedWontStarts.remove(serviceController.getName());
-        if (future != null) {
-            future.setServiceController(serviceController);
-        }
-    }
-
-    public void serviceWontStartCleared(ServiceController<? extends Object> serviceController) {
-        final ServiceFuture future = expectedWontStartClears.remove(serviceController.getName());
-        if (future != null) {
-            future.setServiceController(serviceController);
-        }
-    }
-
-    public void serviceRemoved(ServiceController<? extends Object> serviceController) {
-        final ServiceFuture future = expectedRemovals.remove(serviceController.getName());
-        if(future != null) {
-            future.setServiceController(serviceController);
+            case STOPPING_to_DOWN: {
+                final ServiceFuture future = expectedTransitions.get(transition).remove(serviceController.getName());
+                expectedStopsOnly.remove(serviceController.getName());
+                if (future != null) {
+                    future.setServiceController(serviceController);
+                }
+                break;
+            }
+            case STOP_REQUESTED_to_STOPPING: {
+                final ServiceFutureWithValidation invalidFuture = expectedStopsOnly.remove(serviceController.getName());
+                if (invalidFuture != null) {
+                    invalidFuture.invalidate();
+                } else {
+                    final ServiceFuture future = expectedTransitions.get(transition).remove(serviceController.getName());
+                    if (future != null) {
+                        future.setServiceController(serviceController);
+                    }
+                }
+                break;
+            }
+            default: {
+                final ServiceFuture future = expectedTransitions.get(transition).remove(serviceController.getName());
+                if (future != null) {
+                    future.setServiceController(serviceController);
+                }
+                break;
+            }
         }
     }
 
@@ -144,20 +118,6 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
 
     public void serviceRemoveRequestCleared(final ServiceController<? extends Object> serviceController) {
         final ServiceFuture future = expectedRemovalRequestClears.remove(serviceController.getName());
-        if(future != null) {
-            future.setServiceController(serviceController);
-        }
-    }
-
-    public void serviceFailed(ServiceController<? extends Object> serviceController, StartException reason) {
-        final ServiceFailureFuture future = expectedFailures.remove(serviceController.getName());
-        if(future != null) {
-            future.setStartException(reason);
-        }
-    }
-
-    public void failedServiceStopped(final ServiceController<? extends Object> serviceController) {
-        final ServiceFuture future = expectedFailedStops.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
         }
@@ -205,19 +165,7 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
         }
     }
 
-    public void dependencyProblem(ServiceController<? extends Object> serviceController) {
-        final ServiceFuture future = expectedDependencyProblems.remove(serviceController.getName());
-        if (future != null) {
-            future.setServiceController(serviceController);
-        }
-    }
-
-    public void dependencyProblemCleared(ServiceController<? extends Object> serviceController) {
-        final ServiceFuture future = expectedDependencyProblemClears.remove(serviceController.getName());
-        if (future != null) {
-            future.setServiceController(serviceController);
-        }
-    }
+    // ----
 
     public Future<ServiceController<?>> expectListenerAdded(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
@@ -233,86 +181,86 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
 
     public Future<ServiceController<?>> expectServiceStart(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
-        expectedStarts.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.STARTING_to_UP).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectNoServiceStart(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture(100);
-        expectedStarts.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.STARTING_to_UP).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectServiceStop(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
-        expectedStops.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.STOPPING_to_DOWN).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectNoServiceStop(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture(100);
-        expectedStops.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.STOPPING_to_DOWN).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectServiceStoppedOnly(final ServiceName serviceName) {
         final ServiceFutureWithValidation future = new ServiceFutureWithValidation();
-        expectedStops.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.STOPPING_to_DOWN).put(serviceName, future);
         expectedStopsOnly.put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectFailedServiceStopped(final ServiceName serviceName) {
         final ServiceFutureWithValidation future = new ServiceFutureWithValidation();
-        expectedFailedStops.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.START_FAILED_to_DOWN).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectServiceStopping(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
-        expectedStoppings.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.STOP_REQUESTED_to_STOPPING).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectNoServiceStopping(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture(100);
-        expectedStoppings.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.STOP_REQUESTED_to_STOPPING).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectServiceWaiting(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
-        expectedWaitings.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.DOWN_to_WAITING).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectNoServiceWaiting(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture(100);
-        expectedWaitings.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.DOWN_to_WAITING).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectServiceWaitingCleared(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
-        expectedWaitingClears.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.WAITING_to_DOWN).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectNoServiceWaitingCleared(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture(100);
-        expectedWaitingClears.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.WAITING_to_DOWN).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectServiceWontStart(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
-        expectedWontStarts.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.DOWN_to_WONT_START).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectServiceWontStartCleared(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
-        expectedWontStartClears.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.WONT_START_to_DOWN).put(serviceName, future);
         return future;
     }
 
@@ -336,13 +284,13 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
 
     public Future<ServiceController<?>> expectServiceRemoval(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
-        expectedRemovals.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.REMOVING_to_REMOVED).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectNoServiceRemoval(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture(100);
-        expectedRemovals.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.REMOVING_to_REMOVED).put(serviceName, future);
         return future;
     }
 
@@ -426,25 +374,25 @@ public class TestServiceListener extends AbstractServiceListener<Object> {
 
     public Future<ServiceController<?>> expectDependencyProblem(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
-        expectedDependencyProblems.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.START_REQUESTED_to_PROBLEM).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectNoDependencyProblem(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture(100);
-        expectedDependencyProblems.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.START_REQUESTED_to_PROBLEM).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectDependencyProblemCleared(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
-        expectedDependencyProblemClears.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.PROBLEM_to_START_REQUESTED).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectNoDependencyProblemCleared(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture(100);
-        expectedDependencyProblemClears.put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.PROBLEM_to_START_REQUESTED).put(serviceName, future);
         return future;
     }
 

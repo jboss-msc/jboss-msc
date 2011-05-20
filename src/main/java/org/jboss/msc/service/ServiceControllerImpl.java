@@ -169,6 +169,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * The system nanotime of the moment in which the last lifecycle change was
      * initiated.
      */
+    @SuppressWarnings("VolatileLongOrDoubleField")
     private volatile long lifecycleTime;
 
     private static final Dependent[] NO_DEPENDENTS = new Dependent[0];
@@ -462,30 +463,30 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             switch (transition) {
                 case DOWN_to_WAITING: {
-                    getListenerTasks(ListenerNotification.WAITING, tasks);
+                    getListenerTasks(transition, tasks);
                     break;
                 }
                 case WAITING_to_DOWN: {
-                    getListenerTasks(ListenerNotification.WAITING_CLEARED, tasks);
+                    getListenerTasks(transition, tasks);
                     break;
                 }
                 case DOWN_to_WONT_START: {
-                    getListenerTasks(ListenerNotification.WONT_START, tasks);
+                    getListenerTasks(transition, tasks);
                     tasks.add(new ServiceUnavailableTask());
                     break;
                 }
                 case WONT_START_to_DOWN: {
-                    getListenerTasks(ListenerNotification.WONT_START_CLEARED, tasks);
+                    getListenerTasks(transition, tasks);
                     tasks.add(new ServiceAvailableTask());
                     break;
                 }
                 case STOPPING_to_DOWN: {
-                    getListenerTasks(transition.getAfter().getState(), tasks);
+                    getListenerTasks(transition, tasks);
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
                 case START_REQUESTED_to_DOWN: {
-                    getListenerTasks(ListenerNotification.START_REQUEST_CLEARED, tasks);
+                    getListenerTasks(transition, tasks);
                     break;
                 }
                 case START_REQUESTED_to_START_INITIATING: {
@@ -502,7 +503,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (failCount > 0) {
                         getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
                     }
-                    getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM, tasks);
+                    getListenerTasks(transition, tasks);
                     break;
                 }
                 case UP_to_STOP_REQUESTED: {
@@ -512,13 +513,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         tasks.add(new UndemandParentsTask());
                         parentsDemanded = false;
                     }
-                    getListenerTasks(ListenerNotification.STOP_REQUESTED, tasks);
+                    getListenerTasks(transition, tasks);
                     lifecycleTime = System.nanoTime();
                     tasks.add(new DependencyStoppedTask(getDependents()));
                     break;
                 }
                 case STARTING_to_UP: {
-                    getListenerTasks(transition.getAfter().getState(), tasks);
+                    getListenerTasks(transition, tasks);
                     tasks.add(new DependencyStartedTask(getDependents()));
                     break;
                 }
@@ -535,32 +536,32 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                             child.setMode(Mode.REMOVE);
                         }
                     }
-                    getListenerTasks(transition.getAfter().getState(), tasks);
+                    getListenerTasks(transition, tasks);
                     tasks.add(new DependencyFailedTask(getDependents()));
                     break;
                 }
                 case START_FAILED_to_STARTING: {
-                    getListenerTasks(ListenerNotification.FAILED_STARTING, tasks);
+                    getListenerTasks(transition, tasks);
                     tasks.add(new DependencyRetryingTask(getDependents()));
                     tasks.add(new DependentStartedTask());
                     break;
                 }
                 case START_INITIATING_to_STARTING: {
-                    getListenerTasks(transition.getAfter().getState(), tasks);
+                    getListenerTasks(transition, tasks);
                     tasks.add(new StartTask(true));
                     break;
                 }
                 case START_FAILED_to_DOWN: {
                     startException = null;
                     failCount--;
-                    getListenerTasks(ListenerNotification.FAILED_STOPPED, tasks);
+                    getListenerTasks(transition, tasks);
                     tasks.add(new DependencyRetryingTask(getDependents()));
                     tasks.add(new StopTask(true));
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
                 case STOP_REQUESTED_to_UP: {
-                    getListenerTasks(ListenerNotification.STOP_REQUEST_CLEARED, tasks);
+                    getListenerTasks(transition, tasks);
                     tasks.add(new DependencyStartedTask(getDependents()));
                     break;
                 }
@@ -577,7 +578,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                             child.setMode(Mode.REMOVE);
                         }
                     }
-                    getListenerTasks(transition.getAfter().getState(), tasks);
+                    getListenerTasks(transition, tasks);
                     tasks.add(new StopTask(false));
                     break;
                 }
@@ -595,7 +596,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case REMOVING_to_REMOVED: {
-                    getListenerTasks(transition.getAfter().getState(), tasks);
+                    getListenerTasks(transition, tasks);
                     listeners.clear();
                     break;
                 }
@@ -603,7 +604,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case DOWN_to_START_REQUESTED: {
-                    getListenerTasks(ListenerNotification.START_REQUESTED, tasks);
+                    getListenerTasks(transition, tasks);
                     break;
                 }
                 case PROBLEM_to_START_REQUESTED: {
@@ -616,7 +617,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (failCount > 0) {
                         getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
                     }
-                    getListenerTasks(ListenerNotification.DEPENDENCY_PROBLEM_CLEAR, tasks);
+                    getListenerTasks(transition, tasks);
                     lifecycleTime = System.nanoTime();
                     break;
                 }
@@ -628,10 +629,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         } while (tasks.isEmpty());
     }
 
-    private void getListenerTasks(final ServiceController.State newState, final ArrayList<Runnable> tasks) {
+    private void getListenerTasks(final Transition transition, final ArrayList<Runnable> tasks) {
         final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
         for (ServiceListener<? super S> listener : listeners) {
-            tasks.add(new ListenerTask(listener, newState));
+            tasks.add(new ListenerTask(listener, transition));
         }
     }
 
@@ -1210,7 +1211,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
         invokeListener(listener, ListenerNotification.LISTENER_ADDED, null);
         if (state == Substate.REMOVED) {
-            invokeListener(listener, ListenerNotification.STATE, State.REMOVED);
+            invokeListener(listener, ListenerNotification.TRANSITION, Transition.REMOVING_to_REMOVED);
         }
     }
 
@@ -1317,23 +1318,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         /** Notify the listener that is has been added. */
         LISTENER_ADDED,
         /** Notifications related to the current state.  */
-        STATE,
-        /** Notify the listener that the service was requested to start */
-        START_REQUESTED,
-        /** Notify the listener that the service start request is cleared */
-        START_REQUEST_CLEARED,
-        /** Notify the listener that the service was requested to stop */
-        STOP_REQUESTED,
-        /** Notify the listener that the service stop request is cleared */
-        STOP_REQUEST_CLEARED,
-        /** Notify the listener that the service will not start because it is in NEVER mode. */
-        WONT_START,
-        /** Notify the listener that the service is no longer in NEVER mode. */
-        WONT_START_CLEARED,
-        /** Notify the listener that the service is waiting for its dependencies to be started. */
-        WAITING,
-        /** Notify the listener that the service is no longer waiting for its dependencies to be started. */
-        WAITING_CLEARED,
+        TRANSITION,
         /** Notify the listener that a dependency failure occurred. */
         DEPENDENCY_FAILURE,
         /** Notify the listener that all dependency failures are cleared. */
@@ -1346,18 +1331,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         TRANSITIVE_DEPENDENCY_UNAVAILABLE,
         /** Notify the listener that all previously unavailable transitive dependencies are now available. */
         TRANSITIVE_DEPENDENCY_AVAILABLE,
-        /** Notify the listener that one or more dependencies will not start due to a problem. */ 
-        DEPENDENCY_PROBLEM,
-        /** Notify the listener that all dependency problems are now cleared. */
-        DEPENDENCY_PROBLEM_CLEAR,
         /** Notify the listener that the service is going to be removed. */
         REMOVE_REQUESTED,
         /** Notify the listener that the service is no longer going to be removed. */
-        REMOVE_REQUEST_CLEARED,
-        /** Notify the listener that the failed to start service is attempting to start again */
-        FAILED_STARTING,
-        /** Notify the listener that the failed to start service is now stopped */
-        FAILED_STOPPED
+        REMOVE_REQUEST_CLEARED
     }
 
     /**
@@ -1365,104 +1342,54 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * 
      * @param listener      listener to be invoked
      * @param notification  specified notification
-     * @param state         the state to be notified, only relevant if {@code notification} is
-     *                      {@link ListenerNotification#STATE}
+     * @param transition    the transition to be notified, only relevant if {@code notification} is
+     *                      {@link ListenerNotification#TRANSITION}
      */
-    private void invokeListener(final ServiceListener<? super S> listener, final ListenerNotification notification, final State state) {
+    private void invokeListener(final ServiceListener<? super S> listener, final ListenerNotification notification, final Transition transition) {
         assert !holdsLock(this);
         try {
             switch (notification) {
-                case LISTENER_ADDED:
+                case TRANSITION: {
+                    listener.transition(this, transition);
+                    break;
+                }
+                case LISTENER_ADDED: {
                     listener.listenerAdded(this);
                     break;
-                case STATE:
-                    switch (state) {
-                        case DOWN: {
-                            listener.serviceStopped(this);
-                            break;
-                        }
-                        case STARTING: {
-                            listener.serviceStarting(this);
-                            break;
-                        }
-                        case START_FAILED: {
-                            listener.serviceFailed(this, startException);
-                            break;
-                        }
-                        case UP: {
-                            listener.serviceStarted(this);
-                            break;
-                        }
-                        case STOPPING: {
-                            listener.serviceStopping(this);
-                            break;
-                        }
-                        case REMOVED: {
-                            listener.serviceRemoved(this);
-                            break;
-                        }
-                    }
-                    break;
-                case DEPENDENCY_FAILURE:
-                    listener.dependencyFailed(this);
-                    break;
-                case DEPENDENCY_FAILURE_CLEAR:
-                    listener.dependencyFailureCleared(this);
-                    break;
-                case IMMEDIATE_DEPENDENCY_UNAVAILABLE:
+                }
+                case IMMEDIATE_DEPENDENCY_UNAVAILABLE: {
                     listener.immediateDependencyUnavailable(this);
                     break;
-                case IMMEDIATE_DEPENDENCY_AVAILABLE:
+                }
+                case IMMEDIATE_DEPENDENCY_AVAILABLE: {
                     listener.immediateDependencyAvailable(this);
                     break;
-                case TRANSITIVE_DEPENDENCY_UNAVAILABLE:
+                }
+                case TRANSITIVE_DEPENDENCY_UNAVAILABLE: {
                     listener.transitiveDependencyUnavailable(this);
                     break;
-                case TRANSITIVE_DEPENDENCY_AVAILABLE:
+                }
+                case TRANSITIVE_DEPENDENCY_AVAILABLE: {
                     listener.transitiveDependencyAvailable(this);
                     break;
-                case DEPENDENCY_PROBLEM:
-                    listener.dependencyProblem(this);
+                }
+                case DEPENDENCY_FAILURE: {
+                    listener.dependencyFailed(this);
                     break;
-                case DEPENDENCY_PROBLEM_CLEAR:
-                    listener.dependencyProblemCleared(this);
+                }
+                case DEPENDENCY_FAILURE_CLEAR: {
+                    listener.dependencyFailureCleared(this);
                     break;
-                case REMOVE_REQUESTED:
+                }
+                case REMOVE_REQUESTED: {
                     listener.serviceRemoveRequested(this);
                     break;
-                case REMOVE_REQUEST_CLEARED:
+                }
+                case REMOVE_REQUEST_CLEARED: {
                     listener.serviceRemoveRequestCleared(this);
                     break;
-                case START_REQUESTED:
-                    listener.serviceStartRequested(this);
-                    break;
-                case START_REQUEST_CLEARED:
-                    listener.serviceStartRequestCleared(this);
-                    break;
-                case STOP_REQUESTED:
-                    listener.serviceStopRequested(this);
-                    break;
-                case STOP_REQUEST_CLEARED:
-                    listener.serviceStopRequestCleared(this);
-                    break;
-                case FAILED_STARTING:
-                    listener.failedServiceStarting(this);
-                    break;
-                case FAILED_STOPPED:
-                    listener.failedServiceStopped(this);
-                    break;
-                case WONT_START:
-                    listener.serviceWontStart(this);
-                    break;
-                case WONT_START_CLEARED:
-                    listener.serviceWontStartCleared(this);
-                    break;
-                case WAITING:
-                    listener.serviceWaiting(this);
-                    break;
-                case WAITING_CLEARED:
-                    listener.serviceWaitingCleared(this);
-                    break;
+                }
+                default: throw new IllegalStateException();
             }
         } catch (Throwable t) {
             ServiceLogger.SERVICE.listenerFailed(t, listener);
@@ -1897,17 +1824,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
         private final ListenerNotification notification;
         private final ServiceListener<? super S> listener;
-        private final ServiceController.State state;
+        private final Transition transition;
 
-        ListenerTask(final ServiceListener<? super S> listener, final ServiceController.State state) {
+        ListenerTask(final ServiceListener<? super S> listener, final Transition transition) {
             this.listener = listener;
-            this.state = state;
-            notification = ListenerNotification.STATE;
+            this.transition = transition;
+            notification = ListenerNotification.TRANSITION;
         }
 
         ListenerTask(final ServiceListener<? super S> listener, final ListenerNotification notification) {
             this.listener = listener;
-            state = null;
+            transition = null;
             this.notification = notification;
         }
 
@@ -1916,12 +1843,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                 final long start = System.nanoTime();
                 try {
-                    invokeListener(listener, notification, state);
+                    invokeListener(listener, notification, transition);
                 } finally {
                     writeProfileInfo('L', start, System.nanoTime());
                 }
             } else {
-                invokeListener(listener, notification, state);
+                invokeListener(listener, notification, transition);
             }
         }
     }
@@ -2320,74 +2247,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
         public long getElapsedTime() {
             return System.nanoTime() - lifecycleTime;
-        }
-    }
-
-    enum Substate {
-        NEW(State.DOWN),
-        CANCELLED(State.REMOVED),
-        DOWN(State.DOWN),
-        WAITING(State.DOWN),
-        WONT_START(State.DOWN),
-        PROBLEM(State.DOWN),
-        START_REQUESTED(State.DOWN),
-        START_INITIATING(State.STARTING),
-        STARTING(State.STARTING),
-        START_FAILED(State.START_FAILED),
-        UP(State.UP),
-        STOP_REQUESTED(State.UP),
-        STOPPING(State.STOPPING),
-        REMOVING(State.DOWN),
-        REMOVED(State.REMOVED),
-        ;
-        private final ServiceController.State state;
-
-        Substate(final ServiceController.State state) {
-            this.state = state;
-        }
-
-        public ServiceController.State getState() {
-            return state;
-        }
-    }
-
-    enum Transition {
-        START_REQUESTED_to_DOWN(Substate.START_REQUESTED, Substate.DOWN),
-        START_REQUESTED_to_PROBLEM(Substate.START_REQUESTED, Substate.PROBLEM),
-        START_REQUESTED_to_START_INITIATING(Substate.START_REQUESTED, Substate.START_INITIATING),
-        PROBLEM_to_START_REQUESTED(Substate.PROBLEM, Substate.START_REQUESTED),
-        START_INITIATING_to_STARTING (Substate.START_INITIATING, Substate.STARTING),
-        STARTING_to_UP(Substate.STARTING, Substate.UP),
-        STARTING_to_START_FAILED(Substate.STARTING, Substate.START_FAILED),
-        START_FAILED_to_STARTING(Substate.START_FAILED, Substate.START_INITIATING),
-        START_FAILED_to_DOWN(Substate.START_FAILED, Substate.DOWN),
-        UP_to_STOP_REQUESTED(Substate.UP, Substate.STOP_REQUESTED),
-        STOP_REQUESTED_to_UP(Substate.STOP_REQUESTED, Substate.UP),
-        STOP_REQUESTED_to_STOPPING(Substate.STOP_REQUESTED, Substate.STOPPING),
-        STOPPING_to_DOWN(Substate.STOPPING, Substate.DOWN),
-        REMOVING_to_REMOVED(Substate.REMOVING, Substate.REMOVED),
-        REMOVING_to_DOWN(Substate.REMOVING, Substate.DOWN),
-        DOWN_to_REMOVING(Substate.DOWN, Substate.REMOVING),
-        DOWN_to_START_REQUESTED(Substate.DOWN, Substate.START_REQUESTED),
-        DOWN_to_WAITING(Substate.DOWN, Substate.WAITING),
-        DOWN_to_WONT_START(Substate.DOWN, Substate.WONT_START),
-        WAITING_to_DOWN(Substate.WAITING, Substate.DOWN),
-        WONT_START_to_DOWN(Substate.WONT_START, Substate.DOWN);
-
-        private final Substate before;
-        private final Substate after;
-
-        Transition(final Substate before, final Substate after) {
-            this.before = before;
-            this.after = after;
-        }
-
-        public Substate getBefore() {
-            return before;
-        }
-
-        public Substate getAfter() {
-            return after;
         }
     }
 }

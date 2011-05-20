@@ -92,9 +92,10 @@ public final class MultipleRemoveListener<T> extends AbstractServiceListener<Obj
         countUpdater.getAndIncrement(this);
     }
 
-    /** {@inheritDoc} */
-    public void serviceRemoved(final ServiceController<?> controller) {
-        tick();
+    public void transition(final ServiceController<? extends Object> controller, final ServiceController.Transition transition) {
+        if (transition.getAfter() == ServiceController.Substate.REMOVED) {
+            tick();
+        }
     }
 
     /**

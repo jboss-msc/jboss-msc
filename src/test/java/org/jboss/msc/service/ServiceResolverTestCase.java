@@ -79,7 +79,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
         assertEquals(8, listener.startedControllers.size());
         for(ServiceController<?> serviceController : listener.startedControllers) {
             assertEquals(ServiceController.State.UP, serviceController.getState());
-            final List<ServiceController<?>> deps = getServiceDependencies(serviceContainer, serviceController);
+            final List<ServiceController<?>> deps = getServiceDependencies(serviceController);
             for(ServiceController<?> depController : deps) {
                 assertTrue("Missing dependency " + depController, expected.contains(depController));
             }
@@ -114,7 +114,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
         assertEquals(8, listener.startedControllers.size());
         for(ServiceController<?> serviceController : listener.startedControllers) {
             assertEquals(ServiceController.State.UP, serviceController.getState());
-            final List<ServiceController<?>> deps = getServiceDependencies(serviceContainer, serviceController);
+            final List<ServiceController<?>> deps = getServiceDependencies(serviceController);
             for(ServiceController<?> depController : deps) {
                 assertTrue(expected.contains(depController));
             }
@@ -156,7 +156,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
     }
 
 
-    private List<ServiceController<?>> getServiceDependencies(ServiceContainer serviceContainer, final ServiceController<?> serviceController) throws IllegalAccessException {
+    private List<ServiceController<?>> getServiceDependencies(final ServiceController<?> serviceController) throws IllegalAccessException {
         Dependency[] deps = (Dependency[]) dependenciesField.get(serviceController);
         List<ServiceController<?>> depInstances = new ArrayList<ServiceController<?>>(deps.length);
         for (Dependency dep: deps) {
@@ -173,9 +173,11 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
         final List<ServiceController<? extends Object>> startedControllers = Collections.synchronizedList(new ArrayList<ServiceController<? extends Object>>());
 
         @Override
-        public void serviceStarted(ServiceController<? extends Object> serviceController) {
-            startedControllers.add(serviceController);
-            super.serviceStarted(serviceController);
+        public void transition(final ServiceController<? extends Object> controller, final ServiceController.Transition transition) {
+            if (transition.getAfter() == ServiceController.Substate.UP) {
+                startedControllers.add(controller);
+            }
+            super.transition(controller, transition);
         }
     }
 }

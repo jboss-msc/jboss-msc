@@ -22,9 +22,9 @@
 
 package org.jboss.msc.service.util;
 
+import org.jboss.msc.service.AbstractServiceListener;
 import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceListener;
-import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.TimingServiceListener;
 
 import java.util.concurrent.CountDownLatch;
@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author John E. Bailey
  */
-public class LatchedFinishListener implements ServiceListener<Object> {
+public class LatchedFinishListener extends AbstractServiceListener<Object> implements ServiceListener<Object> {
     private final CountDownLatch latch = new CountDownLatch(1);
     private final TimingServiceListener timingServiceListener = new TimingServiceListener(new Runnable() {
         @Override
@@ -42,24 +42,8 @@ public class LatchedFinishListener implements ServiceListener<Object> {
         }
     });
 
-    @Override
-    public void serviceStartRequested(final ServiceController<? extends Object> controller) {
-        timingServiceListener.serviceStartRequested(controller);
-    }
-
-    @Override
-    public void serviceStartRequestCleared(final ServiceController<? extends Object> controller) {
-        timingServiceListener.serviceStartRequestCleared(controller);
-    }
-
-    @Override
-    public void serviceStopRequested(final ServiceController<? extends Object> controller) {
-        timingServiceListener.serviceStopRequested(controller);
-    }
-
-    @Override
-    public void serviceStopRequestCleared(final ServiceController<? extends Object> controller) {
-        timingServiceListener.serviceStopRequestCleared(controller);
+    public void transition(final ServiceController<? extends Object> controller, final ServiceController.Transition transition) {
+        timingServiceListener.transition(controller, transition);
     }
 
     @Override
@@ -67,114 +51,36 @@ public class LatchedFinishListener implements ServiceListener<Object> {
         timingServiceListener.listenerAdded(serviceController);
     }
 
-    @Override
-    public void serviceStarting(ServiceController<? extends Object> serviceController) {
-        timingServiceListener.serviceStarting(serviceController);
-    }
-
-    @Override
-    public void failedServiceStarting(final ServiceController<? extends Object> serviceController) {
-        timingServiceListener.failedServiceStarting(serviceController);
-    }
-
-    @Override
-    public void serviceStarted(ServiceController<? extends Object> serviceController) {
-        timingServiceListener.serviceStarted(serviceController);
-    }
-
-    @Override
-    public void serviceFailed(ServiceController<? extends Object> serviceController, StartException reason) {
-        timingServiceListener.serviceFailed(serviceController, reason);
-    }
-
-    @Override
-    public void serviceStopping(ServiceController<? extends Object> serviceController) {
-        timingServiceListener.serviceStopping(serviceController);
-    }
-
-    @Override
-    public void serviceStopped(ServiceController<? extends Object> serviceController) {
-        timingServiceListener.serviceStopped(serviceController);
-    }
-
-    @Override
-    public void failedServiceStopped(final ServiceController<? extends Object> controller) {
-        timingServiceListener.failedServiceStopped(controller);
-    }
-
-    @Override
-    public void serviceWaiting(final ServiceController<? extends Object> controller) {
-        timingServiceListener.serviceWaiting(controller);
-    }
-
-    @Override
-    public void serviceWaitingCleared(final ServiceController<? extends Object> controller) {
-        timingServiceListener.serviceWaitingCleared(controller);
-    }
-
-    @Override
-    public void serviceWontStart(final ServiceController<? extends Object> controller) {
-        timingServiceListener.serviceWontStart(controller);
-    }
-
-    @Override
-    public void serviceWontStartCleared(final ServiceController<? extends Object> controller) {
-        timingServiceListener.serviceWontStartCleared(controller);
-    }
-
-    @Override
     public void serviceRemoveRequested(final ServiceController<? extends Object> controller) {
         timingServiceListener.serviceRemoveRequested(controller);
     }
 
-    @Override
     public void serviceRemoveRequestCleared(final ServiceController<? extends Object> controller) {
         timingServiceListener.serviceRemoveRequestCleared(controller);
     }
 
-    @Override
-    public void serviceRemoved(ServiceController<? extends Object> serviceController) {
-        timingServiceListener.serviceRemoved(serviceController);
+    public void dependencyFailed(final ServiceController<? extends Object> controller) {
+        timingServiceListener.dependencyFailed(controller);
     }
 
-    @Override
-    public void dependencyFailed(ServiceController<? extends Object> serviceController) {
-        timingServiceListener.dependencyFailed(serviceController);
+    public void dependencyFailureCleared(final ServiceController<? extends Object> controller) {
+        timingServiceListener.dependencyFailureCleared(controller);
     }
 
-    @Override
-    public void dependencyFailureCleared(ServiceController<? extends Object> serviceController) {
-        timingServiceListener.dependencyFailureCleared(serviceController);
-    }
-
-    @Override
-    public void immediateDependencyAvailable(ServiceController<? extends Object> controller) {
-        timingServiceListener.immediateDependencyAvailable(controller);
-    }
-
-    @Override
-    public void immediateDependencyUnavailable(ServiceController<? extends Object> controller) {
+    public void immediateDependencyUnavailable(final ServiceController<? extends Object> controller) {
         timingServiceListener.immediateDependencyUnavailable(controller);
     }
 
-    @Override
-    public void transitiveDependencyAvailable(ServiceController<? extends Object> controller) {
-        timingServiceListener.transitiveDependencyAvailable(controller);
+    public void immediateDependencyAvailable(final ServiceController<? extends Object> controller) {
+        timingServiceListener.immediateDependencyAvailable(controller);
     }
 
-    @Override
-    public void transitiveDependencyUnavailable(ServiceController<? extends Object> controller) {
+    public void transitiveDependencyUnavailable(final ServiceController<? extends Object> controller) {
         timingServiceListener.transitiveDependencyUnavailable(controller);
     }
 
-    @Override
-    public void dependencyProblem(ServiceController<? extends Object> controller) {
-        timingServiceListener.dependencyProblem(controller);
-    }
-
-    @Override
-    public void dependencyProblemCleared(ServiceController<? extends Object> controller) {
-        timingServiceListener.dependencyProblemCleared(controller);
+    public void transitiveDependencyAvailable(final ServiceController<? extends Object> controller) {
+        timingServiceListener.transitiveDependencyAvailable(controller);
     }
 
     public void await() throws Exception {

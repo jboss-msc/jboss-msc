@@ -64,7 +64,7 @@ import org.jboss.modules.ref.WeakReference;
 import org.jboss.msc.Version;
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.ServiceController.Mode;
-import org.jboss.msc.service.ServiceControllerImpl.Substate;
+import org.jboss.msc.service.ServiceController.Substate;
 import org.jboss.msc.service.management.ServiceContainerMXBean;
 import org.jboss.msc.service.management.ServiceStatus;
 import org.jboss.msc.value.InjectedValue;
@@ -403,7 +403,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
     static final class LatchListener extends CountDownLatch implements TerminateListener {
 
-        public LatchListener(int count) {
+        LatchListener(int count) {
             super(count);
         }
 

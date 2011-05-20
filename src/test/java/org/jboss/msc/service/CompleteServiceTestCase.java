@@ -169,29 +169,28 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         final ServiceController<?> serviceEController = serviceContainer.addService(fooServiceName, serviceE)
             .addDependency(serviceNameD, ServiceD.class, new SetMethodInjector<ServiceD>(
                     Values.immediateValue(serviceE), getMethod(ServiceE.class, "initialize", ServiceD.class)))
-             .addListener(testListener)
-             .addListener(new AbstractServiceListener<Void>() {
-                 @Override
-                 public void serviceRemoved(final ServiceController<? extends Void> controller) {
-                     // when service E is removed, install service A as foo service
-                     final Value<ServiceA> serviceAValue = Values.immediateValue(serviceA);
-                     try {
-                         // install service A as foo service, with a description injected, an initial parameter
-                         // plus service D and service B injected
-                        serviceContainer.addService(fooServiceName, serviceA).addInjection(new FieldInjector<String>(serviceAValue, getField(ServiceA.class, "description")), "foo")
-                                 .addInjection(new FieldInjector<Integer>(serviceAValue, getField(ServiceA.class, "initialParameter")), 2218)
-                                 .addDependency(serviceNameB,
-                                         new FieldInjector<Object>(serviceAValue, getField(ServiceA.class, "serviceB")))
-                                 .addDependency(serviceNameD, 
-                                 new SetMethodInjector<Object>(Values.immediateValue(serviceA), getMethod(ServiceA.class, "setServiceD", ServiceD.class)))
-                                 .addListener(testListener)
-                                         .install();
-                    } catch (IllegalArgumentException e) {
-                        throw new RuntimeException(e);
-                    } catch (ServiceRegistryException e) {
-                        throw new RuntimeException(e);
-                    } catch (NoSuchFieldException e) {
-                        throw new RuntimeException(e);
+            .addListener(testListener)
+            .addListener(new AbstractServiceListener<Void>() {
+                public void transition(final ServiceController<? extends Void> controller, final ServiceController.Transition transition) {
+                    if (transition.getAfter() == ServiceController.Substate.REMOVED) {
+                        // when service E is removed, install service A as foo service
+                        final Value<ServiceA> serviceAValue = Values.immediateValue(serviceA);
+                        try {
+                            // install service A as foo service, with a description injected, an initial parameter
+                            // plus service D and service B injected
+                            serviceContainer.addService(fooServiceName, serviceA).addInjection(new FieldInjector<String>(serviceAValue, getField(ServiceA.class, "description")), "foo")
+                                    .addInjection(new FieldInjector<Integer>(serviceAValue, getField(ServiceA.class, "initialParameter")), 2218)
+                                    .addDependency(serviceNameB, new FieldInjector<Object>(serviceAValue, getField(ServiceA.class, "serviceB")))
+                                        .addDependency(serviceNameD, new SetMethodInjector<Object>(Values.immediateValue(serviceA), getMethod(ServiceA.class, "setServiceD", ServiceD.class)))
+                                            .addListener(testListener)
+                                            .install();
+                        } catch (IllegalArgumentException e) {
+                            throw new RuntimeException(e);
+                        } catch (ServiceRegistryException e) {
+                            throw new RuntimeException(e);
+                        } catch (NoSuchFieldException e) {
+                            throw new RuntimeException(e);
+                        }
                     }
                  }
              }).install();
@@ -265,29 +264,26 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
                 .addDependency(serviceNameD, new SetMethodInjector<Object>(Values.immediateValue(serviceA), getMethod(ServiceA.class, "setServiceD", ServiceD.class)))
                 .addListener(testListener)
                 .addListener(new AbstractServiceListener<ServiceA>() {
-                 @Override
-                 public void immediateDependencyUnavailable(final ServiceController<? extends ServiceA> controller) {
-                     // remove foo service as soon as its dep is uninstalled
-                     controller.setMode(Mode.REMOVE);
-                 }
-
-                 @Override
-                 public void serviceRemoved(final ServiceController<? extends ServiceA> controller){
-                     try {
-                         // replace the removed service by service E
-                         serviceContainer.addService(fooServiceName, serviceE)
-                         .addDependency(DependencyType.OPTIONAL, serviceNameD, ServiceD.class, new SetMethodInjector<ServiceD>(
-                                 Values.immediateValue(serviceE), getMethod(ServiceE.class, "initialize", ServiceD.class)))
-                          .addListener(testListener)
-                          .install();
-                    } catch (IllegalArgumentException e) {
-                        throw new RuntimeException(e);
-                    } catch (ServiceRegistryException e) {
-                        throw new RuntimeException(e);
+                    @Override
+                    public void immediateDependencyUnavailable(final ServiceController<? extends ServiceA> controller) {
+                        // remove foo service as soon as its dep is uninstalled
+                        controller.setMode(Mode.REMOVE);
                     }
-                 }
-             })
-                .install();
+
+                    @Override
+                    public void transition(final ServiceController<? extends ServiceA> controller, final ServiceController.Transition transition) {
+                        if (transition.getAfter() == ServiceController.Substate.REMOVED) {
+                            try {
+                                // replace the removed service by service E
+                                serviceContainer.addService(fooServiceName, serviceE).addDependency(DependencyType.OPTIONAL, serviceNameD, ServiceD.class, new SetMethodInjector<ServiceD>(Values.immediateValue(serviceE), getMethod(ServiceE.class, "initialize", ServiceD.class))).addListener(testListener).install();
+                            } catch (IllegalArgumentException e) {
+                                throw new RuntimeException(e);
+                            } catch (ServiceRegistryException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    }
+             }).install();
 
         assertController(fooServiceName, serviceAController);
         assertController(serviceAController, serviceAStart);

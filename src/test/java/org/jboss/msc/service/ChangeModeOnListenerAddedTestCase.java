@@ -1491,7 +1491,7 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         private Mode mode;
         private RuntimeException exception;
 
-        public SetModeListener() {
+        SetModeListener() {
             unexpectedCalls = new StringBuffer();
         }
 
@@ -1521,78 +1521,8 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         }
 
         @Override
-        public void serviceStartRequested(final ServiceController<?> controller) {
-            unexpectedCalls.append("serviceStartRequested\n");
-        }
-
-        @Override
-        public void serviceStartRequestCleared(final ServiceController<?> controller) {
-            unexpectedCalls.append("serviceStartRequestCleared\n");
-        }
-
-        @Override
-        public void serviceStarting(ServiceController<?> controller) {
-            unexpectedCalls.append("serviceStarting\n");
-        }
-
-        @Override
-        public void failedServiceStarting(final ServiceController<?> serviceController) {
-            unexpectedCalls.append("failedServiceStarting\n");
-        }
-
-        @Override
-        public void serviceStarted(ServiceController<?> controller) {
-            unexpectedCalls.append("serviceStarted\n");
-        }
-
-        @Override
-        public void serviceFailed(ServiceController<?> controller, StartException reason) {
-            unexpectedCalls.append("serviceFailed\n");
-        }
-
-        @Override
-        public void serviceStopRequested(final ServiceController<?> controller) {
-            unexpectedCalls.append("serviceStopRequested\n");
-        }
-
-        @Override
-        public void serviceStopRequestCleared(final ServiceController<?> controller) {
-            unexpectedCalls.append("serviceStopRequestCleared\n");
-        }
-
-        @Override
-        public void serviceStopping(ServiceController<?> controller) {
-            unexpectedCalls.append("serviceStopping\n");
-        }
-
-        @Override
-        public void serviceStopped(ServiceController<?> controller) {
-            unexpectedCalls.append("serviceStopped\n");
-        }
-
-        @Override
-        public void failedServiceStopped(final ServiceController<? extends Object> controller) {
-            unexpectedCalls.append("failedServiceStopped\n");
-        }
-
-        @Override
-        public void serviceWontStart(final ServiceController<? extends Object> controller) {
-            unexpectedCalls.append("serviceWontStart");
-        }
-
-        @Override
-        public void serviceWontStartCleared(final ServiceController<? extends Object> controller) {
-            unexpectedCalls.append("serviceWontStartCleared");
-        }
-
-        @Override
-        public void serviceWaiting(final ServiceController<? extends Object> controller) {
-            unexpectedCalls.append("serviceWontStart");
-        }
-
-        @Override
-        public void serviceWaitingCleared(final ServiceController<? extends Object> controller) {
-            unexpectedCalls.append("serviceWontStartCleared");
+        public void transition(final ServiceController<? extends Object> controller, final ServiceController.Transition transition) {
+            unexpectedCalls.append(transition).append('\n');
         }
 
         @Override
@@ -1603,11 +1533,6 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         @Override
         public void serviceRemoveRequestCleared(final ServiceController<?> controller) {
             unexpectedCalls.append("serviceRemoveRequestCleared\n");
-        }
-
-        @Override
-        public void serviceRemoved(ServiceController<?> controller) {
-            unexpectedCalls.append("serviceRemoved\n");
         }
 
         @Override
@@ -1638,16 +1563,6 @@ public class ChangeModeOnListenerAddedTestCase extends AbstractServiceTest {
         @Override
         public void transitiveDependencyAvailable(ServiceController<?> controller) {
             unexpectedCalls.append("transitiveDependencyAvailable\n");
-        }
-
-        @Override
-        public void dependencyProblem(ServiceController<?> controller) {
-            unexpectedCalls.append("dependencyProblem\n");
-        }
-
-        @Override
-        public void dependencyProblemCleared(ServiceController<?> controller) {
-            unexpectedCalls.append("dependencyProblemCleared\n");
         }
     }
 }

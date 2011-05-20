@@ -65,20 +65,16 @@ public final class TimingServiceListener extends AbstractServiceListener<Object>
         totalServicesUpdater.incrementAndGet(this);
     }
 
-    /** {@inheritDoc} */
-    public void serviceStarted(final ServiceController<? extends Object> serviceController) {
-        if (countUpdater.decrementAndGet(this) == 0) {
-            done();
+    public void transition(final ServiceController<? extends Object> controller, final ServiceController.Transition transition) {
+        switch (transition) {
+            case STARTING_to_UP:
+            case STARTING_to_START_FAILED:
+                if (countUpdater.decrementAndGet(this) == 0) {
+                    done();
+                }
+                controller.removeListener(this);
+                break;
         }
-        serviceController.removeListener(this);
-    }
-
-    /** {@inheritDoc} */
-    public void serviceFailed(final ServiceController<? extends Object> serviceController, final StartException reason) {
-        if (countUpdater.decrementAndGet(this) == 0) {
-            done();
-        }
-        serviceController.removeListener(this);
     }
 
     private void done() {

@@ -43,8 +43,8 @@ import org.junit.Test;
  */
 public class MultipleListenersTestCase extends AbstractServiceTest {
 
-    private final static ServiceName firstServiceName = ServiceName.of("firstService");
-    private final static ServiceName secondServiceName = ServiceName.of("secondService");
+    private static final ServiceName firstServiceName = ServiceName.of("firstService");
+    private static final ServiceName secondServiceName = ServiceName.of("secondService");
 
     @Test
     public void test1() throws Exception {
@@ -140,7 +140,7 @@ public class MultipleListenersTestCase extends AbstractServiceTest {
         private final LatchedFinishListener latch;
         private final List<ServiceName> startedServices = Collections.synchronizedList(new ArrayList<ServiceName>());
 
-        public MockListener(LatchedFinishListener latch) {
+        MockListener(LatchedFinishListener latch) {
             this.latch = latch;
         }
 
@@ -149,10 +149,11 @@ public class MultipleListenersTestCase extends AbstractServiceTest {
             latch.listenerAdded(serviceController);
         }
 
-        @Override
-        public void serviceStarted(ServiceController<? extends Object> serviceController) {
-            startedServices.add(serviceController.getName());
-            latch.serviceStarted(serviceController);
+        public void transition(final ServiceController<? extends Object> serviceController, final ServiceController.Transition transition) {
+            if (transition == ServiceController.Transition.STARTING_to_UP) {
+                startedServices.add(serviceController.getName());
+                latch.transition(serviceController, transition);
+            }
         }
     }
 

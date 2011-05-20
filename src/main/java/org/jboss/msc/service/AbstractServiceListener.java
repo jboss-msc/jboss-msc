@@ -37,63 +37,7 @@ public abstract class AbstractServiceListener<S> implements ServiceListener<S> {
     }
 
     /** {@inheritDoc} */
-    public void serviceStartRequested(final ServiceController<? extends S> controller) {
-    }
-
-    /** {@inheritDoc} */
-    public void serviceStartRequestCleared(final ServiceController<? extends S> controller) {
-    }
-
-    /** {@inheritDoc} */
-    public void failedServiceStarting(final ServiceController<? extends S> controller) {
-    }
-
-    /** {@inheritDoc} */
-    public void serviceStarting(final ServiceController<? extends S> controller) {
-    }
-
-    /** {@inheritDoc} */
-    public void serviceStarted(final ServiceController<? extends S> controller) {
-    }
-
-    /** {@inheritDoc} */
-    public void serviceFailed(final ServiceController<? extends S> controller, final StartException reason) {
-    }
-
-    /** {@inheritDoc} */
-    public void serviceStopRequested(final ServiceController<? extends S> controller) {
-    }
-
-    /** {@inheritDoc} */
-    public void serviceStopRequestCleared(final ServiceController<? extends S> controller) {
-    }
-
-    /** {@inheritDoc} */
-    public void serviceStopping(final ServiceController<? extends S> controller) {
-    }
-
-    /** {@inheritDoc} */
-    public void serviceStopped(final ServiceController<? extends S> controller) {
-    }
-
-    /** {@inheritDoc} */
-    public void failedServiceStopped(final ServiceController<? extends S> controller) {
-    }
-
-    /** {@inheritDoc} */
-    public void serviceWaiting(final ServiceController<? extends S> controller) {
-    }
-
-    /** {@inheritDoc} */
-    public void serviceWaitingCleared(final ServiceController<? extends S> controller) {
-    }
-
-    /** {@inheritDoc} */
-    public void serviceWontStart(final ServiceController<? extends S> controller) {
-    }
-
-    /** {@inheritDoc} */
-    public void serviceWontStartCleared(final ServiceController<? extends S> controller) {
+    public void transition(final ServiceController<? extends S> controller, final ServiceController.Transition transition) {
     }
 
     /** {@inheritDoc} */
@@ -105,10 +49,6 @@ public abstract class AbstractServiceListener<S> implements ServiceListener<S> {
     }
 
     /** {@inheritDoc} */
-    public void serviceRemoved(final ServiceController<? extends S> controller) {
-    }
-
-    /** {@inheritDoc} */
     public void dependencyFailed(final ServiceController<? extends S> controller) {
     }
 
@@ -117,26 +57,18 @@ public abstract class AbstractServiceListener<S> implements ServiceListener<S> {
     }
 
     /** {@inheritDoc} */
-    public void immediateDependencyAvailable(ServiceController<? extends S> controller) {
+    public void immediateDependencyUnavailable(final ServiceController<? extends S> controller) {
     }
 
     /** {@inheritDoc} */
-    public void immediateDependencyUnavailable(ServiceController<? extends S> controller) {
+    public void immediateDependencyAvailable(final ServiceController<? extends S> controller) {
     }
 
     /** {@inheritDoc} */
-    public void transitiveDependencyAvailable(ServiceController<? extends S> controller) {
+    public void transitiveDependencyUnavailable(final ServiceController<? extends S> controller) {
     }
 
     /** {@inheritDoc} */
-    public void transitiveDependencyUnavailable(ServiceController<? extends S> controller) {
-    }
-
-    /** {@inheritDoc} */
-    public void dependencyProblem(ServiceController<? extends S> controller) {
-    }
-
-    /** {@inheritDoc} */
-    public void dependencyProblemCleared(ServiceController<? extends S> controller) {
+    public void transitiveDependencyAvailable(final ServiceController<? extends S> controller) {
     }
 }

@@ -193,7 +193,7 @@ public interface ServiceController<S> extends Value<S> {
         ON_DEMAND,
         /**
          * Only come up if all dependencies are satisfied </b>and</b> at least one dependent demands to start.
-         * Once in the {@link State.UP UP} state, it will remain that way regardless of demands from dependents.
+         * Once in the {@link State#UP UP} state, it will remain that way regardless of demands from dependents.
          */
         LAZY,
         /**
@@ -205,5 +205,224 @@ public interface ServiceController<S> extends Value<S> {
          */
         ACTIVE,
         ;
+    }
+
+    /**
+     * A fine-grained substate of the more general basic controller {@link State}s.  The list of possible
+     * substates may change over time, so users should not rely on its permanence.
+     */
+    enum Substate {
+        /**
+         * New controller being installed.
+         */
+        NEW(State.DOWN, false),
+        /**
+         * Cancelled controller installation due to duplicate or other problem.
+         */
+        CANCELLED(State.REMOVED, true),
+        /**
+         * Controller is down.
+         */
+        DOWN(State.DOWN, false),
+        /**
+         * Controller is waiting for an external condition to start, such as a dependent demand.
+         */
+        WAITING(State.DOWN, true),
+        /**
+         * Controller is configured not to start.
+         */
+        WONT_START(State.DOWN, true),
+        /**
+         * Controller cannot start due to a problem with a dependency or transitive dependency.
+         */
+        PROBLEM(State.DOWN, true),
+        /**
+         * A stopped controller has been requested to start.
+         */
+        START_REQUESTED(State.DOWN, false),
+        /**
+         * First phase of start processing.
+         */
+        START_INITIATING(State.STARTING, false),
+        /**
+         * Second phase of start processing ({@link Service#start(StartContext) start()} method invoked).
+         */
+        STARTING(State.STARTING, false),
+        /**
+         * Start failed.
+         */
+        START_FAILED(State.START_FAILED, true),
+        /**
+         * Service is up.
+         */
+        UP(State.UP, true),
+        /**
+         * Service is up but has been requested to stop.
+         */
+        STOP_REQUESTED(State.UP, false),
+        /**
+         * Service is stopping.
+         */
+        STOPPING(State.STOPPING, false),
+        /**
+         * Service is being removed.
+         */
+        REMOVING(State.DOWN, false),
+        /**
+         * Service has been removed.
+         */
+        REMOVED(State.REMOVED, true),
+        ;
+        private final State state;
+        private final boolean restState;
+
+        Substate(final State state, final boolean restState) {
+            this.state = state;
+            this.restState = restState;
+        }
+
+        /**
+         * Determine whether this is a "rest" state.
+         *
+         * @return {@code true} if it is a rest state, {@code false} otherwise
+         */
+        public boolean isRestState() {
+            return restState;
+        }
+
+        /**
+         * Get the state corresponding to this sub-state.
+         *
+         * @return the state
+         */
+        public State getState() {
+            return state;
+        }
+    }
+
+    /**
+     * A transition from one substate to another.  The list of possible transitions may change over time, so users
+     * should not rely on its permanence.
+     */
+    enum Transition {
+        /**
+         * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#DOWN DOWN}.
+         */
+        START_REQUESTED_to_DOWN(Substate.START_REQUESTED, Substate.DOWN),
+        /**
+         * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#PROBLEM PROBLEM}.
+         */
+        START_REQUESTED_to_PROBLEM(Substate.START_REQUESTED, Substate.PROBLEM),
+        /**
+         * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#START_INITIATING START_INITIATING}.
+         */
+        START_REQUESTED_to_START_INITIATING(Substate.START_REQUESTED, Substate.START_INITIATING),
+        /**
+         * Transition from {@link Substate#PROBLEM PROBLEM} to {@link Substate#START_REQUESTED START_REQUESTED}.
+         */
+        PROBLEM_to_START_REQUESTED(Substate.PROBLEM, Substate.START_REQUESTED),
+        /**
+         * Transition from {@link Substate#START_INITIATING START_INITIATING} to {@link Substate#STARTING STARTING}.
+         */
+        START_INITIATING_to_STARTING (Substate.START_INITIATING, Substate.STARTING),
+        /**
+         * Transition from {@link Substate#STARTING STARTING} to {@link Substate#UP UP}.
+         */
+        STARTING_to_UP(Substate.STARTING, Substate.UP),
+        /**
+         * Transition from {@link Substate#STARTING STARTING} to {@link Substate#START_FAILED START_FAILED}.
+         */
+        STARTING_to_START_FAILED(Substate.STARTING, Substate.START_FAILED),
+        /**
+         * Transition from {@link Substate#START_FAILED START_FAILED} to {@link Substate#START_INITIATING START_INITIATING}.
+         */
+        START_FAILED_to_STARTING(Substate.START_FAILED, Substate.START_INITIATING),
+        /**
+         * Transition from {@link Substate#START_FAILED START_FAILED} to {@link Substate#DOWN DOWN}.
+         */
+        START_FAILED_to_DOWN(Substate.START_FAILED, Substate.DOWN),
+        /**
+         * Transition from {@link Substate#UP UP} to {@link Substate#STOP_REQUESTED STOP_REQUESTED}.
+         */
+        UP_to_STOP_REQUESTED(Substate.UP, Substate.STOP_REQUESTED),
+        /**
+         * Transition from {@link Substate#STOP_REQUESTED STOP_REQUESTED} to {@link Substate#UP UP}.
+         */
+        STOP_REQUESTED_to_UP(Substate.STOP_REQUESTED, Substate.UP),
+        /**
+         * Transition from {@link Substate#STOP_REQUESTED STOP_REQUESTED} to {@link Substate#STOPPING STOPPING}.
+         */
+        STOP_REQUESTED_to_STOPPING(Substate.STOP_REQUESTED, Substate.STOPPING),
+        /**
+         * Transition from {@link Substate#STOPPING STOPPING} to {@link Substate#DOWN DOWN}.
+         */
+        STOPPING_to_DOWN(Substate.STOPPING, Substate.DOWN),
+        /**
+         * Transition from {@link Substate#REMOVING REMOVING} to {@link Substate#REMOVED REMOVED}.
+         */
+        REMOVING_to_REMOVED(Substate.REMOVING, Substate.REMOVED),
+        /**
+         * Transition from {@link Substate#REMOVING REMOVING} to {@link Substate#DOWN DOWN}.
+         */
+        REMOVING_to_DOWN(Substate.REMOVING, Substate.DOWN),
+        /**
+         * Transition from {@link Substate#DOWN DOWN} to {@link Substate#REMOVING REMOVING}.
+         */
+        DOWN_to_REMOVING(Substate.DOWN, Substate.REMOVING),
+        /**
+         * Transition from {@link Substate#DOWN DOWN} to {@link Substate#START_REQUESTED START_REQUESTED}.
+         */
+        DOWN_to_START_REQUESTED(Substate.DOWN, Substate.START_REQUESTED),
+        /**
+         * Transition from {@link Substate#DOWN DOWN} to {@link Substate#WAITING WAITING}.
+         */
+        DOWN_to_WAITING(Substate.DOWN, Substate.WAITING),
+        /**
+         * Transition from {@link Substate#DOWN DOWN} to {@link Substate#WONT_START WONT_START}.
+         */
+        DOWN_to_WONT_START(Substate.DOWN, Substate.WONT_START),
+        /**
+         * Transition from {@link Substate#WAITING WAITING} to {@link Substate#DOWN DOWN}.
+         */
+        WAITING_to_DOWN(Substate.WAITING, Substate.DOWN),
+        /**
+         * Transition from {@link Substate#WONT_START WONT_START} to {@link Substate#DOWN DOWN}.
+         */
+        WONT_START_to_DOWN(Substate.WONT_START, Substate.DOWN);
+
+        private final Substate before;
+        private final Substate after;
+
+        Transition(final Substate before, final Substate after) {
+            this.before = before;
+            this.after = after;
+        }
+
+        /**
+         * Get the source state of this transition.
+         *
+         * @return the source state
+         */
+        public Substate getBefore() {
+            return before;
+        }
+
+        /**
+         * Get the target (new) state of this transition.
+         *
+         * @return the target state
+         */
+        public Substate getAfter() {
+            return after;
+        }
+
+        /**
+         * Get the string representation of this transition.
+         *
+         * @return the string
+         */
+        public String toString() {
+            return "transition from " + before.name() + " to " + after.name();
+        }
     }
 }
