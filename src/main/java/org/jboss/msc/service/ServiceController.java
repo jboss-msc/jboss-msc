@@ -313,6 +313,8 @@ public interface ServiceController<S> extends Value<S> {
      * should not rely on its permanence.
      */
     enum Transition {
+        // New transitions should be added to the end.  Unused transitions should be retained as "deprecated" for
+        // binary compatibility.
         /**
          * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#DOWN DOWN}.
          */
@@ -404,6 +406,24 @@ public interface ServiceController<S> extends Value<S> {
         Transition(final Substate before, final Substate after) {
             this.before = before;
             this.after = after;
+        }
+
+        /**
+         * Determine whether this transition causes movement from a rest state to a non-rest state.
+         *
+         * @return {@code true} if this transition leaves a rest state
+         */
+        public boolean leavesRestState() {
+            return before.isRestState() && ! after.isRestState();
+        }
+
+        /**
+         * Determine whether this transition causes movement from a non-rest state to a rest state.
+         *
+         * @return {@code true} if this transition enters a rest state
+         */
+        public boolean entersRestState() {
+            return ! before.isRestState() && after.isRestState();
         }
 
         /**
