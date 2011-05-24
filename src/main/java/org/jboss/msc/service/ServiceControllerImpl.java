@@ -811,7 +811,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         upperCount--;
                         break;
                     }
-                    case LAZY:
+                    case LAZY: {
+                        if (state == Substate.UP) {
+                            break;
+                        }
+                        // fall thru!
+                    }
                     case ON_DEMAND: {
                         if (demandedByCount == 0) {
                             upperCount--;
@@ -1409,7 +1414,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    Substate getSubstate() {
+    public Substate getSubstate() {
         synchronized (this) {
             return state;
         }

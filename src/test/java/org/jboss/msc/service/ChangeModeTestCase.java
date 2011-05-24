@@ -33,6 +33,7 @@ import java.util.concurrent.Future;
 
 import org.jboss.msc.service.ServiceController.Mode;
 import org.jboss.msc.service.ServiceController.State;
+import org.jboss.msc.service.ServiceController.Substate;
 import org.jboss.msc.service.util.FailToStartService;
 import org.jboss.msc.util.TestServiceListener;
 import org.junit.Before;
@@ -1100,7 +1101,9 @@ public class ChangeModeTestCase extends AbstractServiceTest {
     public void changeUpPassiveToLazy() throws Exception {
         final ServiceController<?> firstController = getUpPassiveFirstController();
         firstController.setMode(Mode.LAZY);
-        assertSame(State.UP, firstController.getState());
+        // Problem here is, we have to let async tasks finish before we test the state, but there's really no way to do that, so just sleep 10
+        Thread.sleep(10L);
+        assertSame(Substate.UP, firstController.getSubstate());
     }
 
     @Test
