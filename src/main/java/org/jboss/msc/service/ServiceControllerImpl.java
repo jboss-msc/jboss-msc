@@ -26,6 +26,7 @@ import static java.lang.Thread.holdsLock;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -548,7 +549,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case START_INITIATING_to_STARTING: {
                     getListenerTasks(transition, tasks);
-                    tasks.add(new StartTask(true));
+                    tasks.add(new ClearTCCLTask(new StartTask(true)));
                     break;
                 }
                 case START_FAILED_to_DOWN: {
@@ -556,7 +557,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     failCount--;
                     getListenerTasks(transition, tasks);
                     tasks.add(new DependencyRetryingTask(getDependents()));
-                    tasks.add(new StopTask(true));
+                    tasks.add(new ClearTCCLTask(new StopTask(true)));
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
@@ -579,7 +580,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         }
                     }
                     getListenerTasks(transition, tasks);
-                    tasks.add(new StopTask(false));
+                    tasks.add(new ClearTCCLTask(new StopTask(false)));
                     break;
                 }
                 case DOWN_to_REMOVING: {
@@ -632,14 +633,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private void getListenerTasks(final Transition transition, final ArrayList<Runnable> tasks) {
         final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
         for (ServiceListener<? super S> listener : listeners) {
-            tasks.add(new ListenerTask(listener, transition));
+            tasks.add(new ClearTCCLTask(new ListenerTask(listener, transition)));
         }
     }
 
     private void getListenerTasks(final ListenerNotification notification, final ArrayList<Runnable> tasks) {
         final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
         for (ServiceListener<? super S> listener : listeners) {
-            tasks.add(new ListenerTask(listener, notification));
+            tasks.add(new ClearTCCLTask(new ListenerTask(listener, notification)));
         }
     }
 
@@ -2157,7 +2158,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public void execute(final Runnable command) {
-            doExecute(command);
+            doExecute(new ClearTCCLTask(command));
         }
     }
 
@@ -2251,11 +2252,33 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public void execute(final Runnable command) {
-            doExecute(command);
+            doExecute(new ClearTCCLTask(command));
         }
 
         public long getElapsedTime() {
             return System.nanoTime() - lifecycleTime;
+        }
+    }
+
+    private static class ClearTCCLTask implements Runnable {
+
+        private final Runnable command;
+
+        ClearTCCLTask(final Runnable command) {
+            this.command = command;
+        }
+
+        public void run() {
+            try {
+                command.run();
+            } finally {
+                final SecurityManager sm = System.getSecurityManager();
+                if (sm != null) {
+                    AccessController.doPrivileged(SetTCCLAction.CLEAR_TCCL_ACTION);
+                } else {
+                    SetTCCLAction.CLEAR_TCCL_ACTION.run();
+                }
+            }
         }
     }
 }
