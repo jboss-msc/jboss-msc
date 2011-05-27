@@ -52,7 +52,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     /**
      * The service itself.
      */
-    private final Value<? extends Service<? extends S>> serviceValue;
+    private final Value<? extends Service<S>> serviceValue;
     /**
      * The dependencies of this service.
      */
@@ -176,7 +176,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private static final Dependent[] NO_DEPENDENTS = new Dependent[0];
     private static final String[] NO_STRINGS = new String[0];
 
-    ServiceControllerImpl(final Value<? extends Service<? extends S>> serviceValue, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<? extends ServiceListener<? super S>> listeners, final ServiceControllerImpl<?> parent) {
+    ServiceControllerImpl(final Value<? extends Service<S>> serviceValue, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<? extends ServiceListener<? super S>> listeners, final ServiceControllerImpl<?> parent) {
         this.serviceValue = serviceValue;
         this.dependencies = dependencies;
         this.injections = injections;
@@ -1180,7 +1180,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return serviceValue.getValue().getValue();
     }
 
-    public Service<? extends S> getService() throws IllegalStateException {
+    public Service<S> getService() throws IllegalStateException {
         return serviceValue.getValue();
     }
 

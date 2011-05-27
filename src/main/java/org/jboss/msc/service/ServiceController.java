@@ -105,7 +105,7 @@ public interface ServiceController<S> extends Value<S> {
      * @return the service
      * @throws IllegalStateException if the service is not available (i.e. it is not up)
      */
-    Service<? extends S> getService() throws IllegalStateException;
+    Service<S> getService() throws IllegalStateException;
 
     /**
      * Get the name of this service, if any.
