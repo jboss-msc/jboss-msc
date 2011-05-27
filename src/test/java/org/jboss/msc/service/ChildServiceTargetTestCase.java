@@ -27,8 +27,11 @@ import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.jboss.msc.service.ServiceController.Mode;
 import org.jboss.msc.service.ServiceController.State;
 import org.jboss.msc.service.util.FailToStartService;
@@ -306,6 +309,74 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
         assertController(fifthController, fifthServiceRemoval);
     }
 
+    @Test
+    public void singleInheritance() throws Exception {
+        // 1 is grandparent w/ listener, 2 is parent which inherits, 3 is child which does not inherit
+        final TestServiceListener listener = new TestServiceListener();
+
+        final TestServiceListener oneListener = new TestServiceListener();
+        final TestServiceListener twoListener = new TestServiceListener();
+        final TestServiceListener threeListener = new TestServiceListener();
+
+        final Future<ServiceController<?>> firstStart = listener.expectServiceStart(firstServiceName);
+        final Future<ServiceController<?>> secondStart = listener.expectServiceStart(secondServiceName);
+        final Future<ServiceController<?>> thirdStart = listener.expectNoListenerAdded(thirdServiceName);
+
+        final Future<ServiceController<?>> oneStart = oneListener.expectServiceStart(firstServiceName);
+        final Future<ServiceController<?>> twoStart = twoListener.expectServiceStart(secondServiceName);
+        final Future<ServiceController<?>> threeStart = threeListener.expectServiceStart(thirdServiceName);
+
+        final ServiceController<?> one;
+        final AtomicReference<ServiceController<?>> twoRef = new AtomicReference<ServiceController<?>>();
+        final AtomicReference<ServiceController<?>> threeRef = new AtomicReference<ServiceController<?>>();
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        one = serviceContainer.addService(firstServiceName, new Service<Object>() {
+            public void start(final StartContext context) throws StartException {
+                twoRef.set(context.getChildTarget().addService(secondServiceName, new Service<Object>() {
+                    public void start(final StartContext context) throws StartException {
+                        threeRef.set(context.getChildTarget().addService(thirdServiceName, new Service<Object>() {
+                            public void start(final StartContext context) throws StartException {
+                                latch.countDown();
+                            }
+
+                            public void stop(final StopContext context) {
+                            }
+
+                            public Object getValue() throws IllegalStateException, IllegalArgumentException {
+                                return null;
+                            }
+                        }).addListener(threeListener).install());
+                    }
+
+                    public void stop(final StopContext context) {
+                    }
+
+                    public Object getValue() throws IllegalStateException, IllegalArgumentException {
+                        return null;
+                    }
+                }).addListener(twoListener).install());
+            }
+
+            public void stop(final StopContext context) {
+            }
+
+            public Object getValue() throws IllegalStateException, IllegalArgumentException {
+                return null;
+            }
+        }).addListener(ServiceListener.Inheritance.ONCE, listener).addListener(oneListener).install();
+
+        latch.await(1L, TimeUnit.SECONDS);
+
+        assertController(one, oneStart);
+        assertController(twoRef.get(), twoStart);
+        assertController(threeRef.get(), threeStart);
+
+        assertController(one, firstStart);
+        assertController(twoRef.get(), secondStart);
+        thirdStart.get();
+    }
+
     @SuppressWarnings("unchecked")
     @Test
     public void twoLevelChildrenServices() throws Exception {
@@ -331,7 +402,7 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
         final Future<ServiceController<?>> grandParentStart = testListener.expectServiceStart(grandParentName);
         final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
         final ServiceController<?> grandParentController = serviceContainer.addService(grandParentName, grandParentService)
-            .addListener(testListener).install();
+            .addListener(ServiceListener.Inheritance.ALL, testListener).install();
         assertController(grandParentName, grandParentController);
         assertController(grandParentController, grandParentStart);
         final ServiceController<?> firstController = assertController(firstServiceName, firstServiceStart);
@@ -340,7 +411,7 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
 
         // add testListener1_1 to grand parent's child target; this will affect all grand parent's children created
         // from now on, but won't affect first service
-        grandParentService.getChildTarget().addListener(testListener, testListener1_1);
+        grandParentService.getChildTarget().addListener(ServiceListener.Inheritance.ALL, testListener, testListener1_1);
 
         // install second service as child of grand parent; it won't start because it has a dependency on
         // missing third service
@@ -349,7 +420,7 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
         final Future<ServiceController<?>> secondServiceDepMissing1_3 = testListener1_3.expectImmediateDependencyUnavailable(secondServiceName);
         final ServiceController<?> secondController = grandParentService.getChildTarget()
             .addService(secondServiceName, Service.NULL).addDependency(thirdServiceName)
-            .addListener(testListener1_3).install();
+            .addListener(ServiceListener.Inheritance.ALL, testListener1_3).install();
         // notifications expected from testListener, testListener1_1 (both from parent's child target), and testListener1_3
         assertController(secondServiceName, secondController);
         assertController(secondController, secondServiceDepMissing);
@@ -387,7 +458,7 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
         final Future<ServiceController<?>> fifthServiceStart2_1 = testListener2_1.expectServiceStart(fifthServiceName);
         final Future<ServiceController<?>> fifthServiceStart2_2 = testListener2_2.expectServiceStart(fifthServiceName);
         final ServiceController<?> parentController = grandParentService.getChildTarget()
-            .addService(parentName, parentService).addListener(testListener2_1, testListener2_2).addDependency(thirdServiceName).install();
+            .addService(parentName, parentService).addListener(ServiceListener.Inheritance.ALL, testListener2_1, testListener2_2).addDependency(thirdServiceName).install();
         assertController(parentName, parentController);
         // notifications of parent, fourth, and fifth service started are expected from testListener,
         // testListener1_1 (both from grand'parents child target), and testListener2_1, testListener2_2
@@ -616,7 +687,7 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
             startContext = context;
             childTarget = context.getChildTarget();
             assertSame(childTarget, context.getChildTarget());
-            childTarget.addListener(listeners);
+            childTarget.addListener(ServiceListener.Inheritance.ALL, listeners);
             for (ServiceName childName: children) {
                 childTarget.addService(childName, Service.NULL).install();
             }

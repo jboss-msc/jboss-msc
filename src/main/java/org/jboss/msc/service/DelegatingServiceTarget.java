@@ -72,6 +72,21 @@ public final class DelegatingServiceTarget implements ServiceTarget {
         return this;
     }
 
+    public ServiceTarget addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<Object> listener) {
+        delegate.addListener(inheritance, listener);
+        return this;
+    }
+
+    public ServiceTarget addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<Object>... listeners) {
+        delegate.addListener(inheritance, listeners);
+        return this;
+    }
+
+    public ServiceTarget addListener(final ServiceListener.Inheritance inheritance, final Collection<ServiceListener<Object>> listeners) {
+        delegate.addListener(inheritance, listeners);
+        return this;
+    }
+
     /** {@inheritDoc} */
     public ServiceTarget removeListener(final ServiceListener<Object> listener) {
         delegate.removeListener(listener);

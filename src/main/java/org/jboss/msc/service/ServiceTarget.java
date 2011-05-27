@@ -81,6 +81,33 @@ public interface ServiceTarget {
     ServiceTarget addListener(Collection<ServiceListener<Object>> listeners);
 
     /**
+     * Add a service listener that will be added to all the ServiceBuilders installed in this target.
+     *
+     * @param inheritance the inheritance type for this listener
+     * @param listener the listener to add to the target
+     * @return this target
+     */
+    ServiceTarget addListener(ServiceListener.Inheritance inheritance, ServiceListener<Object> listener);
+
+    /**
+     * Add a list of service listener that will be added to all ServiceBuilders installed in this target.
+     *
+     * @param inheritance the inheritance type for this listener
+     * @param listeners a list of listeners to add to the target
+     * @return this target
+     */
+    ServiceTarget addListener(ServiceListener.Inheritance inheritance, ServiceListener<Object>... listeners);
+
+    /**
+     * Add a collection of service listener that will be added to all ServiceBuilders installed in this target.
+     *
+     * @param inheritance the inheritance type for this listener
+     * @param listeners a collection of listeners to add to the target
+     * @return this target
+     */
+    ServiceTarget addListener(ServiceListener.Inheritance inheritance, Collection<ServiceListener<Object>> listeners);
+
+    /**
      * Remove a listener from this target, if it exists.
      *
      * @param listener the listener to remove

@@ -29,6 +29,7 @@ import java.io.Writer;
 import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -68,7 +69,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     /**
      * The set of registered service listeners.
      */
-    private final IdentityHashSet<ServiceListener<? super S>> listeners;
+    private final IdentityHashMap<ServiceListener<? super S>, ServiceListener.Inheritance> listeners;
     /**
      * The primary registration of this service.
      */
@@ -176,14 +177,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private static final Dependent[] NO_DEPENDENTS = new Dependent[0];
     private static final String[] NO_STRINGS = new String[0];
 
-    ServiceControllerImpl(final Value<? extends Service<S>> serviceValue, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<? extends ServiceListener<? super S>> listeners, final ServiceControllerImpl<?> parent) {
+    ServiceControllerImpl(final Value<? extends Service<S>> serviceValue, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Map<? extends ServiceListener<? super S>, ServiceListener.Inheritance> listeners, final ServiceControllerImpl<?> parent) {
         this.serviceValue = serviceValue;
         this.dependencies = dependencies;
         this.injections = injections;
         this.outInjections = outInjections;
         this.primaryRegistration = primaryRegistration;
         this.aliasRegistrations = aliasRegistrations;
-        this.listeners =  new IdentityHashSet<ServiceListener<? super S>>(listeners);
+        this.listeners = new IdentityHashMap<ServiceListener<? super S>, ServiceListener.Inheritance>(listeners);
         this.parent = parent;
         int depCount = dependencies.length;
         upperCount = 0;
@@ -631,15 +632,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private void getListenerTasks(final Transition transition, final ArrayList<Runnable> tasks) {
-        final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
-        for (ServiceListener<? super S> listener : listeners) {
+        final IdentityHashMap<ServiceListener<? super S>,ServiceListener.Inheritance> listeners = this.listeners;
+        for (ServiceListener<? super S> listener : listeners.keySet()) {
             tasks.add(new ClearTCCLTask(new ListenerTask(listener, transition)));
         }
     }
 
     private void getListenerTasks(final ListenerNotification notification, final ArrayList<Runnable> tasks) {
-        final IdentityHashSet<ServiceListener<? super S>> listeners = this.listeners;
-        for (ServiceListener<? super S> listener : listeners) {
+        final IdentityHashMap<ServiceListener<? super S>,ServiceListener.Inheritance> listeners = this.listeners;
+        for (ServiceListener<? super S> listener : listeners.keySet()) {
             tasks.add(new ClearTCCLTask(new ListenerTask(listener, notification)));
         }
     }
@@ -1164,7 +1165,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return children;
     }
 
-    public ServiceController<?> getParent() {
+    public ServiceControllerImpl<?> getParent() {
         return parent;
     }
 
@@ -1210,10 +1211,34 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             state = this.state;
             // Always run listener if removed.
             if (state != Substate.REMOVED) {
-                if (! listeners.add(listener)) {
+                if (listeners.containsKey(listener)) {
                     // Duplicates not allowed
                     throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + primaryRegistration.getName());
                 }
+                listeners.put(listener, ServiceListener.Inheritance.NONE);
+                asyncTasks ++;
+            } else {
+                asyncTasks += 2;
+            }
+        }
+        invokeListener(listener, ListenerNotification.LISTENER_ADDED, null);
+        if (state == Substate.REMOVED) {
+            invokeListener(listener, ListenerNotification.TRANSITION, Transition.REMOVING_to_REMOVED);
+        }
+    }
+
+    public void addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<Object> listener) {
+        assert !holdsLock(this);
+        final Substate state;
+        synchronized (this) {
+            state = this.state;
+            // Always run listener if removed.
+            if (state != Substate.REMOVED) {
+                if (listeners.containsKey(listener)) {
+                    // Duplicates not allowed
+                    throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + primaryRegistration.getName());
+                }
+                listeners.put(listener, inheritance);
                 asyncTasks ++;
             } else {
                 asyncTasks += 2;
@@ -1322,6 +1347,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     !immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount != 0
             );
         }
+    }
+
+    IdentityHashMap<ServiceListener<? super S>, ServiceListener.Inheritance> getListeners() {
+        return listeners;
     }
 
     private enum ListenerNotification {
@@ -2114,7 +2143,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     throw new IllegalStateException("Lifecycle context is no longer valid");
                 }
                 if (childTarget == null) {
-                    childTarget = new ChildServiceTarget(parent == null ? getServiceContainer() : parent.childTarget);
+                    childTarget = new ChildServiceTarget(getServiceContainer());
                 }
                 return childTarget;
             }

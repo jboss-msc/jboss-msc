@@ -214,6 +214,33 @@ public interface ServiceBuilder<T> {
     ServiceBuilder<T> addListener(Collection<? extends ServiceListener<? super T>> listeners);
 
     /**
+     * Add a service listener that will be added to this service.
+     *
+     * @param inheritance the inheritance type for this listener
+     * @param listener the listener to add to the service
+     * @return this builder
+     */
+    ServiceBuilder<T> addListener(ServiceListener.Inheritance inheritance, ServiceListener<? super T> listener);
+
+    /**
+     * Add service listeners that will be added to this service.
+     *
+     * @param inheritance the inheritance type for this listener
+     * @param listeners a list of listeners to add to the service
+     * @return this builder
+     */
+    ServiceBuilder<T> addListener(ServiceListener.Inheritance inheritance, ServiceListener<? super T>... listeners);
+
+    /**
+     * Add service listeners that will be added to this service.
+     *
+     * @param inheritance the inheritance type for this listener
+     * @param listeners a collection of listeners to add to the service
+     * @return this builder
+     */
+    ServiceBuilder<T> addListener(ServiceListener.Inheritance inheritance, Collection<? extends ServiceListener<? super T>> listeners);
+
+    /**
      * Install the defined service into the container.
      *
      * @return the installed service controller

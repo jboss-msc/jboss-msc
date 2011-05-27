@@ -39,6 +39,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -464,6 +465,42 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             }
         }
         return result;
+    }
+
+    void apply(ServiceBuilderImpl<?> builder, ServiceControllerImpl<?> parent, boolean first) {
+        final ServiceControllerImpl<?> parentParent;
+        synchronized (parent) {
+            // this ugly hack is sadly necessary.  Only ServiceListener<Object>s can be inherited, but Java doesn't know that.  So just do it the quick & dirty way!
+            @SuppressWarnings("unchecked")
+            final Map<ServiceListener<Object>, ServiceListener.Inheritance> genericListeners = (Map<ServiceListener<Object>, ServiceListener.Inheritance>) (Map) parent.getListeners();
+            final List<ServiceListener<Object>> inherited = new ArrayList<ServiceListener<Object>>(4);
+            final List<ServiceListener<Object>> once = first ? new ArrayList<ServiceListener<Object>>(4) : null;
+            for (ServiceListener<Object> listener : genericListeners.keySet()) {
+                final ServiceListener.Inheritance inheritance = genericListeners.get(listener);
+                switch (inheritance) {
+                    case ONCE: if (first) once.add(listener); break;
+                    case ALL: inherited.add(listener); break;
+                    case NONE: // fall thru!
+                    default: break;
+                }
+            }
+            if (first) builder.addListenerNoCheck(ServiceListener.Inheritance.NONE, once);
+            builder.addListenerNoCheck(ServiceListener.Inheritance.ALL, inherited);
+            parentParent = parent.getParent();
+        }
+        if (parentParent != null) {
+            apply(builder, parentParent, false);
+        }
+    }
+
+    void apply(ServiceBuilderImpl<?> builder) {
+        // Apply listeners from the target, first
+        super.apply(builder);
+        // Now apply inherited listeners from the parent
+        final ServiceControllerImpl<?> parent = builder.getParent();
+        if (parent != null) {
+            apply(builder, parent, true);
+        }
     }
 
     @Override

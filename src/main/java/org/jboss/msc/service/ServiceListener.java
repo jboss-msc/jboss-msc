@@ -125,4 +125,23 @@ public interface ServiceListener<S> {
      * @param controller the controller
      */
     void transitiveDependencyAvailable(ServiceController<? extends S> controller);
+
+    /**
+     * The inheritance type for a listener.
+     */
+    enum Inheritance {
+        /**
+         * This listener is never inherited.
+         */
+        NONE,
+        /**
+         * This listener is inherited only to one level.
+         */
+        ONCE,
+        /**
+         * This listener is inherited to all levels.
+         */
+        ALL,
+        ;
+    }
 }

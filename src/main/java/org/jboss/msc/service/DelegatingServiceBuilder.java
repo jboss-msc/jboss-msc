@@ -47,92 +47,128 @@ public final class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addAliases(final ServiceName... aliases) {
-        return delegate.addAliases(aliases);
+        delegate.addAliases(aliases);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> setInitialMode(final ServiceController.Mode mode) {
-        return delegate.setInitialMode(mode);
+        delegate.setInitialMode(mode);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependencies(final ServiceName... dependencies) {
-        return delegate.addDependencies(dependencies);
+        delegate.addDependencies(dependencies);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final ServiceName... dependencies) {
-        return delegate.addDependencies(dependencyType, dependencies);
+        delegate.addDependencies(dependencyType, dependencies);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> dependencies) {
-        return delegate.addDependencies(dependencies);
+        delegate.addDependencies(dependencies);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final Iterable<ServiceName> dependencies) {
-        return delegate.addDependencies(dependencyType, dependencies);
+        delegate.addDependencies(dependencyType, dependencies);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependency(final ServiceName dependency) {
-        return delegate.addDependency(dependency);
+        delegate.addDependency(dependency);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency) {
-        return delegate.addDependency(dependencyType, dependency);
+        delegate.addDependency(dependencyType, dependency);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
-        return delegate.addDependency(dependency, target);
+        delegate.addDependency(dependency, target);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Injector<Object> target) {
-        return delegate.addDependency(dependencyType, dependency, target);
+        delegate.addDependency(dependencyType, dependency, target);
+        return this;
     }
 
     /** {@inheritDoc} */
     public <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
-        return delegate.addDependency(dependency, type, target);
+        delegate.addDependency(dependency, type, target);
+        return this;
     }
 
     /** {@inheritDoc} */
     public <I> ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Class<I> type, final Injector<I> target) {
-        return delegate.addDependency(dependencyType, dependency, type, target);
+        delegate.addDependency(dependencyType, dependency, type, target);
+        return this;
     }
 
     /** {@inheritDoc} */
     public <I> ServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {
-        return delegate.addInjection(target, value);
+        delegate.addInjection(target, value);
+        return this;
     }
 
     /** {@inheritDoc} */
     public <I> ServiceBuilder<T> addInjectionValue(final Injector<? super I> target, final Value<I> value) {
-        return delegate.addInjectionValue(target, value);
+        delegate.addInjectionValue(target, value);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addInjection(final Injector<? super T> target) {
-        return delegate.addInjection(target);
+        delegate.addInjection(target);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addListener(final ServiceListener<? super T> listener) {
-        return delegate.addListener(listener);
+        delegate.addListener(listener);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addListener(final ServiceListener<? super T>... listeners) {
-        return delegate.addListener(listeners);
+        delegate.addListener(listeners);
+        return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addListener(final Collection<? extends ServiceListener<? super T>> listeners) {
-        return delegate.addListener(listeners);
+        delegate.addListener(listeners);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    public ServiceBuilder<T> addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<? super T> listener) {
+        delegate.addListener(inheritance, listener);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    public ServiceBuilder<T> addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<? super T>... listeners) {
+        delegate.addListener(inheritance, listeners);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    public ServiceBuilder<T> addListener(final ServiceListener.Inheritance inheritance, final Collection<? extends ServiceListener<? super T>> listeners) {
+        delegate.addListener(inheritance, listeners);
+        return this;
     }
 
     /** {@inheritDoc} */

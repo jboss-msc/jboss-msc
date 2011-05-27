@@ -129,6 +129,14 @@ public interface ServiceController<S> extends Value<S> {
     void addListener(ServiceListener<? super S> serviceListener);
 
     /**
+     * Add a service listener.  The method corresponding to the current service state is called.
+     *
+     * @param inheritance the inheritance type for this listener
+     * @param serviceListener the service listener
+     */
+    void addListener(ServiceListener.Inheritance inheritance, ServiceListener<Object> serviceListener);
+
+    /**
      * Remove a service listener.
      *
      * @param serviceListener the service listener to remove

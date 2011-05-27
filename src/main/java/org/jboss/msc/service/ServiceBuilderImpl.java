@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,7 +52,7 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     private ServiceController.Mode initialMode = ServiceController.Mode.ACTIVE;
     private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
     private final Map<ServiceName, Dependency> dependencies = new HashMap<ServiceName, Dependency>(0);
-    private final Set<ServiceListener<? super T>> listeners = new IdentityHashSet<ServiceListener<? super T>>(0);
+    private final Map<ServiceListener<? super T>, ServiceListener.Inheritance> listeners = new IdentityHashMap<ServiceListener<? super T>, ServiceListener.Inheritance>(0);
     private final List<ValueInjection<?>> valueInjections = new ArrayList<ValueInjection<?>>(0);
     private final List<Injector<? super T>> outInjections = new ArrayList<Injector<? super T>>(0);
     private boolean installed = false;
@@ -236,7 +237,7 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     @Override
     public ServiceBuilderImpl<T> addListener(final ServiceListener<? super T> listener) {
         checkAlreadyInstalled();
-        listeners.add(listener);
+        listeners.put(listener, ServiceListener.Inheritance.NONE);
         return this;
     }
 
@@ -244,8 +245,7 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     public ServiceBuilderImpl<T> addListener(final ServiceListener<? super T>... serviceListeners) {
         checkAlreadyInstalled();
         for (ServiceListener<? super T> listener : serviceListeners) {
-            final Set<ServiceListener<? super T>> listeners = this.listeners;
-            listeners.add(listener);
+            listeners.put(listener, ServiceListener.Inheritance.NONE);
         }
         return this;
     }
@@ -253,11 +253,40 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     @Override
     public ServiceBuilderImpl<T> addListener(final Collection<? extends ServiceListener<? super T>> serviceListeners) {
         checkAlreadyInstalled();
-        return addListenerNoCheck(serviceListeners);
+        return addListenerNoCheck(ServiceListener.Inheritance.NONE, serviceListeners);
     }
 
-    ServiceBuilderImpl<T> addListenerNoCheck(final Collection<? extends ServiceListener<? super T>> serviceListeners) {
-        listeners.addAll(serviceListeners);
+    @Override
+    public ServiceBuilder<T> addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<? super T> listener) {
+        checkAlreadyInstalled();
+        listeners.put(listener, inheritance);
+        return this;
+    }
+
+    @Override
+    public ServiceBuilder<T> addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<? super T>... serviceListeners) {
+        checkAlreadyInstalled();
+        for (ServiceListener<? super T> listener : serviceListeners) {
+            listeners.put(listener, inheritance);
+        }
+        return this;
+    }
+
+    @Override
+    public ServiceBuilder<T> addListener(final ServiceListener.Inheritance inheritance, final Collection<? extends ServiceListener<? super T>> serviceListeners) {
+        checkAlreadyInstalled();
+        return addListenerNoCheck(inheritance, serviceListeners);
+    }
+
+    ServiceBuilderImpl<T> addListenerNoCheck(final ServiceListener.Inheritance inheritance, final Collection<? extends ServiceListener<? super T>> serviceListeners) {
+        for (ServiceListener<? super T> listener : serviceListeners) {
+            listeners.put(listener, inheritance);
+        }
+        return this;
+    }
+
+    ServiceBuilderImpl<T> addListenerNoCheck(final Map<? extends ServiceListener<? super T>, ServiceListener.Inheritance> serviceListeners) {
+        listeners.putAll(serviceListeners);
         return this;
     }
 
@@ -294,7 +323,7 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return dependencies;
     }
 
-    Set<? extends ServiceListener<? super T>> getListeners() {
+    Map<ServiceListener<? super T>,ServiceListener.Inheritance> getListeners() {
         return listeners;
     }
 

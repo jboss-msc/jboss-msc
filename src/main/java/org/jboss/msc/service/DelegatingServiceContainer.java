@@ -47,6 +47,7 @@ public final class DelegatingServiceContainer implements ServiceContainer {
      * @param delegateRegistry the delegate to forward registry requests to
      */
     public DelegatingServiceContainer(final ServiceTarget delegateTarget, final ServiceRegistry delegateRegistry) {
+
         this.delegateTarget = delegateTarget;
         this.delegateRegistry = delegateRegistry;
     }
@@ -62,23 +63,45 @@ public final class DelegatingServiceContainer implements ServiceContainer {
     }
 
     /** {@inheritDoc} */
-    public ServiceTarget addListener(final ServiceListener<Object> listener) {
-        return delegateTarget.addListener(listener);
+    public ServiceContainer addListener(final ServiceListener<Object> listener) {
+        delegateTarget.addListener(listener);
+        return this;
     }
 
     /** {@inheritDoc} */
-    public ServiceTarget addListener(final ServiceListener<Object>... listeners) {
-        return delegateTarget.addListener(listeners);
+    public ServiceContainer addListener(final ServiceListener<Object>... listeners) {
+        delegateTarget.addListener(listeners);
+        return this;
     }
 
     /** {@inheritDoc} */
-    public ServiceTarget addListener(final Collection<ServiceListener<Object>> listeners) {
-        return delegateTarget.addListener(listeners);
+    public ServiceContainer addListener(final Collection<ServiceListener<Object>> listeners) {
+        delegateTarget.addListener(listeners);
+        return this;
     }
 
     /** {@inheritDoc} */
-    public ServiceTarget removeListener(final ServiceListener<Object> listener) {
-        return delegateTarget.removeListener(listener);
+    public ServiceContainer addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<Object> listener) {
+        delegateTarget.addListener(inheritance, listener);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    public ServiceContainer addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<Object>... listeners) {
+        delegateTarget.addListener(inheritance, listeners);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    public ServiceContainer addListener(final ServiceListener.Inheritance inheritance, final Collection<ServiceListener<Object>> listeners) {
+        delegateTarget.addListener(inheritance, listeners);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    public ServiceContainer removeListener(final ServiceListener<Object> listener) {
+        delegateTarget.removeListener(listener);
+        return this;
     }
 
     /** {@inheritDoc} */
@@ -87,23 +110,27 @@ public final class DelegatingServiceContainer implements ServiceContainer {
     }
 
     /** {@inheritDoc} */
-    public ServiceTarget addDependency(final ServiceName dependency) {
-        return delegateTarget.addDependency(dependency);
+    public ServiceContainer addDependency(final ServiceName dependency) {
+        delegateTarget.addDependency(dependency);
+        return this;
     }
 
     /** {@inheritDoc} */
-    public ServiceTarget addDependency(final ServiceName... dependencies) {
-        return delegateTarget.addDependency(dependencies);
+    public ServiceContainer addDependency(final ServiceName... dependencies) {
+        delegateTarget.addDependency(dependencies);
+        return this;
     }
 
     /** {@inheritDoc} */
-    public ServiceTarget addDependency(final Collection<ServiceName> dependencies) {
-        return delegateTarget.addDependency(dependencies);
+    public ServiceContainer addDependency(final Collection<ServiceName> dependencies) {
+        delegateTarget.addDependency(dependencies);
+        return this;
     }
 
     /** {@inheritDoc} */
-    public ServiceTarget removeDependency(final ServiceName dependency) {
-        return delegateTarget.removeDependency(dependency);
+    public ServiceContainer removeDependency(final ServiceName dependency) {
+        delegateTarget.removeDependency(dependency);
+        return this;
     }
 
     /** {@inheritDoc} */
