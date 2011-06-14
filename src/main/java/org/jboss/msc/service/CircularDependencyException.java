@@ -30,12 +30,7 @@ public class CircularDependencyException extends ServiceRegistryException {
 
     private static final long serialVersionUID = -4826336558749601678L;
 
-    /**
-     * Constructs a {@code CircularDependencyException} with no detail message. The cause is not initialized, and may
-     * subsequently be initialized by a call to {@link #initCause(Throwable) initCause}.
-     */
-    public CircularDependencyException() {
-    }
+    private ServiceName[] cycle;
 
     /**
      * Constructs a {@code CircularDependencyException} with the specified detail message. The cause is not initialized, and
@@ -43,28 +38,18 @@ public class CircularDependencyException extends ServiceRegistryException {
      *
      * @param msg the detail message
      */
-    public CircularDependencyException(final String msg) {
+    public CircularDependencyException(final String msg, ServiceName[] cycle) {
         super(msg);
+        this.cycle = cycle;
     }
 
     /**
-     * Constructs a {@code CircularDependencyException} with the specified cause. The detail message is set to:
-     * <pre>(cause == null ? null : cause.toString())</pre>
-     * (which typically contains the class and detail message of {@code cause}).
-     *
-     * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method)
+     * Returns a cycle found during service installation.
+     * 
+     * @return an array formed by the service names involved in the cycle, in dependency order. Last name in the array
+     *         has a dependency on the name in the first position, thus completing the cycle.
      */
-    public CircularDependencyException(final Throwable cause) {
-        super(cause);
-    }
-
-    /**
-     * Constructs a {@code CircularDependencyException} with the specified detail message and cause.
-     *
-     * @param msg the detail message
-     * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method)
-     */
-    public CircularDependencyException(final String msg, final Throwable cause) {
-        super(msg, cause);
+    public ServiceName[] getCycle() {
+        return cycle;
     }
 }

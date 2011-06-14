@@ -22,6 +22,8 @@
 
 package org.jboss.msc.service;
 
+import static org.jboss.modules.management.ObjectProperties.property;
+
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -39,7 +41,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -69,8 +70,6 @@ import org.jboss.msc.service.ServiceController.Substate;
 import org.jboss.msc.service.management.ServiceContainerMXBean;
 import org.jboss.msc.service.management.ServiceStatus;
 import org.jboss.msc.value.InjectedValue;
-
-import static org.jboss.modules.management.ObjectProperties.property;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -579,59 +578,76 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
      */
     private <T> void detectCircularity(ServiceControllerImpl<T> instance) throws CircularDependencyException {
         final Set<ServiceControllerImpl<?>> visited = new IdentityHashSet<ServiceControllerImpl<?>>();
-        final Deque<ServiceControllerImpl<?>> remaining = new ArrayDeque<ServiceControllerImpl<?>>();
-        ServiceControllerImpl<?> current = instance;
-        do {
-            try {
-                synchronized (current) {
-                    if (current.getSubstateLocked() == Substate.CANCELLED) {
+        final Deque<ServiceName> visitStack = new ArrayDeque<ServiceName>();
+        final ServiceRegistrationImpl reg = instance.getPrimaryRegistration();
+        IdentityHashSet<Dependent> dependents = null;
+        synchronized (reg) {
+            visitStack.push(instance.getName());
+            dependents = reg.getDependents();
+            synchronized (dependents) {
+                detectCircularity(reg.getDependents(), instance, visited, visitStack);
+            }
+            synchronized (instance) {
+                detectCircularity(instance.getChildren(), instance, visited, visitStack);
+            }
+        }
+        for (ServiceRegistrationImpl alias: instance.getAliasRegistrations()) {
+            synchronized (alias) {
+                dependents = alias.getDependents();
+                synchronized (dependents) {
+                    detectCircularity(dependents, instance, visited, visitStack);
+                }
+            }
+        }
+    }
+
+    private void detectCircularity(IdentityHashSet<? extends Dependent> dependents, ServiceControllerImpl<?> instance, Set<ServiceControllerImpl<?>> visited,  Deque<ServiceName> visitStack) {
+        for (Dependent dependent: dependents) {
+            final ServiceControllerImpl<?> controller = dependent.getController();
+            if (controller == instance) {
+                // change cycle from dependent order to dependency order
+                ServiceName[] cycle = new ServiceName[visitStack.size()];
+                visitStack.toArray(cycle);
+                int j = cycle.length -1;
+                for (int i = 0; i < j; i++, j--) {
+                    ServiceName temp = cycle[i];
+                    cycle[i] = cycle[j];
+                    cycle[j] = temp;
+                }
+                throw new CircularDependencyException("Service " + name + " has a circular dependency", cycle);
+            }
+            if (visited.add(controller)) {
+                synchronized (controller) {
+                    if (controller.getSubstateLocked() == Substate.CANCELLED) {
                         continue;
                     }
                 }
-                final ServiceRegistrationImpl reg = current.getPrimaryRegistration();
-                IdentityHashSet<Dependent> dependents = null;
-                synchronized (reg) {
+                ServiceRegistrationImpl reg = controller.getPrimaryRegistration();
+                synchronized(reg) {
                     // concurrent removal, skip this one entirely
                     if (reg.getInstance() == null) {
                         continue;
                     }
-                    dependents = reg.getDependents();
-                    synchronized (dependents) {
-                        detectCircularity(reg.getDependents(), instance, visited, remaining);
+                    visitStack.push(controller.getName());
+                    IdentityHashSet<? extends Dependent> controllerDependents = reg.getDependents();
+                    synchronized(controllerDependents) {
+                        detectCircularity(reg.getDependents(), instance, visited, visitStack);
                     }
-                    synchronized (current) {
-                        detectCircularity(current.getChildren(), instance, visited, remaining);
+                    synchronized(controller) {
+                        detectCircularity(controller.getChildren(), instance, visited, visitStack);
                     }
                 }
-                for (ServiceRegistrationImpl alias: current.getAliasRegistrations()) {
+                for (ServiceRegistrationImpl alias: controller.getAliasRegistrations()) {
                     synchronized (alias) {
-                        dependents = alias.getDependents();
-                        synchronized (dependents) {
-                            detectCircularity(dependents, instance, visited, remaining);
+                        IdentityHashSet<? extends Dependent> controllerDependents = alias.getDependents();
+                        synchronized (controllerDependents) {
+                            detectCircularity(controllerDependents, instance, visited, visitStack);
                         }
                     }
                 }
-            } finally {
-                current = remaining.pollFirst();
+                visitStack.poll();
             }
-        } while (current != null);
-    }
-
-    private void detectCircularity(IdentityHashSet<? extends Dependent> dependents, ServiceControllerImpl<?> instance, Set<ServiceControllerImpl<?>> visited,  Deque<ServiceControllerImpl<?>> remaining) {
-        final Iterator<? extends Dependent> iterator = dependents.iterator();
-        if (! iterator.hasNext()) {
-            // No dependents == no cycle; continue
-            return;
-        } else do {
-            final Dependent dependent = iterator.next();
-            final ServiceControllerImpl<?> controller = dependent.getController();
-            if (controller == instance) {
-                throw new CircularDependencyException("Service " + name + " has a circular dependency");
-            }
-            if (visited.add(controller)) {
-                remaining.push(controller);
-            }
-        } while (iterator.hasNext());
+        }
     }
 
     private static final AtomicInteger executorSeq = new AtomicInteger(1);

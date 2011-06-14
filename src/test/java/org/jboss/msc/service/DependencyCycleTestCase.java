@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
 
@@ -83,7 +84,9 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         try {
             serviceContainer.addService(serviceCName, Service.NULL).addDependency(serviceAName).install();
             fail ("CircularDependencyException expected");
-        } catch (CircularDependencyException e) {}
+        } catch (CircularDependencyException e) {
+            assertCycle(e, new ServiceName[]{serviceAName, serviceBName, serviceCName});
+        }
 
         final ServiceController<?> serviceAController = assertController(serviceAName, serviceAListenerAdded);
         assertSame(State.DOWN, serviceAController.getState());
@@ -107,7 +110,9 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         try {
             serviceContainer.addService(serviceCName, Service.NULL).addDependency(serviceAName).install();
             fail ("CircularDependencyException expected");
-        } catch (CircularDependencyException e) {}
+        } catch (CircularDependencyException e) {
+            assertCycle(e, new ServiceName[]{serviceAName, serviceBName, serviceCName});
+        }
     }
 
     // full scenario:
@@ -148,7 +153,9 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         try {
             serviceContainer.addService(serviceNName, Service.NULL).addDependencies(serviceHName, serviceOName).install();
             fail ("CircularDependencyException expected");
-        } catch (CircularDependencyException e) {}
+        } catch (CircularDependencyException e) {
+            assertCycle(e, new ServiceName[] {serviceOName, serviceLName, serviceMName, serviceNName});
+        }
 
         // install E, F, G, H, I, V
         final Future<ServiceController<?>> serviceFTransDepMissing = testListener.expectTransitiveDependencyUnavailable(serviceFName);
@@ -158,14 +165,18 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         try {
             serviceContainer.addService(serviceEName, Service.NULL).addDependency(serviceCName).install();
             fail("CircularDependencyException expected");
-        } catch (CircularDependencyException e) {}
+        } catch (CircularDependencyException e) {
+            assertCycle(e, new ServiceName[]{serviceCName, serviceDName, serviceEName});
+        }
         serviceContainer.addService(serviceFName, Service.NULL).addDependency(serviceGName).install();
         serviceContainer.addService(serviceGName, Service.NULL).addDependency(serviceHName).install();
         serviceContainer.addService(serviceHName, Service.NULL).addDependencies(serviceIName, serviceWName).install();
         try {
             serviceContainer.addService(serviceIName, Service.NULL).addDependencies(serviceHName, serviceJName).install();
             fail("CirculardependencyException expected");
-        } catch (CircularDependencyException e) {}
+        } catch (CircularDependencyException e) {
+            assertCycle(e, new ServiceName[]{serviceHName, serviceIName});
+        }
         serviceContainer.addService(serviceVName, Service.NULL).install();
 
         assertSame(State.DOWN, serviceAController.getState());
@@ -195,7 +206,9 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         try {
             serviceContainer.addService(serviceTName, Service.NULL).addDependency(servicePName).install();
             fail("CircularDependencyException expected");
-        } catch (CircularDependencyException e) {}
+        } catch (CircularDependencyException e) {
+            assertCycle(e, new ServiceName[]{servicePName, serviceQName, serviceRName, serviceSName, serviceTName});
+        }
         serviceContainer.addService(serviceUName, Service.NULL).addDependency(serviceVName).install();
 
         final ServiceController<?> serviceJController = assertController(serviceJName, serviceJImmDepMissing);
@@ -259,7 +272,9 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         try {
             serviceContainer.addService(serviceEName, Service.NULL).addDependencies(serviceAName, serviceFName).install();
             fail("CircularDependencyException expected");
-        } catch (CircularDependencyException e) {}
+        } catch (CircularDependencyException e) {
+            assertCycle(e, new ServiceName[] {serviceAName, serviceBName, serviceCName, serviceDName, serviceEName});
+        }
         serviceContainer.addService(serviceFName, Service.NULL).addDependency(DependencyType.OPTIONAL, serviceGName)
             .install();
         serviceContainer.addService(serviceOName, Service.NULL).addDependency(serviceMName).install();
@@ -267,7 +282,9 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
             serviceContainer.addService(serviceMName, Service.NULL).addDependencies(serviceAName, serviceNName)
                 .addDependencies(DependencyType.OPTIONAL, serviceLName, serviceOName).install();
             fail("CircularDependencyException expected");
-        } catch (CircularDependencyException e) {}
+        } catch (CircularDependencyException e) {
+            assertCycle(e, new ServiceName[]{serviceOName, serviceMName});
+        }
         ServiceController<?> serviceAController = assertController(serviceAName, serviceAImmMissingDep);
         assertController(serviceAController, serviceATransMissingDep);
         assertController(serviceAController, serviceAFailedDep);
@@ -286,7 +303,9 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         try {
             serviceContainer.addService(serviceJName, Service.NULL).addDependency(serviceAName).install();
             fail ("CircularDependencyException expected");
-        } catch (CircularDependencyException e) {}
+        } catch (CircularDependencyException e) {
+            assertCycle(e, new ServiceName[]{serviceAName, serviceIName, serviceJName});
+        }
 
         assertController(serviceHName, serviceHStart);
 
@@ -365,13 +384,19 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         try {
             serviceContainer.addService(serviceAName, Service.NULL).addAliases(serviceDName).addDependency(serviceBName).install();
             fail ("CircularDependencyException expected");
-        } catch (CircularDependencyException e) {}
+        } catch (CircularDependencyException e) {
+            assertCycle(e, new ServiceName[]{serviceBName, serviceCName, serviceDName});
+        }
 
         // try to install service F
         try {
             serviceContainer.addService(serviceFName, Service.NULL).addAliases(serviceGName).addDependencies(serviceIName, serviceJName).install();
             fail ("CircularDependencyException expected");
-        } catch (CircularDependencyException e) {}
+        } catch (CircularDependencyException e) {
+            // it could be either serviceIName or serviceJName
+            assertCycle(e, new ServiceName[]{serviceIName, serviceEName, serviceGName},
+                    new ServiceName[]{serviceJName, serviceEName, serviceGName});
+        }
 
         // stop service E
         final Future<ServiceController<?>> serviceEStop = testListener.expectServiceStop(serviceEName);
@@ -424,5 +449,27 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         assertController(serviceIName, serviceIController);
         final ServiceController<?> serviceJController = serviceContainer.addService(serviceJName, Service.NULL).install();
         assertController(serviceJName, serviceJController);
+    }
+
+    private void assertCycle(CircularDependencyException e, ServiceName[]... cycles) {
+        ServiceName[] actualCycle = e.getCycle();
+        assertNotNull(actualCycle);
+        for (int i = 0; i < cycles.length; i++) {
+            if (actualCycle.length == cycles[i].length) {
+                for (int j = 0; j < cycles[i].length; j++) {
+                    if(!cycles[i][j].equals(actualCycle[j])) {
+                        break;
+                    }
+                }
+                return;
+            }
+        }
+        StringBuffer buffer = new StringBuffer();
+        buffer.append("Actual cycle is different from expected: ");
+        buffer.append(actualCycle[0]);
+        for (int i = 1; i < actualCycle.length; i++) {
+            buffer.append(", ").append(actualCycle[i]);
+        }
+        fail(buffer.toString());
     }
 }
