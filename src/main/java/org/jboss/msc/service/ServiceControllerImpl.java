@@ -244,7 +244,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         synchronized(this) {
             getListenerTasks(ListenerNotification.LISTENER_ADDED, listenerAddedTasks);
             internalSetMode(initialMode, tasks);
-            tasks.add(new ServiceAvailableTask());
             // placeholder async task for running listener added tasks
             asyncTasks += listenerAddedTasks.size() + tasks.size() + 1;
         }
@@ -254,6 +253,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             listenerAddedTask.run();
         }
         synchronized (this) {
+            for (Map.Entry<ServiceName, Dependent[]> dependentEntry: getDependentsByDependencyName().entrySet()) {
+                ServiceName serviceName = dependentEntry.getKey();
+                for (Dependent dependent: dependentEntry.getValue()) {
+                    if (dependent != null) dependent.immediateDependencyAvailable(serviceName);
+                }
+            }
             Dependent[][] dependents = getDependents();
             if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
                 tasks.add(new DependencyUnavailableTask(dependents));
