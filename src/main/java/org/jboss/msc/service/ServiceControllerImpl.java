@@ -238,41 +238,59 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     void commitInstallation(Mode initialMode) {
         assert (state == Substate.NEW);
         assert initialMode != null;
-        assert ! holdsLock(this);
+        assert !holdsLock(this);
         final ArrayList<Runnable> listenerAddedTasks = new ArrayList<Runnable>(16);
         final ArrayList<Runnable> tasks = new ArrayList<Runnable>(16);
-        synchronized(this) {
-            getListenerTasks(ListenerNotification.LISTENER_ADDED, listenerAddedTasks);
-            internalSetMode(initialMode, tasks);
-            // placeholder async task for running listener added tasks
-            asyncTasks += listenerAddedTasks.size() + tasks.size() + 1;
+
+        //we have to save the TCCL, as it may be cleared by
+        //a listener running
+        final ClassLoader loader;
+        final SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            loader = AccessController.doPrivileged(GetTCCLAction.GET_TCCL_ACTION);
+        } else {
+            loader = GetTCCLAction.GET_TCCL_ACTION.run();
         }
-        doExecute(tasks);
-        tasks.clear();
-        for (Runnable listenerAddedTask : listenerAddedTasks) {
-            listenerAddedTask.run();
-        }
-        synchronized (this) {
-            for (Map.Entry<ServiceName, Dependent[]> dependentEntry: getDependentsByDependencyName().entrySet()) {
-                ServiceName serviceName = dependentEntry.getKey();
-                for (Dependent dependent: dependentEntry.getValue()) {
-                    if (dependent != null) dependent.immediateDependencyAvailable(serviceName);
+        try {
+            synchronized (this) {
+                getListenerTasks(ListenerNotification.LISTENER_ADDED, listenerAddedTasks);
+                internalSetMode(initialMode, tasks);
+                // placeholder async task for running listener added tasks
+                asyncTasks += listenerAddedTasks.size() + tasks.size() + 1;
+            }
+            doExecute(tasks);
+            tasks.clear();
+            for (Runnable listenerAddedTask : listenerAddedTasks) {
+                listenerAddedTask.run();
+            }
+            synchronized (this) {
+                for (Map.Entry<ServiceName, Dependent[]> dependentEntry : getDependentsByDependencyName().entrySet()) {
+                    ServiceName serviceName = dependentEntry.getKey();
+                    for (Dependent dependent : dependentEntry.getValue()) {
+                        if (dependent != null) dependent.immediateDependencyAvailable(serviceName);
+                    }
                 }
+                Dependent[][] dependents = getDependents();
+                if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
+                    tasks.add(new DependencyUnavailableTask(dependents));
+                }
+                if (failCount > 0) {
+                    tasks.add(new DependencyFailedTask(dependents));
+                }
+                state = Substate.DOWN;
+                // subtract one to compensate for +1 above
+                asyncTasks--;
+                transition(tasks);
+                asyncTasks += tasks.size();
             }
-            Dependent[][] dependents = getDependents();
-            if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
-                tasks.add(new DependencyUnavailableTask(dependents));
+            doExecute(tasks);
+        } finally {
+            if (sm != null) {
+                AccessController.doPrivileged(new SetTCCLAction(loader));
+            } else {
+                new SetTCCLAction(loader).run();
             }
-            if (failCount > 0) {
-                tasks.add(new DependencyFailedTask(dependents));
-            }
-            state = Substate.DOWN;
-            // subtract one to compensate for +1 above
-            asyncTasks --;
-            transition(tasks);
-            asyncTasks += tasks.size();
         }
-        doExecute(tasks);
     }
 
     /**
@@ -396,7 +414,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case REMOVING: {
-                if (mode == Mode.REMOVE) { 
+                if (mode == Mode.REMOVE) {
                     return Transition.REMOVING_to_REMOVED;
                 } else {
                     return Transition.REMOVING_to_DOWN;
@@ -428,7 +446,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             // first of all, check if parents should be demanded/undemanded
             switch (mode) {
-                case NEVER: 
+                case NEVER:
                 case REMOVE:
                     if (parentsDemanded) {
                         tasks.add(new UndemandParentsTask());
@@ -1056,7 +1074,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             tasks.add(new ServiceUnavailableTask(dependencyName, dependent));
         } else if (state == Substate.UP) {
             tasks.add(new DependencyStartedTask(dependents));
-        } 
+        }
     }
 
     private void doDemandParents() {
@@ -1383,7 +1401,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     /**
      * Invokes the listener, performing the notification specified.
-     * 
+     *
      * @param listener      listener to be invoked
      * @param notification  specified notification
      * @param transition    the transition to be notified, only relevant if {@code notification} is
@@ -1465,7 +1483,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     /**
      * Returns a compiled array of all dependents of this service instance.
-     * 
+     *
      * @return an array of dependents, including children
      */
     private Dependent[][] getDependents() {
@@ -1495,8 +1513,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * Returns a compiled map of all dependents of this service mapped by the dependency name.
      * This map can be used when it is necessary to perform notifications to these dependents that require
      * the name of the dependency issuing notification.
-     * <br> The return result does not include children. 
-     * 
+     * <br> The return result does not include children.
+     *
      * @return an array of dependents, including children
      */
     // children are not included in this this result
