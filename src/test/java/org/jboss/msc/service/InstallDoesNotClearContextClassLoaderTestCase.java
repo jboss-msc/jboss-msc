@@ -31,18 +31,37 @@ public class InstallDoesNotClearContextClassLoaderTestCase extends AbstractServi
 
     @Test
     public void testServiceInstallationDoesNotClearTCCL() {
-            serviceContainer.addListener(new AbstractServiceListener<Object>() {
+        serviceContainer.addListener(new AbstractServiceListener<Object>() {
 
+        });
+        final ClassLoader classLoader = new ClassLoader() {
+
+        };
+        Thread.currentThread().setContextClassLoader(classLoader);
+        try {
+            serviceContainer.addService(ServiceName.of("nothingService"), Service.NULL).install();
+            Assert.assertEquals(classLoader, Thread.currentThread().getContextClassLoader());
+        } finally {
+            Thread.currentThread().setContextClassLoader(null);
+        }
+    }
+
+    @Test
+    public void setAddListenerDoesNotClearTCCL() {
+        serviceContainer.addListener(new AbstractServiceListener<Object>() {
+
+        });
+        final ClassLoader classLoader = new ClassLoader() {
+
+        };
+        Thread.currentThread().setContextClassLoader(classLoader);
+        try {
+            ServiceController<Void> controller = serviceContainer.addService(ServiceName.of("listenerService"), Service.NULL).install();
+            controller.addListener(new AbstractServiceListener<Void>() {
             });
-            final ClassLoader classLoader = new ClassLoader() {
-
-            };
-            Thread.currentThread().setContextClassLoader(classLoader);
-            try {
-                serviceContainer.addService(ServiceName.of("nothingService"), Service.NULL).install();
-                Assert.assertEquals(classLoader, Thread.currentThread().getContextClassLoader());
-            } finally {
-                Thread.currentThread().setContextClassLoader(null);
-            }
+            Assert.assertEquals(classLoader, Thread.currentThread().getContextClassLoader());
+        } finally {
+            Thread.currentThread().setContextClassLoader(null);
+        }
     }
 }
