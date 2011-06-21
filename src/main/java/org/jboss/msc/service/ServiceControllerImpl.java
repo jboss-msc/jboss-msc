@@ -30,6 +30,7 @@ import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -1395,6 +1396,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     dependencyNames[i] = dependencies[i].getName().getCanonicalName();
                 }
             }
+            final String[] unavailbaleNames;
+            if (immediateUnavailableDependencies.isEmpty()) {
+                unavailbaleNames = NO_STRINGS;
+            } else {
+                int unavailbaleLength = immediateUnavailableDependencies.size();
+                unavailbaleNames = new String[unavailbaleLength];
+                Iterator<ServiceName> iterator = immediateUnavailableDependencies.iterator();
+                for (int i = 0; i < unavailbaleLength; i++) {
+                    unavailbaleNames[i] = iterator.next().getCanonicalName();
+                }
+            }
             StartException startException = this.startException;
             return new ServiceStatus(
                     parentName,
@@ -1407,7 +1419,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     dependencyNames,
                     failCount != 0,
                     startException != null ? startException.toString() : null,
-                    !immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount != 0
+                    unavailbaleNames
             );
         }
     }
