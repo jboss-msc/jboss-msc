@@ -272,7 +272,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 Dependent[][] dependents = getDependents();
                 if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
-                    tasks.add(new DependencyUnavailableTask(dependents));
+                    for (Dependent[] dependentArray : dependents) {
+                        for (Dependent dependent : dependentArray) {
+                            if (dependent != null) {
+                                dependent.transitiveDependencyUnavailable();
+                            }
+                        }
+                    }
                 }
                 if (failCount > 0) {
                     tasks.add(new DependencyFailedTask(dependents));
@@ -612,7 +618,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     Dependent[][] dependents = getDependents();
                     // Clear all dependency uninstalled flags from dependents
                     if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
-                        tasks.add(new DependencyAvailableTask(dependents));
+                        for (Dependent[] dependentArray : dependents) {
+                            for (Dependent dependent : dependentArray) {
+                                if (dependent != null) dependent.transitiveDependencyAvailable();
+                            }
+                        }
                     }
                     if (failCount > 0) {
                         tasks.add(new DependencyRetryingTask(dependents));
@@ -896,7 +906,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             // both unavailable dep counts are 0
             if (transitiveUnavailableDepCount == 0) {
-                tasks.add(new DependencyAvailableTask(getDependents()));
+                transition(tasks);
+                propagateTransitiveAvailability();
             }
             asyncTasks += tasks.size();
         }
@@ -919,11 +930,29 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             // if this is the first unavailable dependency, we need to notify dependents;
             // otherwise, they have already been notified
             if (transitiveUnavailableDepCount == 0) {
-                tasks.add(new DependencyUnavailableTask(getDependents()));
+                transition(tasks);
+                propagateTransitiveUnavailability();
             }
             asyncTasks += tasks.size();
         }
         doExecute(tasks);
+    }
+
+    private void propagateTransitiveUnavailability() {
+        assert Thread.holdsLock(this);
+        for (Dependent[] dependentArray : getDependents()) {
+            for (Dependent dependent : dependentArray) {
+                if (dependent != null) dependent.transitiveDependencyUnavailable();
+            }
+        }
+    }
+
+    private void propagateTransitiveAvailability() {
+        for (Dependent[] dependentArray : getDependents()) {
+            for (Dependent dependent : dependentArray) {
+                if (dependent != null) dependent.transitiveDependencyAvailable();
+            }
+        }
     }
 
     @Override
@@ -940,7 +969,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             // there are no immediate nor transitive unavailable dependencies
             if (immediateUnavailableDependencies.isEmpty()) {
-                tasks.add(new DependencyAvailableTask(getDependents()));
+                transition(tasks);
+                propagateTransitiveAvailability();
             }
             asyncTasks += tasks.size();
         }
@@ -962,7 +992,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             //if this is the first unavailable dependency, we need to notify dependents;
             // otherwise, they have already been notified
             if (immediateUnavailableDependencies.isEmpty()) {
-                tasks.add(new DependencyUnavailableTask(getDependents()));
+                transition(tasks);
+                propagateTransitiveUnavailability();
             }
             asyncTasks += tasks.size();
         }
@@ -1061,19 +1092,18 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         doExecute(tasks);
     }
 
-    void newDependent(final ServiceName dependencyName, final Dependent dependent, final ArrayList<Runnable> tasks) {
+    void newDependent(final ServiceName dependencyName, final Dependent dependent) {
         assert holdsLock(this);
-        final Dependent[][] dependents = new Dependent[][] { { dependent } };
         if (failCount > 0) {
-            tasks.add(new DependencyFailedTask(dependents));
+            dependent.dependencyFailed();
         }
         if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
-            tasks.add(new DependencyUnavailableTask(dependents));
+            dependent.transitiveDependencyUnavailable();
         }
         if (state == Substate.WONT_START) {
-            tasks.add(new ServiceUnavailableTask(dependencyName, dependent));
+            dependent.immediateDependencyUnavailable(dependencyName);
         } else if (state == Substate.UP) {
-            tasks.add(new DependencyStartedTask(dependents));
+            dependent.immediateDependencyUp();
         }
     }
 
@@ -1141,7 +1171,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     void addChild(ServiceControllerImpl<?> child) {
         assert !holdsLock(this);
-        final ArrayList<Runnable> tasks;
         synchronized (this) {
             switch (state) {
                 case START_INITIATING:
@@ -1149,14 +1178,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 case UP:
                 case STOP_REQUESTED: {
                     children.add(child);
-                    newDependent(primaryRegistration.getName(), child, tasks = new ArrayList<Runnable>());
+                    newDependent(primaryRegistration.getName(), child);
                     break;
                 }
                 default: throw new IllegalStateException("Children cannot be added in state " + state.getState());
             }
-            asyncTasks += tasks.size();
         }
-        doExecute(tasks);
     }
 
     void removeChild(ServiceControllerImpl<?> child) {
@@ -2015,67 +2042,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 for (Dependent[] dependentArray : dependents) {
                     for (Dependent dependent : dependentArray) {
                         if (dependent != null) dependent.dependencyFailureCleared();
-                    }
-                }
-                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
-                synchronized (ServiceControllerImpl.this) {
-                    // Subtract one for this task
-                    asyncTasks --;
-                    transition(tasks);
-                    asyncTasks += tasks.size();
-                }
-                doExecute(tasks);
-            } catch (Throwable t) {
-                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
-            }
-        }
-    }
-
-    private class DependencyAvailableTask implements Runnable {
-
-        private final Dependent[][] dependents;
-
-        DependencyAvailableTask(final Dependent[][] dependents) {
-            this.dependents = dependents;
-        }
-
-        public void run() {
-            try {
-                for (Dependent[] dependentArray : dependents) {
-                    for (Dependent dependent : dependentArray) {
-                        if (dependent != null) dependent.transitiveDependencyAvailable();
-                    }
-                }
-                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
-                synchronized (ServiceControllerImpl.this) {
-                    // Subtract one for this task
-                    asyncTasks --;
-                    transition(tasks);
-                    asyncTasks += tasks.size();
-                }
-                doExecute(tasks);
-            } catch (Throwable t) {
-                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
-            }
-        }
-
-    }
-
-    private class DependencyUnavailableTask implements Runnable {
-
-        private final Dependent[][] dependents;
-
-        DependencyUnavailableTask(final Dependent[][] dependents) {
-            this.dependents = dependents;
-        }
-
-        public void run() {
-            try {
-                for (Dependent[] dependentArray : dependents) {
-                    for (Dependent dependent : dependentArray) {
-                        if (dependent != null) {
-                            dependent.transitiveDependencyUnavailable();
-                        }
                     }
                 }
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();

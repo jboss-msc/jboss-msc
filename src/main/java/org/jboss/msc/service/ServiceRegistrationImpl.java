@@ -109,7 +109,7 @@ final class ServiceRegistrationImpl implements Dependency {
                     dependent.immediateDependencyUnavailable(name);
                     return;
                 }
-                instance.newDependent(name, dependent, tasks);
+                instance.newDependent(name, dependent);
                 instance.addAsyncTasks(tasks.size() + 1);
             }
         }
@@ -175,6 +175,7 @@ final class ServiceRegistrationImpl implements Dependency {
 
     @Override
     public void dependentStopped() {
+        assert ! holdsLock(this);
         synchronized (this) {
             if (instance != null) {
                 instance.dependentStopped();
@@ -201,6 +202,7 @@ final class ServiceRegistrationImpl implements Dependency {
 
     @Override
     public void dependentStarted() {
+        assert ! holdsLock(this);
         synchronized (this) {
             if (instance != null) {
                 instance.dependentStarted();
@@ -210,6 +212,7 @@ final class ServiceRegistrationImpl implements Dependency {
 
     @Override
     public void addDemand() {
+        assert ! holdsLock(this);
         synchronized (this) {
             demandedByCount++;
             final ServiceControllerImpl<?> instance = this.instance;
@@ -221,6 +224,7 @@ final class ServiceRegistrationImpl implements Dependency {
 
     @Override
     public void removeDemand() {
+        assert ! holdsLock(this);
         synchronized (this) {
             demandedByCount--;
             final ServiceControllerImpl<?> instance = this.instance;

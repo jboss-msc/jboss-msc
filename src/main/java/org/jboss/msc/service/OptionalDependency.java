@@ -279,11 +279,11 @@ class OptionalDependency implements Dependency, Dependent {
         final boolean notificationsForwarded;
         final boolean demandNotified;
         final DependencyState depState;
-        final boolean transpDepUnavailable;
+        final boolean transitiveDepUnavailable;
         final boolean depFailed;
         synchronized (this) {
             depState = dependencyState;
-            transpDepUnavailable = transitiveDependencyUnavailable;
+            transitiveDepUnavailable = transitiveDependencyUnavailable;
             depFailed = dependencyFailed;
             notificationsForwarded = forwardNotifications;
             forwardNotifications = false;
@@ -298,7 +298,7 @@ class OptionalDependency implements Dependency, Dependent {
             if (depFailed) {
                 dependent.dependencyFailureCleared();
             }
-            if (transpDepUnavailable) {
+            if (transitiveDepUnavailable) {
                 dependent.transitiveDependencyAvailable();
             }
             if (demandNotified) {
