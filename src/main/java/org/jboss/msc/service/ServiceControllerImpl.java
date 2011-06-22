@@ -896,7 +896,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             // both unavailable dep counts are 0
             if (transitiveUnavailableDepCount == 0) {
-                tasks.add(new DependencyAvailableTask(getDependents()));
+                transition(tasks);
+                for (Dependent[] dependentArray : getDependents()) {
+                    for (Dependent dependent : dependentArray) {
+                        if (dependent != null) dependent.transitiveDependencyAvailable();
+                    }
+                }
             }
             asyncTasks += tasks.size();
         }
@@ -919,7 +924,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             // if this is the first unavailable dependency, we need to notify dependents;
             // otherwise, they have already been notified
             if (transitiveUnavailableDepCount == 0) {
-                tasks.add(new DependencyUnavailableTask(getDependents()));
+                transition(tasks);
+                for (Dependent[] dependentArray : getDependents()) {
+                    for (Dependent dependent : dependentArray) {
+                        if (dependent != null) {
+                            dependent.transitiveDependencyUnavailable();
+                        }
+                    }
+                }
             }
             asyncTasks += tasks.size();
         }
@@ -940,7 +952,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             // there are no immediate nor transitive unavailable dependencies
             if (immediateUnavailableDependencies.isEmpty()) {
-                tasks.add(new DependencyAvailableTask(getDependents()));
+                transition(tasks);
+                for (Dependent[] dependentArray : getDependents()) {
+                    for (Dependent dependent : dependentArray) {
+                        if (dependent != null) dependent.transitiveDependencyAvailable();
+                    }
+                }
             }
             asyncTasks += tasks.size();
         }
@@ -962,7 +979,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             //if this is the first unavailable dependency, we need to notify dependents;
             // otherwise, they have already been notified
             if (immediateUnavailableDependencies.isEmpty()) {
-                tasks.add(new DependencyUnavailableTask(getDependents()));
+                transition(tasks);
+                for (Dependent[] dependentArray : getDependents()) {
+                    for (Dependent dependent : dependentArray) {
+                        if (dependent != null) {
+                            dependent.transitiveDependencyUnavailable();
+                        }
+                    }
+                }
             }
             asyncTasks += tasks.size();
         }
