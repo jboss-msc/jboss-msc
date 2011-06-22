@@ -24,7 +24,7 @@ package org.jboss.msc.service.management;
 
 import java.beans.ConstructorProperties;
 import java.io.Serializable;
-import org.jboss.msc.service.StartException;
+import java.util.Arrays;
 
 /**
  * A representation of the current status of some service.
@@ -42,8 +42,8 @@ public class ServiceStatus implements Serializable {
     private final String stateName;
     private final String substateName;
     private final String[] dependencies;
+    private final String [] unavailableDependencies;
     private final boolean dependencyFailed;
-    private final boolean dependencyUnavailable;
     private final String parentName;
     private final String exception;
 
@@ -60,10 +60,10 @@ public class ServiceStatus implements Serializable {
      * @param dependencies the list of dependencies for this service
      * @param dependencyFailed {@code true} if some dependency is failed
      * @param exception the service start exception
-     * @param dependencyUnavailable {@code true} if some dependency is unavailable
+     * @param unavailableDependencies the set of unavailable dependencies
      */
     @ConstructorProperties({"parentName", "serviceName", "serviceClassName", "modeName", "stateName", "substateName", "dependencies", "dependencyFailed", "exception", "dependencyUnavailable"})
-    public ServiceStatus(final String parentName, final String serviceName, final String[] aliases, final String serviceClassName, final String modeName, final String stateName, final String substateName, final String[] dependencies, final boolean dependencyFailed, final String exception, final boolean dependencyUnavailable) {
+    public ServiceStatus(final String parentName, final String serviceName, final String[] aliases, final String serviceClassName, final String modeName, final String stateName, final String substateName, final String[] dependencies, final boolean dependencyFailed, final String exception, final String[] unavailableDependencies) {
         if (serviceName == null) {
             throw new IllegalArgumentException("serviceName is null");
         }
@@ -93,7 +93,7 @@ public class ServiceStatus implements Serializable {
         this.substateName = substateName;
         this.dependencies = dependencies;
         this.dependencyFailed = dependencyFailed;
-        this.dependencyUnavailable = dependencyUnavailable;
+        this.unavailableDependencies = unavailableDependencies;
         this.parentName = parentName;
         this.exception = exception;
     }
@@ -175,8 +175,8 @@ public class ServiceStatus implements Serializable {
      *
      * @return {@code true} if some dependency was unavailable
      */
-    public boolean isDependencyUnavailable() {
-        return dependencyUnavailable;
+    public String[] getUnavailableDependencies() {
+        return unavailableDependencies;
     }
 
     /**
@@ -236,8 +236,8 @@ public class ServiceStatus implements Serializable {
         if (dependencyFailed) {
             builder.append(" (has failed dependency)");
         }
-        if (dependencyUnavailable) {
-            builder.append(" (has unavailable dependency)");
+        if (unavailableDependencies.length > 0) {
+            builder.append(" unavailable: " + Arrays.asList(unavailableDependencies));
         }
         return builder.toString();
     }
