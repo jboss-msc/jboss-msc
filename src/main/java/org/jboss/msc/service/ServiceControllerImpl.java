@@ -272,7 +272,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 Dependent[][] dependents = getDependents();
                 if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
-                    tasks.add(new DependencyUnavailableTask(dependents));
+                    for (Dependent[] dependentArray : dependents) {
+                        for (Dependent dependent : dependentArray) {
+                            if (dependent != null) {
+                                dependent.transitiveDependencyUnavailable();
+                            }
+                        }
+                    }
                 }
                 if (failCount > 0) {
                     tasks.add(new DependencyFailedTask(dependents));
@@ -1092,7 +1098,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             tasks.add(new DependencyFailedTask(dependents));
         }
         if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
-            tasks.add(new DependencyUnavailableTask(dependents));
+            for (Dependent[] dependentArray : dependents) {
+                for (Dependent innerDependent : dependentArray) {
+                    if (innerDependent != null) {
+                        innerDependent.transitiveDependencyUnavailable();
+                    }
+                }
+            }
         }
         if (state == Substate.WONT_START) {
             tasks.add(new ServiceUnavailableTask(dependencyName, dependent));
