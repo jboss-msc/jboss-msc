@@ -37,6 +37,8 @@ import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
 
+import java.util.logging.Logger;
+
 /**
  * Test base used for service test cases.
  *
@@ -50,12 +52,14 @@ public class AbstractServiceTest {
 
     @Before
     public void setUp() throws Exception {
+        Logger.getLogger("").fine("Setting up test " + getClass());
         serviceContainer = ServiceContainer.Factory.create();
         shutdownOnTearDown = true;
     }
 
     @After
     public void tearDown() throws Exception {
+        Logger.getLogger("").fine("Tearing down test " + getClass());
         if (shutdownOnTearDown) {
             serviceContainer.shutdown();
             serviceContainer.awaitTermination();
