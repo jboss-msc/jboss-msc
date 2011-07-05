@@ -1094,7 +1094,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     void newDependent(final ServiceName dependencyName, final Dependent dependent) {
         assert holdsLock(this);
-        if (failCount > 0) {
+        if (failCount > 0 && state != Substate.STARTING) {
+            // if starting and failCount is 1, dependents have not been notified yet...
+            // hence, skip it to avoid duplicate notification
             dependent.dependencyFailed();
         }
         if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
