@@ -34,7 +34,7 @@
 
     <groupId>org.jboss.msc</groupId>
     <artifactId>jboss-msc</artifactId>
-    <version>1.0.0.CR3-SNAPSHOT</version>
+    <version>1.0.0.GA</version>
     <name>JBoss Modular Service Container</name>
 
     <properties>
