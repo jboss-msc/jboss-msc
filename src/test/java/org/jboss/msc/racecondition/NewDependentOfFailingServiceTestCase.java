@@ -35,7 +35,6 @@ import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
 import org.jboss.msc.util.TestServiceListener;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -51,7 +50,6 @@ import org.junit.runner.RunWith;
  */
 @RunWith(BMUnitRunner.class)
 @BMScript(dir="src/test/resources")
-@Ignore // FIXME this test hangs sometimes... this is currently under investigation
 public class NewDependentOfFailingServiceTestCase extends AbstractRaceConditionTest {
 
     private static final TestServiceListener testListener = new TestServiceListener();

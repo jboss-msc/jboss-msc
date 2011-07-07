@@ -26,17 +26,18 @@ METHOD failed
 AT EXIT
 IF TRUE
 DO
-   signalWake("failCountPlusPlus", true);
+   signalWake("failCountPlusPlus1", true);
+   signalWake("failCountPlusPlus2", true);
 ENDRULE
 
 RULE transition at StartTask.startFailed
 CLASS org.jboss.msc.service.ServiceControllerImpl$StartTask
 METHOD startFailed
-HELPER org.jboss.msc.racecondition.NullHelper
 AT EXIT
 IF TRUE
 DO
-   signalWake("failCountPlusPlus", true);
+   signalWake("failCountPlusPlus1", true);
+   signalWake("failCountPlusPlus2", true);
 ENDRULE
 
 # hold listenerTask just to make sure asyncTasks is > 0 and transition won't
@@ -49,7 +50,7 @@ AT ENTRY
 IF !isNull($3) && $3.toString().endsWith("START_INITIATING to STARTING")
 DO
    debug("listenerTask waiting for failCont++"),
-   waitFor("failCountPlusPlus", 1000000),
+   waitFor("failCountPlusPlus1", 1000000),
    # hold transition from occurring until new dependent has been added
    debug("wait for ServiceControllerImpl.newDependent"),
    waitFor("newDependent completed", 100000),
@@ -64,7 +65,7 @@ IF TRUE
 DO
    # wait for failure to occur
    debug("waiting for failure on dependency"),
-   waitFor("failCountPlusPlus", 1000000),
+   waitFor("failCountPlusPlus2", 1000000),
    debug("proceeding with ServiceRegistrationImpl.addDependent");
 ENDRULE
 
