@@ -22,12 +22,9 @@
 
 package org.jboss.msc.util;
 
-import java.util.EnumMap;
-import org.jboss.msc.service.ServiceController;
-import org.jboss.msc.service.ServiceListener;
-import org.jboss.msc.service.ServiceName;
-import org.jboss.msc.service.StartException;
+import static org.jboss.msc.service.AbstractServiceTest.assertContextClassLoader;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -35,6 +32,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import org.jboss.msc.service.ServiceController;
+import org.jboss.msc.service.ServiceListener;
+import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.service.StartException;
 
 /**
  * Service listener that allow certain behaviors to be expected.  Like services starting, stopping, etc.  The expect
@@ -71,6 +73,7 @@ public class TestServiceListener implements ServiceListener<Object> {
     }
 
     public void transition(final ServiceController<? extends Object> serviceController, final ServiceController.Transition transition) {
+        assertContextClassLoader(this.getClass().getClassLoader());
         switch (transition) {
             case STARTING_to_START_FAILED: {
                 final ServiceFailureFuture future = expectedFailures.remove(serviceController.getName());
@@ -110,6 +113,7 @@ public class TestServiceListener implements ServiceListener<Object> {
     }
 
     public void serviceRemoveRequested(final ServiceController<? extends Object> serviceController) {
+        assertContextClassLoader(this.getClass().getClassLoader());
         final ServiceFuture future = expectedRemovalRequests.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
@@ -117,6 +121,7 @@ public class TestServiceListener implements ServiceListener<Object> {
     }
 
     public void serviceRemoveRequestCleared(final ServiceController<? extends Object> serviceController) {
+        assertContextClassLoader(this.getClass().getClassLoader());
         final ServiceFuture future = expectedRemovalRequestClears.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
@@ -124,6 +129,7 @@ public class TestServiceListener implements ServiceListener<Object> {
     }
 
     public void dependencyFailed(final ServiceController<? extends Object> serviceController) {
+        assertContextClassLoader(this.getClass().getClassLoader());
         final ServiceFuture future = expectedDependencyFailures.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
@@ -131,6 +137,7 @@ public class TestServiceListener implements ServiceListener<Object> {
     }
 
     public void dependencyFailureCleared(final ServiceController<? extends Object> serviceController) {
+        assertContextClassLoader(this.getClass().getClassLoader());
         final ServiceFuture future = expectedDependencyRetryings.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
@@ -138,6 +145,7 @@ public class TestServiceListener implements ServiceListener<Object> {
     }
 
     public void immediateDependencyAvailable(ServiceController<? extends Object> serviceController) {
+        assertContextClassLoader(this.getClass().getClassLoader());
         final ServiceFuture future = expectedImmediateDepAvailabilities.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
@@ -145,6 +153,7 @@ public class TestServiceListener implements ServiceListener<Object> {
     }
 
     public void immediateDependencyUnavailable(ServiceController<? extends Object> serviceController) {
+        assertContextClassLoader(this.getClass().getClassLoader());
         final ServiceFuture future = expectedImmediateDepUnavailabilities.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
@@ -152,6 +161,7 @@ public class TestServiceListener implements ServiceListener<Object> {
     }
 
     public void transitiveDependencyAvailable(ServiceController<? extends Object> serviceController) {
+        assertContextClassLoader(this.getClass().getClassLoader());
         final ServiceFuture future = expectedTransitiveDepAvailabilities.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);
@@ -159,6 +169,7 @@ public class TestServiceListener implements ServiceListener<Object> {
     }
 
     public void transitiveDependencyUnavailable(ServiceController<? extends Object> serviceController) {
+        assertContextClassLoader(this.getClass().getClassLoader());
         final ServiceFuture future = expectedTransitiveDepUnavailabilities.remove(serviceController.getName());
         if(future != null) {
             future.setServiceController(serviceController);

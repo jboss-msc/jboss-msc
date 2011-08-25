@@ -22,11 +22,11 @@
 
 package org.jboss.msc.service;
 
-import static junit.framework.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.lang.reflect.Field;
@@ -39,7 +39,6 @@ import org.jboss.msc.service.ServiceBuilder.DependencyType;
 import org.jboss.msc.service.ServiceController.Mode;
 import org.jboss.msc.service.ServiceController.State;
 import org.jboss.msc.util.TestServiceListener;
-import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 import org.jboss.msc.value.Values;
 import org.junit.Test;
@@ -331,7 +330,6 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
     @Test
     public void test4() throws Exception {
         final TestServiceListener testListener = new TestServiceListener();
-        final ServiceA serviceA = new ServiceA();
         final ServiceB serviceB = new ServiceB();
         final ServiceBWrapper serviceBWrapper = new ServiceBWrapper();
         final ServiceC serviceC = new ServiceC();
@@ -465,11 +463,13 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
 
         @Override
         public void start(StartContext context) throws StartException {
+            assertContextClassLoader(this.getClass().getClassLoader());
             assertTrue(context.getElapsedTime() > 0L);
         }
 
         @Override
         public void stop(StopContext context) {
+            assertContextClassLoader(this.getClass().getClassLoader());
             assertTrue(context.getElapsedTime() > 0L);
         }
 
@@ -487,10 +487,12 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         boolean startedService;
 
         public void start(){
+            assertContextClassLoader(this.getClass().getClassLoader());
             startedService = true;
         }
 
         public void stop() {
+            assertContextClassLoader(this.getClass().getClassLoader());
             startedService = false;
         }
         
@@ -517,12 +519,14 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
 
         @Override
         public void start(StartContext context) throws StartException {
+            assertContextClassLoader(this.getClass().getClassLoader());
             serviceB.start();
             assertTrue(context.getElapsedTime() > 0L);
         }
 
         @Override
         public void stop(StopContext context) {
+            assertContextClassLoader(this.getClass().getClassLoader());
             serviceB.stop();
             assertTrue(context.getElapsedTime() > 0L);
         }
@@ -595,11 +599,13 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
 
         @Override
         public void start(StartContext context) throws StartException {
+            assertContextClassLoader(this.getClass().getClassLoader());
             assertTrue(context.getElapsedTime() > 0L);
         }
 
         @Override
         public void stop(StopContext context) {
+            assertContextClassLoader(this.getClass().getClassLoader());
             if (failToStop) {
                 throw new RuntimeException();
             }
@@ -621,11 +627,13 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
 
         @Override
         public void start(StartContext context) throws StartException {
+            assertContextClassLoader(this.getClass().getClassLoader());
             assertTrue(context.getElapsedTime() > 0L);
         }
 
         @Override
         public void stop(StopContext context) {
+            assertContextClassLoader(this.getClass().getClassLoader());
             assertTrue(context.getElapsedTime() > 0L);
         }
     }
@@ -647,11 +655,11 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         }
         
     }
-    
+
     private static Field getField(final Class<?> clazz, final String name) throws NoSuchFieldException {
-    	return clazz.getField(name);
+        return clazz.getField(name);
     }
-    
+
     private static Method getMethod(final Class<?> clazz, final String methodName, final Class<?> paramType) {
         final Method method;
         try {
@@ -662,5 +670,4 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         }
         return method;
     }
-
 }
