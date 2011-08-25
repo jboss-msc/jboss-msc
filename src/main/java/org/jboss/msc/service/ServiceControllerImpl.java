@@ -242,61 +242,44 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> listenerAddedTasks = new ArrayList<Runnable>(16);
         final ArrayList<Runnable> tasks = new ArrayList<Runnable>(16);
 
-        //we have to save the TCCL, as it may be cleared by
-        //a listener running
-        final ClassLoader loader;
-        final SecurityManager sm = System.getSecurityManager();
-        if (sm != null) {
-            loader = AccessController.doPrivileged(GetTCCLAction.GET_TCCL_ACTION);
-        } else {
-            loader = GetTCCLAction.GET_TCCL_ACTION.run();
+        synchronized (this) {
+            getListenerTasks(ListenerNotification.LISTENER_ADDED, listenerAddedTasks);
+            internalSetMode(initialMode, tasks);
+            // placeholder async task for running listener added tasks
+            asyncTasks += listenerAddedTasks.size() + tasks.size() + 1;
         }
-        try {
-            synchronized (this) {
-                getListenerTasks(ListenerNotification.LISTENER_ADDED, listenerAddedTasks);
-                internalSetMode(initialMode, tasks);
-                // placeholder async task for running listener added tasks
-                asyncTasks += listenerAddedTasks.size() + tasks.size() + 1;
-            }
-            doExecute(tasks);
-            tasks.clear();
-            for (Runnable listenerAddedTask : listenerAddedTasks) {
-                listenerAddedTask.run();
-            }
-            synchronized (this) {
-                for (Map.Entry<ServiceName, Dependent[]> dependentEntry : getDependentsByDependencyName().entrySet()) {
-                    ServiceName serviceName = dependentEntry.getKey();
-                    for (Dependent dependent : dependentEntry.getValue()) {
-                        if (dependent != null) dependent.immediateDependencyAvailable(serviceName);
-                    }
+        doExecute(tasks);
+        tasks.clear();
+        for (Runnable listenerAddedTask : listenerAddedTasks) {
+            listenerAddedTask.run();
+        }
+        synchronized (this) {
+            for (Map.Entry<ServiceName, Dependent[]> dependentEntry : getDependentsByDependencyName().entrySet()) {
+                ServiceName serviceName = dependentEntry.getKey();
+                for (Dependent dependent : dependentEntry.getValue()) {
+                    if (dependent != null) dependent.immediateDependencyAvailable(serviceName);
                 }
-                Dependent[][] dependents = getDependents();
-                if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
-                    for (Dependent[] dependentArray : dependents) {
-                        for (Dependent dependent : dependentArray) {
-                            if (dependent != null) {
-                                dependent.transitiveDependencyUnavailable();
-                            }
+            }
+            Dependent[][] dependents = getDependents();
+            if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
+                for (Dependent[] dependentArray : dependents) {
+                    for (Dependent dependent : dependentArray) {
+                        if (dependent != null) {
+                            dependent.transitiveDependencyUnavailable();
                         }
                     }
                 }
-                if (failCount > 0) {
-                    tasks.add(new DependencyFailedTask(dependents));
-                }
-                state = Substate.DOWN;
-                // subtract one to compensate for +1 above
-                asyncTasks--;
-                transition(tasks);
-                asyncTasks += tasks.size();
             }
-            doExecute(tasks);
-        } finally {
-            if (sm != null) {
-                AccessController.doPrivileged(new SetTCCLAction(loader));
-            } else {
-                new SetTCCLAction(loader).run();
+            if (failCount > 0) {
+                tasks.add(new DependencyFailedTask(dependents));
             }
+            state = Substate.DOWN;
+            // subtract one to compensate for +1 above
+            asyncTasks--;
+            transition(tasks);
+            asyncTasks += tasks.size();
         }
+        doExecute(tasks);
     }
 
     /**
@@ -579,7 +562,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case START_INITIATING_to_STARTING: {
                     getListenerTasks(transition, tasks);
-                    tasks.add(new ClearTCCLTask(new StartTask(true)));
+                    tasks.add(new StartTask(true));
                     break;
                 }
                 case START_FAILED_to_DOWN: {
@@ -587,7 +570,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     failCount--;
                     getListenerTasks(transition, tasks);
                     tasks.add(new DependencyRetryingTask(getDependents()));
-                    tasks.add(new ClearTCCLTask(new StopTask(true)));
+                    tasks.add(new StopTask(true));
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
@@ -610,7 +593,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         }
                     }
                     getListenerTasks(transition, tasks);
-                    tasks.add(new ClearTCCLTask(new StopTask(false)));
+                    tasks.add(new StopTask(false));
                     break;
                 }
                 case DOWN_to_REMOVING: {
@@ -667,14 +650,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private void getListenerTasks(final Transition transition, final ArrayList<Runnable> tasks) {
         final IdentityHashMap<ServiceListener<? super S>,ServiceListener.Inheritance> listeners = this.listeners;
         for (ServiceListener<? super S> listener : listeners.keySet()) {
-            tasks.add(new ClearTCCLTask(new ListenerTask(listener, transition)));
+            tasks.add(new ListenerTask(listener, transition));
         }
     }
 
     private void getListenerTasks(final ListenerNotification notification, final ArrayList<Runnable> tasks) {
         final IdentityHashMap<ServiceListener<? super S>,ServiceListener.Inheritance> listeners = this.listeners;
         for (ServiceListener<? super S> listener : listeners.keySet()) {
-            tasks.add(new ClearTCCLTask(new ListenerTask(listener, notification)));
+            tasks.add(new ListenerTask(listener, notification));
         }
     }
 
@@ -1438,6 +1421,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private void invokeListener(final ServiceListener<? super S> listener, final ListenerNotification notification, final Transition transition) {
         assert !holdsLock(this);
+        // first set the TCCL
+        final ClassLoader contextClassLoader = setTCCL(listener.getClass().getClassLoader());
         try {
             switch (notification) {
                 case TRANSITION: {
@@ -1485,6 +1470,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         } catch (Throwable t) {
             ServiceLogger.SERVICE.listenerFailed(t, listener);
         } finally {
+            // reset TCCL
+            setTCCL(contextClassLoader);
+            // perform transition tasks
             final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
             synchronized (this) {
                 // Subtract one for this executing listener
@@ -1572,6 +1560,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private static <T> void doInject(final ValueInjection<T> injection) {
         injection.getTarget().inject(injection.getSource().getValue());
+    }
+
+    private static ClassLoader setTCCL(ClassLoader newTCCL) {
+        final SecurityManager sm = System.getSecurityManager();
+        final SetTCCLAction setTCCLAction = new SetTCCLAction(newTCCL);
+        if (sm != null) {
+            return AccessController.doPrivileged(setTCCLAction);
+        } else {
+            return setTCCLAction.run();
+        }
     }
 
     @Override
@@ -1677,12 +1675,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             children = ServiceControllerImpl.this.children.toScatteredArray(NO_DEPENDENTS);
         }
 
-        ServiceUnavailableTask(ServiceName serviceName, Dependent dependent) {
-            dependents = new HashMap<ServiceName, Dependent[]>(1);
-            dependents.put(serviceName, new Dependent[]{dependent});
-            children = NO_DEPENDENTS;
-        }
-
         public void run() {
             try {
                 for (Map.Entry<ServiceName, Dependent[]> dependentEntry: dependents.entrySet()) {
@@ -1764,7 +1756,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 if (service == null) {
                     throw new IllegalArgumentException("Service is null");
                 }
-                service.start(context);
+                startService(service, context);
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
                     if (context.state != ContextState.SYNC) {
@@ -1826,6 +1818,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
         }
 
+        private void startService(Service<? extends S> service, StartContext context) throws StartException {
+            final ClassLoader contextClassLoader = setTCCL(service.getClass().getClassLoader());
+            try {
+                service.start(context);
+            } finally {
+                setTCCL(contextClassLoader);
+            }
+        }
+
         private void startFailed(StartException e, ServiceName serviceName, StartContextImpl context, long startNanos) {
             ServiceLogger.FAIL.startFailed(e, serviceName);
             final ArrayList<Runnable> tasks;
@@ -1868,7 +1869,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     try {
                         final Service<? extends S> service = serviceValue.getValue();
                         if (service != null) {
-                            service.stop(context);
+                            stopService(service, context);
                             ok = true;
                         } else {
                             ServiceLogger.ROOT.stopServiceMissing(serviceName);
@@ -1899,6 +1900,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     asyncTasks += tasks.size();
                 }
                 doExecute(tasks);
+            }
+        }
+
+        private void stopService(Service<? extends S> service, StopContext context) {
+            final ClassLoader contextClassLoader = setTCCL(service.getClass().getClassLoader());
+            try {
+                service.stop(context);
+            } finally {
+                setTCCL(contextClassLoader);
             }
         }
 
@@ -2178,7 +2188,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public void execute(final Runnable command) {
-            doExecute(new ClearTCCLTask(command));
+            final ClassLoader contextClassLoader = setTCCL(command.getClass().getClassLoader());
+            try {
+                command.run();
+            } finally {
+                setTCCL(contextClassLoader);
+            }
         }
     }
 
@@ -2272,33 +2287,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public void execute(final Runnable command) {
-            doExecute(new ClearTCCLTask(command));
+            final ClassLoader contextClassLoader = setTCCL(command.getClass().getClassLoader());
+            try {
+                command.run();
+            } finally {
+                setTCCL(contextClassLoader);
+            }
         }
 
         public long getElapsedTime() {
             return System.nanoTime() - lifecycleTime;
-        }
-    }
-
-    private static class ClearTCCLTask implements Runnable {
-
-        private final Runnable command;
-
-        ClearTCCLTask(final Runnable command) {
-            this.command = command;
-        }
-
-        public void run() {
-            try {
-                command.run();
-            } finally {
-                final SecurityManager sm = System.getSecurityManager();
-                if (sm != null) {
-                    AccessController.doPrivileged(SetTCCLAction.CLEAR_TCCL_ACTION);
-                } else {
-                    SetTCCLAction.CLEAR_TCCL_ACTION.run();
-                }
-            }
         }
     }
 }
