@@ -28,16 +28,15 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Collection;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-
-import junit.framework.Assert;
+import java.util.logging.Logger;
 
 import org.junit.After;
 import org.junit.Before;
-
-import java.util.logging.Logger;
 
 /**
  * Test base used for service test cases.
@@ -222,5 +221,25 @@ public class AbstractServiceTest {
             assertTrue("Unavailable dependency " + missingDependency + " not found in controller missing immediate dependency set",
                     result.contains(missingDependency));
         }
+    }
+
+    /**
+     * @author Stuart Douglas
+     */
+    private static final PrivilegedAction<ClassLoader> GET_TCCL_ACTION = new PrivilegedAction<ClassLoader>() {
+        public ClassLoader run() {
+            return Thread.currentThread().getContextClassLoader();
+        }
+    };
+
+    /**
+     * Asserts that the current Thread context class loader is the same as {@code expected}.
+     * 
+     * @param expected the expected context class loader of current thread
+     */
+    public static void assertContextClassLoader(ClassLoader expected) {
+        final SecurityManager sm = System.getSecurityManager();
+        final ClassLoader currentClassLoader = sm == null? GET_TCCL_ACTION.run(): AccessController.doPrivileged(GET_TCCL_ACTION);
+        assertSame(expected, currentClassLoader);
     }
 }
