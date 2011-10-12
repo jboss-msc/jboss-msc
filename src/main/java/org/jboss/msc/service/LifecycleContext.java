@@ -33,7 +33,8 @@ public interface LifecycleContext extends Executor {
 
     /**
      * Call within the service lifecycle method to trigger an <em>asynchronous</em> lifecycle action.  This action
-     * will not be considered complete until indicated so by calling a method on this interface.
+     * will not be considered complete until indicated so by calling the {@link #complete()} method on the same instance
+     * of this interface.
      *
      * @throws IllegalStateException if called outside of the main service lifecycle method
      */
