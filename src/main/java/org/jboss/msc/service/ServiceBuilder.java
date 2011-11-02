@@ -241,7 +241,8 @@ public interface ServiceBuilder<T> {
     ServiceBuilder<T> addListener(ServiceListener.Inheritance inheritance, Collection<? extends ServiceListener<? super T>> listeners);
 
     /**
-     * Install the defined service into the container.
+     * Install the defined service into the container.  All service listeners defined for this built service will
+     * be invoked from the same thread that calls this method.
      *
      * @return the installed service controller
      * @throws ServiceRegistryException if installation fails
