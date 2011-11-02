@@ -122,14 +122,16 @@ public interface ServiceController<S> extends Value<S> {
     ServiceName[] getAliases();
 
     /**
-     * Add a service listener.  The method corresponding to the current service state is called.
+     * Add a service listener.  The listener's "listener added" callback will be invoked from the same thread that calls
+     * this method.  Then, the method corresponding to the current service state is called.
      *
      * @param serviceListener the service listener
      */
     void addListener(ServiceListener<? super S> serviceListener);
 
     /**
-     * Add a service listener.  The method corresponding to the current service state is called.
+     * Add a service listener.  The listener's "listener added" callback will be invoked from the same thread that calls
+     * this method.  Then, the method corresponding to the current service state is called.
      *
      * @param inheritance the inheritance type for this listener
      * @param serviceListener the service listener
