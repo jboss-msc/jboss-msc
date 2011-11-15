@@ -74,15 +74,15 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
      */
     public static ServiceName of(final ServiceName parent, String... parts) {
         if(parts.length < 1)
-            throw new IllegalArgumentException("Must provide at least one name segment");
+            throw new IllegalArgumentException("Must provide at least one name segment for " + parent.getSimpleName());
         
         ServiceName current = parent;
         for (String part : parts) {
             if (part == null) {
-                throw new IllegalArgumentException("Name segment is null");
+                throw new IllegalArgumentException("Name segment is null for " + current.getSimpleName());
             }
             if (part.isEmpty()) {
-                throw new IllegalArgumentException("Empty name segment is not allowed");
+                throw new IllegalArgumentException("Empty name segment is not allowed for " + current.getSimpleName());
             }
             current = new ServiceName(current, part);
         }
