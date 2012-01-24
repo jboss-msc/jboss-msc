@@ -879,7 +879,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         synchronized (this) {
             assert immediateUnavailableDependencies.contains(dependencyName);
             immediateUnavailableDependencies.remove(dependencyName);
-            if (!immediateUnavailableDependencies.isEmpty() || state.compareTo(Substate.CANCELLED) <= 0) {
+            if (!immediateUnavailableDependencies.isEmpty() || state.compareTo(Substate.CANCELLED) <= 0 || state.compareTo(Substate.REMOVING) >= 0) {
                 return;
             }
             // we dropped it to 0
@@ -902,7 +902,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             immediateUnavailableDependencies.add(dependencyName);
-            if (immediateUnavailableDependencies.size() != 1 || state.compareTo(Substate.CANCELLED) <= 0) {
+            if (immediateUnavailableDependencies.size() != 1 || state.compareTo(Substate.CANCELLED) <= 0 || state.compareTo(Substate.REMOVING) >= 0) {
                 return;
             }
             // we raised it to 1
@@ -942,7 +942,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void transitiveDependencyAvailable() {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            if (-- transitiveUnavailableDepCount != 0 || state.compareTo(Substate.CANCELLED) <= 0) {
+            if (-- transitiveUnavailableDepCount != 0 || state.compareTo(Substate.CANCELLED) <= 0 || state.compareTo(Substate.REMOVING) >= 0) {
                 return;
             }
             // we dropped it to 0
@@ -964,7 +964,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void transitiveDependencyUnavailable() {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            if (++ transitiveUnavailableDepCount != 1 || state.compareTo(Substate.CANCELLED) <= 0) {
+            if (++ transitiveUnavailableDepCount != 1 || state.compareTo(Substate.CANCELLED) <= 0 || state.compareTo(Substate.REMOVING) >= 0) {
                 return;
             }
             // we raised it to 1
