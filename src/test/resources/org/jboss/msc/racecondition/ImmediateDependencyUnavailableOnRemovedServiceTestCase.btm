@@ -1,0 +1,82 @@
+#
+# JBoss, Home of Professional Open Source.
+# Copyright 2012, Red Hat, Inc., and individual contributors
+# as indicated by the @author tags. See the copyright.txt file in the
+# distribution for a full listing of individual contributors.
+#
+# This is free software; you can redistribute it and/or modify it
+# under the terms of the GNU Lesser General Public License as
+# published by the Free Software Foundation; either version 2.1 of
+# the License, or (at your option) any later version.
+#
+# This software is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this software; if not, write to the Free
+# Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+#
+RULE service C on REMOVE mode
+CLASS org.jboss.msc.service.ServiceControllerImpl
+METHOD setMode
+AT ENTRY
+BIND serviceName = $0.primaryRegistration.name.getSimpleName();
+IF serviceName.equals("C") AND $1.toString().equals("REMOVE")
+DO
+    debug("flagging service C on REMOVE mode"),
+    flag("service C on REMOVE mode")
+ENDRULE
+
+RULE before ServiceControllerImpl.immediateDependencyUnavailable
+CLASS org.jboss.msc.service.ServiceControllerImpl
+METHOD immediateDependencyUnavailable
+AT ENTRY
+BIND serviceName = $0.primaryRegistration.name.getSimpleName();
+IF flagged("service C on REMOVE mode") AND serviceName.equals("B") AND incrementCounter("run once before ServiceControllerImpl.immediateDependencyUnavailable") == 1
+DO
+   debug("wait for service enter REMOVING state: " + $0),
+   waitFor("service REMOVING", 100000),
+   debug("wait for service enter REMOVED state: " + $0),
+   waitFor("service REMOVED", 100000),
+   debug("proceed with immediateDependencyUnavailable")
+ENDRULE
+
+RULE service B REMOVING 1
+CLASS org.jboss.msc.service.ServiceControllerImpl
+METHOD doExecute
+AT ENTRY
+BIND serviceName = $0.primaryRegistration.name.getSimpleName()
+IF flagged("service C on REMOVE mode") AND $0.state.toString().equals("REMOVING") AND serviceName.equals("B") AND incrementCounter("run once service B REMOVING") == 1
+DO
+    debug("signaling immediateDependencyUnavailable " + $0),
+    signalWake("service REMOVING", true),
+    debug("signaled immediateDependencyUnavailable")
+ENDRULE
+
+RULE service B REMOVED
+CLASS org.jboss.msc.service.ServiceControllerImpl
+METHOD doExecute
+AT ENTRY
+BIND serviceName = $0.primaryRegistration.name.getSimpleName()
+IF flagged("service C on REMOVE mode") AND $0.state.toString().equals("REMOVED") AND serviceName.equals("B") AND incrementCounter("run once service B REMOVED") == 1
+DO
+    debug("signaling immediateDependencyUnavailable " + $0),
+    signalWake("service REMOVED", true),
+    debug("signaled immediateDependencyUnavailable")
+ENDRULE
+
+RULE clear counters and flags
+CLASS org.jboss.msc.service.AbstractServiceTest
+METHOD tearDown
+AT EXIT
+IF TRUE
+DO
+    debug("clearing counters and flags"),
+    clear("service C on REMOVE mode"),
+    deleteCounter("run once before ServiceControllerImpl.immediateDependencyUnavailable"),
+    deleteCounter("run once service B REMOVING"),
+    deleteCounter("run once service B REMOVED")
+ENDRULE
