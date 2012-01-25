@@ -176,10 +176,12 @@ final class ServiceRegistrationImpl implements Dependency {
     @Override
     public void dependentStopped() {
         assert ! holdsLock(this);
+        final ServiceControllerImpl<?> instance;
         synchronized (this) {
-            if (instance != null) {
-                instance.dependentStopped();
-            }
+            instance = this.instance;
+        }
+        if (instance != null) {
+            instance.dependentStopped();
         }
     }
 
@@ -213,24 +215,26 @@ final class ServiceRegistrationImpl implements Dependency {
     @Override
     public void addDemand() {
         assert ! holdsLock(this);
+        final ServiceControllerImpl<?> instance;
         synchronized (this) {
             demandedByCount++;
-            final ServiceControllerImpl<?> instance = this.instance;
-            if (instance != null) {
-                instance.addDemand();
-            }
+            instance = this.instance;
+        }
+        if (instance != null) {
+            instance.addDemand();
         }
     }
 
     @Override
     public void removeDemand() {
         assert ! holdsLock(this);
+        final ServiceControllerImpl<?> instance;
         synchronized (this) {
             demandedByCount--;
-            final ServiceControllerImpl<?> instance = this.instance;
-            if (instance != null) {
-                instance.removeDemand();
-            }
+            instance = this.instance;
+        }
+        if (instance != null) {
+            instance.removeDemand();
         }
     }
 
