@@ -175,6 +175,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private volatile long lifecycleTime;
 
     private static final Dependent[] NO_DEPENDENTS = new Dependent[0];
+    private static final ServiceControllerImpl<?>[] NO_CONTROLLERS = new ServiceControllerImpl<?>[0];
     private static final String[] NO_STRINGS = new String[0];
 
     ServiceControllerImpl(final Value<? extends Service<S>> serviceValue, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Map<? extends ServiceListener<? super S>, ServiceListener.Inheritance> listeners, final ServiceControllerImpl<?> parent) {
@@ -271,7 +272,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
             }
             if (failCount > 0) {
-                tasks.add(new DependencyFailedTask(dependents));
+                tasks.add(new DependencyFailedTask(dependents, false));
             }
             state = Substate.DOWN;
             // subtract one to compensate for +1 above
@@ -543,15 +544,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         childTarget.valid = false;
                         this.childTarget = null;
                     }
-                    if (! children.isEmpty()) {
-                        // placeholder async task for child removal; last removed child will decrement this count
-                        asyncTasks++;
-                        for (ServiceControllerImpl<?> child : children) {
-                            child.setMode(Mode.REMOVE);
-                        }
-                    }
                     getListenerTasks(transition, tasks);
-                    tasks.add(new DependencyFailedTask(getDependents()));
+                    tasks.add(new DependencyFailedTask(getDependents(), true));
                     break;
                 }
                 case START_FAILED_to_STARTING: {
@@ -584,13 +578,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (childTarget != null) {
                         childTarget.valid = false;
                         this.childTarget = null;
-                    }
-                    if (! children.isEmpty()) {
-                        // placeholder async task for child removal; last removed child will decrement this count
-                        asyncTasks++;
-                        for (ServiceControllerImpl<?> child : children) {
-                            child.setMode(Mode.REMOVE);
-                        }
                     }
                     getListenerTasks(transition, tasks);
                     tasks.add(new StopTask(false));
@@ -1030,7 +1017,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (state == Substate.PROBLEM) {
                 getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
             }
-            tasks.add(new DependencyFailedTask(getDependents()));
+            tasks.add(new DependencyFailedTask(getDependents(), false));
             asyncTasks += tasks.size();
         }
         doExecute(tasks);
@@ -1853,9 +1840,19 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private class StopTask implements Runnable {
         private final boolean onlyUninject;
+        private final ServiceControllerImpl<?>[] children;
 
         StopTask(final boolean onlyUninject) {
             this.onlyUninject = onlyUninject;
+            if (!onlyUninject && !ServiceControllerImpl.this.children.isEmpty()) {
+                this.children = ServiceControllerImpl.this.children.toScatteredArray(NO_CONTROLLERS);
+                // placeholder async task for child removal; last removed child will decrement this count
+                // see removeChild method to verify when this count is decremented
+                ServiceControllerImpl.this.asyncTasks ++;
+            }
+            else {
+                this.children = null;
+            }
         }
 
         public void run() {
@@ -1867,6 +1864,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             try {
                 if (! onlyUninject) {
                     try {
+                        if (children != null) {
+                            for (ServiceController<?> child: children) {
+                                if (child != null) child.setMode(Mode.REMOVE);
+                            }
+                        }
                         final Service<? extends S> service = serviceValue.getValue();
                         if (service != null) {
                             stopService(service, context);
@@ -2015,13 +2017,28 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private class DependencyFailedTask implements Runnable {
 
         private final Dependent[][] dependents;
+        private final ServiceControllerImpl<?>[] children;
 
-        DependencyFailedTask(final Dependent[][] dependents) {
+        DependencyFailedTask(final Dependent[][] dependents, final boolean removeChildren) {
             this.dependents = dependents;
+            if (removeChildren && !ServiceControllerImpl.this.children.isEmpty()) {
+                this.children = ServiceControllerImpl.this.children.toScatteredArray(NO_CONTROLLERS);
+                // placeholder async task for child removal; last removed child will decrement this count
+                // see removeChild method to verify when this count is decremented
+                ServiceControllerImpl.this.asyncTasks ++;
+            }
+            else {
+                this.children = null;
+            }
         }
 
         public void run() {
             try {
+                if (children != null) {
+                    for (ServiceControllerImpl<?> child: children) {
+                        if (child != null) child.setMode(Mode.REMOVE);
+                    }
+                }
                 for (Dependent[] dependentArray : dependents) {
                     for (Dependent dependent : dependentArray) {
                         if (dependent != null) dependent.dependencyFailed();
