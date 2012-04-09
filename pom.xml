@@ -34,31 +34,31 @@
 
     <groupId>org.jboss.msc</groupId>
     <artifactId>jboss-msc</artifactId>
-    <version>1.1.0.CR1-SNAPSHOT</version>
+    <version>1.1.0.Beta1-SNAPSHOT</version>
     <name>JBoss Modular Service Container</name>
 
     <properties>
         <byteman-version>1.5.1</byteman-version>
-        <version.jboss-logmanager>1.2.0.GA</version.jboss-logmanager>
+        <version.jboss-logmanager>1.2.2.GA</version.jboss-logmanager>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>org.jboss.logging</groupId>
             <artifactId>jboss-logging-processor</artifactId>
-            <version>1.0.0.CR5</version>
+            <version>1.0.1.Final</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.jboss.modules</groupId>
             <artifactId>jboss-modules</artifactId>
-            <version>1.0.0.GA</version>
+            <version>1.1.1.GA</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.jboss</groupId>
             <artifactId>jboss-vfs</artifactId>
-            <version>3.0.1.GA</version>
+            <version>3.1.0.Final</version>
             <scope>provided</scope>
             <exclusions>
                 <exclusion>
@@ -70,7 +70,7 @@
         <dependency>
             <groupId>org.jboss.logging</groupId>
             <artifactId>jboss-logging</artifactId>
-            <version>3.1.0.CR1</version>
+            <version>3.1.0.GA</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
