@@ -105,7 +105,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
         public static ServiceContainer create() {
             int cpuCount = Runtime.getRuntime().availableProcessors();
             int coreSize = Math.max(cpuCount << 1, 2);
-            return new ServiceContainerImpl(null, coreSize, 30L, TimeUnit.SECONDS);
+            return new ServiceContainerImpl(null, coreSize, 30L, TimeUnit.SECONDS, true);
         }
 
         /**
@@ -117,7 +117,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
         public static ServiceContainer create(String name) {
             int cpuCount = Runtime.getRuntime().availableProcessors();
             int coreSize = Math.max(cpuCount << 1, 2);
-            return new ServiceContainerImpl(name, coreSize, 30L, TimeUnit.SECONDS);
+            return new ServiceContainerImpl(name, coreSize, 30L, TimeUnit.SECONDS, true);
         }
 
         /**
@@ -130,7 +130,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(int coreSize, long keepAliveTime, TimeUnit keepAliveTimeUnit) {
-            return new ServiceContainerImpl(null, coreSize, keepAliveTime, keepAliveTimeUnit);
+            return new ServiceContainerImpl(null, coreSize, keepAliveTime, keepAliveTimeUnit, true);
         }
 
         /**
@@ -144,7 +144,61 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(String name, int coreSize, long keepAliveTime, TimeUnit keepAliveTimeUnit) {
-            return new ServiceContainerImpl(name, coreSize, keepAliveTime, keepAliveTimeUnit);
+            return new ServiceContainerImpl(name, coreSize, keepAliveTime, keepAliveTimeUnit, true);
+        }
+
+        /**
+         * Create a new instance with a generated name and default thread pool.
+         *
+         * @param autoShutdown {@code true} to automatically shut down the container at VM exit, {@code false} otherwise
+         * @return a new service container instance
+         */
+        public static ServiceContainer create(boolean autoShutdown) {
+            int cpuCount = Runtime.getRuntime().availableProcessors();
+            int coreSize = Math.max(cpuCount << 1, 2);
+            return new ServiceContainerImpl(null, coreSize, 30L, TimeUnit.SECONDS, autoShutdown);
+        }
+
+        /**
+         * Create a new instance with a given name and default thread pool.
+         *
+         * @param name the name of the new container
+         * @param autoShutdown {@code true} to automatically shut down the container at VM exit, {@code false} otherwise
+         * @return a new service container instance
+         */
+        public static ServiceContainer create(String name, boolean autoShutdown) {
+            int cpuCount = Runtime.getRuntime().availableProcessors();
+            int coreSize = Math.max(cpuCount << 1, 2);
+            return new ServiceContainerImpl(name, coreSize, 30L, TimeUnit.SECONDS, autoShutdown);
+        }
+
+        /**
+         * Create a new instance with a generated name and specified initial thread pool settings.
+         *
+         *
+         * @param coreSize the core pool size (must be greater than zero)
+         * @param keepAliveTime the amount of time that non-core threads should linger without tasks
+         * @param keepAliveTimeUnit the time unit for {@code keepAliveTime}
+         * @param autoShutdown {@code true} to automatically shut down the container at VM exit, {@code false} otherwise
+         * @return a new service container instance
+         */
+        public static ServiceContainer create(int coreSize, long keepAliveTime, TimeUnit keepAliveTimeUnit, boolean autoShutdown) {
+            return new ServiceContainerImpl(null, coreSize, keepAliveTime, keepAliveTimeUnit, autoShutdown);
+        }
+
+        /**
+         * Create a new instance with a given name and specified initial thread pool settings.
+         *
+         *
+         * @param name the name of the new container
+         * @param coreSize the core pool size (must be greater than zero)
+         * @param keepAliveTime the amount of time that non-core threads should linger without tasks
+         * @param keepAliveTimeUnit the time unit for {@code keepAliveTime}
+         * @param autoShutdown {@code true} to automatically shut down the container at VM exit, {@code false} otherwise
+         * @return a new service container instance
+         */
+        public static ServiceContainer create(String name, int coreSize, long keepAliveTime, TimeUnit keepAliveTimeUnit, boolean autoShutdown) {
+            return new ServiceContainerImpl(name, coreSize, keepAliveTime, keepAliveTimeUnit, autoShutdown);
         }
     }
 

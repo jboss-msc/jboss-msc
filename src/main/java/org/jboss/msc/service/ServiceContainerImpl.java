@@ -96,6 +96,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     private long shutdownInitiated;
 
     private final List<TerminateListener> terminateListeners = new ArrayList<TerminateListener>(1);
+    private final boolean autoShutdown;
 
     private static final class ShutdownHookHolder {
         private static final Set<Reference<ServiceContainerImpl, Void>> containers;
@@ -115,7 +116,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                                 listener = new LatchListener(set.size());
                                 for (Reference<ServiceContainerImpl, Void> containerRef : set) {
                                     final ServiceContainerImpl container = containerRef.get();
-                                    if (container == null) {
+                                    if (container == null || ! container.isAutoShutdown()) {
                                         listener.countDown();
                                         continue;
                                     }
@@ -224,8 +225,9 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
     };
 
-    ServiceContainerImpl(String name, int coreSize, long timeOut, TimeUnit timeOutUnit) {
+    ServiceContainerImpl(String name, int coreSize, long timeOut, TimeUnit timeOutUnit, final boolean autoShutdown) {
         super(null);
+        this.autoShutdown = autoShutdown;
         final int serialNo = SERIAL.getAndIncrement();
         if (name == null) {
             name = String.format("anonymous-%d", Integer.valueOf(serialNo));
@@ -278,6 +280,10 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 }
             });
         }
+    }
+
+    boolean isAutoShutdown() {
+        return autoShutdown;
     }
 
     public String getName() {
