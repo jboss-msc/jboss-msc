@@ -28,6 +28,7 @@ import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
 import static junit.framework.Assert.fail;
+import static org.junit.Assert.assertArrayEquals;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -300,5 +301,15 @@ public final class ServiceNameTestCase {
         assertEquals(ServiceName.parse("jboss.server.path.\"jboss.home.dir\""), ServiceName.of("jboss", "server", "path", "jboss.home.dir"));
         assertEquals(ServiceName.parse("\"first.section\".\"second.section\".third.fourth"), ServiceName.of("first.section", "second.section", "third", "fourth"));
         assertEquals(ServiceName.parse("\"all.in.one\""), ServiceName.of("all.in.one"));
+    }
+
+    @Test
+    public void testToArray() {
+        final ServiceName one = ServiceName.of("foo", "bar", "baz");
+        final ServiceName two = ServiceName.of("foo", "bar");
+        final ServiceName three = ServiceName.of("foo");
+        assertArrayEquals(new String[] { "foo", "bar", "baz" }, one.toArray());
+        assertArrayEquals(new String[] { "foo", "bar" }, two.toArray());
+        assertArrayEquals(new String[] { "foo" }, three.toArray());
     }
 }

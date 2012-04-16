@@ -612,16 +612,17 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
      * @return the string array
      */
     public String[] toArray() {
-        return toArray(0);
+        return toArray(1);
     }
 
-    private String[] toArray(final int idx) {
+    private String[] toArray(final int len) {
+        final String[] result;
         if (parent == null) {
-            return new String[idx];
+            result = new String[len];
         } else {
-            String[] result = parent.toArray(idx + 1);
-            result[result.length - idx - 1] = name;
-            return result;
+            result = parent.toArray(len + 1);
         }
+        result[result.length - len] = name;
+        return result;
     }
 }
