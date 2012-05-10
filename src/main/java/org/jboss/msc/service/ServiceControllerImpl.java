@@ -153,9 +153,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private int transitiveUnavailableDepCount;
     /**
-     * Indicates whether parents have been demanded.
+     * Indicates whether dependencies have been demanded.
      */
-    private boolean parentsDemanded = false;
+    private boolean dependenciesDemanded = false;
     /**
      * The number of asynchronous tasks that are currently running. This
      * includes listeners, start/stop methods, outstanding asynchronous
@@ -204,10 +204,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     void removeAsyncTask() {
         asyncTasks--;
-    }
-
-    void removeAsyncTasks(final int size) {
-        asyncTasks -= size;
     }
 
     /**
@@ -428,7 +424,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     void transition(final ArrayList<Runnable> tasks) {
         assert holdsLock(this);
-        Transition transition = null;
+        Transition transition;
         do {
             if (asyncTasks != 0) {
                 // no movement possible
@@ -438,16 +434,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             switch (mode) {
                 case NEVER:
                 case REMOVE:
-                    if (parentsDemanded) {
-                        tasks.add(new UndemandParentsTask());
-                        parentsDemanded = false;
+                    if (dependenciesDemanded) {
+                        tasks.add(new UndemandDependenciesTask());
+                        dependenciesDemanded = false;
                     }
                     break;
                 case LAZY: {
                     if (state == Substate.UP) {
-                        if (!parentsDemanded) {
-                            tasks.add(new DemandParentsTask());
-                            parentsDemanded = true;
+                        if (!dependenciesDemanded) {
+                            tasks.add(new DemandDependenciesTask());
+                            dependenciesDemanded = true;
                         }
                         break;
                     }
@@ -455,19 +451,19 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case ON_DEMAND:
                 case PASSIVE: {
-                    if (demandedByCount > 0 && parentsDemanded == false) {
-                        tasks.add(new DemandParentsTask());
-                        parentsDemanded = true;
-                    } else if (demandedByCount == 0 && parentsDemanded == true) {
-                        tasks.add(new UndemandParentsTask());
-                        parentsDemanded = false;
+                    if (demandedByCount > 0 && dependenciesDemanded == false) {
+                        tasks.add(new DemandDependenciesTask());
+                        dependenciesDemanded = true;
+                    } else if (demandedByCount == 0 && dependenciesDemanded == true) {
+                        tasks.add(new UndemandDependenciesTask());
+                        dependenciesDemanded = false;
                     }
                     break;
                 }
                 case ACTIVE: {
-                    if (parentsDemanded == false) {
-                        tasks.add(new DemandParentsTask());
-                        parentsDemanded = true;
+                    if (dependenciesDemanded == false) {
+                        tasks.add(new DemandDependenciesTask());
+                        dependenciesDemanded = true;
                     }
                     break;
                 }
@@ -524,9 +520,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 case UP_to_STOP_REQUESTED: {
                     if (mode == Mode.LAZY && demandedByCount == 0) {
                         upperCount--;
-                        assert parentsDemanded == true;
-                        tasks.add(new UndemandParentsTask());
-                        parentsDemanded = false;
+                        assert dependenciesDemanded == true;
+                        tasks.add(new UndemandDependenciesTask());
+                        dependenciesDemanded = false;
                     }
                     getListenerTasks(transition, tasks);
                     lifecycleTime = System.nanoTime();
@@ -645,16 +641,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final IdentityHashMap<ServiceListener<? super S>,ServiceListener.Inheritance> listeners = this.listeners;
         for (ServiceListener<? super S> listener : listeners.keySet()) {
             tasks.add(new ListenerTask(listener, notification));
-        }
-    }
-
-    void doExecute(final Runnable task) {
-        assert !holdsLock(this);
-        if (task == null) return;
-        try {
-            primaryRegistration.getContainer().getExecutor().execute(task);
-        } catch (RejectedExecutionException e) {
-            task.run();
         }
     }
 
@@ -1079,7 +1065,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private void doDemandParents() {
+    private void doDemandDependencies() {
         assert !holdsLock(this);
         for (Dependency dependency : dependencies) {
             dependency.addDemand();
@@ -1088,7 +1074,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         if (parent != null) parent.addDemand();
     }
 
-    private void doUndemandParents() {
+    private void doUndemandDependencies() {
         assert !holdsLock(this);
         for (Dependency dependency : dependencies) {
             dependency.removeDemand();
@@ -1564,11 +1550,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return String.format("Controller for %s@%x", getName(), Integer.valueOf(hashCode()));
     }
 
-    private class DemandParentsTask implements Runnable {
+    private class DemandDependenciesTask implements Runnable {
 
         public void run() {
             try {
-                doDemandParents();
+                doDemandDependencies();
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
                     // Subtract one for this task
@@ -1583,11 +1569,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class UndemandParentsTask implements Runnable {
+    private class UndemandDependenciesTask implements Runnable {
 
         public void run() {
             try {
-                doUndemandParents();
+                doUndemandDependencies();
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
                     // Subtract one for this task
