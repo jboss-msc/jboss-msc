@@ -173,7 +173,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private static final ServiceControllerImpl<?>[] NO_CONTROLLERS = new ServiceControllerImpl<?>[0];
     private static final String[] NO_STRINGS = new String[0];
 
+    static final int MAX_DEPENDENCIES = (1 << 14) - 1;
+
     ServiceControllerImpl(final Value<? extends Service<S>> serviceValue, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Map<? extends ServiceListener<? super S>, ServiceListener.Inheritance> listeners, final ServiceControllerImpl<?> parent) {
+        assert dependencies.length <= MAX_DEPENDENCIES;
         this.serviceValue = serviceValue;
         this.dependencies = dependencies;
         this.injections = injections;

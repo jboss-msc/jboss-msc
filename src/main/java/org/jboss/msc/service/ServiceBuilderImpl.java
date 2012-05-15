@@ -211,6 +211,9 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
             return existing;
         }
         final Dependency newDep = new Dependency(name, type);
+        if (dependencies.size() == ServiceControllerImpl.MAX_DEPENDENCIES) {
+            throw new IllegalArgumentException("Too many dependencies specified (max is " + ServiceControllerImpl.MAX_DEPENDENCIES + ")");
+        }
         dependencies.put(name, newDep);
         return newDep;
     }
