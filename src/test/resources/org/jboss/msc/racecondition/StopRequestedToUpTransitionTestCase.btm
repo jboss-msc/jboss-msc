@@ -28,7 +28,7 @@ BIND NOTHING
 IF incrementCounter("run rule only once") == 1
 DO
    # DependencyStoppedTask will be able of acquiring the ServiceControllerImpl lock only after
-   # upperCount is incremented to 1, thus causing the service to transition from STOP_REQUESTED to UP
+   # shouldStop() returns false, thus causing the service to transition from STOP_REQUESTED to UP
    debug("wait for setMode(Mode.ACTIVE)"),
    signalWake("STOP_REQUESTED state", true),
    waitFor("setMode_ACTIVE", 100000),
@@ -53,7 +53,7 @@ CLASS org.jboss.msc.service.ServiceControllerImpl
 METHOD setMode
 AT EXIT
 BIND NOTHING
-IF  $0.upperCount > 0 && $0.state.toString().equals("STOP_REQUESTED")
+IF  ! $0.shouldStop() && $0.state.toString().equals("STOP_REQUESTED")
 DO
     # signal UpRequested, making the service controller to enter the exact transition that we need to
     # test: STOP_REQUESTED_to_UP

@@ -48,7 +48,7 @@ public class StopRequestedToUpTransitionTestCase extends AbstractRaceConditionTe
     /*
      * In order to test this specific scenario, we use Byteman to insert a monitor in the specific moment
      *  where the transition from STOP_REQUESTED to the next state is going to occur.
-     *  This monitor will force the thread to wait until upperCount is incremented to 1.
+     *  This monitor will force the thread to wait until shouldStop() returns false.
      */
     @Test
     public void test() throws Exception {
