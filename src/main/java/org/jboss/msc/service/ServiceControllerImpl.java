@@ -114,9 +114,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private int unstartedDependencies;
     /**
-     * Count for dependencies that are DOWN.
+     * Count for dependencies that are trying to stop.  If this count is greater than zero then
+     * dependents will be notified that a stop is necessary.
      */
-    private int downDependencies;
+    private int stoppingDependencies;
     /**
      * The number of dependents that are currently running. The deployment will
      * not execute the {@code stop()} method (and subsequently leave the
@@ -187,7 +188,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         this.parent = parent;
         int depCount = dependencies.length;
         unstartedDependencies = 0;
-        downDependencies = parent == null? depCount : depCount + 1;
+        stoppingDependencies = parent == null? depCount : depCount + 1;
         children = new IdentityHashSet<ServiceControllerImpl<?>>();
         immediateUnavailableDependencies = new IdentityHashSet<ServiceName>();
     }
@@ -333,7 +334,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     return Transition.DOWN_to_REMOVING;
                 } else if (mode == ServiceController.Mode.NEVER) {
                     return Transition.DOWN_to_WONT_START;
-                } else if (shouldStart() && (mode != Mode.PASSIVE || downDependencies == 0)) {
+                } else if (shouldStart() && (mode != Mode.PASSIVE || stoppingDependencies == 0)) {
                     return Transition.DOWN_to_START_REQUESTED;
                 } else {
                     // mode is either LAZY or ON_DEMAND with demandedByCount == 0, or mode is PASSIVE and downDep > 0
@@ -342,7 +343,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             case WAITING: {
                 if (((mode != Mode.ON_DEMAND && mode != Mode.LAZY) || demandedByCount > 0) &&
-                        (mode != Mode.PASSIVE || downDependencies == 0)) {
+                        (mode != Mode.PASSIVE || stoppingDependencies == 0)) {
                     return Transition.WAITING_to_DOWN;
                 }
                 break;
@@ -357,7 +358,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 return Transition.STOPPING_to_DOWN;
             }
             case STOP_REQUESTED: {
-                if (shouldStart() && downDependencies == 0) {
+                if (shouldStart() && stoppingDependencies == 0) {
                     return Transition.STOP_REQUESTED_to_UP;
                 }
                 if (runningDependents == 0) {
@@ -366,14 +367,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case UP: {
-                if (shouldStop() || downDependencies > 0) {
+                if (shouldStop() || stoppingDependencies > 0) {
                     return Transition.UP_to_STOP_REQUESTED;
                 }
                 break;
             }
             case START_FAILED: {
                 if (shouldStart()) {
-                    if (downDependencies == 0) {
+                    if (stoppingDependencies == 0) {
                         if (startException == null) {
                             return Transition.START_FAILED_to_STARTING;
                         }
@@ -397,13 +398,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             case START_REQUESTED: {
                 if (shouldStart()) {
-                    if (mode == Mode.PASSIVE && downDependencies > 0) {
+                    if (mode == Mode.PASSIVE && stoppingDependencies > 0) {
                         return Transition.START_REQUESTED_to_DOWN;
                     }
                     if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0 || failCount > 0) {
                         return Transition.START_REQUESTED_to_PROBLEM;
                     }
-                    else if (downDependencies == 0) {
+                    else if (stoppingDependencies == 0) {
                         return Transition.START_REQUESTED_to_START_INITIATING;
                     }
                 } else {
@@ -840,7 +841,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void immediateDependencyUp() {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            if (--downDependencies != 0) {
+            if (--stoppingDependencies != 0) {
                 return;
             }
             // we dropped it to 0
@@ -855,7 +856,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void immediateDependencyDown() {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            if (++downDependencies != 1) {
+            if (++stoppingDependencies != 1) {
                 return;
             }
             // we dropped it below 0
