@@ -225,7 +225,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
 
         public String dumpServiceDetails(final String serviceName) {
-            final ServiceRegistrationImpl registration = registry.get(ServiceName.parse(name));
+            final ServiceRegistrationImpl registration = registry.get(ServiceName.parse(serviceName));
             if (registration != null) {
                 final ServiceControllerImpl<?> instance = registration.getInstance();
                 if (instance != null) {

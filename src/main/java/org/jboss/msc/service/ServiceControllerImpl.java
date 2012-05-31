@@ -1231,22 +1231,38 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     String dumpServiceDetails() {
+        final StringBuilder b = new StringBuilder();
+        IdentityHashSet<Dependent> dependents;
+        synchronized (primaryRegistration) {
+            dependents = primaryRegistration.getDependents();
+            synchronized (dependents) {
+                b.append("Service Name: ").append(primaryRegistration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
+                for (Dependent dependent : dependents) {
+                    b.append("        ").append(dependent.getController().getName().toString()).append('\n');
+                }
+            }
+        }
+        b.append("Service Aliases: ").append(aliasRegistrations.length).append('\n');
+        for (ServiceRegistrationImpl registration : aliasRegistrations) {
+            synchronized (registration) {
+                dependents = registration.getDependents();
+                synchronized (dependents) {
+                    b.append("    ").append(registration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
+                    for (Dependent dependent : dependents) {
+                        b.append("        ").append(dependent.getController().getName().toString()).append('\n');
+                    }
+                }
+            }
+        }
         synchronized (this) {
-            final StringBuilder b = new StringBuilder();
-            final IdentityHashSet<Dependent> dependents = primaryRegistration.getDependents();
-            b.append("Service Name: ").append(primaryRegistration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
-            for (Dependent dependent : dependents) {
-                b.append("        ").append(dependent.getController().getName().toString());
+            b.append("Children: ").append(children.size()).append('\n');
+            for (ServiceControllerImpl<?> child : children) {
+                synchronized (child) {
+                    b.append("    ").append(child.getName().toString()).append(" - State: ").append(child.state.getState()).append(" (Substate: ").append(child.state).append(")\n");
+                }
             }
             final Substate state = this.state;
             b.append("State: ").append(state.getState()).append(" (Substate: ").append(state).append(")\n");
-            b.append("Service Aliases: ").append(aliasRegistrations.length).append('\n');
-            for (ServiceRegistrationImpl registration : aliasRegistrations) {
-                b.append("    ").append(registration.getName().toString()).append(" - Dependents: ").append(registration.getDependents().size()).append('\n');
-                for (Dependent dependent : registration.getDependents()) {
-                    b.append("        ").append(dependent.getController().getName().toString());
-                }
-            }
             if (parent != null) {
                 b.append("Parent Name: ").append(parent.getPrimaryRegistration().getName().toString()).append('\n');
             }
@@ -1270,7 +1286,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             b.append("Transitive Unavailable Dep Count: ").append(transitiveUnavailableDepCount).append('\n');
             b.append("Dependencies Demanded: ").append(dependenciesDemanded ? "yes" : "no").append('\n');
             b.append("Async Tasks: ").append(asyncTasks).append('\n');
-            b.append("Lifecycle Timestamp: ").append(lifecycleTime).append(String.format(" = %1$b %1$d %1$H:%1$M:%1$S.%1$L", lifecycleTime));
+            if (lifecycleTime != 0L) b.append("Lifecycle Timestamp: ").append(lifecycleTime).append(String.format(" = %tb %<td %<tH:%<tM:%<tS.%<tL", lifecycleTime));
             return b.toString();
         }
     }
