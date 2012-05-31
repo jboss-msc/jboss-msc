@@ -297,6 +297,14 @@ public interface ServiceController<S> extends Value<S> {
          * Service has been removed.
          */
         REMOVED(State.REMOVED, true),
+        /**
+         * Service is up, but child services are still being processed.
+         */
+        PROCESSING_CHILD_SERVICES(State.UP, false),
+        /**
+         * One or more child services are in a problem or failed state.
+         */
+        CHILD_SERVICE_PROBLEM(State.UP, true),
         ;
         private final State state;
         private final boolean restState;
@@ -353,8 +361,9 @@ public interface ServiceController<S> extends Value<S> {
          */
         START_INITIATING_to_STARTING (Substate.START_INITIATING, Substate.STARTING),
         /**
-         * Transition from {@link Substate#STARTING STARTING} to {@link Substate#UP UP}.
+         * Transition from {@link Substate#STARTING STARTING} to {@link Substate#UP UP}.  No longer used.
          */
+        @Deprecated
         STARTING_to_UP(Substate.STARTING, Substate.UP),
         /**
          * Transition from {@link Substate#STARTING STARTING} to {@link Substate#START_FAILED START_FAILED}.
@@ -415,7 +424,44 @@ public interface ServiceController<S> extends Value<S> {
         /**
          * Transition from {@link Substate#WONT_START WONT_START} to {@link Substate#DOWN DOWN}.
          */
-        WONT_START_to_DOWN(Substate.WONT_START, Substate.DOWN);
+        WONT_START_to_DOWN(Substate.WONT_START, Substate.DOWN),
+        /**
+         * Transition from {@link Substate#STARTING STARTING} to {@link Substate#PROCESSING_CHILD_SERVICES PROCESSING_CHILD_SERVICES}.
+         */
+        STARTING_to_PROCESSING_CHILD_SERVICES(Substate.STARTING, Substate.PROCESSING_CHILD_SERVICES),
+        /**
+         * Transition from {@link Substate#PROCESSING_CHILD_SERVICES PROCESSING_CHILD_SERVICES} to {@link Substate#CHILD_SERVICE_PROBLEM CHILD_SERVICE_PROBLEM}.
+         */
+        PROCESSING_CHILD_SERVICES_to_CHILD_SERVICE_PROBLEM(Substate.PROCESSING_CHILD_SERVICES, Substate.CHILD_SERVICE_PROBLEM),
+        /**
+         * Transition from {@link Substate#CHILD_SERVICE_PROBLEM CHILD_SERVICE_PROBLEM} to {@link Substate#PROCESSING_CHILD_SERVICES PROCESSING_CHILD_SERVICES}.
+         */
+        CHILD_SERVICE_PROBLEM_to_PROCESSING_CHILD_SERVICES(Substate.CHILD_SERVICE_PROBLEM, Substate.PROCESSING_CHILD_SERVICES),
+        /**
+         * Transition from {@link Substate#PROCESSING_CHILD_SERVICES PROCESSING_CHILD_SERVICES} to {@link Substate#UP UP}.
+         */
+        PROCESSING_CHILD_SERVICES_to_UP(Substate.PROCESSING_CHILD_SERVICES, Substate.UP),
+        /**
+         * Transition from {@link Substate#UP UP} to {@link Substate#PROCESSING_CHILD_SERVICES PROCESSING_CHILD_SERVICES}.
+         */
+        UP_to_PROCESSING_CHILD_SERVICES(Substate.UP, Substate.PROCESSING_CHILD_SERVICES),
+        /**
+         * Transition from {@link Substate#CHILD_SERVICE_PROBLEM CHILD_SERVICE_PROBLEM} to {@link Substate#STOP_REQUESTED STOP_REQUESTED}.
+         */
+        CHILD_SERVICE_PROBLEM_to_STOP_REQUESTED(Substate.CHILD_SERVICE_PROBLEM, Substate.STOP_REQUESTED),
+        /**
+         * Transition from {@link Substate#STOP_REQUESTED STOP_REQUESTED} to {@link Substate#CHILD_SERVICE_PROBLEM CHILD_SERVICE_PROBLEM}.
+         */
+        STOP_REQUESTED_to_CHILD_SERVICE_PROBLEM(Substate.STOP_REQUESTED, Substate.CHILD_SERVICE_PROBLEM),
+        /**
+         * Transition from {@link Substate#PROCESSING_CHILD_SERVICES PROCESSING_CHILD_SERVICES} to {@link Substate#STOP_REQUESTED STOP_REQUESTED}.
+         */
+        PROCESSING_CHILD_SERVICES_to_STOP_REQUESTED(Substate.PROCESSING_CHILD_SERVICES, Substate.STOP_REQUESTED),
+        /**
+         * Transition from {@link Substate#STOP_REQUESTED STOP_REQUESTED} to {@link Substate#PROCESSING_CHILD_SERVICES PROCESSING_CHILD_SERVICES}.
+         */
+        STOP_REQUESTED_to_PROCESSING_CHILD_SERVICES(Substate.STOP_REQUESTED, Substate.PROCESSING_CHILD_SERVICES),
+        ;
 
         private final Substate before;
         private final Substate after;

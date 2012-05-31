@@ -150,7 +150,7 @@ public class MultipleListenersTestCase extends AbstractServiceTest {
         }
 
         public void transition(final ServiceController<? extends Object> serviceController, final ServiceController.Transition transition) {
-            if (transition == ServiceController.Transition.STARTING_to_UP) {
+            if (transition == ServiceController.Transition.STARTING_to_PROCESSING_CHILD_SERVICES) {
                 startedServices.add(serviceController.getName());
                 latch.transition(serviceController, transition);
             }
