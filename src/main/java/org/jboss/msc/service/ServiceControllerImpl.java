@@ -1230,6 +1230,51 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return listeners;
     }
 
+    String dumpServiceDetails() {
+        synchronized (this) {
+            final StringBuilder b = new StringBuilder();
+            final IdentityHashSet<Dependent> dependents = primaryRegistration.getDependents();
+            b.append("Service Name: ").append(primaryRegistration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
+            for (Dependent dependent : dependents) {
+                b.append("        ").append(dependent.getController().getName().toString());
+            }
+            final Substate state = this.state;
+            b.append("State: ").append(state.getState()).append(" (Substate: ").append(state).append(")\n");
+            b.append("Service Aliases: ").append(aliasRegistrations.length).append('\n');
+            for (ServiceRegistrationImpl registration : aliasRegistrations) {
+                b.append("    ").append(registration.getName().toString()).append(" - Dependents: ").append(registration.getDependents().size()).append('\n');
+                for (Dependent dependent : registration.getDependents()) {
+                    b.append("        ").append(dependent.getController().getName().toString());
+                }
+            }
+            if (parent != null) {
+                b.append("Parent Name: ").append(parent.getPrimaryRegistration().getName().toString()).append('\n');
+            }
+            b.append("Dependencies: ").append(dependencies.length).append('\n');
+            for (int i = 0; i < dependencies.length; i ++) {
+                b.append("    ").append(dependencies[i].getName().toString()).append('\n');
+            }
+            b.append("Service Mode: ").append(mode).append('\n');
+            if (startException != null) {
+                b.append("Start Exception: ").append(startException.getClass().getName()).append(" (Message: ").append(startException.getMessage()).append(")\n");
+            }
+            b.append("Demanded By: ").append(demandedByCount).append('\n');
+            b.append("Unstarted Dependencies: ").append(unstartedDependencies).append('\n');
+            b.append("Stopping Dependencies: ").append(stoppingDependencies).append('\n');
+            b.append("Running Dependents: ").append(runningDependents).append('\n');
+            b.append("Fail Count: ").append(failCount).append('\n');
+            b.append("Immediate Unavailable Dep Count: ").append(immediateUnavailableDependencies.size()).append('\n');
+            for (ServiceName name : immediateUnavailableDependencies) {
+                b.append("    ").append(name.toString()).append('\n');
+            }
+            b.append("Transitive Unavailable Dep Count: ").append(transitiveUnavailableDepCount).append('\n');
+            b.append("Dependencies Demanded: ").append(dependenciesDemanded ? "yes" : "no").append('\n');
+            b.append("Async Tasks: ").append(asyncTasks).append('\n');
+            b.append("Lifecycle Timestamp: ").append(lifecycleTime).append(String.format(" = %1$b %1$d %1$H:%1$M:%1$S.%1$L", lifecycleTime));
+            return b.toString();
+        }
+    }
+
     private enum ListenerNotification {
         /** Notify the listener that is has been added. */
         LISTENER_ADDED,

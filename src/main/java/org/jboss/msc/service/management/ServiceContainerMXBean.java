@@ -73,4 +73,12 @@ public interface ServiceContainerMXBean {
      * @return the container state, as a string
      */
     String dumpServicesToString();
+
+    /**
+     * Dump all details of a service.
+     *
+     * @param serviceName the name of the service to examine
+     * @return the details, as a string
+     */
+    String dumpServiceDetails(String serviceName);
 }

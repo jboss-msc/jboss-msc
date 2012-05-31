@@ -223,6 +223,17 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 throw new IllegalStateException(e);
             }
         }
+
+        public String dumpServiceDetails(final String serviceName) {
+            final ServiceRegistrationImpl registration = registry.get(ServiceName.parse(name));
+            if (registration != null) {
+                final ServiceControllerImpl<?> instance = registration.getInstance();
+                if (instance != null) {
+                    return instance.dumpServiceDetails();
+                }
+            }
+            return null;
+        }
     };
 
     ServiceContainerImpl(String name, int coreSize, long timeOut, TimeUnit timeOutUnit, final boolean autoShutdown) {
