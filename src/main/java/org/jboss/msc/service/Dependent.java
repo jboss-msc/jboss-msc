@@ -97,7 +97,7 @@ interface Dependent {
 
     /**
      * Notify this dependent that all {@link #transitiveDependencyUnavailable() unavailable} transitive dependencies are
-     * now available (i.e., they are installed and wlil perform an attempt to start shortly).
+     * now available (i.e., they are installed and will perform an attempt to start shortly).
      * <p> This method must not be called under a lock.
      */
     void transitiveDependencyAvailable();
