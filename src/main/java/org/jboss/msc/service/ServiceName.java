@@ -48,6 +48,7 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
     private static final Pattern validNameSegmentPattern = Pattern.compile("[^\\p{Cntrl}\\p{Space}]+");
 
     private final String name;
+    @SuppressWarnings("unused")
     private volatile String canonicalName;
     private final ServiceName parent;
     private final transient int hashCode;

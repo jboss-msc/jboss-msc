@@ -41,7 +41,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -209,7 +208,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
         public String dumpServicesToString() {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            PrintStream ps = null;
+            PrintStream ps;
             try {
                 ps = new PrintStream(baos, false, "UTF-8");
             } catch (UnsupportedEncodingException e) {
@@ -597,7 +596,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         final Set<ServiceControllerImpl<?>> visited = new IdentityHashSet<ServiceControllerImpl<?>>();
         final Deque<ServiceName> visitStack = new ArrayDeque<ServiceName>();
         final ServiceRegistrationImpl reg = instance.getPrimaryRegistration();
-        IdentityHashSet<Dependent> dependents = null;
+        IdentityHashSet<Dependent> dependents;
         synchronized (reg) {
             visitStack.push(instance.getName());
             dependents = reg.getDependents();
