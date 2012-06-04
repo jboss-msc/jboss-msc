@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Pattern;
 
 /**
@@ -47,8 +48,11 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
     private static final Pattern validNameSegmentPattern = Pattern.compile("[^\\p{Cntrl}\\p{Space}]+");
 
     private final String name;
+    private volatile String canonicalName;
     private final ServiceName parent;
     private final transient int hashCode;
+
+    private static final AtomicReferenceFieldUpdater<ServiceName, String> canonicalNameUpdater = AtomicReferenceFieldUpdater.newUpdater(ServiceName.class, String.class, "canonicalName");
 
     /**
      * The root name "jboss".
@@ -256,7 +260,16 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
      * @return the canonical name
      */
     public String getCanonicalName() {
-        return getCanonicalName(new StringBuilder()).toString();
+        String name = canonicalName;
+        if (name != null) {
+            return name;
+        }
+        name = getCanonicalName(new StringBuilder()).toString();
+        if (canonicalNameUpdater.compareAndSet(this, null, name)) {
+            return name;
+        } else {
+            return canonicalName;
+        }
     }
 
     /**
