@@ -46,7 +46,14 @@ class ServiceTargetImpl implements ServiceTarget {
     private final Set<ServiceName> dependencies = Collections.synchronizedSet(new HashSet<ServiceName>());
 
     ServiceTargetImpl(final ServiceTargetImpl parent) {
+        if (parent == null) {
+            throw new IllegalStateException("parent is null");
+        }
         this.parent = parent;
+    }
+
+    ServiceTargetImpl() {
+        this.parent = null;
     }
 
     @Override

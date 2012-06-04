@@ -236,7 +236,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     };
 
     ServiceContainerImpl(String name, int coreSize, long timeOut, TimeUnit timeOutUnit, final boolean autoShutdown) {
-        super(null);
         this.autoShutdown = autoShutdown;
         final int serialNo = SERIAL.getAndIncrement();
         if (name == null) {
