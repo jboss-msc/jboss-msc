@@ -500,7 +500,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                     break;
                 case LAZY: {
-                    if (state == Substate.UP) {
+                    if (state.getState() == State.UP && state != Substate.STOP_REQUESTED) {
                         if (!dependenciesDemanded) {
                             tasks.add(new DemandDependenciesTask());
                             dependenciesDemanded = true;
@@ -1070,7 +1070,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
         if (state == Substate.WONT_START) {
             dependent.immediateDependencyUnavailable(dependencyName);
-        } else if (state == Substate.UP) {
+        } else if (state.getState() == State.UP && state != Substate.STOP_REQUESTED) {
             dependent.immediateDependencyUp();
         }
     }
@@ -1104,7 +1104,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         synchronized (this) {
             final int cnt = this.demandedByCount;
             this.demandedByCount += demandedByCount;
-            boolean notStartedLazy = mode == Mode.LAZY && state != Substate.UP;
+            boolean notStartedLazy = mode == Mode.LAZY && !(state.getState() == State.UP && state != Substate.STOP_REQUESTED);
             propagate = cnt == 0 && (mode == Mode.ON_DEMAND || notStartedLazy || mode == Mode.PASSIVE);
             if (propagate) {
                 transition(tasks);
@@ -1120,7 +1120,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final boolean propagate;
         synchronized (this) {
             final int cnt = --demandedByCount;
-            boolean notStartedLazy = mode == Mode.LAZY && state != Substate.UP;
+            boolean notStartedLazy = mode == Mode.LAZY && !(state.getState() == State.UP && state != Substate.STOP_REQUESTED);
             propagate = cnt == 0 && (mode == Mode.ON_DEMAND || notStartedLazy || mode == Mode.PASSIVE);
             if (propagate) {
                 transition(tasks);
@@ -1192,6 +1192,26 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     public S getValue() throws IllegalStateException {
         return serviceValue.getValue().getValue();
+    }
+
+    public S awaitValue() throws IllegalStateException, InterruptedException {
+        assert !holdsLock(this);
+        synchronized (this) {
+            for (;;) switch (state.getState()) {
+                case UP: {
+                    return serviceValue.getValue().getValue();
+                }
+                case START_FAILED: {
+                    throw new IllegalStateException("Failed to start service", startException);
+                }
+                case REMOVED: {
+                    throw new IllegalStateException("Service was removed");
+                }
+                default: {
+                    wait();
+                }
+            }
+        }
     }
 
     public Service<S> getService() throws IllegalStateException {

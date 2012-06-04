@@ -100,6 +100,15 @@ public interface ServiceController<S> extends Value<S> {
     S getValue() throws IllegalStateException;
 
     /**
+     * Wait for a service to come up, and then return its value.
+     *
+     * @return the service value
+     * @throws IllegalStateException if the service is not available (i.e. it was removed or failed)
+     * @throws InterruptedException if the wait operation was interrupted
+     */
+    S awaitValue() throws IllegalStateException, InterruptedException;
+
+    /**
      * Get the service.
      *
      * @return the service
