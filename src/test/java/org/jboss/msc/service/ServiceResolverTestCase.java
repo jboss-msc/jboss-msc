@@ -174,7 +174,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
 
         @Override
         public void transition(final ServiceController<? extends Object> controller, final ServiceController.Transition transition) {
-            if (transition.getBefore().getState() != ServiceController.State.UP && transition.getAfter().getState() == ServiceController.State.UP) {
+            if (transition.enters(ServiceController.State.UP)) {
                 startedControllers.add(controller);
             }
             super.transition(controller, transition);

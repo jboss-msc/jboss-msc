@@ -499,6 +499,36 @@ public interface ServiceController<S> extends Value<S> {
         }
 
         /**
+         * Determine whether this transition causes entry into the given state.
+         *
+         * @param state the state
+         * @return {@code true} if the state is entered by this transition
+         */
+        public boolean enters(State state) {
+            return before.getState() != state && after.getState() == state;
+        }
+
+        /**
+         * Determine whether this transition causes exit from the given state.
+         *
+         * @param state the state
+         * @return {@code true} if the state is exited by this transition
+         */
+        public boolean exits(State state) {
+            return before.getState() == state && after.getState() != state;
+        }
+
+        /**
+         * Determine whether this substate transition retains the same given state before and after transition.
+         *
+         * @param state the state
+         * @return {@code true} if the state is retained
+         */
+        public boolean retains(State state) {
+            return before.getState() == state && after.getState() == state;
+        }
+
+        /**
          * Get the source state of this transition.
          *
          * @return the source state

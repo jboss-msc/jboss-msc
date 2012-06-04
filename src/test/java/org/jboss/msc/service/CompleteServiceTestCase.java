@@ -171,7 +171,7 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
             .addListener(testListener)
             .addListener(new AbstractServiceListener<Void>() {
                 public void transition(final ServiceController<? extends Void> controller, final ServiceController.Transition transition) {
-                    if (transition.getAfter() == ServiceController.Substate.REMOVED) {
+                    if (transition.enters(State.REMOVED)) {
                         // when service E is removed, install service A as foo service
                         final Value<ServiceA> serviceAValue = Values.immediateValue(serviceA);
                         try {
@@ -271,7 +271,7 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
 
                     @Override
                     public void transition(final ServiceController<? extends ServiceA> controller, final ServiceController.Transition transition) {
-                        if (transition.getAfter() == ServiceController.Substate.REMOVED) {
+                        if (transition.enters(State.REMOVED)) {
                             try {
                                 // replace the removed service by service E
                                 serviceContainer.addService(fooServiceName, serviceE).addDependency(DependencyType.OPTIONAL, serviceNameD, ServiceD.class, new SetMethodInjector<ServiceD>(Values.immediateValue(serviceE), getMethod(ServiceE.class, "initialize", ServiceD.class))).addListener(testListener).install();
