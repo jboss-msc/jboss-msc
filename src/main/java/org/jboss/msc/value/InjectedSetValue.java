@@ -63,11 +63,6 @@ public final class InjectedSetValue<T> implements Value<Set<T>> {
         return cachedValue;
     }
 
-    /** {@inheritDoc} */
-    public Set<T> getOptionalValue() {
-        return getValue();
-    }
-
     private synchronized void addItem(T item) {
         value.add(item);
         cachedValue = null;

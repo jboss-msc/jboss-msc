@@ -64,7 +64,7 @@ public class InjectedSetValueTestCase {
         expected.add(15);
         expected.add(10);
         assertEquals(expected, injectedSetValue.getValue());
-        assertEquals(expected, injectedSetValue.getOptionalValue());
+        assertEquals(expected, injectedSetValue.getValue());
     }
 
     @Test
@@ -77,7 +77,7 @@ public class InjectedSetValueTestCase {
         Set<Object> expected = new LinkedHashSet<Object>();
         expected.add(anyObject);
         expected.add(anyObject2);
-        assertEquals(expected, injectedSetValue.getOptionalValue());
+        assertEquals(expected, injectedSetValue.getValue());
         assertEquals(expected, injectedSetValue.getValue());
     }
 
@@ -86,7 +86,7 @@ public class InjectedSetValueTestCase {
         final InjectedSetValue<Object> injectedSetValue = new InjectedSetValue<Object>();
         injectedSetValue.injector().inject(null);
         assertEquals(Collections.singleton(null), injectedSetValue.getValue());
-        assertEquals(Collections.singleton(null), injectedSetValue.getOptionalValue());
+        assertEquals(Collections.singleton(null), injectedSetValue.getValue());
     }
 
     @Test
@@ -99,11 +99,11 @@ public class InjectedSetValueTestCase {
         expected.add(15);
         expected.add(10);
         assertEquals(expected, injectedSetValue.getValue());
-        assertEquals(expected, injectedSetValue.getOptionalValue());
+        assertEquals(expected, injectedSetValue.getValue());
         firstIInjector.uninject();
         expected = new LinkedHashSet<Integer>();
         expected.add(10);
         assertEquals(expected, injectedSetValue.getValue());
-        assertEquals(expected, injectedSetValue.getOptionalValue());
+        assertEquals(expected, injectedSetValue.getValue());
     }
 }

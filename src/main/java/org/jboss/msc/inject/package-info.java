@@ -21,6 +21,6 @@
  */
 
 /**
- * Classes which implement value injection.  See {@link Injector}.
+ * Classes which implement value injection.  See {@link org.jboss.msc.inject.Injector}.
  */
 package org.jboss.msc.inject;

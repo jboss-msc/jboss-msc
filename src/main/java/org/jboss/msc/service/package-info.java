@@ -22,10 +22,10 @@
 
 /**
  * The service container implementation itself.  The service container is what coordinates the registry of services and
- * manages their installation and execution.  To create a service container, see {@link ServiceContainer.Factory#create()}.
- * To create services, implement the {@link Service} interface.
+ * manages their installation and execution.  To create a service container, see {@link org.jboss.msc.service.ServiceContainer.Factory#create()}.
+ * To create services, implement the {@link org.jboss.msc.service.Service} interface.
  * <p>
- * Individual service instances are controlled using the {@link ServiceController} interface.  Service controllers follow
+ * Individual service instances are controlled using the {@link org.jboss.msc.service.ServiceController} interface.  Service controllers follow
  * this strict internal state machine:
  * <p>
  * <img src="doc-files/state-machine.svg" alt="State machine image"/>

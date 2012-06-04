@@ -21,6 +21,6 @@
  */
 
 /**
- * Classes which implement various indirect value types.  See {@link Value}.
+ * Classes which implement various indirect value types.  See {@link org.jboss.msc.value.Value}.
  */
 package org.jboss.msc.value;
