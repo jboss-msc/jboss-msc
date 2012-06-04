@@ -44,7 +44,7 @@ import java.util.regex.Pattern;
 public final class ServiceName implements Comparable<ServiceName>, Serializable {
 
     private static final long serialVersionUID = 2336190201880964151L;
-    private static final Pattern validNameSegmentPattern = Pattern.compile("[\\u0000-\\u10FFFF&&[^\\u0000-\\u001F]&&[^\\u007F-\\u009F]&&[^ ]]+");
+    private static final Pattern validNameSegmentPattern = Pattern.compile("[^\\p{Cntrl}\\p{Space}]+");
 
     private final String name;
     private final ServiceName parent;
