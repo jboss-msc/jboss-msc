@@ -743,6 +743,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             state = transition.getAfter();
         } while (tasks.isEmpty());
+        // Notify waiters that a transition occurred
+        notifyAll();
     }
 
     private void getListenerTasks(final Transition transition, final ArrayList<Runnable> tasks) {
