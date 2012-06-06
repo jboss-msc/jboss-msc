@@ -219,6 +219,21 @@ public interface ServiceController<S> extends Value<S> {
          */
         REMOVED,
         ;
+
+        /**
+         * Determine if this state is one of the given states.
+         *
+         * @param states the states to check
+         * @return {@code true} if this state is in the set; {@code false} otherwise
+         */
+        public boolean in(State... states) {
+            for (State test : states) {
+                if (this == test) {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
     /**
@@ -252,6 +267,21 @@ public interface ServiceController<S> extends Value<S> {
          */
         ACTIVE,
         ;
+
+        /**
+         * Determine if this mode is one of the given modes.
+         *
+         * @param modes the modes to check
+         * @return {@code true} if this mode is in the set; {@code false} otherwise
+         */
+        public boolean in(Mode... modes) {
+            for (Mode test : modes) {
+                if (this == test) {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
     /**
@@ -352,6 +382,21 @@ public interface ServiceController<S> extends Value<S> {
          */
         public State getState() {
             return state;
+        }
+
+        /**
+         * Determine if this substate is one of the given substates.
+         *
+         * @param substates the substates to check
+         * @return {@code true} if this substate is in the set; {@code false} otherwise
+         */
+        public boolean in(Substate... substates) {
+            for (Substate test : substates) {
+                if (this == test) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 
@@ -557,6 +602,21 @@ public interface ServiceController<S> extends Value<S> {
          */
         public Substate getAfter() {
             return after;
+        }
+
+        /**
+         * Determine if this transition is one of the given transitions.
+         *
+         * @param transitions the transitions to check
+         * @return {@code true} if this transition is in the set; {@code false} otherwise
+         */
+        public boolean in(Transition... transitions) {
+            for (Transition test : transitions) {
+                if (this == test) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         /**
