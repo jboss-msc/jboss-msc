@@ -1394,10 +1394,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         synchronized (primaryRegistration) {
             dependents = primaryRegistration.getDependents();
             synchronized (dependents) {
-                b.append("Service Name: ").append(primaryRegistration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
-                for (Dependent dependent : dependents) {
-                    b.append("        ").append(dependent.getController().getName().toString()).append('\n');
-                }
+                dependents = dependents.clone();
+            }
+        }
+        b.append("Service Name: ").append(primaryRegistration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
+        for (Dependent dependent : dependents) {
+            final ServiceControllerImpl<?> controller = dependent.getController();
+            synchronized (controller) {
+                b.append("        ").append(controller.getName().toString()).append(" - State: ").append(controller.state.getState()).append(" (Substate: ").append(controller.state).append(")\n");
             }
         }
         b.append("Service Aliases: ").append(aliasRegistrations.length).append('\n');
@@ -1405,11 +1409,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             synchronized (registration) {
                 dependents = registration.getDependents();
                 synchronized (dependents) {
-                    b.append("    ").append(registration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
-                    for (Dependent dependent : dependents) {
-                        b.append("        ").append(dependent.getController().getName().toString()).append('\n');
-                    }
+                    dependents = dependents.clone();
                 }
+            }
+            b.append("    ").append(registration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
+            for (Dependent dependent : dependents) {
+                final ServiceControllerImpl<?> controller = dependent.getController();
+                b.append("        ").append(controller.getName().toString()).append(" - State: ").append(controller.state.getState()).append(" (Substate: ").append(controller.state).append(")\n");
             }
         }
         synchronized (this) {
@@ -1424,14 +1430,26 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (parent != null) {
                 b.append("Parent Name: ").append(parent.getPrimaryRegistration().getName().toString()).append('\n');
             }
-            b.append("Dependencies: ").append(dependencies.length).append('\n');
-            for (int i = 0; i < dependencies.length; i ++) {
-                b.append("    ").append(dependencies[i].getName().toString()).append('\n');
-            }
             b.append("Service Mode: ").append(mode).append('\n');
             if (startException != null) {
                 b.append("Start Exception: ").append(startException.getClass().getName()).append(" (Message: ").append(startException.getMessage()).append(")\n");
             }
+            String serviceValueString = "(indeterminate)";
+            try {
+                serviceValueString = serviceValue.toString();
+            } catch (Throwable ignored) {}
+            b.append("Service Value: ").append(serviceValueString).append('\n');
+            String serviceObjectString = "(indeterminate)";
+            Object serviceObjectClass = "(indeterminate)";
+            try {
+                Object serviceObject = serviceValue.getValue();
+                if (serviceObject != null) {
+                    serviceObjectClass = serviceObject.getClass();
+                    serviceObjectString = serviceObject.toString();
+                }
+            } catch (Throwable ignored) {}
+            b.append("Service Object: ").append(serviceObjectString).append('\n');
+            b.append("Service Object Class: ").append(serviceObjectClass).append('\n');
             b.append("Demanded By: ").append(demandedByCount).append('\n');
             b.append("Unstarted Dependencies: ").append(unstartedDependencies).append('\n');
             b.append("Stopping Dependencies: ").append(stoppingDependencies).append('\n');
@@ -1446,9 +1464,27 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             b.append("Async Tasks: ").append(asyncTasks).append('\n');
             b.append("Incomplete Children: ").append(incompleteChildren).append('\n');
             b.append("Problem Children: ").append(problemChildren).append('\n');
-            if (lifecycleTime != 0L) b.append("Lifecycle Timestamp: ").append(lifecycleTime).append(String.format(" = %tb %<td %<tH:%<tM:%<tS.%<tL", lifecycleTime));
-            return b.toString();
+            if (lifecycleTime != 0L) {
+                final long elapsedNanos = System.nanoTime() - lifecycleTime;
+                final long now = System.currentTimeMillis();
+                final long stamp = now - (elapsedNanos / 1000000L);
+                b.append("Lifecycle Timestamp: ").append(lifecycleTime).append(String.format(" = %tb %<td %<tH:%<tM:%<tS.%<tL%n", stamp));
+            }
         }
+        b.append("Dependencies: ").append(dependencies.length).append('\n');
+        for (int i = 0; i < dependencies.length; i ++) {
+            final Dependency dependency = dependencies[i];
+            final ServiceControllerImpl<?> controller = dependency.getDependencyController();
+            b.append("    ").append(dependency.getName().toString());
+            if (controller == null) {
+                b.append(" (missing)\n");
+            } else {
+                synchronized (controller) {
+                    b.append(" - State: ").append(controller.state.getState()).append(" (Substate: ").append(controller.state).append(")\n");
+                }
+            }
+        }
+        return b.toString();
     }
 
     private enum ListenerNotification {

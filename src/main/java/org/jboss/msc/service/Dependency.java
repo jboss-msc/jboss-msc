@@ -87,4 +87,11 @@ interface Dependency extends Value<Object> {
      * @return the name
      */
     ServiceName getName();
+
+    /**
+     * Get the controller for this dependency, or {@code null} if there is none currently.
+     *
+     * @return the controller, or {@code null} for none
+     */
+    ServiceControllerImpl<?> getDependencyController();
 }

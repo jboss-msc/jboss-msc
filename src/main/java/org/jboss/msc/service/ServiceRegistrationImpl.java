@@ -202,6 +202,10 @@ final class ServiceRegistrationImpl implements Dependency {
         return name;
     }
 
+    public ServiceControllerImpl<?> getDependencyController() {
+        return getInstance();
+    }
+
     @Override
     public void dependentStarted() {
         assert ! holdsLock(this);
