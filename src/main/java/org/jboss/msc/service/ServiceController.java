@@ -24,6 +24,8 @@ package org.jboss.msc.service;
 
 import java.util.Set;
 
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.jboss.msc.value.Value;
 
 /**
@@ -107,6 +109,17 @@ public interface ServiceController<S> extends Value<S> {
      * @throws InterruptedException if the wait operation was interrupted
      */
     S awaitValue() throws IllegalStateException, InterruptedException;
+
+    /**
+     * Wait for a service to come up for a certain amount of time, and then return its value.
+     *
+     * @param time the amount of time to wait
+     * @param unit the unit of time to wait
+     * @return the service value
+     * @throws IllegalStateException if the service is not available (i.e. it was removed or failed)
+     * @throws InterruptedException if the wait operation was interrupted
+     */
+    S awaitValue(long time, TimeUnit unit) throws IllegalStateException, InterruptedException, TimeoutException;
 
     /**
      * Get the service.

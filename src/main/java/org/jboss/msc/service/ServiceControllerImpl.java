@@ -35,6 +35,8 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.jboss.msc.service.management.ServiceStatus;
 import org.jboss.msc.value.Value;
 
@@ -1213,6 +1215,37 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     wait();
                 }
             }
+        }
+    }
+
+    public S awaitValue(final long time, final TimeUnit unit) throws IllegalStateException, InterruptedException, TimeoutException {
+        assert !holdsLock(this);
+        long now;
+        long then = System.nanoTime();
+        long remaining = unit.toNanos(time);
+        synchronized (this) {
+            do {
+                switch (state.getState()) {
+                    case UP: {
+                        return serviceValue.getValue().getValue();
+                    }
+                    case START_FAILED: {
+                        throw new IllegalStateException("Failed to start service", startException);
+                    }
+                    case REMOVED: {
+                        throw new IllegalStateException("Service was removed");
+                    }
+                    default: {
+                        wait(remaining / 1000000L, (int) (remaining % 1000000L));
+                    }
+                }
+                // When will then be now?
+                now = System.nanoTime();
+                remaining -= now - then;
+                // soon...
+                then = now;
+            } while (remaining > 0L);
+            throw new TimeoutException("Operation timed out");
         }
     }
 
