@@ -128,7 +128,10 @@ public interface ServiceListener<S> {
 
     /**
      * The inheritance type for a listener.
+     *
+     * @deprecated Listeners inherently degrade performance.  Inheritance only compounds the problem.  Ultimately listener inheritance will be eliminated.
      */
+    @Deprecated
     enum Inheritance {
         /**
          * This listener is never inherited.
