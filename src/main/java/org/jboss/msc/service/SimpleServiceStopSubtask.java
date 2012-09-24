@@ -18,30 +18,34 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.txn.Committable;
+import org.jboss.msc.txn.Executable;
+import org.jboss.msc.txn.ExecutionContext;
+import org.jboss.msc.txn.Revertible;
+import org.jboss.msc.txn.Validatable;
+import org.jboss.msc.txn.ValidationContext;
+import org.jboss.msc.txn.WorkContext;
+
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class SimpleServiceStopSubtask implements TxnTask<Void> {
+final class SimpleServiceStopSubtask<T> implements Executable<T>, Revertible, Committable,Validatable {
 
-    private final Service service;
+    private final Service<T> service;
 
-    public SimpleServiceStopSubtask(final Service service) {
+    public SimpleServiceStopSubtask(final Service<T> service) {
         this.service = service;
     }
 
-    public void execute(final TxnTaskContext<Void> context) {
-        context.executeComplete(null, 0);
+    public void commit(final WorkContext context) {
     }
 
-    public void rollback(final TxnTaskContext<Void> context) {
-        service.start(context.getTransaction(), new SimpleStartContext(context));
-        context.rollbackComplete();
+    public void execute(final ExecutionContext<T> context) {
     }
 
-    public void commit(final TxnTaskContext<Void> context) {
-        if (service instanceof TransactionalSimpleService) {
-            ((TransactionalSimpleService)service).stop();
-        }
-        context.commitComplete();
+    public void rollback(final WorkContext context) {
+    }
+
+    public void validate(final ValidationContext validateContext) {
     }
 }

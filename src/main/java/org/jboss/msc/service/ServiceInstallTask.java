@@ -18,27 +18,39 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.txn.Committable;
+import org.jboss.msc.txn.Executable;
+import org.jboss.msc.txn.ExecutionContext;
+import org.jboss.msc.txn.Revertible;
+import org.jboss.msc.txn.Validatable;
+import org.jboss.msc.txn.ValidationContext;
+import org.jboss.msc.txn.WorkContext;
+
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class ServiceInstallTask<T> implements TxnTask<Controller<T>> {
+final class ServiceInstallTask<T> implements Executable<Controller<T>>, Validatable, Committable, Revertible {
     private final ServiceTxn txn;
     private final Registration primaryReg;
     private final Registration[] aliasReg;
-    private final TxnTask<T> startSubtask;
+    private final Executable<T> startSubtask;
 
-    ServiceInstallTask(final ServiceTxn txn) {
+    ServiceInstallTask(final Executable<T> startSubtask, final Registration[] aliasReg, final Registration primaryReg, final ServiceTxn txn) {
+        this.startSubtask = startSubtask;
+        this.aliasReg = aliasReg;
+        this.primaryReg = primaryReg;
         this.txn = txn;
     }
 
-    public void execute(final TxnTaskContext<Controller<T>> context) {
-        // add a new Controller to the transaction
-        new Controller<T>(dependencies, aliasReg, primaryReg, stopSubtask, startSubtask);
+    public void commit(final WorkContext context) {
     }
 
-    public void rollback(final TxnTaskContext<Controller<T>> context) {
+    public void execute(final ExecutionContext<Controller<T>> context) {
     }
 
-    public void commit(final TxnTaskContext<Controller<T>> context) {
+    public void rollback(final WorkContext context) {
+    }
+
+    public void validate(final ValidationContext validateContext) {
     }
 }

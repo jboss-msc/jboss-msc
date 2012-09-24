@@ -20,9 +20,9 @@ package org.jboss.msc.txn;
 
 import org.jboss.logging.Logger;
 import org.jboss.logging.annotations.Cause;
+import org.jboss.logging.annotations.Field;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
-import org.jboss.logging.annotations.Property;
 
 import javax.transaction.xa.XAException;
 
@@ -39,5 +39,5 @@ interface Log {
 
     // todo - XAException example
     @Message(value = "A transaction exception occurred")
-    XAException xaException(@Property int errorCode, @Cause Throwable cause);
+    XAException xaException(@Field int errorCode, @Cause Throwable cause);
 }

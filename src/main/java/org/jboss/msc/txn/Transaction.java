@@ -69,7 +69,8 @@ public abstract class Transaction extends AbstractAttachable {
      * @param completionListener the listener to call when the rollback is complete
      * @return {@code true} if rollback was initiated, or {@code false} if another thread has already committed or rolled back
      */
-    public boolean rollback(TxnListener completionListener) {
+    public boolean rollback(TransactionListener completionListener) {
+        return false;
     }
 
     /**

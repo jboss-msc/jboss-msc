@@ -129,7 +129,7 @@ public final class RootTransaction extends Transaction {
         return (int) (val & MASK_STATE);
     }
 
-    private void invokeTransactionListener(final TxnListener completionListener) {
+    private void invokeTransactionListener(final TransactionListener completionListener) {
         try {
             if (completionListener != null) completionListener.handleEvent(this);
         } catch (Throwable ignored) {}
@@ -210,23 +210,25 @@ public final class RootTransaction extends Transaction {
 
     /**
      * Prepare this transaction.  It is an error to prepare a transaction with unreleased tasks.
-     * Once this method returns, either {@link #commit(TxnListener)} or {@link #rollback(TxnListener)} must be called.
-     * If this method throws an exception, the transaction must {@link #rollback(TxnListener)}.  After calling this method (regardless
+     * Once this method returns, either {@link #commit(TransactionListener)} or {@link #rollback(TransactionListener)} must be called.
+     * If this method throws an exception, the transaction must {@link #rollback(TransactionListener)}.  After calling this method (regardless
      * of its outcome), the transaction can not be modified before termination.
      *
      * @param completionListener the listener to call when the prepare is complete or has failed
      */
-    public boolean prepare(TxnListener completionListener) {
+    public boolean prepare(TransactionListener completionListener) {
+        return false;
     }
 
     /**
-     * Commit the work done by {@link #prepare(TxnListener)} and terminate this transaction.
+     * Commit the work done by {@link #prepare(TransactionListener)} and terminate this transaction.
      *
      * @param completionListener the listener to call when the rollback is complete
      */
-    public boolean commit(TxnListener completionListener) {
+    public boolean commit(TransactionListener completionListener) {
         // CAS state to COMMIT from OPEN or PREPARE
 
         // CAS state from COMMIT to COMPLETE
+        return false;
     }
 }

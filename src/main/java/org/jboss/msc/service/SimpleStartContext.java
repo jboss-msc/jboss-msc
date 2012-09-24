@@ -18,6 +18,7 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.txn.ExecutionContext;
 import org.jboss.msc.txn.Failure;
 
 /**
@@ -25,13 +26,13 @@ import org.jboss.msc.txn.Failure;
 */
 class SimpleStartContext implements StartContext {
 
-    private final TxnTaskContext context;
+    private final ExecutionContext<?> context;
 
-    public SimpleStartContext(final TxnTaskContext context) {
+    public SimpleStartContext(final ExecutionContext<?> context) {
         this.context = context;
     }
 
     public void startFailed(final Failure reason) {
-        context.executeFailed(reason);
+        context.failed(reason);
     }
 }

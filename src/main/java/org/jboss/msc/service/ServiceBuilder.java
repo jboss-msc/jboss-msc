@@ -33,23 +33,23 @@ import org.jboss.msc.txn.Transaction;
 public final class ServiceBuilder<T> {
     private final ServiceName name;
     private final Transaction transaction;
-    private final TxnTask startSubtask;
-    private final TxnTask stopSubtask;
+    private final Object startSubtask;
+    private final Object stopSubtask;
     private final TaskController<T> installTask;
     private final Map<ServiceName, DependencySpec<?>> specs = new LinkedHashMap<ServiceName, DependencySpec<?>>();
     private ServiceMode mode;
 
-    ServiceBuilder(final ServiceName name, final Transaction transaction, final TxnTask<T> startSubtask, final TxnTask<Void> stopSubtask) {
+    ServiceBuilder(final ServiceName name, final Transaction transaction, final Object startSubtask, final Object stopSubtask) {
         this.name = name;
         this.transaction = transaction;
         this.startSubtask = startSubtask;
         this.stopSubtask = stopSubtask;
 
-        installTask = transaction.newSubtask(new ServiceInstallTask<T>(null));
+        installTask = null;
     }
 
     ServiceBuilder(final ServiceName name, final Transaction transaction, final Service<T> service) {
-        this(name, transaction, new SimpleServiceStartSubtask<T>(service), new SimpleServiceStopSubtask(service));
+        this(name, transaction, null, null);
     }
 
     /**
@@ -133,7 +133,6 @@ public final class ServiceBuilder<T> {
      * @param subtask the subtask
      */
     public void addDependency(TaskController subtask) {
-        subtask.addDependencies(subtask);
     }
 
     /**
@@ -144,13 +143,12 @@ public final class ServiceBuilder<T> {
      * @return the controller which manages the installation of the service
      */
     public TaskController install(final TaskListener listener) {
-        return installTask.release(listener);
+        return null;
     }
 
     /**
      * Initiate rollback of this service installation.  If the service was already installed, it will be removed.
      */
     public void remove() {
-        installTask.rollback(null);
     }
 }

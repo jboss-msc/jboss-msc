@@ -26,8 +26,6 @@ import org.jboss.msc.value.WritableValue;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 final class Controller<T> {
-    private final TxnTask<T> startSubtask;
-    private final TxnTask<Void> stopSubtask;
     private final Registration primaryRegistration;
     private final Registration[] aliasRegistrations;
     private final Dependency[] dependencies;
@@ -35,20 +33,10 @@ final class Controller<T> {
     private volatile ServiceMode mode = ServiceMode.NEVER;
     private volatile State state = State.NEW;
 
-    Controller(final Dependency[] dependencies, final Registration[] aliasRegistrations, final Registration primaryRegistration, final TxnTask<Void> stopSubtask, final TxnTask<T> startSubtask) {
+    Controller(final Dependency[] dependencies, final Registration[] aliasRegistrations, final Registration primaryRegistration) {
         this.dependencies = dependencies;
         this.aliasRegistrations = aliasRegistrations;
         this.primaryRegistration = primaryRegistration;
-        this.stopSubtask = stopSubtask;
-        this.startSubtask = startSubtask;
-    }
-
-    public TxnTask<T> getStartSubtask() {
-        return startSubtask;
-    }
-
-    public TxnTask<Void> getStopSubtask() {
-        return stopSubtask;
     }
 
     public Registration getPrimaryRegistration() {

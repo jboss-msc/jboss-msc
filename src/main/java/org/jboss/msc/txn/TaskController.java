@@ -25,10 +25,7 @@ package org.jboss.msc.txn;
  */
 public final class TaskController<T> {
 
-    private final TxnTaskContext<T> context;
-
-    TaskController(final RootTransaction transaction, final TxnTask<T> subtask) {
-        context = new TxnTaskContext<T>(transaction, this, subtask);
+    TaskController(final RootTransaction transaction, final Object subtask) {
     }
 
     /**
@@ -36,17 +33,8 @@ public final class TaskController<T> {
      *
      * @return the transaction associated with this controller
      */
-    public RootTransaction getTransaction() {
-        return context.getTransaction();
-    }
-
-    /**
-     * Get the state of this controller.
-     *
-     * @return the state
-     */
-    public TxnTask.State getState() {
-        return context.getState();
+    public Transaction getTransaction() {
+        return null;
     }
 
 }

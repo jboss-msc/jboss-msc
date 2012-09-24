@@ -21,7 +21,6 @@ package org.jboss.msc.service;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.jboss.msc.txn.TaskController;
-import org.jboss.msc.txn.TaskListener;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -45,69 +44,6 @@ final class ServiceTxn {
     }
 
     public void remove(final ServiceName serviceName) {
-        Pending existing = map.get(serviceName);
-        Pending created;
-        do {
-            if (existing == null) {
-                Registration registration = container.getRegistration(serviceName);
-                if (registration == null) {
-                    // nothing to do
-                    return;
-                }
-                Controller<?> controller = registration.getController();
-                if (controller == null) {
-                    // nothing to do
-                    return;
-                }
-                created = new Pending(State.PENDING_REMOVE, transaction.newSubtask(new ServiceRemoveTask(serviceName)));
-            } else {
-                State state = existing.getState();
-                switch (state) {
-                    case PENDING_REMOVE: return; // nothing to do
-                    case PENDING_ADD_CANCEL: return; // nothing to do
-                    case PENDING_REMOVE_ADD: {
-                        created = new Pending(State.PENDING_REMOVE, existing.getSubtask());
-                        break;
-                    }
-                    case PENDING_REMOVE_CANCEL: {
-                        created = new Pending(State.PENDING_REMOVE_CANCEL_REMOVE, existing.getSubtask());
-                        break;
-                    }
-                    default: {
-                        throw new IllegalStateException();
-                    }
-                }
-            }
-            existing = map.putIfAbsent(serviceName, created);
-        } while (existing != null);
-        if (created.getState() == State.PENDING_REMOVE_CANCEL) {
-            created.getSubtask().rollback(new TaskListener<Object>() {
-                public void handleEvent(final TaskController<?> controller) {
-                    Pending pending;
-                    for (;;) {
-                        pending = map.get(serviceName);
-                        if (pending.getState() == State.PENDING_REMOVE_CANCEL) {
-                            if (map.remove(serviceName, pending)) {
-                                // we're good
-                                return;
-                            }
-                            // retry
-                        } else {
-                            assert pending.getState() == State.PENDING_REMOVE_CANCEL_REMOVE;
-                            TaskController<Void> subtask = transaction.newSubtask(new ServiceRemoveTask(serviceName));
-                            if (map.replace(serviceName, pending, new Pending(State.PENDING_REMOVE, subtask))) {
-                                subtask.release(null);
-                                return;
-                            }
-                            subtask.rollback(null);
-                            // retry
-                        }
-                    }
-                }
-            });
-        } else if (created.getState() == State.PENDING_REMOVE) {
-            created.getSubtask().release(null);
-        }
     }
 
     public Transaction getTransaction() {

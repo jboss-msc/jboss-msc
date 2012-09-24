@@ -18,20 +18,31 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.txn.Committable;
+import org.jboss.msc.txn.Executable;
+import org.jboss.msc.txn.ExecutionContext;
+import org.jboss.msc.txn.Revertible;
+import org.jboss.msc.txn.Validatable;
+import org.jboss.msc.txn.ValidationContext;
+import org.jboss.msc.txn.WorkContext;
+
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class ServiceRemoveTask implements TxnTask<Void> {
+final class ServiceRemoveTask implements Committable, Executable<Void>, Revertible, Validatable {
 
     ServiceRemoveTask(final ServiceName name) {
     }
 
-    public void execute(final TxnTaskContext context) {
+    public void commit(final WorkContext context) {
     }
 
-    public void rollback(final TxnTaskContext context) {
+    public void execute(final ExecutionContext<Void> context) {
     }
 
-    public void commit(final TxnTaskContext context) {
+    public void rollback(final WorkContext context) {
+    }
+
+    public void validate(final ValidationContext validateContext) {
     }
 }
