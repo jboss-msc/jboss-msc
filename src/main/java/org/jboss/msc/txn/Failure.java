@@ -26,11 +26,11 @@ import java.io.Serializable;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class SubtaskFailure implements Serializable {
+public final class Failure implements Serializable {
 
     private static final long serialVersionUID = 7378993289655554246L;
 
-    private final SubtaskController subtask;
+    private final TaskController subtask;
     private final String message;
     private final Throwable cause;
 
@@ -41,7 +41,7 @@ public final class SubtaskFailure implements Serializable {
      * @param message the error description
      * @param cause the optional exception cause
      */
-    public SubtaskFailure(final SubtaskController subtask, final String message, final Throwable cause) {
+    public Failure(final TaskController subtask, final String message, final Throwable cause) {
         if (subtask == null) {
             throw new IllegalArgumentException("subtask is null");
         }
@@ -59,7 +59,7 @@ public final class SubtaskFailure implements Serializable {
      * @param subtask the subtask that failed
      * @param message the error description
      */
-    public SubtaskFailure(final SubtaskController subtask, final String message) {
+    public Failure(final TaskController subtask, final String message) {
         this(subtask, message, null);
     }
 
@@ -69,7 +69,7 @@ public final class SubtaskFailure implements Serializable {
      * @param subtask the subtask that failed
      * @param cause the exception cause
      */
-    public SubtaskFailure(final SubtaskController subtask, final Throwable cause) {
+    public Failure(final TaskController subtask, final Throwable cause) {
         this(subtask, "Task failed due to exception", cause);
         if (cause == null) {
             throw new IllegalArgumentException("cause is null");
@@ -81,7 +81,7 @@ public final class SubtaskFailure implements Serializable {
      *
      * @return the subtask that failed
      */
-    public SubtaskController getSubtask() {
+    public TaskController getSubtask() {
         return subtask;
     }
 

@@ -18,6 +18,8 @@
 
 package org.jboss.msc.txn;
 
+import org.jboss.msc.value.Factory;
+
 /**
  * A key for a transaction attachment.
  *
@@ -25,10 +27,25 @@ package org.jboss.msc.txn;
  */
 @SuppressWarnings("unused")
 public final class AttachmentKey<T> {
+    private final Factory<T> defaultFactory;
+
+    private AttachmentKey(final Factory<T> factory) {
+        defaultFactory = factory;
+    }
+
     private AttachmentKey() {
+        defaultFactory = null;
     }
 
     public static <T> AttachmentKey<T> create() {
         return new AttachmentKey<T>();
+    }
+
+    public static <T> AttachmentKey<T> create(Factory<T> factory) {
+        return new AttachmentKey<T>(factory);
+    }
+
+    T createValue() {
+        return defaultFactory.create();
     }
 }

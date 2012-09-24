@@ -16,27 +16,37 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.value;
+package org.jboss.msc.txn;
 
 /**
- * A value which returns the {@code Class} object of another value.
+ * A controller for an installed subtask.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class ClassOfValue<T> implements ReadableValue<Class<? extends T>> {
-    private final ReadableValue<? extends T> value;
+public final class TaskController<T> {
 
-    public ClassOfValue(final ReadableValue<? extends T> value) {
-        this.value = value;
+    private final TxnTaskContext<T> context;
+
+    TaskController(final RootTransaction transaction, final TxnTask<T> subtask) {
+        context = new TxnTaskContext<T>(transaction, this, subtask);
     }
 
     /**
-     * @return the {@code Class} of the value, or {@code null} if value.getValue() is {@code null}.
+     * Get the transaction associated with this controller.
+     *
+     * @return the transaction associated with this controller
      */
-    @SuppressWarnings({ "unchecked" })
-    public Class<? extends T> getValue() throws IllegalStateException {
-        final ReadableValue<? extends T> value = this.value;
-        final T actualValue = value.getValue();
-        return actualValue == null? null: (Class<? extends T>) actualValue.getClass();
+    public RootTransaction getTransaction() {
+        return context.getTransaction();
     }
+
+    /**
+     * Get the state of this controller.
+     *
+     * @return the state
+     */
+    public TxnTask.State getState() {
+        return context.getState();
+    }
+
 }

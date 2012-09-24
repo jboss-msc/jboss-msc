@@ -18,34 +18,27 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.txn.Subtask;
-import org.jboss.msc.txn.SubtaskContext;
-import org.jboss.msc.txn.SubtaskController;
-import org.jboss.msc.txn.SubtaskFailure;
-
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class ServiceInstallTask implements Subtask {
+final class ServiceInstallTask<T> implements TxnTask<Controller<T>> {
     private final ServiceTxn txn;
+    private final Registration primaryReg;
+    private final Registration[] aliasReg;
+    private final TxnTask<T> startSubtask;
 
     ServiceInstallTask(final ServiceTxn txn) {
         this.txn = txn;
     }
 
-    public void execute(final SubtaskContext context) {
-        // add a new Controller to the
+    public void execute(final TxnTaskContext<Controller<T>> context) {
+        // add a new Controller to the transaction
+        new Controller<T>(dependencies, aliasReg, primaryReg, stopSubtask, startSubtask);
     }
 
-    public void rollback(final SubtaskContext context) {
+    public void rollback(final TxnTaskContext<Controller<T>> context) {
     }
 
-    public void prepare(final SubtaskContext context) {
-    }
-
-    public void abort(final SubtaskContext context) {
-    }
-
-    public void commit(final SubtaskContext context) {
+    public void commit(final TxnTaskContext<Controller<T>> context) {
     }
 }

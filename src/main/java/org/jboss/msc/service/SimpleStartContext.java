@@ -18,21 +18,20 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.txn.SubtaskContext;
-import org.jboss.msc.txn.SubtaskFailure;
+import org.jboss.msc.txn.Failure;
 
 /**
 * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
 */
 class SimpleStartContext implements StartContext {
 
-    private final SubtaskContext context;
+    private final TxnTaskContext context;
 
-    public SimpleStartContext(final SubtaskContext context) {
+    public SimpleStartContext(final TxnTaskContext context) {
         this.context = context;
     }
 
-    public void startFailed(final SubtaskFailure reason) {
+    public void startFailed(final Failure reason) {
         context.executeFailed(reason);
     }
 }

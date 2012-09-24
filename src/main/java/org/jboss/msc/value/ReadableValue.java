@@ -33,8 +33,6 @@ public interface ReadableValue<T> {
      * Get the actual value.
      *
      * @return the actual value
-     * @throws IllegalStateException if the value is time-sensitive and the current state does not allow retrieval.
-     * @throws IllegalArgumentException when the value cannot be read due to misconfiguration 
      */
-    T getValue() throws IllegalStateException, IllegalArgumentException;
+    T getValue() throws ValueNotSetException;
 }

@@ -26,7 +26,9 @@ package org.jboss.msc.value;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class ThreadLocalValue<T> implements ReadableValue<T> {
-    private final ThreadLocal<ReadableValue<? extends T>> threadLocal = new ThreadLocal<ReadableValue<? extends T>>();
+    private final ThreadLocal<T> threadLocal = new ThreadLocal<T>();
+
+    private static final Object UNSET = new Object();
 
     /**
      * Construct a new instance.
@@ -36,11 +38,11 @@ public final class ThreadLocalValue<T> implements ReadableValue<T> {
 
     /** {@inheritDoc} */
     public T getValue() {
-        final ReadableValue<? extends T> value = threadLocal.get();
-        if (value == null) {
+        final T value = threadLocal.get();
+        if (value == UNSET) {
             throw new IllegalStateException("No value set");
         }
-        return value.getValue();
+        return value;
     }
 
     /**
@@ -48,21 +50,7 @@ public final class ThreadLocalValue<T> implements ReadableValue<T> {
      *
      * @param newValue the new value to set
      */
-    public void setValue(ReadableValue<? extends T> newValue) {
+    public void setValue(T newValue) {
         threadLocal.set(newValue);
-    }
-
-    /**
-     * Get and set the value.  Returns the old value so it can be restored later on (typically in a {@code finally} block).
-     *
-     * @param newValue the new value
-     * @return the old value
-     */
-    public ReadableValue<? extends T> getAndSetValue(ReadableValue<? extends T> newValue) {
-        try {
-            return threadLocal.get();
-        } finally {
-            threadLocal.set(newValue);
-        }
     }
 }

@@ -16,34 +16,37 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.service;
+package org.jboss.msc.txn;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.jboss.msc.value.WritableValue;
+import java.util.concurrent.Executor;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class DependencySpec<T> {
-    private final ServiceName name;
-    private final DependencyFlag[] flags;
-    private final List<WritableValue<? super T>> injections = new ArrayList<WritableValue<? super T>>();
+public final class ChildTransaction extends Transaction {
+    private final Transaction parent;
+    private final List<TaskController<?>> rootControllers = new ArrayList<TaskController<?>>(); // controllers with no dependencies in this txn
 
-    DependencySpec(final ServiceName name, final DependencyFlag[] flags) {
-        this.name = name;
-        this.flags = flags;
+    ChildTransaction(final Transaction parent) {
+        this.parent = parent;
     }
 
-    public ServiceName getName() {
-        return name;
+    /**
+     * Get the parent transaction.
+     *
+     * @return the parent transaction
+     */
+    public Transaction getParent() {
+        return parent;
     }
 
-    public DependencyFlag[] getFlags() {
-        return flags;
+    <T> TaskBuilder<T> newSubtask(final Executable<T> executable, final Object subtask, final Transaction owner) throws IllegalStateException {
+        return getParent().newSubtask(executable, subtask, owner);
     }
 
-    public List<WritableValue<? super T>> getInjections() {
-        return injections;
+    public Executor getExecutor() {
+        return getParent().getExecutor();
     }
 }

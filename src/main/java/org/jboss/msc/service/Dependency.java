@@ -20,15 +20,15 @@ package org.jboss.msc.service;
 
 import org.jboss.msc.value.WritableValue;
 
-final class Dependency {
+final class Dependency<T> {
     private final Registration dependencyRegistration;
     private final DependencyFlag[] flags;
-    private final WritableValue<?>[] injections;
+    private final WritableValue<? super T>[] injections;
 
     @SuppressWarnings("unchecked")
-    static final WritableValue<?>[] NO_INJECTIONS = new WritableValue[0];
+    static final WritableValue<Object>[] NO_INJECTIONS = new WritableValue[0];
 
-    Dependency(final WritableValue<?>[] injections, final DependencyFlag[] flags, final Registration dependencyRegistration) {
+    Dependency(final WritableValue<? super T>[] injections, final DependencyFlag[] flags, final Registration dependencyRegistration) {
         this.injections = injections;
         this.flags = flags;
         this.dependencyRegistration = dependencyRegistration;
@@ -42,7 +42,7 @@ final class Dependency {
         return flags;
     }
 
-    public WritableValue<?>[] getInjections() {
+    public WritableValue<? super T>[] getInjections() {
         return injections;
     }
 }

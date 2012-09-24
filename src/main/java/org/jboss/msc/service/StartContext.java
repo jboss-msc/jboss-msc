@@ -18,7 +18,7 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.txn.SubtaskFailure;
+import org.jboss.msc.txn.Failure;
 
 /**
  * A context for service start.
@@ -32,5 +32,7 @@ public interface StartContext {
      *
      * @param reason the failure reason
      */
-    void startFailed(SubtaskFailure reason);
+    void startFailed(Failure reason);
+
+
 }

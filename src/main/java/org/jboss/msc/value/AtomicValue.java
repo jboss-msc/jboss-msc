@@ -19,7 +19,6 @@
 package org.jboss.msc.value;
 
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import org.jboss.msc.value.ReadableValue;
 
 /**
  * A simple readable and writable value.
@@ -33,21 +32,21 @@ public final class AtomicValue<T> implements WritableValue<T>, ReadableValue<T> 
 
     private static final AtomicReferenceFieldUpdater<AtomicValue, Object> valueUpdater = AtomicReferenceFieldUpdater.newUpdater(AtomicValue.class, Object.class, "value");
 
-    public void inject(final T value) throws InjectionException {
+    public void setValue(final T value) throws ValueAlreadySetException {
         if (! valueUpdater.compareAndSet(this, UNSET, value)) {
-            throw new InjectionException("Value already set for this injector");
+            throw new ValueAlreadySetException("Value already set for this injector");
         }
     }
 
-    public void uninject() {
+    public void clear() {
         value = UNSET;
     }
 
     @SuppressWarnings("unchecked")
-    public T getValue() throws IllegalStateException, IllegalArgumentException {
+    public T getValue() throws ValueNotSetException {
         Object value = this.value;
         if (value == UNSET) {
-            throw new IllegalStateException("Value is not set");
+            throw new ValueNotSetException("Value is not set");
         }
         return (T) value;
     }

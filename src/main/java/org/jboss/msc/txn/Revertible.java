@@ -16,32 +16,19 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.service;
+package org.jboss.msc.txn;
 
 /**
+ * A task which executes during the transaction rollback phase.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class SimpleServiceStopSubtask implements TxnTask<Void> {
+public interface Revertible {
 
-    private final Service service;
-
-    public SimpleServiceStopSubtask(final Service service) {
-        this.service = service;
-    }
-
-    public void execute(final TxnTaskContext<Void> context) {
-        context.executeComplete(null, 0);
-    }
-
-    public void rollback(final TxnTaskContext<Void> context) {
-        service.start(context.getTransaction(), new SimpleStartContext(context));
-        context.rollbackComplete();
-    }
-
-    public void commit(final TxnTaskContext<Void> context) {
-        if (service instanceof TransactionalSimpleService) {
-            ((TransactionalSimpleService)service).stop();
-        }
-        context.commitComplete();
-    }
+    /**
+     * Undo the work done in the execute phase.
+     *
+     * @param context the work context
+     */
+    void rollback(WorkContext context);
 }

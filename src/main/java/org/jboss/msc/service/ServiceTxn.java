@@ -20,8 +20,8 @@ package org.jboss.msc.service;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import org.jboss.msc.txn.SubtaskController;
-import org.jboss.msc.txn.SubtaskListener;
+import org.jboss.msc.txn.TaskController;
+import org.jboss.msc.txn.TaskListener;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -54,7 +54,7 @@ final class ServiceTxn {
                     // nothing to do
                     return;
                 }
-                Controller controller = registration.getController();
+                Controller<?> controller = registration.getController();
                 if (controller == null) {
                     // nothing to do
                     return;
@@ -81,8 +81,8 @@ final class ServiceTxn {
             existing = map.putIfAbsent(serviceName, created);
         } while (existing != null);
         if (created.getState() == State.PENDING_REMOVE_CANCEL) {
-            created.getSubtask().rollback(new SubtaskListener() {
-                public void handleEvent(final SubtaskController controller) {
+            created.getSubtask().rollback(new TaskListener<Object>() {
+                public void handleEvent(final TaskController<?> controller) {
                     Pending pending;
                     for (;;) {
                         pending = map.get(serviceName);
@@ -94,7 +94,7 @@ final class ServiceTxn {
                             // retry
                         } else {
                             assert pending.getState() == State.PENDING_REMOVE_CANCEL_REMOVE;
-                            SubtaskController subtask = transaction.newSubtask(new ServiceRemoveTask(serviceName));
+                            TaskController<Void> subtask = transaction.newSubtask(new ServiceRemoveTask(serviceName));
                             if (map.replace(serviceName, pending, new Pending(State.PENDING_REMOVE, subtask))) {
                                 subtask.release(null);
                                 return;
@@ -114,15 +114,15 @@ final class ServiceTxn {
         return transaction;
     }
 
-    SubtaskController removePendingInstall(final ServiceName name) {
+    TaskController removePendingInstall(final ServiceName name) {
         return null;
     }
 
     static final class Pending {
-        private final SubtaskController subtask;
+        private final TaskController<?> subtask;
         private final State state;
 
-        Pending(final State state, final SubtaskController subtask) {
+        Pending(final State state, final TaskController<?> subtask) {
             if (state == null) {
                 throw new IllegalArgumentException("state is null");
             }
@@ -133,7 +133,7 @@ final class ServiceTxn {
             this.subtask = subtask;
         }
 
-        public SubtaskController getSubtask() {
+        public TaskController<?> getSubtask() {
             return subtask;
         }
 

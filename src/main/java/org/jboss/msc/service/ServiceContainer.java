@@ -22,8 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import org.jboss.msc.txn.AttachmentKey;
-import org.jboss.msc.txn.Subtask;
-import org.jboss.msc.txn.SubtaskController;
+import org.jboss.msc.txn.RootTransaction;
+import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.value.ReadableValue;
 
@@ -33,7 +33,7 @@ import org.jboss.msc.value.ReadableValue;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class ServiceContainer {
-    private static final AtomicReferenceFieldUpdater<ServiceContainer, Transaction> transactionUpdater = AtomicReferenceFieldUpdater.newUpdater(ServiceContainer.class, Transaction.class, "transaction");
+    private static final AtomicReferenceFieldUpdater<ServiceContainer, Transaction> transactionUpdater = AtomicReferenceFieldUpdater.newUpdater(ServiceContainer.class, RootTransaction.class, "transaction");
 
     private final ConcurrentMap<ServiceName, Registration> registry = new ConcurrentHashMap<ServiceName, Registration>();
     private final AttachmentKey<ServiceTxn> key = AttachmentKey.create();
@@ -84,7 +84,7 @@ public final class ServiceContainer {
     public void removeService(Transaction transaction, ServiceName name) {
         final ServiceTxn txn = getTxn(transaction);
         synchronized (txn) {
-            SubtaskController controller = txn.removePendingInstall(name);
+            TaskController controller = txn.removePendingInstall(name);
             if (controller != null) {
                 controller.rollback(null);
             } else {
@@ -102,7 +102,7 @@ public final class ServiceContainer {
      *
      * @return the service builder
      */
-    public ServiceBuilder<Void> installService(Transaction transaction, ServiceName name, SimpleService service) {
+    public ServiceBuilder<Void> installService(Transaction transaction, ServiceName name, Service service) {
         return null;
     }
 
@@ -116,7 +116,7 @@ public final class ServiceContainer {
      *
      * @return the service builder
      */
-    public <T> ServiceBuilder<T> installService(Transaction transaction, ServiceName name, ReadableValue<T> value, SimpleService service) {
+    public <T> ServiceBuilder<T> installService(Transaction transaction, ServiceName name, ReadableValue<T> value, Service service) {
         return null;
     }
 
@@ -130,7 +130,7 @@ public final class ServiceContainer {
      *
      * @return the service builder
      */
-    public ServiceBuilder<Void> installService(Transaction transaction, ServiceName name, Subtask startTask, Subtask stopTask) {
+    public ServiceBuilder<Void> installService(Transaction transaction, ServiceName name, TxnTask startTask, TxnTask stopTask) {
         return null;
     }
 
@@ -145,7 +145,7 @@ public final class ServiceContainer {
      *
      * @return the service builder
      */
-    public <T> ServiceBuilder<T> installService(Transaction transaction, ServiceName name, ReadableValue<T> value, Subtask startTask, Subtask stopTask) {
+    public <T> ServiceBuilder<T> installService(Transaction transaction, ServiceName name, ReadableValue<T> value, TxnTask startTask, TxnTask stopTask) {
         return new ServiceBuilder<T>(name, transaction, value, startTask, stopTask);
     }
 

@@ -16,30 +16,17 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.service;
-
-import org.jboss.msc.txn.Transaction;
+package org.jboss.msc.txn;
 
 /**
- * A simple service which starts and stops and has a void value (i.e. is not injectable).  Services may be
- * stopped and started multiple times.
+ * A task which can be validated before commit.  When validation occurs, all work is complete; all
+ * dependencies will have been validated, and all dependents will await the results of this validation
+ * before proceeding.  If validation fails, dependents will not be validated.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface SimpleService {
+public interface Validatable {
 
-    /**
-     * Start the service.  If this method throws an exception, it will be recorded as a failure to start.
-     *
-     * @param transaction the transaction
-     * @param startContext the start context
-     */
-    void start(Transaction transaction, StartContext startContext);
+    void validate(ValidationContext validateContext);
 
-    /**
-     * Stop the service.
-     *
-     * @param transaction the transaction
-     */
-    void stop(Transaction transaction);
 }

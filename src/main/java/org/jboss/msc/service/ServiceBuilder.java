@@ -20,12 +20,10 @@ package org.jboss.msc.service;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.jboss.msc.txn.TaskController;
+import org.jboss.msc.txn.TaskListener;
 import org.jboss.msc.value.WritableValue;
-import org.jboss.msc.txn.Subtask;
-import org.jboss.msc.txn.SubtaskController;
-import org.jboss.msc.txn.SubtaskListener;
 import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.value.ReadableValue;
 
 /**
  * A service builder.
@@ -35,25 +33,23 @@ import org.jboss.msc.value.ReadableValue;
 public final class ServiceBuilder<T> {
     private final ServiceName name;
     private final Transaction transaction;
-    private final ReadableValue<T> serviceValue;
-    private final Subtask startSubtask;
-    private final Subtask stopSubtask;
-    private final SubtaskController installTask;
-    private final Map<ServiceName, DependencySpec> specs = new LinkedHashMap<ServiceName, DependencySpec>();
+    private final TxnTask startSubtask;
+    private final TxnTask stopSubtask;
+    private final TaskController<T> installTask;
+    private final Map<ServiceName, DependencySpec<?>> specs = new LinkedHashMap<ServiceName, DependencySpec<?>>();
     private ServiceMode mode;
 
-    ServiceBuilder(final ServiceName name, final Transaction transaction, final ReadableValue<T> serviceValue, final Subtask startSubtask, final Subtask stopSubtask) {
+    ServiceBuilder(final ServiceName name, final Transaction transaction, final TxnTask<T> startSubtask, final TxnTask<Void> stopSubtask) {
         this.name = name;
         this.transaction = transaction;
-        this.serviceValue = serviceValue;
         this.startSubtask = startSubtask;
         this.stopSubtask = stopSubtask;
 
-        installTask = transaction.newSubtask(new ServiceInstallTask());
+        installTask = transaction.newSubtask(new ServiceInstallTask<T>(null));
     }
 
-    ServiceBuilder(final ServiceName name, final Transaction transaction, final SimpleService service, final ReadableValue<T> serviceValue) {
-        this(name, transaction, serviceValue, new SimpleServiceStartSubtask(service), new SimpleServiceStopSubtask(service));
+    ServiceBuilder(final ServiceName name, final Transaction transaction, final Service<T> service) {
+        this(name, transaction, new SimpleServiceStartSubtask<T>(service), new SimpleServiceStopSubtask(service));
     }
 
     /**
@@ -136,7 +132,7 @@ public final class ServiceBuilder<T> {
      *
      * @param subtask the subtask
      */
-    public void addDependency(SubtaskController subtask) {
+    public void addDependency(TaskController subtask) {
         subtask.addDependencies(subtask);
     }
 
@@ -147,7 +143,7 @@ public final class ServiceBuilder<T> {
      * @param listener the completion listener or {@code null} for none
      * @return the controller which manages the installation of the service
      */
-    public SubtaskController install(final SubtaskListener listener) {
+    public TaskController install(final TaskListener listener) {
         return installTask.release(listener);
     }
 

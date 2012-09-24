@@ -18,43 +18,40 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.txn.ExecutionContext;
 import org.jboss.msc.txn.Transaction;
+import org.jboss.msc.txn.WorkContext;
 
 /**
- * A simple service which starts transactionally.
+ * A service which starts and stops .  Services may be stopped and started multiple times.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface TransactionalSimpleService extends SimpleService {
-
-    void start(Transaction transaction, StartContext startContext);
+public interface Service<T> {
 
     /**
-     * Perform any prepare-state operations for this service start.  If prepare cannot proceed, the given start context
-     * should be used to report the failure cause.
+     * Start the service.  If this method throws an exception, it will be recorded as a failure to start.  Because
+     * this method executes transactionally, another service that has the same name or is competing for the same resource
+     * may already be installed.  For this reason, any potentially conflicting actions should occur during the commit
+     * phase.
      *
-     * @param transaction the owing transaction
+     * @param transaction the transaction
      * @param startContext the start context
      */
-    void prepareStart(Transaction transaction, StartContext startContext);
+    T start(Transaction transaction, ExecutionContext<T> startContext);
+
+    /**
+     * Cancel the service start.
+     */
+    void rollbackStart(WorkContext context);
 
     /**
      * Commit the service start.  Expected to succeed; any exceptions thrown will be ignored.
      */
-    void commitStart();
-
-    /**
-     * Inform the service of intention to stop.
-     *
-     * @param transaction the owning transaction
-     */
-    void intendStop(Transaction transaction);
-
-    void stop(Transaction transaction);
+    void commitStart(WorkContext context);
 
     /**
      * Commit the service stop.  Expected to succeed; any exceptions thrown will be ignored.
      */
-    void commitStop();
-
+    void stop(WorkContext context);
 }

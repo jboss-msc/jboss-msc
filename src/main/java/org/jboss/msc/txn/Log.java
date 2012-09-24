@@ -16,32 +16,28 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.service;
+package org.jboss.msc.txn;
+
+import org.jboss.logging.Logger;
+import org.jboss.logging.annotations.Cause;
+import org.jboss.logging.annotations.Message;
+import org.jboss.logging.annotations.MessageLogger;
+import org.jboss.logging.annotations.Property;
+
+import javax.transaction.xa.XAException;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class SimpleServiceStopSubtask implements TxnTask<Void> {
+@MessageLogger(projectCode = "TSC")
+interface Log {
 
-    private final Service service;
+    Log log = Logger.getMessageLogger(Log.class, "org.jboss.tsc.txn");
 
-    public SimpleServiceStopSubtask(final Service service) {
-        this.service = service;
-    }
+    @Message(id = 1, value = "Transaction is not active")
+    IllegalStateException notActive();
 
-    public void execute(final TxnTaskContext<Void> context) {
-        context.executeComplete(null, 0);
-    }
-
-    public void rollback(final TxnTaskContext<Void> context) {
-        service.start(context.getTransaction(), new SimpleStartContext(context));
-        context.rollbackComplete();
-    }
-
-    public void commit(final TxnTaskContext<Void> context) {
-        if (service instanceof TransactionalSimpleService) {
-            ((TransactionalSimpleService)service).stop();
-        }
-        context.commitComplete();
-    }
+    // todo - XAException example
+    @Message(value = "A transaction exception occurred")
+    XAException xaException(@Property int errorCode, @Cause Throwable cause);
 }

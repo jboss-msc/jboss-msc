@@ -26,6 +26,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import javax.transaction.RollbackException;
+import javax.transaction.SystemException;
+import javax.transaction.TransactionManager;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 import javax.transaction.xa.Xid;
@@ -44,6 +47,7 @@ public final class MSCResource implements XAResource, Serializable {
 
     private static final AttachmentKey<XidKey> XID_KEY = AttachmentKey.create();
     private static final Xid[] NO_XIDS = new Xid[0];
+    private static final AttachmentKey<TransactionManager> TM_KEY = AttachmentKey.create();
 
     public static MSCResource getInstance() {
         return INSTANCE;
@@ -56,6 +60,17 @@ public final class MSCResource implements XAResource, Serializable {
      */
     public static Transaction getCurrentTransaction() {
         return currentTransaction.get();
+    }
+
+    public static TransactionManager getTransactionManagerFor(Transaction transaction) {
+        return transaction.getAttachmentIfPresent(TM_KEY);
+    }
+
+    public void enlist(Transaction transaction, TransactionManager transactionManager) throws SystemException, RollbackException {
+        if (! transaction.ensureAttachmentValue(TM_KEY, transactionManager)) {
+            throw new IllegalStateException("Transaction is already associated with another transaction manager");
+        }
+        transactionManager.getTransaction().enlistResource(this);
     }
 
     private static XidKey getKeyFor(Transaction transaction) {

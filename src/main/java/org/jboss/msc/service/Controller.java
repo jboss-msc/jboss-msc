@@ -18,36 +18,36 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.txn.Subtask;
+import org.jboss.msc.value.AtomicValue;
 import org.jboss.msc.value.ReadableValue;
+import org.jboss.msc.value.WritableValue;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class Controller {
-    private final Subtask startSubtask;
-    private final Subtask stopSubtask;
+final class Controller<T> {
+    private final TxnTask<T> startSubtask;
+    private final TxnTask<Void> stopSubtask;
     private final Registration primaryRegistration;
     private final Registration[] aliasRegistrations;
     private final Dependency[] dependencies;
-    private final ReadableValue<?> value;
+    private final AtomicValue<T> value = new AtomicValue<T>();
     private volatile ServiceMode mode = ServiceMode.NEVER;
     private volatile State state = State.NEW;
 
-    Controller(final Dependency[] dependencies, final Registration[] aliasRegistrations, final Registration primaryRegistration, final Subtask stopSubtask, final Subtask startSubtask, final ReadableValue<?> value) {
+    Controller(final Dependency[] dependencies, final Registration[] aliasRegistrations, final Registration primaryRegistration, final TxnTask<Void> stopSubtask, final TxnTask<T> startSubtask) {
         this.dependencies = dependencies;
         this.aliasRegistrations = aliasRegistrations;
         this.primaryRegistration = primaryRegistration;
         this.stopSubtask = stopSubtask;
         this.startSubtask = startSubtask;
-        this.value = value;
     }
 
-    public Subtask getStartSubtask() {
+    public TxnTask<T> getStartSubtask() {
         return startSubtask;
     }
 
-    public Subtask getStopSubtask() {
+    public TxnTask<Void> getStopSubtask() {
         return stopSubtask;
     }
 
@@ -63,7 +63,11 @@ final class Controller {
         return dependencies;
     }
 
-    public ReadableValue<?> getValue() {
+    public ReadableValue<T> getValue() {
+        return value;
+    }
+
+    WritableValue<T> getWriteValue() {
         return value;
     }
 

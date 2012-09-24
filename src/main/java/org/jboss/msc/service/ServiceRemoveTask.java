@@ -18,31 +18,20 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.txn.Subtask;
-import org.jboss.msc.txn.SubtaskContext;
-import org.jboss.msc.txn.SubtaskController;
-import org.jboss.msc.txn.SubtaskFailure;
-
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class ServiceRemoveTask implements Subtask {
+final class ServiceRemoveTask implements TxnTask<Void> {
 
     ServiceRemoveTask(final ServiceName name) {
     }
 
-    public void execute(final SubtaskContext context) {
+    public void execute(final TxnTaskContext context) {
     }
 
-    public void rollback(final SubtaskContext context) {
+    public void rollback(final TxnTaskContext context) {
     }
 
-    public void prepare(final SubtaskContext context) {
-    }
-
-    public void abort(final SubtaskContext context) {
-    }
-
-    public void commit(final SubtaskContext context) {
+    public void commit(final TxnTaskContext context) {
     }
 }

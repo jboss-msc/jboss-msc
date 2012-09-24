@@ -25,10 +25,10 @@ import java.util.concurrent.CopyOnWriteArraySet;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 final class Registration {
-    private volatile Controller controller;
-    private final Set<Dependency> incomingDependencies = new CopyOnWriteArraySet<Dependency>();
+    private volatile Controller<?> controller;
+    private final Set<Dependency<?>> incomingDependencies = new CopyOnWriteArraySet<Dependency<?>>();
 
-    Controller getController() {
+    Controller<?> getController() {
         return controller;
     }
 }

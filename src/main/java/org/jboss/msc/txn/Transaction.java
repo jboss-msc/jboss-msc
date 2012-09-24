@@ -18,28 +18,14 @@
 
 package org.jboss.msc.txn;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
+
+import static org.jboss.msc.txn.Bits.allAreSet;
 
 /**
- * A task transaction.
- *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class Transaction {
-    private final long startTime = System.nanoTime();
-    private volatile long endTime;
-    private final Executor subtaskExecutor;
-    private final Queue<SubtaskContext> subtasks = new ConcurrentLinkedQueue<SubtaskContext>();
-    private final ConcurrentMap<AttachmentKey, Object> attachments = new ConcurrentHashMap<AttachmentKey, Object>();
-
-    private Transaction(final Executor executor) {
-        subtaskExecutor = executor;
-    }
+public abstract class Transaction extends AbstractAttachable {
 
     /**
      * Create a new subtask transaction.
@@ -48,8 +34,19 @@ public final class Transaction {
      * @return the transaction
      */
     public static Transaction create(Executor executor) {
-        return new Transaction(executor);
+        return new RootTransaction(executor);
     }
+
+    /**
+     * Create a nested transaction within this transaction.
+     *
+     * @return the nested transaction
+     */
+    public final Transaction createNested() {
+        return new ChildTransaction(this);
+    }
+
+    abstract <T> TaskBuilder<T> newSubtask(Executable<T> executable, Object subtask, Transaction owner) throws IllegalStateException;
 
     /**
      * Add a subtask to this transaction.
@@ -58,94 +55,44 @@ public final class Transaction {
      * @return the subtask builder
      * @throws IllegalStateException if the transaction is not open
      */
-    public SubtaskController newSubtask(Subtask subtask) throws IllegalStateException {
-        return new SubtaskController(this, subtask);
+    public final <T> TaskBuilder<T> newSubtask(Executable<T> subtask) throws IllegalStateException {
+        return newSubtask(subtask, subtask, this);
+    }
+
+    public final TaskBuilder<Void> newSubtask(Object subtask) throws IllegalStateException {
+        return newSubtask(Executable.NULL, subtask, this);
     }
 
     /**
-     * Roll back this transaction, undoing all work executed up until this time.  New work may not be submitted against
-     * this transaction once this method has been called.
+     * Roll back this transaction, undoing all work executed up until this time.
      *
      * @param completionListener the listener to call when the rollback is complete
-     * @throws IllegalStateException if the transaction was already terminated
+     * @return {@code true} if rollback was initiated, or {@code false} if another thread has already committed or rolled back
      */
-    public void rollback(TransactionListener completionListener) throws IllegalStateException {
-
+    public boolean rollback(TxnListener completionListener) {
     }
 
     /**
-     * Prepare this transaction.  It is an error to prepare a transaction with unreleased tasks.
-     * Once this method returns, either {@link #commit(TransactionListener)} or {@link #rollback(TransactionListener)} must be called.
-     * If this method throws an exception, the transaction must {@link #rollback(TransactionListener)}.  After calling this method (regardless
-     * of its outcome), the transaction can not be modified before termination.
+     * Determine whether this transaction is a parent or ancestor of another transaction.
      *
-     * @param completionListener the listener to call when the rollback is complete
-     * @throws PrepareFailedException if the transaction cannot be prepared
+     * @param transaction the possible child transaction
+     * @return {@code true} if this transaction is equal to, or is an ancestor of, the given transaction
      */
-    public void prepare(TransactionListener completionListener) throws PrepareFailedException {
+    public final boolean isParentOf(Transaction transaction) {
+        return this == transaction || transaction instanceof ChildTransaction && isParentOf(((ChildTransaction) transaction).getParent());
     }
 
     /**
-     * Commit the work done by {@link #prepare(TransactionListener)} and terminate this transaction.
+     * Determine whether this transaction is a child or descendant of another transaction.
      *
-     * @param completionListener the listener to call when the rollback is complete
+     * @param transaction the possible parent transaction
+     * @return {@code true} if this transaction is equal to, or is a descendant of, the given transaction
      */
-    public void commit(TransactionListener completionListener) {
-        // CAS state to COMMIT from OPEN or PREPARE
-        SubtaskContext context;
-        while ((context = subtasks.poll()) != null) {
-            // initiate commit
-        }
-        // CAS state from COMMIT to COMPLETE
+    public final boolean isChildOf(Transaction transaction) {
+        return transaction != null && transaction.isParentOf(this);
     }
 
-    @SuppressWarnings("unchecked")
-    public <T> T getAttachment(AttachmentKey<T> key) {
-        return (T) attachments.get(key);
-    }
-
-    @SuppressWarnings("unchecked")
-    public <T> T putAttachment(AttachmentKey<T> key, T newValue) {
-        return (T) attachments.put(key, newValue);
-    }
-
-    @SuppressWarnings("unchecked")
-    public <T> T putAttachmentIfAbsent(AttachmentKey<T> key, T newValue) {
-        return (T) attachments.putIfAbsent(key, newValue);
-    }
-
-    @SuppressWarnings("unchecked")
-    public <T> T removeAttachment(AttachmentKey<T> key) {
-        return (T) attachments.remove(key);
-    }
-
-    public <T> boolean removeAttachment(AttachmentKey<T> key, T expectedValue) {
-        return attachments.remove(key, expectedValue);
-    }
-
-    @SuppressWarnings("unchecked")
-    public <T> T replaceAttachment(AttachmentKey<T> key, T newValue) {
-        return (T) attachments.replace(key, newValue);
-    }
-
-    public <T> boolean replaceAttachment(AttachmentKey<T> key, T expectedValue, T newValue) {
-        return attachments.replace(key, expectedValue, newValue);
-    }
-
-    public boolean containsAttachment(AttachmentKey<?> key) {
-        return attachments.containsKey(key);
-    }
-
-    /**
-     * Get the duration of the current transaction.
-     *
-     * @return the duration of the current transaction
-     */
-    public long getDuration(TimeUnit unit) {
-        // todo: query txn state
-        long endTime = false ? this.endTime : System.nanoTime();
-        return unit.convert(endTime - startTime, TimeUnit.NANOSECONDS);
-    }
+    public abstract Executor getExecutor();
 
     public enum State {
         OPEN,

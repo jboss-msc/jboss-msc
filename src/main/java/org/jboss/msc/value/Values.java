@@ -188,18 +188,6 @@ public final class Values {
     }
 
     /**
-     * Safely re-cast a value as its superclass.
-     *
-     * @param value the value to re-cast
-     * @param <T> the value type
-     * @return the value
-     */
-    @SuppressWarnings({ "unchecked" })
-    public static <T> ReadableValue<T> asSuperclass(ReadableValue<? extends T> value) {
-        return (ReadableValue<T>) value;
-    }
-
-    /**
      * The special value representing {@code this} (the object being invoked upon).
      *
      * @return the value for {@code this}

@@ -28,16 +28,16 @@ package org.jboss.msc.value;
 public interface WritableValue<T> {
 
     /**
-     * Inject the given value.
+     * Set (inject) the given value.
      *
      * @param value the value
-     * @throws InjectionException if the injection failed
+     * @throws ValueAlreadySetException if the injection failed
      */
-    void inject(T value) throws InjectionException;
+    void setValue(T value) throws ValueAlreadySetException;
 
     /**
-     * Uninject the given value (in other words, cancel or undo a previous injection).  Only called after {@code inject()}
+     * Clear the value (in other words, cancel or undo a previous injection).  Only called after {@code setValue()}
      * has been called.
      */
-    void uninject();
+    void clear();
 }
