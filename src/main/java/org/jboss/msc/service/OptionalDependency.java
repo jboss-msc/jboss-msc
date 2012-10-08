@@ -151,7 +151,7 @@ class OptionalDependency implements Dependency, Dependent {
         assert !holdsLock(this);
         assert !holdsLock(dependent);
         synchronized (this) {
-            dependent = null;
+            this.dependent = null;
             forwardNotifications = false;
         }
         optionalDependency.removeDependent(this);
@@ -178,6 +178,7 @@ class OptionalDependency implements Dependency, Dependent {
         final DependencyState depState;
         final boolean transDepUnavailable;
         final boolean depFailed;
+        final Dependent dependent;
         synchronized (this) {
             demandedByDependent = false;
             depState = dependencyState;
@@ -190,6 +191,7 @@ class OptionalDependency implements Dependency, Dependent {
                 notifyOptionalDependency = false;
                 startNotifying = forwardNotifications = dependencyState.compareTo(DependencyState.AVAILABLE) >= 0;//);
             }
+            dependent = this.dependent;
         }
         if (startNotifying) {
             if (depState == DependencyState.AVAILABLE) {
@@ -262,7 +264,9 @@ class OptionalDependency implements Dependency, Dependent {
         final boolean notifyOptionalDependent;
         final boolean depFailed;
         final boolean startNotifying;
+        final Dependent dependent;
         synchronized (this) {
+            dependent = this.dependent;
             depFailed = dependencyFailed;
             startNotifying = !forwardNotifications;
             dependencyState = DependencyState.AVAILABLE;
@@ -285,7 +289,9 @@ class OptionalDependency implements Dependency, Dependent {
         final DependencyState depState;
         final boolean transitiveDepUnavailable;
         final boolean depFailed;
+        final Dependent dependent;
         synchronized (this) {
+            dependent = this.dependent;
             depState = dependencyState;
             transitiveDepUnavailable = transitiveDependencyUnavailable;
             depFailed = dependencyFailed;
@@ -315,7 +321,9 @@ class OptionalDependency implements Dependency, Dependent {
     public void immediateDependencyUp() {
         assert !holdsLock(this);
         final boolean notifyOptionalDependent;
+        final Dependent dependent;
         synchronized (this) {
+            dependent = this.dependent;
             dependencyState = DependencyState.UP;
             notifyOptionalDependent = forwardNotifications;
         }
@@ -328,7 +336,9 @@ class OptionalDependency implements Dependency, Dependent {
     public void immediateDependencyDown() {
         assert !holdsLock(this);
         final boolean notifyOptionalDependent;
+        final Dependent dependent;
         synchronized (this) {
+            dependent = this.dependent;
             dependencyState = DependencyState.AVAILABLE;
             notifyOptionalDependent = forwardNotifications;
         }
@@ -341,7 +351,9 @@ class OptionalDependency implements Dependency, Dependent {
     public void dependencyFailed() {
         assert !holdsLock(this);
         final boolean notifyOptionalDependent;
+        final Dependent dependent;
         synchronized (this) {
+            dependent = this.dependent;
             notifyOptionalDependent = forwardNotifications;
             dependencyFailed = true;
         }
@@ -354,7 +366,9 @@ class OptionalDependency implements Dependency, Dependent {
     public void dependencyFailureCleared() {
         assert !holdsLock(this);
         final boolean notifyOptionalDependent;
+        final Dependent dependent;
         synchronized (this) {
+            dependent = this.dependent;
             notifyOptionalDependent = forwardNotifications;
             dependencyFailed = false;
         }
@@ -367,9 +381,11 @@ class OptionalDependency implements Dependency, Dependent {
     public void transitiveDependencyAvailable() {
         assert !holdsLock(this);
         final boolean notifyOptionalDependent;
+        final Dependent dependent;
         synchronized (this) {
             notifyOptionalDependent = forwardNotifications;
             transitiveDependencyUnavailable = false;
+            dependent = this.dependent;
         }
         if (notifyOptionalDependent) {
             dependent.transitiveDependencyAvailable();
@@ -378,6 +394,10 @@ class OptionalDependency implements Dependency, Dependent {
 
     @Override
     public ServiceControllerImpl<?> getController() {
+        final Dependent dependent;
+        synchronized (this) {
+            dependent = this.dependent;
+        }
         return dependent.getController();
     }
 
@@ -385,7 +405,9 @@ class OptionalDependency implements Dependency, Dependent {
     public void transitiveDependencyUnavailable() {
         assert !holdsLock(this);
         final boolean notifyOptionalDependent;
+        final Dependent dependent;
         synchronized (this) {
+            dependent = this.dependent;
             notifyOptionalDependent = forwardNotifications;
             transitiveDependencyUnavailable = true;
         }
