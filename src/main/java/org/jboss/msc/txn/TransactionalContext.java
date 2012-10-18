@@ -19,8 +19,35 @@
 package org.jboss.msc.txn;
 
 /**
+ * A context for a task associated with a transaction.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface TransactionalContext {
+    /**
+     * Begin doing work on behalf of this task from the current thread.  Should be followed by a
+     * {@code try}/{@code finally} block, wherein the {@link #end()} method is called from the {@code finally}
+     * portion.  The initial execution method need not invoke this method; it is presumed to be executing on behalf of
+     * the task for the duration of the method call.
+     * <p>
+     * Calling this method may affect the calling thread in any of the following ways:
+     * <ul>
+     *     <li>The thread may be interrupted if the associated task is cancellable, and it was cancelled</li>
+     *     <li>The thread's current context loader may be set</li>
+     *     <li>Management interfaces may be updated to reflect that this task is making progress</li>
+     * </ul>
+     */
+    void begin();
+
+    /**
+     * Finish doing work on behalf of this task from the current thread.
+     */
+    void end();
+
+    /**
+     * Get the transaction.
+     *
+     * @return the transaction
+     */
     Transaction getTransaction();
 }

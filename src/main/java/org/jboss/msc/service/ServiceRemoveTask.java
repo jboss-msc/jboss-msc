@@ -18,13 +18,14 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.txn.CommitContext;
 import org.jboss.msc.txn.Committable;
 import org.jboss.msc.txn.Executable;
-import org.jboss.msc.txn.ExecutionContext;
+import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.Revertible;
+import org.jboss.msc.txn.RollbackContext;
 import org.jboss.msc.txn.Validatable;
-import org.jboss.msc.txn.ValidationContext;
-import org.jboss.msc.txn.WorkContext;
+import org.jboss.msc.txn.ValidateContext;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -34,15 +35,15 @@ final class ServiceRemoveTask implements Committable, Executable<Void>, Revertib
     ServiceRemoveTask(final ServiceName name) {
     }
 
-    public void commit(final WorkContext context) {
+    public void commit(final CommitContext context) {
     }
 
-    public void execute(final ExecutionContext<Void> context) {
+    public void execute(final ExecuteContext<Void> context) {
     }
 
-    public void rollback(final WorkContext context) {
+    public void rollback(final RollbackContext context) {
     }
 
-    public void validate(final ValidationContext validateContext) {
+    public void validate(final ValidateContext validateContext) {
     }
 }

@@ -31,6 +31,7 @@ import org.jboss.msc.txn.Transaction;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class ServiceBuilder<T> {
+    private final ServiceContainer container;
     private final ServiceName name;
     private final Transaction transaction;
     private final Object startSubtask;
@@ -39,7 +40,8 @@ public final class ServiceBuilder<T> {
     private final Map<ServiceName, DependencySpec<?>> specs = new LinkedHashMap<ServiceName, DependencySpec<?>>();
     private ServiceMode mode;
 
-    ServiceBuilder(final ServiceName name, final Transaction transaction, final Object startSubtask, final Object stopSubtask) {
+    ServiceBuilder(final ServiceContainer container, final ServiceName name, final Transaction transaction, final Object startSubtask, final Object stopSubtask) {
+        this.container = container;
         this.name = name;
         this.transaction = transaction;
         this.startSubtask = startSubtask;
@@ -48,8 +50,8 @@ public final class ServiceBuilder<T> {
         installTask = null;
     }
 
-    ServiceBuilder(final ServiceName name, final Transaction transaction, final Service<T> service) {
-        this(name, transaction, null, null);
+    ServiceBuilder(final ServiceName name, final Transaction transaction, final Service<T> service, final ServiceContainer container) {
+        this(container, name, transaction, null, null);
     }
 
     /**
@@ -85,10 +87,30 @@ public final class ServiceBuilder<T> {
     /**
      * Add a dependency to the service being built.
      *
+     * @param container the service container
+     * @param name the service name
+     */
+    public void addDependency(ServiceContainer container, ServiceName name) {
+        addDependency(container, name, DependencyFlag.NONE);
+    }
+
+    /**
+     * Add a dependency to the service being built.
+     *
      * @param name the service name
      */
     public void addDependency(ServiceName name) {
-        addDependency(name, DependencyFlag.NONE);
+        addDependency(container, name, DependencyFlag.NONE);
+    }
+
+    /**
+     * Add a dependency to the service being built.
+     *
+     * @param name the service name
+     * @param flags the flags for the service
+     */
+    public void addDependency(ServiceContainer container, ServiceName name, DependencyFlag... flags) {
+        specs.put(name, new DependencySpec(container, name, flags));
     }
 
     /**
@@ -98,8 +120,19 @@ public final class ServiceBuilder<T> {
      * @param flags the flags for the service
      */
     public void addDependency(ServiceName name, DependencyFlag... flags) {
-        specs.put(name, new DependencySpec(name, flags));
+        specs.put(name, new DependencySpec(container, name, flags));
     }
+
+    /**
+     * Add an injected dependency to the service being built.  The dependency will be injected just before
+     * starting this service and uninjected just before stopping it.
+     *
+     * @param name the service name
+     * @param injector the injector for the dependency value
+     */
+    public void addDependency(ServiceContainer container, ServiceName name, WritableValue<?> injector) {
+        addDependency(container, name, injector, DependencyFlag.NONE);
+    };
 
     /**
      * Add an injected dependency to the service being built.  The dependency will be injected just before
@@ -120,9 +153,23 @@ public final class ServiceBuilder<T> {
      * @param injector the injector for the dependency value
      * @param flags the flags for the service
      */
-    public void addDependency(ServiceName name, WritableValue<?> injector, DependencyFlag... flags) {
-        DependencySpec spec = new DependencySpec(name, flags);
-        spec.getInjections().add(injector);
+    public <T> void addDependency(ServiceContainer container, ServiceName name, WritableValue<T> injector, DependencyFlag... flags) {
+        DependencySpec<T> spec = new DependencySpec<T>(container, name, flags);
+        spec.addInjection(injector);
+        specs.put(name, spec);
+    }
+
+    /**
+     * Add an injected dependency to the service being built.  The dependency will be injected just before starting this
+     * service and uninjected just before stopping it.
+     *
+     * @param name the service name
+     * @param injector the injector for the dependency value
+     * @param flags the flags for the service
+     */
+    public <T> void addDependency(ServiceName name, WritableValue<T> injector, DependencyFlag... flags) {
+        DependencySpec<T> spec = new DependencySpec<T>(container, name, flags);
+        spec.addInjection(injector);
         specs.put(name, spec);
     }
 

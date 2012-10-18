@@ -18,12 +18,16 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.txn.ExecutionContext;
-import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.txn.WorkContext;
+import org.jboss.msc.txn.CommitContext;
+import org.jboss.msc.txn.Committable;
+import org.jboss.msc.txn.ExecuteContext;
+import org.jboss.msc.txn.Revertible;
+import org.jboss.msc.txn.Validatable;
 
 /**
- * A service which starts and stops .  Services may be stopped and started multiple times.
+ * A service which starts and stops .  Services may be stopped and started multiple times.  A service may additionally
+ * implement {@link Validatable}, {@link Revertible}, and/or {@link Committable} to implement full transactional
+ * start semantics.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
@@ -35,23 +39,12 @@ public interface Service<T> {
      * may already be installed.  For this reason, any potentially conflicting actions should occur during the commit
      * phase.
      *
-     * @param transaction the transaction
      * @param startContext the start context
      */
-    T start(Transaction transaction, ExecutionContext<T> startContext);
-
-    /**
-     * Cancel the service start.
-     */
-    void rollbackStart(WorkContext context);
-
-    /**
-     * Commit the service start.  Expected to succeed; any exceptions thrown will be ignored.
-     */
-    void commitStart(WorkContext context);
+    void start(ExecuteContext<T> startContext);
 
     /**
      * Commit the service stop.  Expected to succeed; any exceptions thrown will be ignored.
      */
-    void stop(WorkContext context);
+    void stop(CommitContext context);
 }

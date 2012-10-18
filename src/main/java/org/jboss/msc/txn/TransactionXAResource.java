@@ -38,18 +38,18 @@ import javax.transaction.xa.Xid;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class MSCResource implements XAResource, Serializable {
+public final class TransactionXAResource implements XAResource, Serializable {
     private static final long serialVersionUID = -5916852431271162444L;
 
     private static final ConcurrentMap<XidKey, Transaction> incompleteTransactions = new ConcurrentHashMap<XidKey, Transaction>();
     private static final ThreadLocal<Transaction> currentTransaction = new ThreadLocal<Transaction>();
-    private static final MSCResource INSTANCE = new MSCResource();
+    private static final TransactionXAResource INSTANCE = new TransactionXAResource();
 
     private static final AttachmentKey<XidKey> XID_KEY = AttachmentKey.create();
     private static final Xid[] NO_XIDS = new Xid[0];
     private static final AttachmentKey<TransactionManager> TM_KEY = AttachmentKey.create();
 
-    public static MSCResource getInstance() {
+    public static TransactionXAResource getInstance() {
         return INSTANCE;
     }
 

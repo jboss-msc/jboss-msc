@@ -16,23 +16,12 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.service;
-
-import org.jboss.msc.txn.ExecutionContext;
-import org.jboss.msc.txn.Failure;
+package org.jboss.msc.txn;
 
 /**
-* @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
-*/
-class SimpleStartContext implements StartContext {
-
-    private final ExecutionContext<?> context;
-
-    public SimpleStartContext(final ExecutionContext<?> context) {
-        this.context = context;
-    }
-
-    public void startFailed(final Failure reason) {
-        context.failed(reason);
-    }
+ * The context for a commit operation.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
+public interface CommitContext extends SimpleWorkContext, TransactionalContext {
 }

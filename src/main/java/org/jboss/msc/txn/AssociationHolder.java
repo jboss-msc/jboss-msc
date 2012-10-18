@@ -21,6 +21,12 @@ package org.jboss.msc.txn;
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface WorkContext extends TransactionalContext {
-    void complete();
+final class AssociationHolder extends ThreadLocal<Association> {
+    public Association push(Transaction transaction, TaskController<?> controller) {
+        return new Association(transaction, controller);
+    }
+
+    public void restore(Association pushed) {
+        // find last association
+    }
 }

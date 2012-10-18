@@ -18,18 +18,13 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.txn.CommitContext;
 import org.jboss.msc.txn.Committable;
-import org.jboss.msc.txn.Executable;
-import org.jboss.msc.txn.ExecutionContext;
-import org.jboss.msc.txn.Revertible;
-import org.jboss.msc.txn.Validatable;
-import org.jboss.msc.txn.ValidationContext;
-import org.jboss.msc.txn.WorkContext;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class SimpleServiceStopSubtask<T> implements Executable<T>, Revertible, Committable,Validatable {
+final class SimpleServiceStopSubtask<T> implements Committable {
 
     private final Service<T> service;
 
@@ -37,15 +32,7 @@ final class SimpleServiceStopSubtask<T> implements Executable<T>, Revertible, Co
         this.service = service;
     }
 
-    public void commit(final WorkContext context) {
-    }
-
-    public void execute(final ExecutionContext<T> context) {
-    }
-
-    public void rollback(final WorkContext context) {
-    }
-
-    public void validate(final ValidationContext validateContext) {
+    public void commit(final CommitContext context) {
+        service.stop(context);
     }
 }

@@ -41,12 +41,12 @@ public interface Attachable {
     <T> boolean replaceAttachment(AttachmentKey<T> key, T expectedValue, T newValue);
 
     /**
-     * Ensure that an attachment has the specified value, setting it if necessary.
+     * Ensure that an attachment has the specified value, setting it if it is missing.
      *
      * @param key the key
      * @param expectedValue the expected value
      * @param <T> the value type
-     * @return {@code true} if the attachment value is equal to {@code expectedValue}, {@code false} otherwise
+     * @return {@code true} if the attachment value is already, or was added to be, equal to {@code expectedValue}, {@code false} otherwise
      */
     <T> boolean ensureAttachmentValue(AttachmentKey<T> key, T expectedValue);
 }

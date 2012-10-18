@@ -28,7 +28,7 @@ public interface Committable {
     /**
      * Commit this operation.
      *
-     * @param context the work context
+     * @param context the commit context
      */
-    void commit(WorkContext context);
+    void commit(CommitContext context);
 }

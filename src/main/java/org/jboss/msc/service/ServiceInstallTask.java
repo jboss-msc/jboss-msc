@@ -18,39 +18,41 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.txn.CommitContext;
 import org.jboss.msc.txn.Committable;
 import org.jboss.msc.txn.Executable;
-import org.jboss.msc.txn.ExecutionContext;
+import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.Revertible;
+import org.jboss.msc.txn.RollbackContext;
 import org.jboss.msc.txn.Validatable;
-import org.jboss.msc.txn.ValidationContext;
-import org.jboss.msc.txn.WorkContext;
+import org.jboss.msc.txn.ValidateContext;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class ServiceInstallTask<T> implements Executable<Controller<T>>, Validatable, Committable, Revertible {
+final class ServiceInstallTask<T> implements Executable<Controller<T>>, Revertible, Validatable, Committable {
     private final ServiceTxn txn;
     private final Registration primaryReg;
     private final Registration[] aliasReg;
-    private final Executable<T> startSubtask;
+    private final Service<T> service;
 
-    ServiceInstallTask(final Executable<T> startSubtask, final Registration[] aliasReg, final Registration primaryReg, final ServiceTxn txn) {
-        this.startSubtask = startSubtask;
-        this.aliasReg = aliasReg;
-        this.primaryReg = primaryReg;
+    ServiceInstallTask(final ServiceTxn txn, final Registration primaryReg, final Registration[] aliasReg, final Service<T> service) {
         this.txn = txn;
+        this.primaryReg = primaryReg;
+        this.aliasReg = aliasReg;
+        this.service = service;
     }
 
-    public void commit(final WorkContext context) {
+    public void execute(final ExecuteContext<Controller<T>> context) {
+
     }
 
-    public void execute(final ExecutionContext<Controller<T>> context) {
+    public void validate(final ValidateContext validateContext) {
     }
 
-    public void rollback(final WorkContext context) {
+    public void rollback(final RollbackContext context) {
     }
 
-    public void validate(final ValidationContext validateContext) {
+    public void commit(final CommitContext context) {
     }
 }

@@ -16,23 +16,35 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.service;
-
-import org.jboss.msc.txn.Failure;
+package org.jboss.msc.txn;
 
 /**
- * A context for service start.
- *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface StartContext {
+final class Association {
+    private final Transaction transaction;
+    private final TaskController<?> controller;
+    private ClassLoader storedClassLoader;
+    private Association pushed;
 
-    /**
-     * Indicate that the service could not be started.
-     *
-     * @param reason the failure reason
-     */
-    void startFailed(Failure reason);
+    Association(final Transaction transaction, final TaskController<?> controller) {
+        this.transaction = transaction;
+        this.controller = controller;
+    }
 
+    public Transaction getTransaction() {
+        return transaction;
+    }
 
+    public TaskController<?> getController() {
+        return controller;
+    }
+
+    public ClassLoader getStoredClassLoader() {
+        return storedClassLoader;
+    }
+
+    public Association getPushed() {
+        return pushed;
+    }
 }

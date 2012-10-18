@@ -31,11 +31,21 @@ import org.jboss.msc.value.WritableValue;
 public final class TaskBuilder<T> {
 
     private final RootTransaction transaction;
-    private final Object subtask;
+    private Executable<T> executable;
+    private Validatable validatable;
+    private Revertible revertible;
+    private Committable committable;
+
+    TaskBuilder(final RootTransaction transaction, final Executable<T> executable, final Object subtask) {
+        this.transaction = transaction;
+        this.executable = executable;
+        if (subtask instanceof Validatable) validatable = (Validatable) subtask;
+        if (subtask instanceof Revertible) revertible = (Revertible) subtask;
+        if (subtask instanceof Committable) committable = (Committable) subtask;
+    }
 
     TaskBuilder(final RootTransaction transaction, final Object subtask) {
-        this.transaction = transaction;
-        this.subtask = subtask;
+        this(transaction, null, subtask);
     }
 
     /**
@@ -45,6 +55,52 @@ public final class TaskBuilder<T> {
      */
     public Transaction getTransaction() {
         return transaction;
+    }
+
+    /**
+     * Change the executable part of this task, or {@code null} to prevent the executable part from running.
+     *
+     * @param executable the new executable part
+     */
+    public void setExecutable(final Executable<T> executable) {
+        this.executable = executable;
+    }
+
+    /**
+     * Set the validatable part of this task, or {@code null} to prevent the validation phase from running for this task.
+     *
+     * @param validatable the validatable part
+     */
+    public void setValidatable(final Validatable validatable) {
+        this.validatable = validatable;
+    }
+
+    /**
+     * Set the revertible part of this task, or {@code null} if the task should not support rollback.
+     *
+     * @param revertible the revertible part
+     */
+    public void setRevertible(final Revertible revertible) {
+        this.revertible = revertible;
+    }
+
+    /**
+     * Set the committable part of this task, or {@code null} if this task should not support commit operations.
+     *
+     * @param committable the committable part
+     */
+    public void setCommittable(final Committable committable) {
+        this.committable = committable;
+    }
+
+    /**
+     * Set the class loader to use for this task.
+     *
+     * @param classLoader the class loader
+     * @return this task builder
+     */
+    public TaskBuilder<T> setClassLoader(ClassLoader classLoader) {
+        return this;
     }
 
     /**

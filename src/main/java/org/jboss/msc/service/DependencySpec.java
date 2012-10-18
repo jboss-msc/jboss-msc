@@ -26,13 +26,19 @@ import org.jboss.msc.value.WritableValue;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 final class DependencySpec<T> {
+    private final ServiceContainer container;
     private final ServiceName name;
     private final DependencyFlag[] flags;
     private final List<WritableValue<? super T>> injections = new ArrayList<WritableValue<? super T>>();
 
-    DependencySpec(final ServiceName name, final DependencyFlag[] flags) {
+    DependencySpec(final ServiceContainer container, final ServiceName name, final DependencyFlag[] flags) {
+        this.container = container;
         this.name = name;
         this.flags = flags;
+    }
+
+    public ServiceContainer getContainer() {
+        return container;
     }
 
     public ServiceName getName() {
@@ -45,5 +51,9 @@ final class DependencySpec<T> {
 
     public List<WritableValue<? super T>> getInjections() {
         return injections;
+    }
+
+    public void addInjection(final WritableValue<? super T> injector) {
+        injections.add(injector);
     }
 }

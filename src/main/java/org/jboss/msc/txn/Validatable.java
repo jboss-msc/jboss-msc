@@ -27,6 +27,12 @@ package org.jboss.msc.txn;
  */
 public interface Validatable {
 
-    void validate(ValidationContext validateContext);
-
+    /**
+     * Perform validation.  Any problems should be reported via the {@code validateContext}.  When validation
+     * is complete, the context's {@code complete()} method must be called, regardless of whether validation
+     * succeeded or failed.
+     *
+     * @param validateContext the validation context
+     */
+    void validate(ValidateContext validateContext);
 }

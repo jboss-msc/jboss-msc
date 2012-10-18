@@ -19,31 +19,13 @@
 package org.jboss.msc.txn;
 
 /**
- * Context for a task that may succeed or fail which may also produce a consumable result.  If threads executing on
+ * A task which may be cancelled.  If threads executing on
  * behalf of the corresponding task are interrupted, the {@link #isCancelRequested()} method should be checked to
  * see if the task should be cancelled.
  *
- * @param <T> the result type of the associated task
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface ExecutionContext<T> extends TransactionalContext {
-
-    void complete(T result);
-
-    void failed(Failure reason);
-
-    /**
-     * Begin doing work on behalf of this task from the current thread.  Should be followed by a
-     * {@code try}/{@code finally} block, wherein the {@link #end()} method is called from the {@code finally}
-     * portion.  The initial {@link Executable#execute(ExecutionContext)} method need not invoke this method; it
-     * is presumed to be executing on behalf of the task for the duration of the method call.
-     */
-    void begin();
-
-    /**
-     * Finish doing work on behalf of this task from the current thread.
-     */
-    void end();
+public interface CancellableContext {
 
     /**
      * Determine if this task has been requested to be cancelled (due to its containing transaction being
@@ -57,4 +39,5 @@ public interface ExecutionContext<T> extends TransactionalContext {
      * Acknowledge the cancellation of this task.
      */
     void cancelled();
+
 }

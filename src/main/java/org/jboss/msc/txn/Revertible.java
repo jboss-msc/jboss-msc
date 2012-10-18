@@ -30,5 +30,5 @@ public interface Revertible {
      *
      * @param context the work context
      */
-    void rollback(WorkContext context);
+    void rollback(RollbackContext context);
 }

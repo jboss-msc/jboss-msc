@@ -21,8 +21,6 @@ package org.jboss.msc.txn;
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface ValidationContext extends TransactionalContext {
-    void passed();
-
-    void failed(Failure failure);
+public interface SimpleWorkContext {
+    void complete();
 }

@@ -46,6 +46,6 @@ public final class AttachmentKey<T> {
     }
 
     T createValue() {
-        return defaultFactory.create();
+        return defaultFactory == null ? null : defaultFactory.create();
     }
 }
