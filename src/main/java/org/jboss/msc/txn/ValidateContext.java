@@ -21,6 +21,5 @@ package org.jboss.msc.txn;
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface ValidateContext extends TransactionalContext, CancellableContext, FailableContext {
-    void passed();
+public interface ValidateContext extends TransactionalContext, CancellableContext, ReportableContext, SimpleWorkContext {
 }

@@ -22,7 +22,7 @@ package org.jboss.msc.txn;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 final class AssociationHolder extends ThreadLocal<Association> {
-    public Association push(Transaction transaction, TaskController<?> controller) {
+    public Association push(Transaction transaction, TaskControllerImpl<?> controller) {
         return new Association(transaction, controller);
     }
 

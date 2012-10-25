@@ -18,9 +18,6 @@
 
 package org.jboss.msc.service;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -31,8 +28,6 @@ import org.jboss.msc.txn.Transaction;
 final class ServiceTxn {
     private final ServiceContainer container;
     private final Transaction transaction;
-
-    private final ConcurrentMap<ServiceName, Pending> map = new ConcurrentHashMap<ServiceName, Pending>();
 
     public ServiceTxn(final ServiceContainer container, final Transaction transaction) {
         this.container = container;
@@ -48,34 +43,6 @@ final class ServiceTxn {
 
     public Transaction getTransaction() {
         return transaction;
-    }
-
-    TaskController removePendingInstall(final ServiceName name) {
-        return null;
-    }
-
-    static final class Pending {
-        private final TaskController<?> subtask;
-        private final State state;
-
-        Pending(final State state, final TaskController<?> subtask) {
-            if (state == null) {
-                throw new IllegalArgumentException("state is null");
-            }
-            if (subtask == null) {
-                throw new IllegalArgumentException("subtask is null");
-            }
-            this.state = state;
-            this.subtask = subtask;
-        }
-
-        public TaskController<?> getSubtask() {
-            return subtask;
-        }
-
-        public State getState() {
-            return state;
-        }
     }
 
     enum State {

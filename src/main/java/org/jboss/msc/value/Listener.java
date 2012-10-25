@@ -16,12 +16,21 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.txn;
+package org.jboss.msc.value;
+
+import java.util.EventListener;
 
 /**
+ * A listener for a value.  Listeners are fired in response to an event for which they were registered.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface FailableContext {
+public interface Listener<T> extends EventListener {
 
-    void failed(Failure reason);
+    /**
+     * Handle the event.
+     *
+     * @param subject the subject of the event
+     */
+    void handleEvent(T subject);
 }

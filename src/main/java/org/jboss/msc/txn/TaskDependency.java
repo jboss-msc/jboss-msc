@@ -19,27 +19,16 @@
 package org.jboss.msc.txn;
 
 /**
- * Context for a task that may succeed or fail which may also produce a consumable result.
+ * Internal interface for task dependency operations.
  *
- * @param <T> the result type of the associated task
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface ExecuteContext<T> extends TransactionalContext, ReportableContext, CancellableContext, SimpleWorkContext {
+interface TaskDependency {
+    void dependentExecutionFinished();
 
-    /**
-     * Register the completion of this task with a value.  This method returns without blocking.
-     *
-     * @param result the result of the task, or {@code null} if the execution type is {@link Void}
-     */
-    void complete(T result);
+    void dependentValidationFinished();
 
-    /**
-     * Register the completion of this task with a {@code null} value.  This method returns without blocking.
-     */
-    void complete();
+    void dependentRollbackFinished();
 
-    /**
-     * Indicate that the task cannot complete execution.
-     */
-    void failed();
+    void dependentCommitFinished();
 }

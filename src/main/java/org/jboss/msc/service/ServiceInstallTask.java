@@ -31,13 +31,11 @@ import org.jboss.msc.txn.ValidateContext;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 final class ServiceInstallTask<T> implements Executable<Controller<T>>, Revertible, Validatable, Committable {
-    private final ServiceTxn txn;
     private final Registration primaryReg;
     private final Registration[] aliasReg;
     private final Service<T> service;
 
-    ServiceInstallTask(final ServiceTxn txn, final Registration primaryReg, final Registration[] aliasReg, final Service<T> service) {
-        this.txn = txn;
+    ServiceInstallTask(final Registration primaryReg, final Registration[] aliasReg, final Service<T> service) {
         this.primaryReg = primaryReg;
         this.aliasReg = aliasReg;
         this.service = service;

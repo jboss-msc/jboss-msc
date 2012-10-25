@@ -18,19 +18,16 @@
 
 package org.jboss.msc.txn;
 
-import java.util.EventListener;
-
 /**
- * A listener for transaction events.
- *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface TransactionListener extends EventListener {
+public interface ReportableContext {
 
     /**
-     * Handle the event.
+     * Add a problem to this execution.  Depending on the reason severity, the task may or may not
+     * roll back.
      *
-     * @param transaction the transaction upon which the event occurred
+     * @param reason the problem reason
      */
-    void handleEvent(Transaction transaction);
+    void addProblem(Problem reason);
 }

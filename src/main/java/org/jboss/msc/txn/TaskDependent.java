@@ -18,11 +18,21 @@
 
 package org.jboss.msc.txn;
 
-import java.util.EventListener;
-
 /**
+ * Internal interface for task dependent operations.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface TaskListener<T> extends EventListener {
-    void handleEvent(TaskController<? extends T> controller);
+interface TaskDependent {
+    void dependencyExecutionComplete();
+
+    void dependencyValidateComplete();
+
+    void dependencyCommitComplete();
+
+    void dependentInitiateRollback();
+
+    void dependentInitiateValidate();
+
+    void dependentInitiateCommit();
 }

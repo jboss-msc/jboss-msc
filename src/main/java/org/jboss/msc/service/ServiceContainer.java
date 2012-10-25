@@ -22,7 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import org.jboss.msc.txn.AttachmentKey;
-import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.value.ReadableValue;
 
@@ -83,12 +82,7 @@ public final class ServiceContainer {
     public void removeService(Transaction transaction, ServiceName name) {
         final ServiceTxn txn = getTxn(transaction);
         synchronized (txn) {
-            TaskController controller = txn.removePendingInstall(name);
-            if (controller != null) {
-                // todo controller.rollback(null);
-            } else {
-
-            }
+            // todo
         }
     }
 

@@ -19,6 +19,8 @@
 package org.jboss.msc.txn;
 
 /**
+ * A context for a task that can be completed with no return value.
+ *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface SimpleWorkContext {

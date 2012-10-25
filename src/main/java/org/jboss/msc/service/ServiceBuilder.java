@@ -21,7 +21,6 @@ package org.jboss.msc.service;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.jboss.msc.txn.TaskController;
-import org.jboss.msc.txn.TaskListener;
 import org.jboss.msc.value.WritableValue;
 import org.jboss.msc.txn.Transaction;
 
@@ -179,7 +178,7 @@ public final class ServiceBuilder<T> {
      *
      * @param subtask the subtask
      */
-    public void addDependency(TaskController subtask) {
+    public void addDependency(TaskController<?> controller) {
     }
 
     /**
@@ -189,7 +188,7 @@ public final class ServiceBuilder<T> {
      * @param listener the completion listener or {@code null} for none
      * @return the controller which manages the installation of the service
      */
-    public TaskController install(final TaskListener listener) {
+    public TaskController<?> install() {
         return null;
     }
 

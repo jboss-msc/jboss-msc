@@ -19,8 +19,6 @@
 package org.jboss.msc.txn;
 
 import java.util.Collection;
-import org.jboss.msc.value.ReadableValue;
-import org.jboss.msc.value.WritableValue;
 
 /**
  * A builder for subtasks.  Subtasks may be configured with dependencies and injections before being installed.
@@ -30,22 +28,22 @@ import org.jboss.msc.value.WritableValue;
  */
 public final class TaskBuilder<T> {
 
-    private final RootTransaction transaction;
+    private final Transaction transaction;
     private Executable<T> executable;
     private Validatable validatable;
     private Revertible revertible;
     private Committable committable;
 
-    TaskBuilder(final RootTransaction transaction, final Executable<T> executable, final Object subtask) {
+    TaskBuilder(final Transaction transaction, final Executable<T> executable) {
         this.transaction = transaction;
         this.executable = executable;
-        if (subtask instanceof Validatable) validatable = (Validatable) subtask;
-        if (subtask instanceof Revertible) revertible = (Revertible) subtask;
-        if (subtask instanceof Committable) committable = (Committable) subtask;
+        if (executable instanceof Validatable) validatable = (Validatable) executable;
+        if (executable instanceof Revertible) revertible = (Revertible) executable;
+        if (executable instanceof Committable) committable = (Committable) executable;
     }
 
-    TaskBuilder(final RootTransaction transaction, final Object subtask) {
-        this(transaction, null, subtask);
+    TaskBuilder(final Transaction transaction) {
+        this(transaction, null);
     }
 
     /**
@@ -109,7 +107,7 @@ public final class TaskBuilder<T> {
      * @param dependencies the dependencies to add
      * @return this builder
      */
-    public TaskBuilder<T> addDependencies(TaskController<?>... dependencies) throws IllegalStateException {
+    public TaskBuilder<T> addDependencies(TaskControllerImpl<?>... dependencies) throws IllegalStateException {
         return this;
     }
 
@@ -119,7 +117,7 @@ public final class TaskBuilder<T> {
      * @param dependencies the dependencies to add
      * @return this builder
      */
-    public TaskBuilder<T> addDependencies(Collection<TaskController<?>> dependencies) throws IllegalStateException {
+    public TaskBuilder<T> addDependencies(Collection<TaskControllerImpl<?>> dependencies) throws IllegalStateException {
         return this;
     }
 
@@ -129,34 +127,7 @@ public final class TaskBuilder<T> {
      * @param dependency the dependency to add
      * @return this builder
      */
-    public TaskBuilder<T> addDependency(TaskController<?> dependency) throws IllegalStateException {
-        if (! dependency.getTransaction().isParentOf(transaction)) {
-            throw new IllegalArgumentException("Dependency transaction must be the same as, or a parent of, this subtask's transaction");
-        }
-        return this;
-    }
-
-    /**
-     * Add a single dependency, if this subtask has not yet been executed.
-     *
-     * @param dependency the dependency to add
-     * @param injectTarget a writable target to inject the result of this dependency's execution
-     * @return this builder
-     */
-    public <J> TaskBuilder<T> addDependency(TaskController<J> dependency, WritableValue<? super J> injectTarget) throws IllegalStateException {
-        return this;
-    }
-
-    /**
-     * Add a non-dependency injection, if this subtask has not yet been executed.  The injection is executed when
-     * the subtask's dependencies are complete but the task itself has not yet executed.
-     *
-     * @param source the injection source
-     * @param injectTarget the writable target to inject the value
-     * @param <J> the value type
-     * @return this builder
-     */
-    public <J> TaskBuilder<T> addInjection(ReadableValue<J> source, WritableValue<? super J> injectTarget) {
+    public TaskBuilder<T> addDependency(TaskControllerImpl<?> dependency) throws IllegalStateException {
         return this;
     }
 
@@ -164,30 +135,10 @@ public final class TaskBuilder<T> {
      * Release this task to begin execution.  The given listener is called upon completion or failure, or immediately
      * if this task was already released.
      *
-     * @param completionListener the completion listener for this subtask
      * @return the new controller
      */
-    public TaskController<T> release(TaskListener<? super T> completionListener) {
+    public TaskControllerImpl<T> release() {
         return null;
-    }
-
-    /**
-     * Get the subtask corresponding to this controller.
-     *
-     * @return the subtask
-     */
-    public Object getSubtask() {
-        return subtask;
-    }
-
-    /**
-     * Add an outward injection that is emitted when a subtask completes execution.
-     *
-     * @param target the target into which the value should be written
-     * @return this builder
-     */
-    public TaskBuilder<T> addOutwardInjection(final WritableValue<? super T> target) {
-        return this;
     }
 
 }

@@ -18,249 +18,54 @@
 
 package org.jboss.msc.txn;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-
-import static java.lang.Thread.currentThread;
-import static java.util.concurrent.locks.LockSupport.park;
-import static java.util.concurrent.locks.LockSupport.unpark;
-import static org.jboss.msc.txn.Bits.allAreClear;
-import static org.jboss.msc.txn.Bits.allAreSet;
-import static org.jboss.msc.txn.Log.log;
+import org.jboss.msc.value.Listener;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class Transaction extends AbstractAttachable {
+public abstract class Transaction extends SimpleAttachable implements TaskTarget {
 
-    /**
-     * Create a new subtask transaction.
-     *
-     * @param executor the executor to use to run subtasks
-     * @return the transaction
-     */
-    public static Transaction create(Executor executor) {
-        return new Transaction(executor);
-    }
-
-    /*
-     * A task may be submitted to a transaction if:
-     * 1. The
-     *
-     *
-     */
-
-    private final long startTime = System.nanoTime();
-    private volatile long endTime;
-    private final Executor subtaskExecutor;
-    private final Transaction parent;
-
-    private final List<TaskController<?>> dependencylessSubtasks = new ArrayList<TaskController<?>>();
-    private final Set<TaskController<?>> dependentlessSubtasks = new LittleIdentitySet<TaskController<?>>();
-
-    private volatile long state;
-    private volatile Thread waiter;
-
-    private static final AtomicLongFieldUpdater<Transaction> stateUpdater = AtomicLongFieldUpdater.newUpdater(Transaction.class, "state");
-    private static final AtomicReferenceFieldUpdater<Transaction, Thread> waiterUpdater = AtomicReferenceFieldUpdater.newUpdater(Transaction.class, Thread.class, "waiter");
-
-    private static final long MASK_STATE        = 0x000000000000000fL;
-    private static final long MASK_SUBTASKS     = 0x0000000ffffffff0L;
-    private static final long ONE_SUBTASK       = 0x0000000000000010L;
-    private static final long MASK_TXNS         = 0xffff000000000000L;
-    private static final long ONE_TXN           = 0x0001000000000000L;
-
-    private static final int MAX_SPINS;
-
-    private static final int ACTIVE                = 0x0; // adding tasks and subtransactions; counts = # added
-    private static final int ROLLED_BACK           = 0x0; // "dead" state
-    private static final int COMMITTED             = 0x0; // "success" state
-    private static final int ROLLBACK_WAIT         = 0x0; // waiting for subtransactions to roll back; count = # remaining
-    private static final int ROLLBACK              = 0x0; // rolling back all our tasks; count = # remaining
-    private static final int PREPARE_CHILD_NOTIFY  = 0x0; // notifying children of intent to prepare
-    private static final int PREPARE_WAIT          = 0x0; // waiting for parent transaction to prepare and for our children to be resolved
-    private static final int PREPARING             = 0x0; // preparing all our tasks
-    private static final int PREPARE_CANCEL        = 0x0; // parent transaction cancelled prepare in mid-flight; undoing via abort/rollback
-    private static final int PREPARE_CHILD_WAIT    = 0x0; // preparing subtransactions
-    private static final int PREPARED              = 0x0; // prepare finished, wait for commit/abort decision from user or parent
-    private static final int PREPARE_UNDOING       = 0x0; // prepare failed, undoing all work via abort or rollback
-    private static final int COMMIT_WAIT           = 0x0; // waiting for parent to commit (COMMIT_NESTED_WAIT)
-    private static final int COMMITTING            = 0x0; // performing commit actions
-    private static final int COMMIT_NESTED_WAIT    = 0x0; // waiting for nested to commit
-
-    private static final int STATE_FLAG_ACTIVE      = 1 << 0; // the state is active
-    private static final int STATE_FLAG_ROLLBACK    = 1 << 1; // the state is rolling back or aborting/aborted
-    private static final int STATE_FLAG_DEAD        = 1 << 2; // transaction is done
-
-    private static final long FLAG_FAILURES = 1L << 28; // set if a task in this transaction failed
-    private static final long FLAG_SPIN_LOCK = 1L << 29; // single-invocation spin lock; must never block or talk to other threads while holding this lock
-    private static final long FLAG_ROLLBACK_REQ = 1L << 30; // set if rollback of the current txn was requested
-    private static final long FLAG_PREPARE_REQ = 1L << 31; // set if prepare of the current txn was requested
-    private static final long FLAG_COMMIT_REQ = 1L << 32; // set if commit of the current txn was requested
-
-    private static final int[] STATE_FLAGS;
-
-    static {
-        final int[] stateFlags = new int[16];
-        stateFlags[ACTIVE]                  = STATE_FLAG_ACTIVE;
-        stateFlags[ROLLED_BACK]             = STATE_FLAG_ROLLBACK | STATE_FLAG_DEAD;
-        stateFlags[COMMITTED]               = STATE_FLAG_DEAD;
-        stateFlags[ROLLBACK_WAIT]           = STATE_FLAG_ROLLBACK;
-        stateFlags[ROLLBACK]                = STATE_FLAG_ROLLBACK;
-        stateFlags[PREPARE_CHILD_NOTIFY]    = 0;
-        stateFlags[PREPARE_WAIT]            = 0;
-        stateFlags[PREPARING]               = 0;
-        stateFlags[PREPARE_CANCEL]          = STATE_FLAG_ROLLBACK;
-        stateFlags[PREPARE_CHILD_WAIT]      = 0;
-        stateFlags[PREPARED]                = 0;
-        stateFlags[PREPARE_UNDOING]         = STATE_FLAG_ROLLBACK;
-        stateFlags[COMMIT_WAIT]             = 0;
-        stateFlags[COMMITTING]              = 0;
-        stateFlags[COMMIT_NESTED_WAIT]      = 0;
-        STATE_FLAGS = stateFlags;
-        final int cpus = Runtime.getRuntime().availableProcessors();
-        MAX_SPINS = cpus == 1 ? 1 : 500;
-    }
-
-    Transaction(final Executor subtaskExecutor) {
-        parent = null;
-        this.subtaskExecutor = subtaskExecutor;
-    }
-
-    final boolean compareAndSetState(long expect, long update) {
-        return stateUpdater.compareAndSet(this, expect, update);
-    }
-
-    private static int stateOf(long val) {
-        return (int) (val & MASK_STATE);
-    }
-
-    private void invokeTransactionListener(final TransactionListener completionListener) {
-        try {
-            if (completionListener != null) completionListener.handleEvent(this);
-        } catch (Throwable ignored) {}
-    }
-
-    private static long withStateOf(long val, int state) {
-        return (val & ~MASK_STATE) | (long)state;
-    }
-
-    // locking methods are divided up to increase odds of inlining.
-
-    private void lockPark() {
-        Thread waiter = waiterUpdater.getAndSet(this, currentThread());
-        try {
-            if (allAreSet(state, FLAG_SPIN_LOCK)) {
-                park(this);
-            }
-        } finally {
-            safeUnpark(waiter);
-        }
-    }
-
-    private void unparkWaiter() {
-        safeUnpark(waiterUpdater.getAndSet(this, null));
-    }
-
-    private static void safeUnpark(Thread parked) {
-        if (parked != null) unpark(parked);
-    }
-
-    private long lockAndAddTxn() {
-        int cnt = 0;
-        long oldVal;
-        do {
-            if (cnt++ > MAX_SPINS) lockPark();
-            checkActive(oldVal = state);
-        } while (tryLockAndAddTxn(oldVal));
-        return oldVal + ONE_TXN | FLAG_SPIN_LOCK;
-    }
-
-    private boolean tryLockAndAddTxn(final long oldVal) {
-        return allAreSet(oldVal, FLAG_SPIN_LOCK) || ! compareAndSetState(oldVal, oldVal + ONE_TXN | FLAG_SPIN_LOCK);
-    }
-
-    private static void checkActive(final long oldVal) {
-        if (allAreClear(STATE_FLAGS[stateOf(oldVal)], STATE_FLAG_ACTIVE)) {
-            throw log.notActive();
-        }
-    }
-
-    private void releaseSpinLock(long oldVal) {
-        long newVal = oldVal & ~FLAG_SPIN_LOCK;
-        while (! compareAndSetState(oldVal, newVal)) {
-            oldVal = state;
-            newVal = oldVal & ~FLAG_SPIN_LOCK;
-        }
-        unparkWaiter();
-    }
-
-    <T> TaskBuilder<T> newSubtask(final Executable<T> executable, final Object subtask, final Transaction owner) throws IllegalStateException {
-        return null;
-    }
-
-    public Executor getExecutor() {
-        return subtaskExecutor;
-    }
+    public abstract Executor getExecutor();
 
     /**
      * Get the duration of the current transaction.
      *
      * @return the duration of the current transaction
      */
-    public long getDuration(TimeUnit unit) {
-        // todo: query txn state
-        long endTime = false ? this.endTime : System.nanoTime();
-        return unit.convert(endTime - startTime, TimeUnit.NANOSECONDS);
-    }
+    public abstract long getDuration(TimeUnit unit);
 
     /**
      * Prepare this transaction.  It is an error to prepare a transaction with unreleased tasks.
-     * Once this method returns, either {@link #commit(TransactionListener)} or {@link #rollback(TransactionListener)} must be called.
+     * Once this method returns, either {@link #commit(Listener)} or {@link #rollback(Listener)} must be called.
      * After calling this method (regardless of its outcome), the transaction can not be directly modified before termination.
+     *
      *
      * @param completionListener the listener to call when the prepare is complete or has failed
      * @return {@code true} if this thread initiated prepare, or {@code false} if prepare was already initiated
-     * @throws TransactionRolledBackException if the transaction was previously rolled back
+     * @throws org.jboss.msc.txn.TransactionRolledBackException if the transaction was previously rolled back
      */
-    public boolean prepare(TransactionListener completionListener) throws TransactionRolledBackException {
-        return false;
-    }
+    public abstract boolean prepare(Listener<Transaction> completionListener) throws TransactionRolledBackException;
 
     /**
-     * Commit the work done by {@link #prepare(TransactionListener)} and terminate this transaction.
+     * Commit the work done by {@link #prepare(org.jboss.msc.value.Listener)} and terminate this transaction.
      *
      * @param completionListener the listener to call when the rollback is complete
      * @return {@code true} if this thread initiated commit, or {@code false} if commit was already initiated
-     * @throws InvalidTransactionStateException if the transaction has not been prepared
-     * @throws TransactionRolledBackException if the transaction was previously rolled back
+     * @throws org.jboss.msc.txn.InvalidTransactionStateException if the transaction has not been prepared
+     * @throws org.jboss.msc.txn.TransactionRolledBackException if the transaction was previously rolled back
      */
-    public boolean commit(TransactionListener completionListener) throws InvalidTransactionStateException, TransactionRolledBackException {
-        // CAS state to COMMIT from OPEN or PREPARE
-
-        // CAS state from COMMIT to COMPLETE
-        return false;
-    }
+    public abstract boolean commit(Listener<Transaction> completionListener) throws InvalidTransactionStateException, TransactionRolledBackException;
 
     /**
-     * Add a subtask to this transaction.
+     * Add a task to this transaction.
      *
-     * @param subtask the subtask
+     * @param task the task
      * @return the subtask builder
      * @throws IllegalStateException if the transaction is not open
      */
-    public final <T> TaskBuilder<T> newSubtask(Executable<T> subtask) throws IllegalStateException {
-        return newSubtask(subtask, subtask, this);
-    }
-
-    public final TaskBuilder<Void> newSubtask(Object subtask) throws IllegalStateException {
-        return newSubtask(null, subtask, this);
-    }
+    public abstract <T> TaskBuilder<T> newTask(Executable<T> task) throws IllegalStateException;
 
     /**
      * Roll back this transaction, undoing all work executed up until this time.
@@ -268,9 +73,16 @@ public final class Transaction extends AbstractAttachable {
      * @param completionListener the listener to call when the rollback is complete
      * @return {@code true} if rollback was initiated, or {@code false} if another thread has already committed or rolled back
      */
-    public boolean rollback(TransactionListener completionListener) {
-        return false;
-    }
+    public abstract boolean rollback(Listener<Transaction> completionListener);
+
+    /**
+     * Indicate that the current operation on this transaction depends on the completion of the given transaction.
+     *
+     * @param other the other transaction
+     * @throws InterruptedException if the wait was interrupted
+     * @throws DeadlockException if this wait has caused a deadlock and this task was selected to break it
+     */
+    public abstract void waitFor(Transaction other) throws InterruptedException, DeadlockException;
 
     public enum State {
         OPEN,

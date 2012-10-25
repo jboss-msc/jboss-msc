@@ -23,11 +23,11 @@ package org.jboss.msc.txn;
  */
 final class Association {
     private final Transaction transaction;
-    private final TaskController<?> controller;
+    private final TaskControllerImpl<?> controller;
     private ClassLoader storedClassLoader;
     private Association pushed;
 
-    Association(final Transaction transaction, final TaskController<?> controller) {
+    Association(final Transaction transaction, final TaskControllerImpl<?> controller) {
         this.transaction = transaction;
         this.controller = controller;
     }
@@ -36,7 +36,7 @@ final class Association {
         return transaction;
     }
 
-    public TaskController<?> getController() {
+    public TaskControllerImpl<?> getController() {
         return controller;
     }
 
