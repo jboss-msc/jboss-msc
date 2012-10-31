@@ -53,7 +53,12 @@ public enum DependencyFlag {
      * Always place a demand on this dependency even if the mode otherwise wouldn't.
      */
     DEMANDED,
-
+    /**
+     * Treat the dependency as a parent; that is, when the dependency is stopped, this service should be removed.  Be
+     * sure to consider what happens if the parent re-starts however - this flag should only be used when the parent
+     * adds the service as part of its start process.  Implies {@link #REQUIRED}.
+     */
+    PARENT,
     ;
 
     public final boolean in(DependencyFlag flag) {
@@ -95,20 +100,21 @@ public enum DependencyFlag {
      * @throws IllegalArgumentException if the combination is invalid
      */
     public static void validate(DependencyFlag... flags) throws IllegalArgumentException {
-        boolean anti = false, required = false, unrequired = false, optional = false, undemanded = false, demanded = false;
+        boolean anti = false, required = false, unrequired = false, optional = false, undemanded = false, demanded = false, parent = false;
         for (DependencyFlag flag : flags) {
-            if (flag == OPTIONAL && anti || flag == ANTI && optional) {
-                throw new IllegalArgumentException("ANTI cannot coexist with OPTIONAL");
-            }
-            if (flag == REQUIRED && unrequired || flag == UNREQUIRED && required) {
-                throw new IllegalArgumentException("REQUIRED cannot coexist with UNREQUIRED");
-            }
-            if (optional && flag.in(REQUIRED, UNREQUIRED, ANTI) || required && flag.in(OPTIONAL, UNREQUIRED, ANTI) || (anti || unrequired) && flag.in(OPTIONAL, REQUIRED)) {
-                throw new IllegalArgumentException("Only one of REQUIRED, UNREQUIRED, or OPTIONAL may be given (ANTI implies UNREQUIRED)");
+            if (optional && flag.in(REQUIRED, PARENT, UNREQUIRED, ANTI) || (parent || required) && flag.in(OPTIONAL, UNREQUIRED, ANTI) || (anti || unrequired) && flag.in(OPTIONAL, REQUIRED, PARENT)) {
+                throw new IllegalArgumentException("Only one of REQUIRED, UNREQUIRED, or OPTIONAL may be given (ANTI implies UNREQUIRED, PARENT implies REQUIRED)");
             }
             if (flag == DEMANDED && undemanded || flag == UNDEMANDED && demanded) {
                 throw new IllegalArgumentException("DEMANDED cannot coexist with UNDEMANDED");
             }
+            if (flag == ANTI) anti = true;
+            if (flag == REQUIRED) required = true;
+            if (flag == UNREQUIRED) unrequired = true;
+            if (flag == OPTIONAL) optional = true;
+            if (flag == UNDEMANDED) undemanded = true;
+            if (flag == DEMANDED) demanded = true;
+            if (flag == PARENT) parent = true;
         }
     }
 }

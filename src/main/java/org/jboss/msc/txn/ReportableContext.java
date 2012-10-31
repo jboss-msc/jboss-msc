@@ -30,4 +30,14 @@ public interface ReportableContext {
      * @param reason the problem reason
      */
     void addProblem(Problem reason);
+
+    void addProblem(Problem.Severity severity, String message);
+
+    void addProblem(Problem.Severity severity, String message, Throwable cause);
+
+    void addProblem(String message, Throwable cause);
+
+    void addProblem(String message);
+
+    void addProblem(Throwable cause);
 }

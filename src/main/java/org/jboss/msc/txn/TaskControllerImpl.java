@@ -151,6 +151,26 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskDepen
                     execFailed(reason);
                 }
 
+                public void addProblem(final Problem.Severity severity, final String message) {
+                    addProblem(new Problem(TaskControllerImpl.this, message, severity));
+                }
+
+                public void addProblem(final Problem.Severity severity, final String message, final Throwable cause) {
+                    addProblem(new Problem(TaskControllerImpl.this, message, cause, severity));
+                }
+
+                public void addProblem(final String message, final Throwable cause) {
+                    addProblem(new Problem(TaskControllerImpl.this, message, cause));
+                }
+
+                public void addProblem(final String message) {
+                    addProblem(new Problem(TaskControllerImpl.this, message));
+                }
+
+                public void addProblem(final Throwable cause) {
+                    addProblem(new Problem(TaskControllerImpl.this, cause));
+                }
+
                 public void begin() {
 
                 }
