@@ -59,6 +59,10 @@ public enum DependencyFlag {
      * adds the service as part of its start process.  Implies {@link #REQUIRED}.
      */
     PARENT,
+    /**
+     * Indicate that the dependency can be replaced without stopping this service.
+     */
+    REPLACEABLE,
     ;
 
     public final boolean in(DependencyFlag flag) {

@@ -27,6 +27,16 @@ import org.jboss.msc.value.Listener;
  */
 public abstract class Transaction extends SimpleAttachable implements TaskTarget {
 
+    /**
+     * Create a new task transaction.
+     *
+     * @param executor the executor to use to run tasks
+     * @return the transaction
+     */
+    public static Transaction create(Executor executor) {
+        return new TransactionImpl(executor);
+    }
+
     public abstract Executor getExecutor();
 
     /**

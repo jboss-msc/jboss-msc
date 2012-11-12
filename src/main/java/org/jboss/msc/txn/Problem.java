@@ -38,14 +38,14 @@ public final class Problem implements Serializable {
     /**
      * Construct a new instance.
      *
-     * @param subtask the subtask that failed
+     * @param task the task that failed
      * @param message the error description
      * @param cause the optional exception cause
      * @param severity the severity of the problem
      */
-    public Problem(final TaskControllerImpl subtask, final String message, final Throwable cause, final Severity severity) {
-        if (subtask == null) {
-            throw new IllegalArgumentException("subtask is null");
+    public Problem(final TaskControllerImpl task, final String message, final Throwable cause, final Severity severity) {
+        if (task == null) {
+            throw new IllegalArgumentException("task is null");
         }
         if (message == null) {
             throw new IllegalArgumentException("message is null");
@@ -56,60 +56,60 @@ public final class Problem implements Serializable {
         this.severity = severity;
         this.cause = cause;
         this.message = message;
-        this.subtask = subtask;
+        this.subtask = task;
     }
 
     /**
      * Construct a new instance.
      *
-     * @param subtask the subtask that failed
+     * @param task the task that failed
      * @param message the error description
      * @param cause the optional exception cause
      */
-    public Problem(final TaskControllerImpl subtask, final String message, final Throwable cause) {
-        this(subtask, message, cause, Severity.ERROR);
+    public Problem(final TaskControllerImpl task, final String message, final Throwable cause) {
+        this(task, message, cause, Severity.ERROR);
     }
 
     /**
      * Construct a new instance.
      *
-     * @param subtask the subtask that failed
+     * @param task the task that failed
      * @param message the error description
      * @param severity the severity of the problem
      */
-    public Problem(final TaskControllerImpl subtask, final String message, final Severity severity) {
-        this(subtask, message, null, severity);
+    public Problem(final TaskControllerImpl task, final String message, final Severity severity) {
+        this(task, message, null, severity);
     }
 
     /**
      * Construct a new instance.
      *
-     * @param subtask the subtask that failed
+     * @param task the task that failed
      * @param message the error description
      */
-    public Problem(final TaskControllerImpl subtask, final String message) {
-        this(subtask, message, null, Severity.ERROR);
+    public Problem(final TaskControllerImpl task, final String message) {
+        this(task, message, null, Severity.ERROR);
     }
 
     /**
      * Construct a new instance.  The exception must not be {@code null}.
      *
-     * @param subtask the subtask that failed
+     * @param task the task that failed
      * @param cause the exception cause
      */
-    public Problem(final TaskControllerImpl subtask, final Throwable cause) {
-        this(subtask, "Task failed due to exception", cause);
+    public Problem(final TaskControllerImpl task, final Throwable cause) {
+        this(task, "Task failed due to exception", cause);
         if (cause == null) {
             throw new IllegalArgumentException("cause is null");
         }
     }
 
     /**
-     * Get the subtask that failed.  Will not be {@code null}.
+     * Get the task that failed.  Will not be {@code null}.
      *
-     * @return the subtask that failed
+     * @return the task that failed
      */
-    public TaskControllerImpl getSubtask() {
+    public TaskControllerImpl getTask() {
         return subtask;
     }
 

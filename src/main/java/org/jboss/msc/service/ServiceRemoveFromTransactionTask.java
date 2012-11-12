@@ -18,17 +18,18 @@
 
 package org.jboss.msc.service;
 
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
+import org.jboss.msc.txn.Executable;
+import org.jboss.msc.txn.ExecuteContext;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class Registration {
-    private volatile ServiceController<?> controller;
-    private final Set<Dependency<?>> incomingDependencies = new CopyOnWriteArraySet<Dependency<?>>();
+final class ServiceRemoveFromTransactionTask implements Executable<Void> {
 
-    ServiceController<?> getController() {
-        return controller;
+    ServiceRemoveFromTransactionTask(final ServiceName name) {
+    }
+
+    public void execute(final ExecuteContext<Void> context) {
+        // remove service registration in transaction view
     }
 }

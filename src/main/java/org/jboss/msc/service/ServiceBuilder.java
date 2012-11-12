@@ -20,6 +20,7 @@ package org.jboss.msc.service;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.value.WritableValue;
 import org.jboss.msc.txn.Transaction;
@@ -32,34 +33,14 @@ import org.jboss.msc.txn.Transaction;
 public final class ServiceBuilder<T> {
     private final ServiceContainer container;
     private final ServiceName name;
-    private final Transaction transaction;
-    private final Object startSubtask;
-    private final Object stopSubtask;
-    private final TaskController<T> installTask;
+    private final Service<T> service;
     private final Map<ServiceName, DependencySpec<?>> specs = new LinkedHashMap<ServiceName, DependencySpec<?>>();
     private ServiceMode mode;
 
-    ServiceBuilder(final ServiceContainer container, final ServiceName name, final Transaction transaction, final Object startSubtask, final Object stopSubtask) {
+    public ServiceBuilder(final ServiceContainer container, final ServiceName name, final Service<T> service) {
         this.container = container;
         this.name = name;
-        this.transaction = transaction;
-        this.startSubtask = startSubtask;
-        this.stopSubtask = stopSubtask;
-
-        installTask = null;
-    }
-
-    ServiceBuilder(final ServiceName name, final Transaction transaction, final Service<T> service, final ServiceContainer container) {
-        this(container, name, transaction, null, null);
-    }
-
-    /**
-     * Get the transaction associated with this service install.
-     *
-     * @return the transaction associated with this service install
-     */
-    public Transaction getTransaction() {
-        return transaction;
+        this.service = service;
     }
 
     /**
@@ -173,23 +154,35 @@ public final class ServiceBuilder<T> {
     }
 
     /**
-     * Add a dependency on a subtask.  If the subtask fails, the service install will also fail.  The subtask must be
+     * Add a dependency on a task.  If the task fails, the service install will also fail.  The task must be
      * part of the same transaction as the service.
      *
-     * @param subtask the subtask
+     * @param task the task
      */
-    public void addDependency(TaskController<?> controller) {
+    public void addDependency(Object task) {
     }
 
     /**
      * Initiate installation of this service as configured.  If the service was already installed, this method has no
      * effect.
-     *
-     * @param listener the completion listener or {@code null} for none
-     * @return the controller which manages the installation of the service
      */
-    public TaskController<?> install() {
-        return null;
+    public void install(Transaction transaction) {
+        // todo install into registry (throws {@link org.jboss.msc.service.DuplicateServiceException})
+        //  - wire up dependency graph
+        final ServiceInstallTask<T> installTask = new ServiceInstallTask<T>(null, null, service);
+        final TaskBuilder<Void> taskBuilder = transaction.newTask();
+        taskBuilder.setTraits(installTask);
+        final TaskController<Void> installController = taskBuilder.release();
+        // todo put this controller on the transaction
+        // todo examine the service
+        //  - check mode & dependency state, determine task
+        /* maybe */ {
+            SimpleServiceStartTask<T> startTask = new SimpleServiceStartTask<T>(service);
+            final TaskBuilder<T> startBuilder = transaction.newTask(startTask);
+            startBuilder.addDependency(installController);
+            final TaskController<T> startController = startBuilder.release();
+            // todo put this controller on the transaction
+        }
     }
 
     /**

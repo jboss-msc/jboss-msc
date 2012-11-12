@@ -18,32 +18,26 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.txn.CommitContext;
-import org.jboss.msc.txn.Committable;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
-import org.jboss.msc.txn.Revertible;
-import org.jboss.msc.txn.RollbackContext;
-import org.jboss.msc.txn.Validatable;
-import org.jboss.msc.txn.ValidateContext;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class ServiceRemoveTask implements Committable, Executable<Void>, Revertible, Validatable {
+final class SimpleServiceStartTask<T> implements Executable<T> {
 
-    ServiceRemoveTask(final ServiceName name) {
+    private final Service<T> service;
+
+    public SimpleServiceStartTask(final Service<T> service) {
+        this.service = service;
     }
 
-    public void commit(final CommitContext context) {
-    }
-
-    public void execute(final ExecuteContext<Void> context) {
-    }
-
-    public void rollback(final RollbackContext context) {
-    }
-
-    public void validate(final ValidateContext validateContext) {
+    /**
+     * Perform the task.
+     *
+     * @param context
+     */
+    public void execute(final ExecuteContext<T> context) {
+        service.start(context);
     }
 }

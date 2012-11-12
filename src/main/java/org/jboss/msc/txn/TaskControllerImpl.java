@@ -18,9 +18,6 @@
 
 package org.jboss.msc.txn;
 
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-
 import static java.util.concurrent.locks.LockSupport.park;
 import static org.jboss.msc.txn.Bits.*;
 
@@ -36,24 +33,12 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskDepen
     private final Revertible revertible;
     private final Validatable validatable;
     private final Committable committable;
+    private final LittleIdentitySet<Thread> threads = new LittleIdentitySet<Thread>();
     private final LittleIdentitySet<TaskControllerImpl<?>> dependents = new LittleIdentitySet<TaskControllerImpl<?>>();
+    private final Object lock = new Object();
 
-    private volatile int state;
-    private volatile Thread waiter;
+    private int state;
     private T result;
-
-    private static final AtomicIntegerFieldUpdater<TaskControllerImpl> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(TaskControllerImpl.class, "state");
-    private static final AtomicReferenceFieldUpdater<TaskControllerImpl, Thread> waiterUpdater = AtomicReferenceFieldUpdater.newUpdater(TaskControllerImpl.class, Thread.class, "waiter");
-
-    private static final int SPINS;
-
-    static {
-        if (Runtime.getRuntime().availableProcessors() < 2) {
-            SPINS = 0;
-        } else {
-            SPINS = 200;
-        }
-    }
 
     private static final int STATE_VALIDATE_FAILED = -5;
     private static final int STATE_FAILED = -3;
@@ -84,11 +69,11 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskDepen
     }
 
     public <T> TaskBuilder<T> newTask(final Executable<T> task) throws IllegalStateException {
-        return null;
+        return new TaskBuilder<T>(transaction, task);
     }
 
     public TaskBuilder<Void> newTask() throws IllegalStateException {
-        return null;
+        return new TaskBuilder<Void>(transaction);
     }
 
     public T getResult() throws IllegalStateException {
@@ -108,10 +93,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskDepen
         return oldVal & ~0xf | state;
     }
 
-    private boolean compareAndSetState(int expect, int update) {
-        return stateUpdater.compareAndSet(this, expect, update);
-    }
-
     private void execComplete(final T result) {
 
     }
@@ -120,7 +101,15 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskDepen
 
     }
 
-    private void execFailed(final Problem reason) {
+    private void execFailed() {
+
+    }
+
+    void doBegin() {
+
+    }
+
+    void doEnd() {
 
     }
 
@@ -148,7 +137,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskDepen
                 }
 
                 public void addProblem(final Problem reason) {
-                    execFailed(reason);
+                    execFailed();
                 }
 
                 public void addProblem(final Problem.Severity severity, final String message) {
@@ -172,10 +161,11 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskDepen
                 }
 
                 public void begin() {
-
+                    doBegin();
                 }
 
                 public void end() {
+                    doEnd();
                 }
 
                 public Transaction getTransaction() {

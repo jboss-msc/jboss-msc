@@ -36,8 +36,6 @@ public final class ServiceContainer {
     private final ConcurrentMap<ServiceName, Registration> registry = new ConcurrentHashMap<ServiceName, Registration>();
     private final AttachmentKey<ServiceTxn> key = AttachmentKey.create();
 
-    private volatile Transaction transaction;
-
     private Registration getOrCreateRegistration(ServiceName name) {
         Registration registration = registry.get(name);
         if (registration == null) {
@@ -51,26 +49,7 @@ public final class ServiceContainer {
     }
 
     private ServiceTxn getTxn(Transaction transaction) {
-        Transaction old;
-        do {
-            old = this.transaction;
-            if (old == transaction) {
-                break;
-            }
-            if (old != null) {
-                throw new IllegalStateException("Another transaction is active");
-            }
-        } while (! transactionUpdater.compareAndSet(this, old, transaction));
-        ServiceTxn txn = transaction.getAttachment(key);
-        if (txn == null) {
-            txn = new ServiceTxn(this, transaction);
-            ServiceTxn appearing = transaction.putAttachmentIfAbsent(key, txn);
-            if (appearing != null) {
-                txn = appearing;
-            }
-            assert txn.getTransaction() == transaction;
-        }
-        return txn;
+        return null;
     }
 
     /**

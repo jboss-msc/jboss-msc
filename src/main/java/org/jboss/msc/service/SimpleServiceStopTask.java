@@ -20,33 +20,19 @@ package org.jboss.msc.service;
 
 import org.jboss.msc.txn.CommitContext;
 import org.jboss.msc.txn.Committable;
-import org.jboss.msc.txn.Revertible;
-import org.jboss.msc.txn.RollbackContext;
-import org.jboss.msc.txn.Validatable;
-import org.jboss.msc.txn.ValidateContext;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class ServiceInstallTask<T> implements Revertible, Validatable, Committable {
-    private final Registration primaryReg;
-    private final Registration[] aliasReg;
+final class SimpleServiceStopTask<T> implements Committable {
+
     private final Service<T> service;
 
-    ServiceInstallTask(final Registration primaryReg, final Registration[] aliasReg, final Service<T> service) {
-        this.primaryReg = primaryReg;
-        this.aliasReg = aliasReg;
+    public SimpleServiceStopTask(final Service<T> service) {
         this.service = service;
     }
 
-    public void validate(final ValidateContext validateContext) {
-    }
-
-    public void rollback(final RollbackContext context) {
-        // delete registration
-    }
-
     public void commit(final CommitContext context) {
-        // commit registration
+        service.stop(context);
     }
 }

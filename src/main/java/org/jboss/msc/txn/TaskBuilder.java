@@ -92,6 +92,17 @@ public final class TaskBuilder<T> {
     }
 
     /**
+     * todo - doc
+     *
+     * @param task
+     */
+    public void setTraits(final Object task) {
+        if (task instanceof Committable) committable = (Committable) task;
+        if (task instanceof Revertible) revertible = (Revertible) task;
+        if (task instanceof Validatable) validatable = (Validatable) task;
+    }
+
+    /**
      * Set the class loader to use for this task.
      *
      * @param classLoader the class loader
@@ -107,7 +118,7 @@ public final class TaskBuilder<T> {
      * @param dependencies the dependencies to add
      * @return this builder
      */
-    public TaskBuilder<T> addDependencies(TaskControllerImpl<?>... dependencies) throws IllegalStateException {
+    public TaskBuilder<T> addDependencies(TaskController<?>... dependencies) throws IllegalStateException {
         return this;
     }
 
@@ -117,7 +128,7 @@ public final class TaskBuilder<T> {
      * @param dependencies the dependencies to add
      * @return this builder
      */
-    public TaskBuilder<T> addDependencies(Collection<TaskControllerImpl<?>> dependencies) throws IllegalStateException {
+    public TaskBuilder<T> addDependencies(Collection<TaskController<?>> dependencies) throws IllegalStateException {
         return this;
     }
 
@@ -127,7 +138,7 @@ public final class TaskBuilder<T> {
      * @param dependency the dependency to add
      * @return this builder
      */
-    public TaskBuilder<T> addDependency(TaskControllerImpl<?> dependency) throws IllegalStateException {
+    public TaskBuilder<T> addDependency(TaskController<?> dependency) throws IllegalStateException {
         return this;
     }
 
@@ -137,7 +148,7 @@ public final class TaskBuilder<T> {
      *
      * @return the new controller
      */
-    public TaskControllerImpl<T> release() {
+    public TaskController<T> release() {
         return null;
     }
 

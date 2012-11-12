@@ -20,19 +20,22 @@ package org.jboss.msc.service;
 
 import org.jboss.msc.txn.CommitContext;
 import org.jboss.msc.txn.Committable;
+import org.jboss.msc.txn.Executable;
+import org.jboss.msc.txn.ExecuteContext;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class SimpleServiceStopSubtask<T> implements Committable {
+final class ServiceRemoveFromContainerTask implements Committable, Executable<Void> {
 
-    private final Service<T> service;
-
-    public SimpleServiceStopSubtask(final Service<T> service) {
-        this.service = service;
+    ServiceRemoveFromContainerTask(final ServiceName name) {
     }
 
     public void commit(final CommitContext context) {
-        service.stop(context);
+        // remove service registration in container
+    }
+
+    public void execute(final ExecuteContext<Void> context) {
+        // remove service registration in transaction view
     }
 }

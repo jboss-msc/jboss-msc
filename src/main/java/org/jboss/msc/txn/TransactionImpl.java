@@ -23,51 +23,32 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import org.jboss.msc.value.Listener;
 
 import static java.lang.Thread.currentThread;
 import static java.util.concurrent.locks.LockSupport.park;
 import static java.util.concurrent.locks.LockSupport.unpark;
-import static org.jboss.msc.txn.Bits.allAreClear;
 import static org.jboss.msc.txn.Bits.allAreSet;
-import static org.jboss.msc.txn.Log.log;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 final class TransactionImpl extends Transaction implements TaskDependency {
 
-    /**
-     * Create a new subtask transaction.
-     *
-     * @param executor the executor to use to run subtasks
-     * @return the transaction
-     */
-    public static Transaction create(Executor executor) {
-        return new TransactionImpl(executor);
-    }
+    private final Object lock = new Object();
 
     private final long startTime = System.nanoTime();
-    private volatile long endTime;
-    private final Executor subtaskExecutor;
-    private final Transaction parent;
+    private long endTime;
+    private final Executor taskExecutor;
 
     private final List<TaskControllerImpl<?>> dependencylessSubtasks = new ArrayList<TaskControllerImpl<?>>();
     private final Set<TaskControllerImpl<?>> dependentlessSubtasks = new LittleIdentitySet<TaskControllerImpl<?>>();
 
-    private volatile long state;
-    private volatile Thread waiter;
-
-    private static final AtomicLongFieldUpdater<TransactionImpl> stateUpdater = AtomicLongFieldUpdater.newUpdater(TransactionImpl.class, "state");
-    private static final AtomicReferenceFieldUpdater<TransactionImpl, Thread> waiterUpdater = AtomicReferenceFieldUpdater.newUpdater(TransactionImpl.class, Thread.class, "waiter");
+    private long state;
 
     private static final long MASK_STATE        = 0x000000000000000fL;
     private static final long MASK_SUBTASKS     = 0x0000000ffffffff0L;
     private static final long ONE_SUBTASK       = 0x0000000000000010L;
-
-    private static final int MAX_SPINS;
 
     private static final int ACTIVE                = 0x0; // adding tasks and subtransactions; counts = # added
     private static final int ROLLED_BACK           = 0x0; // "dead" state
@@ -90,63 +71,26 @@ final class TransactionImpl extends Transaction implements TaskDependency {
     private static final long FLAG_PREPARE_REQ = 1L << 31; // set if prepare of the current txn was requested
     private static final long FLAG_COMMIT_REQ = 1L << 32; // set if commit of the current txn was requested
 
-    static {
-        final int cpus = Runtime.getRuntime().availableProcessors();
-        MAX_SPINS = cpus == 1 ? 1 : 500;
+    TransactionImpl(final Executor taskExecutor) {
+        this.taskExecutor = taskExecutor;
     }
 
-    TransactionImpl(final Executor subtaskExecutor) {
-        parent = null;
-        this.subtaskExecutor = subtaskExecutor;
-    }
-
-    final boolean compareAndSetState(long expect, long update) {
-        return stateUpdater.compareAndSet(this, expect, update);
-    }
-
-    private static int stateOf(long val) {
-        return (int) (val & MASK_STATE);
-    }
-
-    private void invokeTransactionListener(final Listener<Transaction> completionListener) {
+    private static void invokeTransactionListener(final Listener<Transaction> completionListener) {
         try {
             if (completionListener != null) completionListener.handleEvent(this);
         } catch (Throwable ignored) {}
     }
 
-    private static long withStateOf(long val, int state) {
-        return (val & ~MASK_STATE) | (long)state;
-    }
-
-    // locking methods are divided up to increase odds of inlining.
-
-    private void lockPark() {
-        Thread waiter = waiterUpdater.getAndSet(this, currentThread());
-        try {
-            if (allAreSet(state, FLAG_SPIN_LOCK)) {
-                park(this);
-            }
-        } finally {
-            safeUnpark(waiter);
-        }
-    }
-
-    private void unparkWaiter() {
-        safeUnpark(waiterUpdater.getAndSet(this, null));
-    }
-
-    private static void safeUnpark(Thread parked) {
-        if (parked != null) unpark(parked);
-    }
-
     public Executor getExecutor() {
-        return subtaskExecutor;
+        return taskExecutor;
     }
 
     public long getDuration(TimeUnit unit) {
-        // todo: query txn state
-        long endTime = false ? this.endTime : System.nanoTime();
-        return unit.convert(endTime - startTime, TimeUnit.NANOSECONDS);
+        synchronized (lock) {
+            // todo: query txn state
+            long endTime = false ? this.endTime : System.nanoTime();
+            return unit.convert(endTime - startTime, TimeUnit.NANOSECONDS);
+        }
     }
 
     public boolean prepare(Listener<Transaction> completionListener) throws TransactionRolledBackException {
@@ -154,9 +98,6 @@ final class TransactionImpl extends Transaction implements TaskDependency {
     }
 
     public boolean commit(Listener<Transaction> completionListener) throws InvalidTransactionStateException, TransactionRolledBackException {
-        // CAS state to COMMIT from OPEN or PREPARE
-
-        // CAS state from COMMIT to COMPLETE
         return false;
     }
 
