@@ -192,13 +192,13 @@ public class TestServiceListener implements ServiceListener<Object> {
 
     public Future<ServiceController<?>> expectServiceStart(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
-        expectedTransitions.get(ServiceController.Transition.STARTING_to_PROCESSING_CHILD_SERVICES).put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.STARTING_to_UP).put(serviceName, future);
         return future;
     }
 
     public Future<ServiceController<?>> expectNoServiceStart(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture(100);
-        expectedTransitions.get(ServiceController.Transition.STARTING_to_PROCESSING_CHILD_SERVICES).put(serviceName, future);
+        expectedTransitions.get(ServiceController.Transition.STARTING_to_UP).put(serviceName, future);
         return future;
     }
 

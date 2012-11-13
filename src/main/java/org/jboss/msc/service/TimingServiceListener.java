@@ -67,7 +67,7 @@ public final class TimingServiceListener extends AbstractServiceListener<Object>
 
     public void transition(final ServiceController<? extends Object> controller, final ServiceController.Transition transition) {
         switch (transition) {
-            case STARTING_to_PROCESSING_CHILD_SERVICES:
+            case STARTING_to_UP:
             case STARTING_to_START_FAILED:
                 if (countUpdater.decrementAndGet(this) == 0) {
                     done();

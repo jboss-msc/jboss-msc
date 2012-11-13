@@ -161,14 +161,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private int asyncTasks;
     /**
-     * The number of child services which are not yet fully up.
-     */
-    private int incompleteChildren;
-    /**
-     * The number of child services which have a problem.
-     */
-    private int problemChildren;
-    /**
      * The service target for adding child services (can be {@code null} if none
      * were added).
      */
@@ -276,7 +268,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                 }
             }
-            if (parent != null) tasks.add(new ChildTask(CHILD_TASK_ADD_PROCESSING));
             if (failCount > 0) {
                 tasks.add(new DependencyFailedTask(dependents, false));
             }
@@ -298,7 +289,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             asyncTasks ++;
             state = Substate.CANCELLED;
         }
-        if (parent != null) parent.childEvent(CHILD_TASK_REMOVE_PROCESSING);
         (new RemoveTask()).run();
     }
 
@@ -371,12 +361,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             case STOP_REQUESTED: {
                 if (shouldStart() && stoppingDependencies == 0) {
-                    if (incompleteChildren > 0) {
-                        return Transition.STOP_REQUESTED_to_PROCESSING_CHILD_SERVICES;
-                    }
-                    if (problemChildren > 0) {
-                        return Transition.STOP_REQUESTED_to_CHILD_SERVICE_PROBLEM;
-                    }
                     return Transition.STOP_REQUESTED_to_UP;
                 }
                 if (runningDependents == 0) {
@@ -387,31 +371,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             case UP: {
                 if (shouldStop() || stoppingDependencies > 0) {
                     return Transition.UP_to_STOP_REQUESTED;
-                }
-                if (incompleteChildren > 0) {
-                    return Transition.UP_to_PROCESSING_CHILD_SERVICES;
-                }
-                break;
-            }
-            case PROCESSING_CHILD_SERVICES: {
-                if (shouldStop() || stoppingDependencies > 0) {
-                    return Transition.PROCESSING_CHILD_SERVICES_to_STOP_REQUESTED;
-                }
-                if (incompleteChildren == 0) {
-                    if (problemChildren == 0) {
-                        return Transition.PROCESSING_CHILD_SERVICES_to_UP;
-                    } else {
-                        return Transition.PROCESSING_CHILD_SERVICES_to_CHILD_SERVICE_PROBLEM;
-                    }
-                }
-                break;
-            }
-            case CHILD_SERVICE_PROBLEM: {
-                if (shouldStop() || stoppingDependencies > 0) {
-                    return Transition.CHILD_SERVICE_PROBLEM_to_STOP_REQUESTED;
-                }
-                if (incompleteChildren > 0) {
-                    return Transition.CHILD_SERVICE_PROBLEM_to_PROCESSING_CHILD_SERVICES;
                 }
                 break;
             }
@@ -434,7 +393,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             case STARTING: {
                 if (startException == null) {
-                    return Transition.STARTING_to_PROCESSING_CHILD_SERVICES;
+                    return Transition.STARTING_to_UP;
                 } else {
                     return Transition.STARTING_to_START_FAILED;
                 }
@@ -536,23 +495,19 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             switch (transition) {
                 case DOWN_to_WAITING: {
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_REMOVE_PROCESSING));
                     getListenerTasks(transition, tasks);
                     break;
                 }
                 case WAITING_to_DOWN: {
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_ADD_PROCESSING));
                     getListenerTasks(transition, tasks);
                     break;
                 }
                 case DOWN_to_WONT_START: {
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_REMOVE_PROCESSING));
                     getListenerTasks(transition, tasks);
                     tasks.add(new ServiceUnavailableTask());
                     break;
                 }
                 case WONT_START_to_DOWN: {
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_ADD_PROCESSING));
                     getListenerTasks(transition, tasks);
                     tasks.add(new ServiceAvailableTask());
                     break;
@@ -580,15 +535,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (failCount > 0) {
                         getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
                     }
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_REMOVE_PROCESSING | CHILD_TASK_ADD_PROBLEM));
                     getListenerTasks(transition, tasks);
                     break;
                 }
                 case UP_to_STOP_REQUESTED: {
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_ADD_PROCESSING));
-                    // fall thru
-                }
-                case PROCESSING_CHILD_SERVICES_to_STOP_REQUESTED: {
                     if (mode == Mode.LAZY && demandedByCount == 0) {
                         assert dependenciesDemanded == true;
                         tasks.add(new UndemandDependenciesTask());
@@ -599,41 +549,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     tasks.add(new DependencyStoppedTask(getDependents()));
                     break;
                 }
-                case CHILD_SERVICE_PROBLEM_to_STOP_REQUESTED: {
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_ADD_PROCESSING | CHILD_TASK_REMOVE_PROBLEM));
-                    if (mode == Mode.LAZY && demandedByCount == 0) {
-                        assert dependenciesDemanded == true;
-                        tasks.add(new UndemandDependenciesTask());
-                        dependenciesDemanded = false;
-                    }
-                    getListenerTasks(transition, tasks);
-                    lifecycleTime = System.nanoTime();
-                    tasks.add(new DependencyStoppedTask(getDependents()));
-                    break;
-                }
-                case STARTING_to_PROCESSING_CHILD_SERVICES: {
+                case STARTING_to_UP: {
                     getListenerTasks(transition, tasks);
                     tasks.add(new DependencyStartedTask(getDependents()));
-                    break;
-                }
-                case PROCESSING_CHILD_SERVICES_to_UP: {
-                    getListenerTasks(transition, tasks);
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_REMOVE_PROCESSING));
-                    break;
-                }
-                case UP_to_PROCESSING_CHILD_SERVICES: {
-                    getListenerTasks(transition, tasks);
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_ADD_PROCESSING));
-                    break;
-                }
-                case PROCESSING_CHILD_SERVICES_to_CHILD_SERVICE_PROBLEM: {
-                    getListenerTasks(transition, tasks);
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_REMOVE_PROCESSING | CHILD_TASK_ADD_PROBLEM));
-                    break;
-                }
-                case CHILD_SERVICE_PROBLEM_to_PROCESSING_CHILD_SERVICES: {
-                    getListenerTasks(transition, tasks);
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_ADD_PROCESSING | CHILD_TASK_REMOVE_PROBLEM));
                     break;
                 }
                 case STARTING_to_START_FAILED: {
@@ -644,14 +562,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                     getListenerTasks(transition, tasks);
                     tasks.add(new DependencyFailedTask(getDependents(), true));
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_REMOVE_PROCESSING | CHILD_TASK_ADD_PROBLEM));
                     break;
                 }
                 case START_FAILED_to_STARTING: {
                     getListenerTasks(transition, tasks);
                     tasks.add(new DependencyRetryingTask(getDependents()));
                     tasks.add(new DependentStartedTask());
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_ADD_PROCESSING | CHILD_TASK_REMOVE_PROBLEM));
                     break;
                 }
                 case START_INITIATING_to_STARTING: {
@@ -666,22 +582,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     tasks.add(new DependencyRetryingTask(getDependents()));
                     tasks.add(new StopTask(true));
                     tasks.add(new DependentStoppedTask());
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_ADD_PROCESSING | CHILD_TASK_REMOVE_PROBLEM));
                     break;
                 }
                 case STOP_REQUESTED_to_UP: {
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_REMOVE_PROCESSING));
-                    // fall thru
-                }
-                case STOP_REQUESTED_to_PROCESSING_CHILD_SERVICES: {
                     getListenerTasks(transition, tasks);
                     tasks.add(new DependencyStartedTask(getDependents()));
-                    break;
-                }
-                case STOP_REQUESTED_to_CHILD_SERVICE_PROBLEM: {
-                    getListenerTasks(transition, tasks);
-                    tasks.add(new DependencyStartedTask(getDependents()));
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_REMOVE_PROCESSING | CHILD_TASK_ADD_PROBLEM));
                     break;
                 }
                 case STOP_REQUESTED_to_STOPPING: {
@@ -712,7 +617,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case REMOVING_to_REMOVED: {
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_REMOVE_PROCESSING));
                     getListenerTasks(transition, tasks);
                     listeners.clear();
                     break;
@@ -735,7 +639,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
                     }
                     getListenerTasks(transition, tasks);
-                    if (parent != null) tasks.add(new ChildTask(CHILD_TASK_ADD_PROCESSING | CHILD_TASK_REMOVE_PROBLEM));
                     lifecycleTime = System.nanoTime();
                     break;
                 }
@@ -1004,43 +907,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         doExecute(tasks);
     }
 
-    private void childEvent(final int flags) {
-        assert ! holdsLock(this);
-        final ArrayList<Runnable> tasks;
-        synchronized (this) {
-            boolean mayTransitionProblem = false, mayTransitionIncomplete = false;
-            if ((flags & _CHILD_TASK_PROBLEM) != 0) {
-                if ((flags & _CHILD_TASK_PROBLEM_DO) != 0) {
-                    if (problemChildren++ == 0) {
-                        mayTransitionProblem = true;
-                    }
-                } else {
-                    if (--problemChildren == 0) {
-                        mayTransitionProblem = true;
-                    }
-                }
-            }
-            if ((flags & _CHILD_TASK_PROCESSING) != 0) {
-                if ((flags & _CHILD_TASK_PROCESSING_DO) != 0) {
-                    if (incompleteChildren++ == 0) {
-                        mayTransitionIncomplete = true;
-                    }
-                } else {
-                    if (--incompleteChildren == 0) {
-                        mayTransitionIncomplete = true;
-                    }
-                }
-            }
-            if (! (mayTransitionIncomplete || mayTransitionProblem)) {
-                return;
-            }
-            tasks = new ArrayList<Runnable>();
-            transition(tasks);
-            asyncTasks += tasks.size();
-        }
-        doExecute(tasks);
-    }
-
     void dependentStarted() {
         assert !holdsLock(this);
         synchronized (this) {
@@ -1141,8 +1007,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 case START_INITIATING:
                 case STARTING:
                 case UP:
-                case PROCESSING_CHILD_SERVICES:
-                case CHILD_SERVICE_PROBLEM:
                 case STOP_REQUESTED: {
                     children.add(child);
                     newDependent(primaryRegistration.getName(), child);
@@ -1495,8 +1359,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             b.append("Transitive Unavailable Dep Count: ").append(transitiveUnavailableDepCount).append('\n');
             b.append("Dependencies Demanded: ").append(dependenciesDemanded ? "yes" : "no").append('\n');
             b.append("Async Tasks: ").append(asyncTasks).append('\n');
-            b.append("Incomplete Children: ").append(incompleteChildren).append('\n');
-            b.append("Problem Children: ").append(problemChildren).append('\n');
             if (lifecycleTime != 0L) {
                 final long elapsedNanos = System.nanoTime() - lifecycleTime;
                 final long now = System.currentTimeMillis();
@@ -2459,41 +2321,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
         public long getElapsedTime() {
             return System.nanoTime() - lifecycleTime;
-        }
-    }
-
-    static final int _CHILD_TASK_PROBLEM_DO     = 0x01;
-    static final int _CHILD_TASK_PROBLEM        = 0x02;
-    static final int _CHILD_TASK_PROCESSING_DO  = 0x04;
-    static final int _CHILD_TASK_PROCESSING     = 0x08;
-
-    static final int CHILD_TASK_ADD_PROBLEM       = _CHILD_TASK_PROBLEM + _CHILD_TASK_PROBLEM_DO;
-    static final int CHILD_TASK_REMOVE_PROBLEM    = _CHILD_TASK_PROBLEM;
-    static final int CHILD_TASK_ADD_PROCESSING    = _CHILD_TASK_PROCESSING + _CHILD_TASK_PROCESSING_DO;
-    static final int CHILD_TASK_REMOVE_PROCESSING = _CHILD_TASK_PROCESSING;
-
-    class ChildTask implements Runnable {
-
-        private final int flags;
-
-        ChildTask(final int flags) {
-            this.flags = flags;
-        }
-
-        public void run() {
-            try {
-                parent.childEvent(flags);
-                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
-                synchronized (ServiceControllerImpl.this) {
-                    // Subtract one for this task
-                    asyncTasks --;
-                    transition(tasks);
-                    asyncTasks += tasks.size();
-                }
-                doExecute(tasks);
-            } catch (Throwable t) {
-                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
-            }
         }
     }
 }
