@@ -22,6 +22,13 @@
 
 package org.jboss.msc;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.Enumeration;
+import java.util.jar.Attributes;
+import java.util.jar.Manifest;
+
 /**
  * The current version of this module.
  *
@@ -30,18 +37,52 @@ package org.jboss.msc;
 public final class Version {
     private Version() {}
 
-    /**
-     * The current version.
-     */
-    public static final String VERSION = getVersionString();
+    private static final String JAR_NAME;
+    private static final String VERSION_STRING;
+
+    static {
+        final Enumeration<URL> resources;
+        String jarName = "(unknown)";
+        String versionString = "(unknown)";
+        try {
+            final ClassLoader classLoader = Version.class.getClassLoader();
+            resources = classLoader == null ? ClassLoader.getSystemResources("META-INF/MANIFEST.MF") : classLoader.getResources("META-INF/MANIFEST.MF");
+            while (resources.hasMoreElements()) {
+                final URL url = resources.nextElement();
+                final InputStream stream = url.openStream();
+                if (stream != null) try {
+                    final Manifest manifest = new Manifest(stream);
+                    final Attributes mainAttributes = manifest.getMainAttributes();
+                    if (mainAttributes != null && "JBoss Modular Service Container".equals(mainAttributes.getValue("Specification-Title"))) {
+                        jarName = mainAttributes.getValue("Jar-Name");
+                        versionString = mainAttributes.getValue("Jar-Version");
+                    }
+                } finally {
+                    try { stream.close(); } catch (Throwable ignored) {}
+                }
+            }
+        } catch (IOException ignored) {
+        }
+        JAR_NAME = jarName;
+        VERSION_STRING = versionString;
+    }
 
     /**
-     * Get the version string.
+     * Get the name of the JBoss Modules JAR.
+     *
+     * @return the name
+     */
+    public static String getJarName() {
+        return JAR_NAME;
+    }
+
+    /**
+     * Get the version string of JBoss Modules.
      *
      * @return the version string
      */
     public static String getVersionString() {
-        return "TRUNK SNAPSHOT";
+        return VERSION_STRING;
     }
 
     /**
@@ -50,6 +91,6 @@ public final class Version {
      * @param args ignored
      */
     public static void main(String[] args) {
-        System.out.printf("JBoss Modular Service Container version %s\n", VERSION);
+        System.out.printf("JBoss Modular Service Container version %s\n", VERSION_STRING);
     }
 }
