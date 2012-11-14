@@ -71,6 +71,24 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
     void awaitTermination(long timeout, TimeUnit unit) throws InterruptedException;
 
     /**
+     * Causes the current thread to wait until the container is stable.
+     *
+     * @throws InterruptedException if the current thread is interrupted
+     *         while waiting
+     */
+    void awaitStability() throws InterruptedException;
+
+    /**
+     * Causes the current thread to wait until the container is stable.
+     *
+     * @param timeout the maximum time to wait
+     * @param unit the time unit of the {@code timeout} argument
+     * @throws InterruptedException if the current thread is interrupted
+     *         while waiting
+     */
+    boolean awaitStability(long timeout, TimeUnit unit) throws InterruptedException;
+
+    /**
      * Dump a complete list of services to {@code System.out}.
      */
     void dumpServices();

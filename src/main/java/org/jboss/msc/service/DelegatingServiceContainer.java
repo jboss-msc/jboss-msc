@@ -204,4 +204,16 @@ public final class DelegatingServiceContainer implements ServiceContainer {
     public void awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
         throw new UnsupportedOperationException();
     }
+
+    /** {@inheritDoc} */
+    @Override
+    public void awaitStability() throws InterruptedException {
+        throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public boolean awaitStability(final long timeout, final TimeUnit unit) throws InterruptedException {
+        throw new UnsupportedOperationException();
+    }
 }

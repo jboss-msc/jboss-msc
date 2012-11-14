@@ -99,6 +99,7 @@ final class ServiceRegistrationImpl implements Dependency {
                 return;
             }
             synchronized (instance) {
+                final int ss = instance.getStabilityState();
                 synchronized (dependents) {
                     dependents.add(dependent);
                 }
@@ -111,15 +112,18 @@ final class ServiceRegistrationImpl implements Dependency {
                 }
                 instance.newDependent(name, dependent);
                 instance.addAsyncTasks(tasks.size() + 1);
+                instance.updateStabilityState(ss);
             }
         }
         instance.doExecute(tasks);
         tasks.clear();
         synchronized(this) {
             synchronized (instance) {
+                final int ss = instance.getStabilityState();
                 instance.removeAsyncTask();
                 instance.transition(tasks);
                 instance.addAsyncTasks(tasks.size());
+                instance.updateStabilityState(ss);
             }
         }
         instance.doExecute(tasks);
