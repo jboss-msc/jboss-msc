@@ -23,6 +23,7 @@
 package org.jboss.msc.service;
 
 import java.io.PrintStream;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -73,20 +74,24 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
     /**
      * Causes the current thread to wait until the container is stable.
      *
+     * @param failed a set into which failed services should be copied, or {@code null} to ignore
+     * @param problem a set into which problem services should be copied, or {@code null} to ignore
      * @throws InterruptedException if the current thread is interrupted
      *         while waiting
      */
-    void awaitStability() throws InterruptedException;
+    void awaitStability(Set<? super ServiceController<?>> failed, Set<? super ServiceController<?>> problem) throws InterruptedException;
 
     /**
      * Causes the current thread to wait until the container is stable.
      *
      * @param timeout the maximum time to wait
      * @param unit the time unit of the {@code timeout} argument
+     * @param failed a set into which failed services should be copied, or {@code null} to ignore
+     * @param problem a set into which problem services should be copied, or {@code null} to ignore
      * @throws InterruptedException if the current thread is interrupted
      *         while waiting
      */
-    boolean awaitStability(long timeout, TimeUnit unit) throws InterruptedException;
+    boolean awaitStability(long timeout, TimeUnit unit, Set<? super ServiceController<?>> failed, Set<? super ServiceController<?>> problem) throws InterruptedException;
 
     /**
      * Dump a complete list of services to {@code System.out}.

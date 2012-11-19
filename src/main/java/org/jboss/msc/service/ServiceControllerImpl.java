@@ -552,6 +552,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case START_REQUESTED_to_PROBLEM: {
+                    getPrimaryRegistration().getContainer().addProblem(this);
                     if (!immediateUnavailableDependencies.isEmpty()) {
                         getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_UNAVAILABLE, tasks);
                     }
@@ -581,6 +582,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case STARTING_to_START_FAILED: {
+                    getPrimaryRegistration().getContainer().addFailed(this);
                     ChildServiceTarget childTarget = this.childTarget;
                     if (childTarget != null) {
                         childTarget.valid = false;
@@ -591,6 +593,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case START_FAILED_to_STARTING: {
+                    getPrimaryRegistration().getContainer().removeFailed(this);
                     getListenerTasks(transition, tasks);
                     tasks.add(new DependencyRetryingTask(getDependents()));
                     tasks.add(new DependentStartedTask());
@@ -602,6 +605,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case START_FAILED_to_DOWN: {
+                    getPrimaryRegistration().getContainer().removeFailed(this);
                     startException = null;
                     failCount--;
                     getListenerTasks(transition, tasks);
@@ -655,6 +659,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case PROBLEM_to_START_REQUESTED: {
+                    getPrimaryRegistration().getContainer().removeProblem(this);
                     if (!immediateUnavailableDependencies.isEmpty()) {
                         getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_AVAILABLE, tasks);
                     }

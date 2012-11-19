@@ -207,13 +207,13 @@ public final class DelegatingServiceContainer implements ServiceContainer {
 
     /** {@inheritDoc} */
     @Override
-    public void awaitStability() throws InterruptedException {
+    public void awaitStability(final Set<? super ServiceController<?>> failed, final Set<? super ServiceController<?>> problem) throws InterruptedException {
         throw new UnsupportedOperationException();
     }
 
     /** {@inheritDoc} */
     @Override
-    public boolean awaitStability(final long timeout, final TimeUnit unit) throws InterruptedException {
+    public boolean awaitStability(final long timeout, final TimeUnit unit, final Set<? super ServiceController<?>> failed, final Set<? super ServiceController<?>> problem) throws InterruptedException {
         throw new UnsupportedOperationException();
     }
 }

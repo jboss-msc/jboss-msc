@@ -22,7 +22,10 @@
 
 package org.jboss.msc.service;
 
+import java.util.Set;
 import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -33,12 +36,16 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
     public void testSimpleInstallation() {
         final ServiceBuilder<Void> builder = serviceContainer.addService(ServiceName.of("Test1"), Service.NULL);
         final ServiceController<Void> controller = builder.install();
+        final Set<Object> problem = new IdentityHashSet<Object>();
+        final Set<Object> failed = new IdentityHashSet<Object>();
         try {
-            serviceContainer.awaitStability();
+            serviceContainer.awaitStability(failed, problem);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
         assertController(controller.getName(), controller);
+        assertTrue(problem.isEmpty());
+        assertTrue(failed.isEmpty());
     }
 
     @Test
@@ -66,12 +73,16 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         builder = serviceContainer.addService(ServiceName.of("Test2"), Service.NULL);
         builder.setInitialMode(ServiceController.Mode.ON_DEMAND);
         final ServiceController<?> controller2 = builder.install();
+        final Set<Object> problem = new IdentityHashSet<Object>();
+        final Set<Object> failed = new IdentityHashSet<Object>();
         try {
-            serviceContainer.awaitStability();
+            serviceContainer.awaitStability(failed, problem);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
         assertController(controller1.getName(), controller1);
         assertController(controller2.getName(), controller2);
+        assertTrue(problem.isEmpty());
+        assertTrue(failed.isEmpty());
     }
 }

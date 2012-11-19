@@ -36,7 +36,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -59,9 +58,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.concurrent.locks.LockSupport;
 import org.jboss.modules.management.ObjectProperties;
 import org.jboss.modules.ref.Reaper;
 import org.jboss.modules.ref.Reference;
@@ -94,13 +90,13 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     }
 
     private final ConcurrentMap<ServiceName, ServiceRegistrationImpl> registry = new UnlockedReadHashMap<ServiceName, ServiceRegistrationImpl>(512);
-
-    private static final Thread[] NO_WAITERS = new Thread[0];
-
-    @SuppressWarnings("unused")
-    private volatile int unstableServices;
-    private volatile Thread[] stabilityWaiters = NO_WAITERS;
     private final long start = System.nanoTime();
+
+    private final Set<ServiceController<?>> problems = new IdentityHashSet<ServiceController<?>>();
+    private final Set<ServiceController<?>> failed = new IdentityHashSet<ServiceController<?>>();
+    private final Object lock = new Object();
+
+    private int unstableServices;
     private long shutdownInitiated;
 
     private final List<TerminateListener> terminateListeners = new ArrayList<TerminateListener>(1);
@@ -244,9 +240,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
     };
 
-    private static final AtomicIntegerFieldUpdater<ServiceContainerImpl> unstableServicesUpdater = AtomicIntegerFieldUpdater.newUpdater(ServiceContainerImpl.class, "unstableServices");
-    private static final AtomicReferenceFieldUpdater<ServiceContainerImpl, Thread[]> stabilityWaitersUpdater = AtomicReferenceFieldUpdater.newUpdater(ServiceContainerImpl.class, Thread[].class, "stabilityWaiters");
-
     ServiceContainerImpl(String name, int coreSize, long timeOut, TimeUnit timeOutUnit, final boolean autoShutdown) {
         this.autoShutdown = autoShutdown;
         final int serialNo = SERIAL.getAndIncrement();
@@ -303,16 +296,48 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
     }
 
-    int incrementUnstableServices() {
-        return unstableServicesUpdater.getAndIncrement(this);
+    void removeProblem(ServiceController<?> controller) {
+        synchronized (lock) {
+            problems.remove(controller);
+        }
     }
 
-    int decrementUnstableServices() {
-        final int old = unstableServicesUpdater.getAndDecrement(this);
-        if (old == 1) {
-            awakenStabilityWaiters();
+    void removeFailed(ServiceController<?> controller) {
+        synchronized (lock) {
+            failed.remove(controller);
         }
-        return old;
+    }
+
+    void incrementUnstableServices() {
+        synchronized (lock) {
+            unstableServices++;
+        }
+    }
+
+    void addProblem(ServiceController<?> controller) {
+        synchronized (lock) {
+            problems.add(controller);
+            if (--unstableServices == 0) {
+                lock.notifyAll();
+            }
+        }
+    }
+
+    void addFailed(ServiceController<?> controller) {
+        synchronized (lock) {
+            failed.add(controller);
+            if (--unstableServices == 0) {
+                lock.notifyAll();
+            }
+        }
+    }
+
+    void decrementUnstableServices() {
+        synchronized (lock) {
+            if (--unstableServices == 0) {
+                lock.notifyAll();
+            }
+        }
     }
 
     boolean isAutoShutdown() {
@@ -356,93 +381,39 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     }
 
     @Override
-    public void awaitStability() throws InterruptedException {
-        try {
+    public void awaitStability(Set<? super ServiceController<?>> failed, Set<? super ServiceController<?>> problem) throws InterruptedException {
+        synchronized (lock) {
             while (unstableServices != 0) {
-                addStabilityWaiter();
-                if (unstableServices != 0) {
-                    LockSupport.park(this);
-                }
+                lock.wait();
             }
-        } finally {
-            removeStabilityWaiter();
+            if (failed != null) {
+                failed.addAll(this.failed);
+            }
+            if (problem != null) {
+                problem.addAll(this.problems);
+            }
         }
     }
 
     @Override
-    public boolean awaitStability(final long timeout, final TimeUnit unit) throws InterruptedException {
-        long t = System.nanoTime();
+    public boolean awaitStability(final long timeout, final TimeUnit unit, Set<? super ServiceController<?>> failed, Set<? super ServiceController<?>> problem) throws InterruptedException {
+        long now = System.nanoTime();
         long remaining = unit.toNanos(timeout);
-        try {
+        synchronized (lock) {
             while (unstableServices != 0) {
                 if (remaining <= 0L) {
                     return false;
                 }
-                addStabilityWaiter();
-                if (unstableServices != 0) {
-                    LockSupport.parkNanos(this, remaining);
-                    // this subtracts the elapsed time from remaining (rhs is negative but must remain ordered)
-                    remaining += t - (t = System.nanoTime());
-                }
+                lock.wait(remaining / 1000000L, (int) (remaining % 1000000L));
+                remaining -= (-now + (now = System.nanoTime()));
+            }
+            if (failed != null) {
+                failed.addAll(this.failed);
+            }
+            if (problem != null) {
+                problem.addAll(this.problems);
             }
             return true;
-        } finally {
-            removeStabilityWaiter();
-        }
-    }
-
-    private void addStabilityWaiter() {
-        final Thread thread = Thread.currentThread();
-        Thread[] oldVal, newVal;
-        int oldLen;
-        do {
-            oldVal = stabilityWaiters;
-            for (Thread item : oldVal) {
-                if (item == thread) {
-                    return;
-                }
-            }
-            oldLen = oldVal.length;
-            newVal = Arrays.copyOf(oldVal, oldLen + 1);
-            newVal[oldLen] = thread;
-        } while (! stabilityWaitersUpdater.compareAndSet(this, oldVal, newVal));
-    }
-
-    private void removeStabilityWaiter() {
-        final Thread thread = Thread.currentThread();
-        Thread[] oldVal, newVal;
-        int oldLen;
-        int found;
-        do {
-            oldVal = stabilityWaiters;
-            oldLen = oldVal.length;
-            found = -1;
-            for (int i = 0; i < oldLen; i++) {
-                final Thread item = oldVal[i];
-                if (item == thread) {
-                    found = i;
-                    break;
-                }
-            }
-            if (found == -1) {
-                return;
-            }
-            if (oldLen == 1) {
-                newVal = NO_WAITERS;
-            } else {
-                newVal = Arrays.copyOf(oldVal, oldLen - 1);
-                if (found != oldLen - 1) {
-                    newVal[found] = oldVal[oldLen - 1];
-                }
-            }
-            newVal[oldLen] = thread;
-        } while (! stabilityWaitersUpdater.compareAndSet(this, oldVal, newVal));
-    }
-
-    private void awakenStabilityWaiters() {
-        final Thread[] set = stabilityWaitersUpdater.getAndSet(this, NO_WAITERS);
-        for (Thread thread : set) {
-            LockSupport.unpark(thread);
         }
     }
 
