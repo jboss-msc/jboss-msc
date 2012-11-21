@@ -73,6 +73,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private final IdentityHashMap<ServiceListener<? super S>, ServiceListener.Inheritance> listeners;
     /**
+     * The set of registered stability monitors.
+     */
+    private final IdentityHashSet<StabilityMonitor> monitors;
+    /**
      * The primary registration of this service.
      */
     private final ServiceRegistrationImpl primaryRegistration;
@@ -187,6 +191,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         this.primaryRegistration = primaryRegistration;
         this.aliasRegistrations = aliasRegistrations;
         this.listeners = new IdentityHashMap<ServiceListener<? super S>, ServiceListener.Inheritance>(listeners);
+        this.monitors = new IdentityHashSet<StabilityMonitor>();
         this.parent = parent;
         int depCount = dependencies.length;
         unstartedDependencies = 0;
@@ -340,10 +345,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         if (oldVal == 0) {
             if (asyncTasks > 0 || ! state.isRestState()) {
                 primaryRegistration.getContainer().incrementUnstableServices();
+                for (StabilityMonitor monitor : monitors) {
+                    monitor.incrementUnstableServices();
+                }
             }
         } else {
             if (asyncTasks == 0 && state.isRestState()) {
                 primaryRegistration.getContainer().decrementUnstableServices();
+                for (StabilityMonitor monitor : monitors) {
+                    monitor.decrementUnstableServices();
+                }
             }
         }
     }
@@ -553,6 +564,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case START_REQUESTED_to_PROBLEM: {
                     getPrimaryRegistration().getContainer().addProblem(this);
+                    for (StabilityMonitor monitor : monitors) {
+                        monitor.addProblem(this);
+                    }
                     if (!immediateUnavailableDependencies.isEmpty()) {
                         getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_UNAVAILABLE, tasks);
                     }
@@ -583,6 +597,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case STARTING_to_START_FAILED: {
                     getPrimaryRegistration().getContainer().addFailed(this);
+                    for (StabilityMonitor monitor : monitors) {
+                        monitor.addFailed(this);
+                    }
                     ChildServiceTarget childTarget = this.childTarget;
                     if (childTarget != null) {
                         childTarget.valid = false;
@@ -594,6 +611,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case START_FAILED_to_STARTING: {
                     getPrimaryRegistration().getContainer().removeFailed(this);
+                    for (StabilityMonitor monitor : monitors) {
+                        monitor.removeFailed(this);
+                    }
                     getListenerTasks(transition, tasks);
                     tasks.add(new DependencyRetryingTask(getDependents()));
                     tasks.add(new DependentStartedTask());
@@ -606,6 +626,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case START_FAILED_to_DOWN: {
                     getPrimaryRegistration().getContainer().removeFailed(this);
+                    for (StabilityMonitor monitor : monitors) {
+                        monitor.removeFailed(this);
+                    }
                     startException = null;
                     failCount--;
                     getListenerTasks(transition, tasks);
@@ -660,6 +683,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case PROBLEM_to_START_REQUESTED: {
                     getPrimaryRegistration().getContainer().removeProblem(this);
+                    for (StabilityMonitor monitor : monitors) {
+                        monitor.removeProblem(this);
+                    }
                     if (!immediateUnavailableDependencies.isEmpty()) {
                         getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_AVAILABLE, tasks);
                     }
@@ -1443,6 +1469,29 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
         }
         return b.toString();
+    }
+
+    void addMonitor(final StabilityMonitor stabilityMonitor) {
+        assert !holdsLock(this);
+        synchronized (this) {
+            final Substate state = this.state;
+            monitors.add(stabilityMonitor);
+            if (getStabilityState() != 0) {
+                stabilityMonitor.incrementUnstableServices();
+                if (state == Substate.START_FAILED) {
+                    stabilityMonitor.addFailed(this);
+                } else if (state == Substate.PROBLEM) {
+                    stabilityMonitor.addProblem(this);
+                }
+            }
+        }
+    }
+
+    void removeMonitor(final StabilityMonitor stabilityMonitor) {
+        assert !holdsLock(this);
+        synchronized (this) {
+            monitors.remove(stabilityMonitor);
+        }
     }
 
     private enum ListenerNotification {

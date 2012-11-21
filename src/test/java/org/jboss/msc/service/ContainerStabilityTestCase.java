@@ -85,4 +85,63 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         assertTrue(problem.isEmpty());
         assertTrue(failed.isEmpty());
     }
+
+    @Test
+    public void testSimpleInstallation3() {
+        final ServiceBuilder<Void> builder = serviceContainer.addService(ServiceName.of("Test1"), Service.NULL);
+        final ServiceController<Void> controller = builder.install();
+        final StabilityMonitor stabilityMonitor = new StabilityMonitor();
+        stabilityMonitor.addController(controller);
+        final Set<Object> problem = new IdentityHashSet<Object>();
+        final Set<Object> failed = new IdentityHashSet<Object>();
+        try {
+            stabilityMonitor.awaitStability(failed, problem);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        assertController(controller.getName(), controller);
+        assertTrue(problem.isEmpty());
+        assertTrue(failed.isEmpty());
+    }
+
+    @Test
+    public void testSimpleInstallation4() {
+        final StabilityMonitor stabilityMonitor = new StabilityMonitor();
+        ServiceBuilder<?> builder = serviceContainer.addService(ServiceName.of("Test1"), new Service<Object>() {
+            public void start(final StartContext context) throws StartException {
+                final ServiceBuilder<Void> builder = context.getChildTarget().addService(ServiceName.of("Test1.child"), NULL);
+                builder.addListener(new AbstractServiceListener<Void>() {
+                    public void transition(final ServiceController<? extends Void> controller, final ServiceController.Transition transition) {
+                        // blah
+                    }
+                });
+                builder.install();
+            }
+
+            public void stop(final StopContext context) {
+            }
+
+            public Object getValue() throws IllegalStateException, IllegalArgumentException {
+                return null;
+            }
+        });
+        builder.addDependencies(ServiceName.of("Test2"));
+        final ServiceController<?> controller1 = builder.install();
+        stabilityMonitor.addController(controller1);
+        builder = serviceContainer.addService(ServiceName.of("Test2"), Service.NULL);
+        builder.setInitialMode(ServiceController.Mode.ON_DEMAND);
+        final ServiceController<?> controller2 = builder.install();
+        stabilityMonitor.addController(controller2);
+        final Set<Object> problem = new IdentityHashSet<Object>();
+        final Set<Object> failed = new IdentityHashSet<Object>();
+        try {
+            stabilityMonitor.awaitStability(failed, problem);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        assertController(controller1.getName(), controller1);
+        assertController(controller2.getName(), controller2);
+        assertTrue(problem.isEmpty());
+        assertTrue(failed.isEmpty());
+    }
 }

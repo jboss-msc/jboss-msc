@@ -24,7 +24,6 @@ package org.jboss.msc.service.management;
 
 import java.beans.ConstructorProperties;
 import java.io.Serializable;
-import org.jboss.msc.service.StartException;
 
 /**
  * A representation of the current status of some service.
