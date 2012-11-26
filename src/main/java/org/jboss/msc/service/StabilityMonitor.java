@@ -112,9 +112,6 @@ public final class StabilityMonitor {
         assert holdsLock(controller);
         synchronized (lock) {
             problems.add(controller);
-            if (--unstableServices == 0) {
-                lock.notifyAll();
-            }
         }
     }
 
@@ -122,9 +119,6 @@ public final class StabilityMonitor {
         assert holdsLock(controller);
         synchronized (lock) {
             failed.add(controller);
-            if (--unstableServices == 0) {
-                lock.notifyAll();
-            }
         }
     }
 
