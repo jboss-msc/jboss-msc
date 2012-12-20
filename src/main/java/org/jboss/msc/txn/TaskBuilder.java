@@ -29,21 +29,23 @@ import java.util.Collection;
 public final class TaskBuilder<T> {
 
     private final Transaction transaction;
+    private final TaskParent parent;
     private Executable<T> executable;
     private Validatable validatable;
     private Revertible revertible;
     private Committable committable;
 
-    TaskBuilder(final Transaction transaction, final Executable<T> executable) {
+    TaskBuilder(final Transaction transaction, final TaskParent parent, final Executable<T> executable) {
         this.transaction = transaction;
+        this.parent = parent;
         this.executable = executable;
         if (executable instanceof Validatable) validatable = (Validatable) executable;
         if (executable instanceof Revertible) revertible = (Revertible) executable;
         if (executable instanceof Committable) committable = (Committable) executable;
     }
 
-    TaskBuilder(final Transaction transaction) {
-        this(transaction, null);
+    TaskBuilder(final Transaction transaction, final TaskParent parent) {
+        this(transaction, parent, null);
     }
 
     /**

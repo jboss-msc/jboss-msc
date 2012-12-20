@@ -104,7 +104,7 @@ public enum DependencyFlag {
      * @throws IllegalArgumentException if the combination is invalid
      */
     public static void validate(DependencyFlag... flags) throws IllegalArgumentException {
-        boolean anti = false, required = false, unrequired = false, optional = false, undemanded = false, demanded = false, parent = false;
+        boolean anti = false, required = false, unrequired = false, optional = false, undemanded = false, demanded = false, parent = false, replaceable = false;
         for (DependencyFlag flag : flags) {
             if (optional && flag.in(REQUIRED, PARENT, UNREQUIRED, ANTI) || (parent || required) && flag.in(OPTIONAL, UNREQUIRED, ANTI) || (anti || unrequired) && flag.in(OPTIONAL, REQUIRED, PARENT)) {
                 throw new IllegalArgumentException("Only one of REQUIRED, UNREQUIRED, or OPTIONAL may be given (ANTI implies UNREQUIRED, PARENT implies REQUIRED)");
@@ -119,6 +119,10 @@ public enum DependencyFlag {
             if (flag == UNDEMANDED) undemanded = true;
             if (flag == DEMANDED) demanded = true;
             if (flag == PARENT) parent = true;
+            if (flag == REPLACEABLE) replaceable = true;
+        }
+        if (optional && ! replaceable) {
+            throw new IllegalArgumentException("OPTIONAL requires REPLACEABLE");
         }
     }
 }

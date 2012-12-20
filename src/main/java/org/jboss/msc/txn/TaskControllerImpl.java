@@ -18,7 +18,6 @@
 
 package org.jboss.msc.txn;
 
-import static java.util.concurrent.locks.LockSupport.park;
 import static org.jboss.msc.txn.Bits.*;
 
 /**
@@ -26,9 +25,10 @@ import static org.jboss.msc.txn.Bits.*;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class TaskControllerImpl<T> extends TaskController<T> implements TaskDependency, TaskDependent {
+final class TaskControllerImpl<T> extends TaskController<T> implements TaskParent, TaskChild {
 
-    private final TaskDependency[] dependencies;
+    private final TaskParent parent;
+    private final TaskParent[] dependencies;
     private final Executable<T> executable;
     private final Revertible revertible;
     private final Validatable validatable;
@@ -59,8 +59,8 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskDepen
     private static final int FLAG_COMMIT_REQ = 1 << 7;
     private static final int FLAG_LOCKED = 1 << 31;
 
-    TaskControllerImpl(final Transaction transaction, final TaskDependency[] dependencies, final Executable<T> executable, final Revertible revertible, final Validatable validatable, final Committable committable) {
-        super(transaction);
+    TaskControllerImpl(final TaskParent parent, final TaskParent[] dependencies, final Executable<T> executable, final Revertible revertible, final Validatable validatable, final Committable committable) {
+        this.parent = parent;
         this.dependencies = dependencies;
         this.executable = executable;
         this.revertible = revertible;
@@ -69,11 +69,15 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskDepen
     }
 
     public <T> TaskBuilder<T> newTask(final Executable<T> task) throws IllegalStateException {
-        return new TaskBuilder<T>(transaction, task);
+        return new TaskBuilder<T>(getTransaction(), parent, task);
     }
 
     public TaskBuilder<Void> newTask() throws IllegalStateException {
-        return new TaskBuilder<Void>(transaction);
+        return new TaskBuilder<Void>(getTransaction(), parent);
+    }
+
+    public TransactionImpl getTransaction() {
+        return parent.getTransaction();
     }
 
     public T getResult() throws IllegalStateException {
@@ -160,16 +164,20 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskDepen
                     addProblem(new Problem(TaskControllerImpl.this, cause));
                 }
 
+                public <T> TaskBuilder<T> newTask(final Executable<T> task) throws IllegalStateException {
+                    return null;
+                }
+
+                public TaskBuilder<Void> newTask() throws IllegalStateException {
+                    return null;
+                }
+
                 public void begin() {
                     doBegin();
                 }
 
                 public void end() {
                     doEnd();
-                }
-
-                public Transaction getTransaction() {
-                    return transaction;
                 }
             });
         }
@@ -183,32 +191,32 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskDepen
         }
     }
 
-    public void dependentExecutionFinished() {
+    public void childExecutionFinished(final TaskChild child) {
     }
 
-    public void dependentValidationFinished() {
+    public void childValidationFinished(final TaskChild child) {
     }
 
-    public void dependentRollbackFinished() {
+    public void childRollbackFinished(final TaskChild child) {
     }
 
-    public void dependentCommitFinished() {
+    public void childCommitFinished(final TaskChild child) {
         // a dependent has finished its commit operation.
     }
 
-    public void dependencyExecutionComplete() {
+    public void dependencyExecutionComplete(final TaskParent dependency) {
         // another dependency has completed execution, thus getting us one step closer to having permission to execute.
 
     }
 
-    public void dependencyValidateComplete() {
+    public void dependencyValidateComplete(final TaskParent dependency) {
 
     }
 
-    public void dependencyCommitComplete() {
+    public void dependencyCommitComplete(final TaskParent dependency) {
     }
 
-    public void dependentInitiateRollback() {
+    public void childInitiateRollback() {
         // we're requested to roll back by the transaction.
         // TODO: get lock..
         int state = stateOf(this.state);
@@ -219,20 +227,20 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskDepen
         assert state >= STATE_EXECUTE_WAIT && state <= STATE_COMMIT_WAIT || state == STATE_VALIDATE_FAILED;
         // TODO: set state = STATE_ROLLBACK_WAIT
         for (TaskControllerImpl<?> dependent : dependents) {
-            dependent.dependentInitiateRollback();
+            dependent.childInitiateRollback();
         }
         // TODO: set state = STATE_ROLLBACK
 
         // TODO: release lock..
     }
 
-    public void dependentInitiateValidate() {
+    public void childInitiateValidate() {
         int state = stateOf(this.state);
         assert state == STATE_VALIDATE_WAIT;
 
     }
 
-    public void dependentInitiateCommit() {
+    public void childInitiateCommit() {
 
     }
 }

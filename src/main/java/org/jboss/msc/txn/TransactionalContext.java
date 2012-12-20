@@ -23,7 +23,7 @@ package org.jboss.msc.txn;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface TransactionalContext {
+public interface TransactionalContext extends TaskTarget {
     /**
      * Begin doing work on behalf of this task from the current thread.  Should be followed by a
      * {@code try}/{@code finally} block, wherein the {@link #end()} method is called from the {@code finally}
@@ -43,11 +43,4 @@ public interface TransactionalContext {
      * Finish doing work on behalf of this task from the current thread.
      */
     void end();
-
-    /**
-     * Get the transaction.
-     *
-     * @return the transaction
-     */
-    Transaction getTransaction();
 }

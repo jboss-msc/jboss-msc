@@ -34,7 +34,7 @@ public abstract class Transaction extends SimpleAttachable implements TaskTarget
      * @return the transaction
      */
     public static Transaction create(Executor executor) {
-        return new TransactionImpl(executor);
+        return TransactionImpl.createTransactionImpl(executor);
     }
 
     public abstract Executor getExecutor();
@@ -46,27 +46,7 @@ public abstract class Transaction extends SimpleAttachable implements TaskTarget
      */
     public abstract long getDuration(TimeUnit unit);
 
-    /**
-     * Prepare this transaction.  It is an error to prepare a transaction with unreleased tasks.
-     * Once this method returns, either {@link #commit(Listener)} or {@link #rollback(Listener)} must be called.
-     * After calling this method (regardless of its outcome), the transaction can not be directly modified before termination.
-     *
-     *
-     * @param completionListener the listener to call when the prepare is complete or has failed
-     * @return {@code true} if this thread initiated prepare, or {@code false} if prepare was already initiated
-     * @throws org.jboss.msc.txn.TransactionRolledBackException if the transaction was previously rolled back
-     */
-    public abstract boolean prepare(Listener<Transaction> completionListener) throws TransactionRolledBackException;
-
-    /**
-     * Commit the work done by {@link #prepare(org.jboss.msc.value.Listener)} and terminate this transaction.
-     *
-     * @param completionListener the listener to call when the rollback is complete
-     * @return {@code true} if this thread initiated commit, or {@code false} if commit was already initiated
-     * @throws org.jboss.msc.txn.InvalidTransactionStateException if the transaction has not been prepared
-     * @throws org.jboss.msc.txn.TransactionRolledBackException if the transaction was previously rolled back
-     */
-    public abstract boolean commit(Listener<Transaction> completionListener) throws InvalidTransactionStateException, TransactionRolledBackException;
+    public abstract ProblemReport getProblemReport();
 
     /**
      * Add a task to this transaction.
@@ -78,14 +58,6 @@ public abstract class Transaction extends SimpleAttachable implements TaskTarget
     public abstract <T> TaskBuilder<T> newTask(Executable<T> task) throws IllegalStateException;
 
     /**
-     * Roll back this transaction, undoing all work executed up until this time.
-     *
-     * @param completionListener the listener to call when the rollback is complete
-     * @return {@code true} if rollback was initiated, or {@code false} if another thread has already committed or rolled back
-     */
-    public abstract boolean rollback(Listener<Transaction> completionListener);
-
-    /**
      * Indicate that the current operation on this transaction depends on the completion of the given transaction.
      *
      * @param other the other transaction
@@ -93,6 +65,34 @@ public abstract class Transaction extends SimpleAttachable implements TaskTarget
      * @throws DeadlockException if this wait has caused a deadlock and this task was selected to break it
      */
     public abstract void waitFor(Transaction other) throws InterruptedException, DeadlockException;
+
+    /**
+     * Prepare this transaction.  It is an error to prepare a transaction with unreleased tasks.
+     * Once this method returns, either {@link #commit(org.jboss.msc.value.Listener)} or {@link #rollback(org.jboss.msc.value.Listener)} must be called.
+     * After calling this method (regardless of its outcome), the transaction can not be directly modified before termination.
+     *
+     * @param completionListener the listener to call when the prepare is complete or has failed
+     * @throws TransactionRolledBackException if the transaction was previously rolled back
+     * @throws InvalidTransactionStateException if the transaction has already been prepared or committed
+     */
+    public abstract void prepare(Listener<? super Transaction> completionListener) throws TransactionRolledBackException, InvalidTransactionStateException;
+
+    /**
+     * Commit the work done by {@link #prepare(Listener)} and terminate this transaction.
+     *
+     * @param completionListener the listener to call when the rollback is complete
+     * @throws TransactionRolledBackException if the transaction was previously rolled back
+     * @throws InvalidTransactionStateException if the transaction has already been committed or has not yet been prepared
+     */
+    public abstract void commit(Listener<? super Transaction> completionListener) throws InvalidTransactionStateException, TransactionRolledBackException;
+
+    /**
+     * Roll back this transaction, undoing all work executed up until this time.
+     *
+     * @param completionListener the listener to call when the rollback is complete
+     * @throws InvalidTransactionStateException if commit has already been initiated
+     */
+    public abstract void rollback(Listener<? super Transaction> completionListener) throws InvalidTransactionStateException;
 
     public enum State {
         OPEN,

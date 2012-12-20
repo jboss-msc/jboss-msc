@@ -23,20 +23,14 @@ package org.jboss.msc.txn;
  */
 public abstract class TaskController<T> implements TaskTarget {
 
-    final Transaction transaction;
-
-    TaskController(final Transaction transaction) {
-        this.transaction = transaction;
-    }
+    TaskController() {}
 
     /**
      * Get the transaction associated with this controller.
      *
      * @return the transaction associated with this controller
      */
-    public Transaction getTransaction() {
-        return transaction;
-    }
+    public abstract Transaction getTransaction();
 
     public abstract T getResult() throws IllegalStateException;
 
