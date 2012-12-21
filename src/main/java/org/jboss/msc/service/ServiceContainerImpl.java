@@ -73,6 +73,7 @@ import org.jboss.msc.value.InjectedValue;
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceContainer {
 
@@ -317,18 +318,12 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     void addProblem(ServiceController<?> controller) {
         synchronized (lock) {
             problems.add(controller);
-            if (--unstableServices == 0) {
-                lock.notifyAll();
-            }
         }
     }
 
     void addFailed(ServiceController<?> controller) {
         synchronized (lock) {
             failed.add(controller);
-            if (--unstableServices == 0) {
-                lock.notifyAll();
-            }
         }
     }
 
@@ -337,6 +332,8 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             if (--unstableServices == 0) {
                 lock.notifyAll();
             }
+            // ensure invariant
+            if (unstableServices < 0) throw new IllegalStateException();
         }
     }
 

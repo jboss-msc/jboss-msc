@@ -47,6 +47,7 @@ import org.jboss.msc.value.Value;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent {
 
@@ -165,6 +166,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private int asyncTasks;
     /**
+     * Whether this controller is in stable or unstable state.
+     */
+    private boolean stable = true;
+    /**
      * The service target for adding child services (can be {@code null} if none
      * were added).
      */
@@ -250,7 +255,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             internalSetMode(initialMode, tasks);
             // placeholder async task for running listener added tasks
             asyncTasks += listenerAddedTasks.size() + tasks.size() + 1;
-            updateStabilityState(0);
+            updateStabilityState(true);
         }
         doExecute(tasks);
         tasks.clear();
@@ -258,7 +263,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             listenerAddedTask.run();
         }
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             for (Map.Entry<ServiceName, Dependent[]> dependentEntry : getDependentsByDependencyName().entrySet()) {
                 ServiceName serviceName = dependentEntry.getKey();
                 for (Dependent dependent : dependentEntry.getValue()) {
@@ -283,7 +288,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             asyncTasks--;
             transition(tasks);
             asyncTasks += tasks.size();
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
     }
@@ -293,11 +298,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     void rollbackInstallation() {
         synchronized(this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             mode = Mode.REMOVE;
             asyncTasks ++;
             state = Substate.CANCELLED;
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         (new RemoveTask()).run();
     }
@@ -333,24 +338,28 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return unstartedDependencies > 0 || (mode == Mode.NEVER || mode == Mode.REMOVE || demandedByCount == 0 && mode == Mode.ON_DEMAND);
     }
 
-    int getStabilityState() {
+    /**
+     * Returns true if controller is in rest state and no async tasks are running, false otherwise.
+     * @return true if stable rest state, false otherwise
+     */
+    boolean isStableRestState() {
         assert holdsLock(this);
-        int val = asyncTasks;
-        if (! state.isRestState()) val++;
-        return val;
+        return asyncTasks == 0 && state.isRestState();
     }
 
-    void updateStabilityState(int oldVal) {
+    void updateStabilityState(final boolean leavingStableRestState) {
         assert holdsLock(this);
-        if (oldVal == 0) {
-            if (asyncTasks > 0 || ! state.isRestState()) {
+        if (leavingStableRestState) {
+            if (stable && (asyncTasks > 0 || !state.isRestState())) {
+                stable = false;
                 primaryRegistration.getContainer().incrementUnstableServices();
                 for (StabilityMonitor monitor : monitors) {
                     monitor.incrementUnstableServices();
                 }
             }
         } else {
-            if (asyncTasks == 0 && state.isRestState()) {
+            if (state.isRestState() && asyncTasks == 0 && !stable) {
+                stable = true;
                 primaryRegistration.getContainer().decrementUnstableServices();
                 for (StabilityMonitor monitor : monitors) {
                     monitor.decrementUnstableServices();
@@ -750,7 +759,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
         final ArrayList<Runnable> tasks = new ArrayList<Runnable>(4);
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             final Mode oldMode = mode;
             if (expectedMode != null && expectedMode != oldMode) {
                 return false;
@@ -764,7 +773,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 transition(tasks);
             }
             asyncTasks += tasks.size();
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
         return true;
@@ -789,7 +798,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void immediateDependencyAvailable(ServiceName dependencyName) {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             assert immediateUnavailableDependencies.contains(dependencyName);
             immediateUnavailableDependencies.remove(dependencyName);
             if (!immediateUnavailableDependencies.isEmpty() || state.compareTo(Substate.CANCELLED) <= 0 || state.compareTo(Substate.REMOVING) >= 0) {
@@ -806,7 +815,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 propagateTransitiveAvailability();
             }
             asyncTasks += tasks.size();
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
     }
@@ -815,7 +824,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void immediateDependencyUnavailable(ServiceName dependencyName) {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             immediateUnavailableDependencies.add(dependencyName);
             if (immediateUnavailableDependencies.size() != 1 || state.compareTo(Substate.CANCELLED) <= 0 || state.compareTo(Substate.REMOVING) >= 0) {
                 return;
@@ -832,7 +841,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 propagateTransitiveUnavailability();
             }
             asyncTasks += tasks.size();
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
     }
@@ -858,7 +867,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void transitiveDependencyAvailable() {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             if (-- transitiveUnavailableDepCount != 0 || state.compareTo(Substate.CANCELLED) <= 0 || state.compareTo(Substate.REMOVING) >= 0) {
                 return;
             }
@@ -873,7 +882,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 propagateTransitiveAvailability();
             }
             asyncTasks += tasks.size();
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
     }
@@ -882,7 +891,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void transitiveDependencyUnavailable() {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             if (++ transitiveUnavailableDepCount != 1 || state.compareTo(Substate.CANCELLED) <= 0 || state.compareTo(Substate.REMOVING) >= 0) {
                 return;
             }
@@ -898,7 +907,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 propagateTransitiveUnavailability();
             }
             asyncTasks += tasks.size();
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
     }
@@ -912,7 +921,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void immediateDependencyUp() {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             if (--stoppingDependencies != 0) {
                 return;
             }
@@ -920,7 +929,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             tasks = new ArrayList<Runnable>();
             transition(tasks);
             asyncTasks += tasks.size();
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
     }
@@ -929,7 +938,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void immediateDependencyDown() {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             if (++stoppingDependencies != 1) {
                 return;
             }
@@ -937,7 +946,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             tasks = new ArrayList<Runnable>();
             transition(tasks);
             asyncTasks += tasks.size();
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
     }
@@ -946,7 +955,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void dependencyFailed() {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             if (++failCount != 1 || state.compareTo(Substate.CANCELLED) <= 0) {
                 return;
             }
@@ -957,7 +966,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             tasks.add(new DependencyFailedTask(getDependents(), false));
             asyncTasks += tasks.size();
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
     }
@@ -966,7 +975,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     public void dependencyFailureCleared() {
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             if (--failCount != 0 || state == Substate.CANCELLED) {
                 return;
             }
@@ -977,7 +986,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             tasks.add(new DependencyRetryingTask(getDependents()));
             asyncTasks += tasks.size();
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
     }
@@ -993,14 +1002,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert !holdsLock(this);
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             if (--runningDependents != 0) {
                 return;
             }
             tasks = new ArrayList<Runnable>();
             transition(tasks);
             asyncTasks += tasks.size();
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
     }
@@ -1049,7 +1058,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
         final boolean propagate;
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             final int cnt = this.demandedByCount;
             this.demandedByCount += demandedByCount;
             boolean notStartedLazy = mode == Mode.LAZY && !(state.getState() == State.UP && state != Substate.STOP_REQUESTED);
@@ -1058,7 +1067,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 transition(tasks);
             }
             asyncTasks += tasks.size();
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
     }
@@ -1068,7 +1077,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
         final boolean propagate;
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             final int cnt = --demandedByCount;
             boolean notStartedLazy = mode == Mode.LAZY && !(state.getState() == State.UP && state != Substate.STOP_REQUESTED);
             propagate = cnt == 0 && (mode == Mode.ON_DEMAND || notStartedLazy || mode == Mode.PASSIVE);
@@ -1076,7 +1085,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 transition(tasks);
             }
             asyncTasks += tasks.size();
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
     }
@@ -1102,7 +1111,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert !holdsLock(this);
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             children.remove(child);
             if (children.isEmpty()) {
                 switch (state) {
@@ -1119,7 +1128,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 return;
             }
             asyncTasks += tasks.size();
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
     }
@@ -1223,7 +1232,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert !holdsLock(this);
         final Substate state;
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             state = this.state;
             // Always run listener if removed.
             if (state != Substate.REMOVED) {
@@ -1236,7 +1245,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             } else {
                 asyncTasks += 2;
             }
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         invokeListener(listener, ListenerNotification.LISTENER_ADDED, null);
         if (state == Substate.REMOVED) {
@@ -1248,7 +1257,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert !holdsLock(this);
         final Substate state;
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             state = this.state;
             // Always run listener if removed.
             if (state != Substate.REMOVED) {
@@ -1261,7 +1270,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             } else {
                 asyncTasks += 2;
             }
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         invokeListener(listener, ListenerNotification.LISTENER_ADDED, null);
         if (state == Substate.REMOVED) {
@@ -1287,7 +1296,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert !holdsLock(this);
         final ArrayList<Runnable> tasks;
         synchronized (this) {
-            final int ss = getStabilityState();
+            final boolean leavingRestState = isStableRestState();
             if (state.getState() != ServiceController.State.START_FAILED) {
                 return;
             }
@@ -1296,7 +1305,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             startException = null;
             transition(tasks = new ArrayList<Runnable>());
             asyncTasks += tasks.size();
-            updateStabilityState(ss);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
     }
@@ -1476,7 +1485,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         synchronized (this) {
             final Substate state = this.state;
             monitors.add(stabilityMonitor);
-            if (getStabilityState() != 0) {
+            if (!isStableRestState()) {
                 stabilityMonitor.incrementUnstableServices();
                 if (state == Substate.START_FAILED) {
                     stabilityMonitor.addFailed(this);
@@ -1581,12 +1590,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             // perform transition tasks
             final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
             synchronized (this) {
-                final int ss = getStabilityState();
+                final boolean leavingRestState = isStableRestState();
                 // Subtract one for this executing listener
                 asyncTasks --;
                 transition(tasks);
                 asyncTasks += tasks.size();
-                updateStabilityState(ss);
+                updateStabilityState(leavingRestState);
             }
             doExecute(tasks);
         }
@@ -1692,12 +1701,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 doDemandDependencies();
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    final int ss = getStabilityState();
+                    final boolean leavingRestState = isStableRestState();
                     // Subtract one for this task
                     asyncTasks --;
                     transition(tasks);
                     asyncTasks += tasks.size();
-                    updateStabilityState(ss);
+                    updateStabilityState(leavingRestState);
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1713,12 +1722,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 doUndemandDependencies();
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    final int ss = getStabilityState();
+                    final boolean leavingRestState = isStableRestState();
                     // Subtract one for this task
                     asyncTasks --;
                     transition(tasks);
                     asyncTasks += tasks.size();
-                    updateStabilityState(ss);
+                    updateStabilityState(leavingRestState);
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1740,12 +1749,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    final int ss = getStabilityState();
+                    final boolean leavingRestState = isStableRestState();
                     // Subtract one for this task
                     asyncTasks --;
                     transition(tasks);
                     asyncTasks += tasks.size();
-                    updateStabilityState(ss);
+                    updateStabilityState(leavingRestState);
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1767,12 +1776,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    final int ss = getStabilityState();
+                    final boolean leavingRestState = isStableRestState();
                     // Subtract one for this task
                     asyncTasks --;
                     transition(tasks);
                     asyncTasks += tasks.size();
-                    updateStabilityState(ss);
+                    updateStabilityState(leavingRestState);
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1805,12 +1814,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    final int ss = getStabilityState();
+                    final boolean leavingRestState = isStableRestState();
                     // Subtract one for this task
                     asyncTasks --;
                     transition(tasks);
                     asyncTasks += tasks.size();
-                    updateStabilityState(ss);
+                    updateStabilityState(leavingRestState);
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1843,12 +1852,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    final int ss = getStabilityState();
+                    final boolean leavingRestState = isStableRestState();
                     // Subtract one for this task
                     asyncTasks --;
                     transition(tasks);
                     asyncTasks += tasks.size();
-                    updateStabilityState(ss);
+                    updateStabilityState(leavingRestState);
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -1879,7 +1888,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 startService(service, context);
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    final int ss = getStabilityState();
+                    final boolean leavingRestState = isStableRestState();
                     if (context.state != ContextState.SYNC) {
                         return;
                     }
@@ -1891,7 +1900,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     asyncTasks --;
                     transition(tasks);
                     asyncTasks += tasks.size();
-                    updateStabilityState(ss);
+                    updateStabilityState(leavingRestState);
                 }
                 performOutInjections(serviceName);
                 doExecute(tasks);
@@ -1953,7 +1962,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             ServiceLogger.FAIL.startFailed(e, serviceName);
             final ArrayList<Runnable> tasks;
             synchronized (ServiceControllerImpl.this) {
-                final int ss = getStabilityState();
+                final boolean leavingRestState = isStableRestState();
                 final ContextState oldState = context.state;
                 if (oldState != ContextState.SYNC && oldState != ContextState.ASYNC) {
                     ServiceLogger.FAIL.exceptionAfterComplete(e, serviceName);
@@ -1969,7 +1978,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 asyncTasks --;
                 transition(tasks = new ArrayList<Runnable>());
                 asyncTasks += tasks.size();
-                updateStabilityState(ss);
+                updateStabilityState(leavingRestState);
             }
             doExecute(tasks);
         }
@@ -2030,7 +2039,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 uninject(serviceName, injections);
                 uninject(serviceName, outInjections);
                 synchronized (ServiceControllerImpl.this) {
-                    final int ss = getStabilityState();
+                    final boolean leavingRestState = isStableRestState();
                     if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                         writeProfileInfo('X', startNanos, System.nanoTime());
                     }
@@ -2038,7 +2047,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     asyncTasks --;
                     transition(tasks = new ArrayList<Runnable>());
                     asyncTasks += tasks.size();
-                    updateStabilityState(ss);
+                    updateStabilityState(leavingRestState);
                 }
                 doExecute(tasks);
             }
@@ -2112,12 +2121,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    final int ss = getStabilityState();
+                    final boolean leavingRestState = isStableRestState();
                     // Subtract one for this task
                     asyncTasks --;
                     transition(tasks);
                     asyncTasks += tasks.size();
-                    updateStabilityState(ss);
+                    updateStabilityState(leavingRestState);
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -2143,12 +2152,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    final int ss = getStabilityState();
+                    final boolean leavingRestState = isStableRestState();
                     // Subtract one for this task
                     asyncTasks --;
                     transition(tasks);
                     asyncTasks += tasks.size();
-                    updateStabilityState(ss);
+                    updateStabilityState(leavingRestState);
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -2189,12 +2198,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    final int ss = getStabilityState();
+                    final boolean leavingRestState = isStableRestState();
                     // Subtract one for this task
                     asyncTasks --;
                     transition(tasks);
                     asyncTasks += tasks.size();
-                    updateStabilityState(ss);
+                    updateStabilityState(leavingRestState);
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -2220,12 +2229,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    final int ss = getStabilityState();
+                    final boolean leavingRestState = isStableRestState();
                     // Subtract one for this task
                     asyncTasks --;
                     transition(tasks);
                     asyncTasks += tasks.size();
-                    updateStabilityState(ss);
+                    updateStabilityState(leavingRestState);
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -2254,12 +2263,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 if (parent != null) parent.removeChild(ServiceControllerImpl.this);
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
-                    final int ss = getStabilityState();
+                    final boolean leavingRestState = isStableRestState();
                     // Subtract one for this task
                     asyncTasks --;
                     transition(tasks);
                     asyncTasks += tasks.size();
-                    updateStabilityState(ss);
+                    updateStabilityState(leavingRestState);
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
@@ -2281,7 +2290,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         public void failed(StartException reason) throws IllegalStateException {
             final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
             synchronized (ServiceControllerImpl.this) {
-                final int ss = getStabilityState();
+                final boolean leavingRestState = isStableRestState();
                 if (state != ContextState.ASYNC) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
@@ -2301,7 +2310,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 asyncTasks --;
                 transition(tasks);
                 asyncTasks += tasks.size();
-                updateStabilityState(ss);
+                updateStabilityState(leavingRestState);
             }
             doExecute(tasks);
         }
@@ -2331,7 +2340,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         public void complete() throws IllegalStateException {
             final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
             synchronized (ServiceControllerImpl.this) {
-                final int ss = getStabilityState();
+                final boolean leavingRestState = isStableRestState();
                 if (state != ContextState.ASYNC) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 } else {
@@ -2344,7 +2353,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     transition(tasks);
                     asyncTasks += tasks.size();
                 }
-                updateStabilityState(ss);
+                updateStabilityState(leavingRestState);
             }
             doExecute(tasks);
         }
@@ -2441,7 +2450,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
             synchronized (ServiceControllerImpl.this) {
-                final int ss = getStabilityState();
+                final boolean leavingRestState = isStableRestState();
                 if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
                     writeProfileInfo('X', startNanos, System.nanoTime());
                 }
@@ -2449,7 +2458,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 asyncTasks --;
                 transition(tasks);
                 asyncTasks += tasks.size();
-                updateStabilityState(ss);
+                updateStabilityState(leavingRestState);
             }
             doExecute(tasks);
         }

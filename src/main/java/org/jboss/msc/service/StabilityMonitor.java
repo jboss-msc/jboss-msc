@@ -32,6 +32,7 @@ import static java.lang.Thread.holdsLock;
  * A stability monitor for satisfying certain AS use cases.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class StabilityMonitor {
 
@@ -127,6 +128,8 @@ public final class StabilityMonitor {
             if (--unstableServices == 0) {
                 lock.notifyAll();
             }
+            // ensure invariant
+            if (unstableServices < 0) throw new IllegalStateException();
         }
     }
 }
