@@ -57,6 +57,26 @@ DO
     debug("signaled immediateDependencyAvailable")
 ENDRULE
 
+RULE prevent deadlock with UndemandDependenciesTask - I
+CLASS org.jboss.msc.service.ServiceRegistrationImpl
+METHOD removeDemand
+AT EXIT
+IF $0.name.getSimpleName().equals("C")  AND incrementCounter("run once prevent deadlock I") == 1
+DO
+   debug("unlocking C install thread"),
+   signalWake("service C undemanded", true)
+ENDRULE
+
+RULE prevent deadlock with UndemandDependenciesTask - II
+CLASS org.jboss.msc.racecondition.ImmediateDependencyAvailableDuringServiceRemovalTest$InstallService
+METHOD run
+AT ENTRY
+IF incrementCounter("run once prevent deadlock II") == 1
+DO
+   debug("waiting for service c to be undemanded before proceeding with service C installation - to avoid a deadlock"),
+   waitFor("service C undemanded")
+ENDRULE
+
 RULE clear counters and flags
 CLASS org.jboss.msc.service.AbstractServiceTest
 METHOD tearDown
@@ -66,6 +86,7 @@ DO
     debug("clearing counters and flags"),
     deleteCounter("run once before ServiceControllerImpl.immediateDependencyAvailable"),
     deleteCounter("run once service B REMOVING"),
-    deleteCounter("run once service B REMOVED")
+    deleteCounter("run once service B REMOVED"),
+    deleteCounter("run once prevent deadlock I"),
+    deleteCounter("run once prevent deadlock II")
 ENDRULE
-    
