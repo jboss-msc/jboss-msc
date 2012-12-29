@@ -65,6 +65,9 @@ public abstract class TransitiveDependencyUnavailableDuringServiceRemovalTest ex
         final Future<ServiceController<?>> serviceAStop = testListener.expectServiceStop(serviceNameA);
         final Future<ServiceController<?>> serviceCStop = testListener.expectServiceStop(serviceNameC);
         serviceDController.setMode(Mode.REMOVE);
+        Thread.sleep(50); //avoid a scenario where we fail to reproduce the test case: service B is removed before D
+        // if this happens, the result is the rule for "service B on removing state" being triggered on teardown, which
+        // results in thread waiting forever
         serviceBController.setMode(Mode.REMOVE);
         assertController(serviceBController, serviceBRemoval);
         assertController(serviceDController, serviceDRemoval);
