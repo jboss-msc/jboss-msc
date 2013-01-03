@@ -128,8 +128,7 @@ public final class StabilityMonitor {
             if (--unstableServices == 0) {
                 lock.notifyAll();
             }
-            // ensure invariant
-            if (unstableServices < 0) throw new IllegalStateException();
+            assert unstableServices >= 0;
         }
     }
 }

@@ -166,10 +166,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private int asyncTasks;
     /**
-     * Whether this controller is in stable or unstable state.
-     */
-    private boolean stable = true;
-    /**
      * The service target for adding child services (can be {@code null} if none
      * were added).
      */
@@ -297,14 +293,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * Roll back the service install.
      */
     void rollbackInstallation() {
+        final boolean stabilityNotification;
         synchronized(this) {
+            stabilityNotification = state != Substate.NEW;
             final boolean leavingRestState = isStableRestState();
             mode = Mode.REMOVE;
             asyncTasks ++;
             state = Substate.CANCELLED;
-            updateStabilityState(leavingRestState);
+            if (stabilityNotification) updateStabilityState(leavingRestState);
         }
-        (new RemoveTask()).run();
+        (new RemoveTask(stabilityNotification)).run();
     }
 
     /**
@@ -350,16 +348,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     void updateStabilityState(final boolean leavingStableRestState) {
         assert holdsLock(this);
         if (leavingStableRestState) {
-            if (stable && (asyncTasks > 0 || !state.isRestState())) {
-                stable = false;
+            if (asyncTasks > 0 || !state.isRestState()) {
                 primaryRegistration.getContainer().incrementUnstableServices();
                 for (StabilityMonitor monitor : monitors) {
                     monitor.incrementUnstableServices();
                 }
             }
         } else {
-            if (state.isRestState() && asyncTasks == 0 && !stable) {
-                stable = true;
+            if (state.isRestState() && asyncTasks == 0) {
                 primaryRegistration.getContainer().decrementUnstableServices();
                 for (StabilityMonitor monitor : monitors) {
                     monitor.decrementUnstableServices();
@@ -675,7 +671,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (failCount > 0) {
                         tasks.add(new DependencyRetryingTask(dependents));
                     }
-                    tasks.add(new RemoveTask());
+                    tasks.add(new RemoveTask(true));
                     break;
                 }
                 case REMOVING_to_REMOVED: {
@@ -2244,8 +2240,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private class RemoveTask implements Runnable {
+        
+        private final boolean stabilityNotification;
 
-        RemoveTask() {
+        RemoveTask(final boolean stabilityNotification) {
+            this.stabilityNotification = stabilityNotification;
         }
 
         public void run() {
@@ -2268,7 +2267,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     asyncTasks --;
                     transition(tasks);
                     asyncTasks += tasks.size();
-                    updateStabilityState(leavingRestState);
+                    if (stabilityNotification) updateStabilityState(leavingRestState);
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
