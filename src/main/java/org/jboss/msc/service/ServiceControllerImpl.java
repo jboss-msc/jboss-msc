@@ -183,7 +183,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     static final int MAX_DEPENDENCIES = (1 << 14) - 1;
 
-    ServiceControllerImpl(final Value<? extends Service<S>> serviceValue, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Map<? extends ServiceListener<? super S>, ServiceListener.Inheritance> listeners, final ServiceControllerImpl<?> parent) {
+    ServiceControllerImpl(final Value<? extends Service<S>> serviceValue, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<StabilityMonitor> monitors, final Map<? extends ServiceListener<? super S>, ServiceListener.Inheritance> listeners, final ServiceControllerImpl<?> parent) {
         assert dependencies.length <= MAX_DEPENDENCIES;
         this.serviceValue = serviceValue;
         this.dependencies = dependencies;
@@ -192,7 +192,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         this.primaryRegistration = primaryRegistration;
         this.aliasRegistrations = aliasRegistrations;
         this.listeners = new IdentityHashMap<ServiceListener<? super S>, ServiceListener.Inheritance>(listeners);
-        this.monitors = new IdentityHashSet<StabilityMonitor>();
+        this.monitors = new IdentityHashSet<StabilityMonitor>(monitors);
         this.parent = parent;
         int depCount = dependencies.length;
         unstartedDependencies = 0;
@@ -1497,6 +1497,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         synchronized (this) {
             monitors.remove(stabilityMonitor);
         }
+    }
+    
+    Set<StabilityMonitor> getMonitors() {
+        assert holdsLock(this);
+        return monitors;
     }
 
     private enum ListenerNotification {

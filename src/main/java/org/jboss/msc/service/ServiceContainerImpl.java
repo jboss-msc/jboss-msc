@@ -582,6 +582,10 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             }
             if (first) builder.addListenerNoCheck(ServiceListener.Inheritance.NONE, once);
             builder.addListenerNoCheck(ServiceListener.Inheritance.ALL, inherited);
+            Set<StabilityMonitor> monitors = parent.getMonitors();
+            for (final StabilityMonitor monitor : monitors) {
+                builder.addMonitorNoCheck(monitor);
+            }
             parentParent = parent.getParent();
         }
         if (parentParent != null) {
@@ -650,7 +654,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         // Next create the actual controller
         final ServiceControllerImpl<T> instance = new ServiceControllerImpl<T>(serviceBuilder.getServiceValue(),
                 dependencies, valueInjectionArray, outInjectionArray, primaryRegistration, aliasRegistrations,
-                serviceBuilder.getListeners(), serviceBuilder.getParent());
+                serviceBuilder.getMonitors(), serviceBuilder.getListeners(), serviceBuilder.getParent());
         boolean ok = false;
         try {
             serviceValue.setValue(instance);

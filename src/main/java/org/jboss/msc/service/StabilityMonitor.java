@@ -37,11 +37,11 @@ import static java.lang.Thread.holdsLock;
 public final class StabilityMonitor {
 
     private final Object lock = new Object();
-    private int unstableServices;
     private final Set<ServiceController<?>> problems = new IdentityHashSet<ServiceController<?>>();
     private final Set<ServiceController<?>> failed = new IdentityHashSet<ServiceController<?>>();
     private final ArrayList<ServiceController<?>> controllers = new ArrayList<ServiceController<?>>();
-
+    private int unstableServices;
+    
     public void addController(ServiceController<?> controller) {
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
         serviceController.addMonitor(this);

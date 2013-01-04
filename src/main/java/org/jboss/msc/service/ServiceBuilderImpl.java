@@ -51,6 +51,7 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     private final ServiceName serviceName;
     private ServiceController.Mode initialMode = ServiceController.Mode.ACTIVE;
     private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
+    private final IdentityHashSet<StabilityMonitor> monitors = new IdentityHashSet<StabilityMonitor>();
     private final Map<ServiceName, Dependency> dependencies = new HashMap<ServiceName, Dependency>(0);
     private final Map<ServiceListener<? super T>, ServiceListener.Inheritance> listeners = new IdentityHashMap<ServiceListener<? super T>, ServiceListener.Inheritance>(0);
     private final List<ValueInjection<?>> valueInjections = new ArrayList<ValueInjection<?>>(0);
@@ -236,6 +237,22 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         outInjections.add(target);
         return this;
     }
+    
+    @Override
+    public ServiceBuilder<T> addMonitor(final StabilityMonitor monitor) {
+        checkAlreadyInstalled();
+        monitors.add(monitor);
+        return this;
+    }
+
+    @Override
+    public ServiceBuilder<T> addMonitors(final StabilityMonitor... monitors) {
+        checkAlreadyInstalled();
+        for (StabilityMonitor monitor : monitors) {
+            this.monitors.add(monitor);
+        }
+        return this;
+    }
 
     @Override
     public ServiceBuilderImpl<T> addListener(final ServiceListener<? super T> listener) {
@@ -279,6 +296,11 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     public ServiceBuilder<T> addListener(final ServiceListener.Inheritance inheritance, final Collection<? extends ServiceListener<? super T>> serviceListeners) {
         checkAlreadyInstalled();
         return addListenerNoCheck(inheritance, serviceListeners);
+    }
+
+    ServiceBuilderImpl<T> addMonitorNoCheck(final StabilityMonitor monitor) {
+        monitors.add(monitor);
+        return this;
     }
 
     ServiceBuilderImpl<T> addListenerNoCheck(final ServiceListener.Inheritance inheritance, final Collection<? extends ServiceListener<? super T>> serviceListeners) {
@@ -326,10 +348,14 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return dependencies;
     }
 
+    Set<StabilityMonitor> getMonitors() {
+        return monitors;
+    }
+
     Map<ServiceListener<? super T>,ServiceListener.Inheritance> getListeners() {
         return listeners;
     }
-
+    
     List<ValueInjection<?>> getValueInjections() {
         return valueInjections;
     }

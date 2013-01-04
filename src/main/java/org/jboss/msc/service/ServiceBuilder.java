@@ -36,6 +36,7 @@ import java.util.Collection;
  * @param <T> the service type
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public interface ServiceBuilder<T> {
 
@@ -188,6 +189,22 @@ public interface ServiceBuilder<T> {
      * @return this builder
      */
     ServiceBuilder<T> addInjection(Injector<? super T> target);
+    
+    /**
+     * Add a service stability monitor that will be added to this service.
+     * 
+     * @param monitor the stability monitor to add to the service
+     * @return this builder
+     */
+    ServiceBuilder<T> addMonitor(final StabilityMonitor monitor);
+
+    /**
+     * Add service stability monitors that will be added to this service.
+     * 
+     * @param monitors a list of stability monitors to add to the service
+     * @return this builder
+     */
+    ServiceBuilder<T> addMonitors(final StabilityMonitor... monitors);
 
     /**
      * Add a service listener that will be added to this service.

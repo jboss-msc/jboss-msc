@@ -188,6 +188,6 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         assertController(controller1.getName(), controller1);
         assertController(controller2.getName(), controller2);
         assertTrue(problem.isEmpty());
-        assertTrue(failed.isEmpty());
+        assertTrue(failed.size() == 1);
     }
 }

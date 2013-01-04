@@ -135,6 +135,18 @@ public final class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
         return this;
     }
 
+    @Override
+    public ServiceBuilder<T> addMonitor(final StabilityMonitor monitor) {
+        delegate.addMonitor(monitor);
+        return this;
+    }
+
+    @Override
+    public ServiceBuilder<T> addMonitors(final StabilityMonitor... monitors) {
+        delegate.addMonitors(monitors);
+        return this;
+    }
+
     /** {@inheritDoc} */
     public ServiceBuilder<T> addListener(final ServiceListener<? super T> listener) {
         delegate.addListener(listener);
