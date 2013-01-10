@@ -1480,8 +1480,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert !holdsLock(this);
         synchronized (this) {
             final Substate state = this.state;
-            monitors.add(stabilityMonitor);
-            if (!isStableRestState()) {
+            if (monitors.add(stabilityMonitor) && !isStableRestState()) {
                 stabilityMonitor.incrementUnstableServices();
                 if (state == Substate.START_FAILED) {
                     stabilityMonitor.addFailed(this);
@@ -1495,10 +1494,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     void removeMonitor(final StabilityMonitor stabilityMonitor) {
         assert !holdsLock(this);
         synchronized (this) {
-            monitors.remove(stabilityMonitor);
+            if (monitors.remove(stabilityMonitor) && !isStableRestState()) {
+                stabilityMonitor.decrementUnstableServices();
+                stabilityMonitor.removeFailed(this);
+                stabilityMonitor.removeProblem(this);
+            }
         }
     }
-    
+
     Set<StabilityMonitor> getMonitors() {
         assert holdsLock(this);
         return monitors;

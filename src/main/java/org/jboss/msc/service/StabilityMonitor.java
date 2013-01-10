@@ -22,7 +22,6 @@
 
 package org.jboss.msc.service;
 
-import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -39,19 +38,18 @@ public final class StabilityMonitor {
     private final Object lock = new Object();
     private final Set<ServiceController<?>> problems = new IdentityHashSet<ServiceController<?>>();
     private final Set<ServiceController<?>> failed = new IdentityHashSet<ServiceController<?>>();
-    private final ArrayList<ServiceController<?>> controllers = new ArrayList<ServiceController<?>>();
     private int unstableServices;
     
-    public void addController(ServiceController<?> controller) {
+    public void addController(final ServiceController<?> controller) {
+        if (controller == null) return;
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
         serviceController.addMonitor(this);
     }
 
-    public void remove() {
-        for (ServiceController<?> controller : controllers) {
-            final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
-            serviceController.removeMonitor(this);
-        }
+    public void removeController(final ServiceController<?> controller) {
+        if (controller == null) return;
+        final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
+        serviceController.removeMonitor(this);
     }
 
     public void awaitStability(Set<? super ServiceController<?>> failed, Set<? super ServiceController<?>> problem) throws InterruptedException {
