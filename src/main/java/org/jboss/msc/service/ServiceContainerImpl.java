@@ -377,6 +377,16 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     }
 
     @Override
+    public void awaitStability() throws InterruptedException {
+        awaitStability(null, null);
+    }
+
+    @Override
+    public boolean awaitStability(final long timeout, final TimeUnit unit) throws InterruptedException {
+        return awaitStability(timeout, unit, null, null);
+    }
+
+    @Override
     public void awaitStability(Set<? super ServiceController<?>> failed, Set<? super ServiceController<?>> problem) throws InterruptedException {
         synchronized (lock) {
             while (unstableServices != 0) {

@@ -51,8 +51,16 @@ public final class StabilityMonitor {
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
         serviceController.removeMonitor(this);
     }
+    
+    public void awaitStability() throws InterruptedException {
+        awaitStability(null, null);
+    }
+    
+    public boolean awaitStability(final long timeout, final TimeUnit unit) throws InterruptedException {
+        return awaitStability(timeout, unit, null, null);
+    }
 
-    public void awaitStability(Set<? super ServiceController<?>> failed, Set<? super ServiceController<?>> problem) throws InterruptedException {
+    public void awaitStability(final Set<? super ServiceController<?>> failed, final Set<? super ServiceController<?>> problem) throws InterruptedException {
         synchronized (lock) {
             while (unstableServices != 0) {
                 lock.wait();
@@ -66,7 +74,7 @@ public final class StabilityMonitor {
         }
     }
 
-    public boolean awaitStability(final long timeout, final TimeUnit unit, Set<? super ServiceController<?>> failed, Set<? super ServiceController<?>> problem) throws InterruptedException {
+    public boolean awaitStability(final long timeout, final TimeUnit unit, final Set<? super ServiceController<?>> failed, final Set<? super ServiceController<?>> problem) throws InterruptedException {
         long now = System.nanoTime();
         long remaining = unit.toNanos(timeout);
         synchronized (lock) {
@@ -87,14 +95,28 @@ public final class StabilityMonitor {
         }
     }
 
-    void removeProblem(ServiceController<?> controller) {
+    void addProblem(final ServiceController<?> controller) {
+        assert holdsLock(controller);
+        synchronized (lock) {
+            problems.add(controller);
+        }
+    }
+
+    void removeProblem(final ServiceController<?> controller) {
         assert holdsLock(controller);
         synchronized (lock) {
             problems.remove(controller);
         }
     }
 
-    void removeFailed(ServiceController<?> controller) {
+    void addFailed(final ServiceController<?> controller) {
+        assert holdsLock(controller);
+        synchronized (lock) {
+            failed.add(controller);
+        }
+    }
+
+    void removeFailed(final ServiceController<?> controller) {
         assert holdsLock(controller);
         synchronized (lock) {
             failed.remove(controller);
@@ -104,20 +126,6 @@ public final class StabilityMonitor {
     void incrementUnstableServices() {
         synchronized (lock) {
             unstableServices++;
-        }
-    }
-
-    void addProblem(ServiceController<?> controller) {
-        assert holdsLock(controller);
-        synchronized (lock) {
-            problems.add(controller);
-        }
-    }
-
-    void addFailed(ServiceController<?> controller) {
-        assert holdsLock(controller);
-        synchronized (lock) {
-            failed.add(controller);
         }
     }
 

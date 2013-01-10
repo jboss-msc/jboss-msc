@@ -74,8 +74,28 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
     /**
      * Causes the current thread to wait until the container is stable.
      *
-     * @param failed a set into which failed services should be copied, or {@code null} to ignore
-     * @param problem a set into which problem services should be copied, or {@code null} to ignore
+     * @throws InterruptedException if the current thread is interrupted
+     *         while waiting
+     */
+    void awaitStability() throws InterruptedException;
+
+    /**
+     * Causes the current thread to wait until the container is stable.
+     *
+     * @param timeout the maximum time to wait
+     * @param unit the time unit of the {@code timeout} argument
+     * @return <tt>true</tt> if this container achieved stability,
+     *         <tt>false</tt> if the timeout elapsed before stability
+     * @throws InterruptedException if the current thread is interrupted
+     *         while waiting
+     */
+    boolean awaitStability(long timeout, TimeUnit unit) throws InterruptedException;
+
+    /**
+     * Causes the current thread to wait until the container is stable.
+     *
+     * @param failed a set into which failed services should be copied
+     * @param problem a set into which problem services should be copied
      * @throws InterruptedException if the current thread is interrupted
      *         while waiting
      */
@@ -86,8 +106,10 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
      *
      * @param timeout the maximum time to wait
      * @param unit the time unit of the {@code timeout} argument
-     * @param failed a set into which failed services should be copied, or {@code null} to ignore
-     * @param problem a set into which problem services should be copied, or {@code null} to ignore
+     * @param failed a set into which failed services should be copied
+     * @param problem a set into which problem services should be copied
+     * @return <tt>true</tt> if this container achieved stability,
+     *         <tt>false</tt> if the timeout elapsed before stability
      * @throws InterruptedException if the current thread is interrupted
      *         while waiting
      */
