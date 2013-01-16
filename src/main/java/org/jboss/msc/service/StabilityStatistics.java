@@ -23,8 +23,30 @@
 package org.jboss.msc.service;
 
 /**
- * A stability monitor statistics.
+ * A stability monitor statistics. Allows to collect statistics data
+ * about {@link ServiceController}s registered with {@link StabilityMonitor} object.
+ * The following data are available:
+ * <ul>
+ *   <li>count of controllers in <b>ACTIVE</b> mode - see method {@link #getActiveCount()}</li> 
+ *   <li>count of controllers that <b>FAILED</b> to start - see method {@link #getFailedCount()}</li> 
+ *   <li>count of controllers in <b>LAZY</b> mode - see method {@link #getLazyCount()}</li> 
+ *   <li>count of controllers in <b>NEVER</b> mode - see method {@link #getNeverCount()}</li> 
+ *   <li>count of controllers in <b>ON_DEMAND</b> mode - see method {@link #getOnDemandCount()}</li> 
+ *   <li>count of controllers in <b>PASSIVE</b> mode - see method {@link #getPassiveCount()}</li> 
+ *   <li>count of controllers that had <b>PROBLEM</b> to start - see method {@link #getProblemsCount()}</li> 
+ *   <li>count of controllers in <b>UP</b> state - see method {@link #getStartedCount()}</li> 
+ *   <li>count of controllers in <b>REMOVE</b> mode - see method {@link #getRemovedCount()}</li> 
+ * </ul>
+ * 
+ * Sample usage:
+ * <pre>
+ * StabilityMonitor monitor = ...
+ * <b>StabilityStatistics statistics = new StabilityStatistics();</b>
+ * monitor.awaitStability(<b>statistics</b>);
+ * // do something with <b>statistics</b> object.
+ * </pre>
  *
+ * @see StabilityMonitor
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class StabilityStatistics {
@@ -38,39 +60,84 @@ public final class StabilityStatistics {
     private int problems;
     private int started;
     private int removed;
-    
+
+    /**
+     * Returns count of controllers registered with {@link StabilityMonitor} that are in
+     * {@link ServiceController.Mode#ACTIVE} mode.
+     * @return count of <b>ACTIVE</b> controllers
+     */
     public int getActiveCount() {
         return active;
     }
     
+    /**
+     * Returns count of controllers registered with {@link StabilityMonitor} that failed to start
+     * because of start exception being thrown.
+     * @return count of <b>FAILED</b> controllers
+     */
     public int getFailedCount() {
         return failed;
     }
     
+    /**
+     * Returns count of controllers registered with {@link StabilityMonitor} that are in
+     * {@link ServiceController.Mode#LAZY} mode.
+     * @return count of <b>LAZY</b> controllers
+     */
     public int getLazyCount() {
         return lazy;
     }
     
+    /**
+     * Returns count of controllers registered with {@link StabilityMonitor} that are in
+     * {@link ServiceController.Mode#NEVER} mode.
+     * @return count of <b>NEVER</b> controllers
+     */
     public int getNeverCount() {
         return never;
     }
     
+    /**
+     * Returns count of controllers registered with {@link StabilityMonitor} that are in
+     * {@link ServiceController.Mode#ON_DEMAND} mode.
+     * @return count of <b>ON_DEMAND</b> controllers
+     */
     public int getOnDemandCount() {
         return onDemand;
     }
     
+    /**
+     * Returns count of controllers registered with {@link StabilityMonitor} that are in
+     * {@link ServiceController.Mode#PASSIVE} mode.
+     * @return count of <b>PASSIVE</b> controllers
+     */
     public int getPassiveCount() {
         return passive;
     }
     
+    /**
+     * Returns count of controllers registered with {@link StabilityMonitor} that had problem to start
+     * because of missing dependencies.
+     * @return count of <b>PROBLEM</b> controllers
+     */
     public int getProblemsCount() {
         return problems;
     }
 
+    /**
+     * Returns count of controllers registered with {@link StabilityMonitor} that are in
+     * {@link ServiceController.State#UP} state.
+     * @return count of <b>STARTED</b> controllers
+     */
     public int getStartedCount() {
         return started;
     }
     
+    /**
+     * Returns count of controllers registered with {@link StabilityMonitor} that are in
+     * {@link ServiceController.Mode#REMOVE} mode.
+     * @return count of <b>REMOVE</b> controllers
+     */
     public int getRemovedCount() {
         return removed;
     }
