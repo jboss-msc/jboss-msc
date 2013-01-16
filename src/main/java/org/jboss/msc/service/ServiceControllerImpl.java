@@ -1502,6 +1502,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
+    void removeMonitorNoCallback(final StabilityMonitor stabilityMonitor) {
+        assert !holdsLock(this);
+        synchronized (this) {
+            monitors.remove(stabilityMonitor);
+        }
+    }
+
     Set<StabilityMonitor> getMonitors() {
         assert holdsLock(this);
         return monitors;

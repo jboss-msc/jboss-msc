@@ -29,9 +29,11 @@ import static org.jboss.msc.service.ServiceController.Mode.NEVER;
 import static org.jboss.msc.service.ServiceController.Mode.ON_DEMAND;
 import static org.jboss.msc.service.ServiceController.Mode.PASSIVE;
 import static org.jboss.msc.service.ServiceController.Mode.REMOVE;
+import static org.jboss.msc.service.ServiceController.State.UP;
 
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A stability monitor for satisfying certain AS use cases.
@@ -41,17 +43,21 @@ import java.util.concurrent.TimeUnit;
  */
 public final class StabilityMonitor {
 
-    private final Object lock = new Object();
+    private final Object stabilityLock = new Object();
+    private final Object controllersLock = new Object();
     private final Set<ServiceController<?>> problems = new IdentityHashSet<ServiceController<?>>();
     private final Set<ServiceController<?>> failed = new IdentityHashSet<ServiceController<?>>();
+    private final AtomicBoolean cleanupInProgress = new AtomicBoolean();
     private Set<ServiceControllerImpl<?>> controllers = new IdentityHashSet<ServiceControllerImpl<?>>();
     private int unstableServices;
 
     public void addController(final ServiceController<?> controller) {
         if (controller == null) return;
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
-        serviceController.addMonitor(this);
-        synchronized (lock) {
+        synchronized (controllersLock) {
+            // It is safe to call controller.addMonitor() under controllersLock because
+            // controller.addMonitor() may callback only stabilityLock protected methods.
+            serviceController.addMonitor(this);
             controllers.add(serviceController);
         }
     }
@@ -59,31 +65,45 @@ public final class StabilityMonitor {
     public void removeController(final ServiceController<?> controller) {
         if (controller == null) return;
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
-        serviceController.removeMonitor(this);
-        synchronized (lock) {
+        synchronized (controllersLock) {
+            // It is safe to call controller.addMonitor() under controllersLock because
+            // controller.addMonitor() may callback only stabilityLock protected methods.
+            serviceController.removeMonitor(this);
             controllers.remove(serviceController);
         }
     }
-    
+
     public void clear() {
-        final Set<ServiceControllerImpl<?>> controllers;
-        synchronized(lock) {
-            controllers = this.controllers;
-            this.controllers = new IdentityHashSet<ServiceControllerImpl<?>>();
-        }
-        for (final ServiceControllerImpl<?> controller : controllers) {
-            controller.removeMonitor(this);
+        if (cleanupInProgress.compareAndSet(false, true)) {
+            synchronized (controllersLock) {
+                final Set<ServiceControllerImpl<?>> controllers;
+                synchronized (stabilityLock) {
+                    controllers = this.controllers;
+                    this.controllers = new IdentityHashSet<ServiceControllerImpl<?>>();
+                    failed.clear();
+                    problems.clear();
+                    unstableServices = 0;
+                }
+                // We cannot call removeMonitorNoCallback under stabilityLock
+                // because of deadlock possibility. In order for removing controllers
+                // to don't break stability invariants we're setting cleanupInProgress flag
+                // until all the controllers are removed.
+                for (final ServiceControllerImpl<?> controller : controllers) {
+                    controller.removeMonitorNoCallback(this);
+                }
+            }
+            cleanupInProgress.set(false);
         }
     }
-    
+
     public void awaitStability() throws InterruptedException {
         awaitStability(null, null, null);
     }
-    
+
     public void awaitStability(final StabilityStatistics statistics) throws InterruptedException {
         awaitStability(null, null, statistics);
     }
-    
+
     public boolean awaitStability(final long timeout, final TimeUnit unit) throws InterruptedException {
         return awaitStability(timeout, unit, null, null, null);
     }
@@ -92,93 +112,130 @@ public final class StabilityMonitor {
         return awaitStability(timeout, unit, null, null, statistics);
     }
 
-    public void awaitStability(final Set<? super ServiceController<?>> failed, final Set<? super ServiceController<?>> problem) throws InterruptedException {
-        this.awaitStability(failed, problem, null);
+    public void awaitStability(final Set<? super ServiceController<?>> failed, final Set<? super ServiceController<?>> problems) throws InterruptedException {
+        this.awaitStability(failed, problems, null);
+    }
+
+    public boolean awaitStability(final long timeout, final TimeUnit unit, final Set<? super ServiceController<?>> failed, final Set<? super ServiceController<?>> problems) throws InterruptedException {
+        return awaitStability(timeout, unit, failed, problems, null);
     }
 
     public void awaitStability(final Set<? super ServiceController<?>> failed, final Set<? super ServiceController<?>> problems, final StabilityStatistics statistics) throws InterruptedException {
-        synchronized (lock) {
+        final int failedCount;
+        final int problemsCount;
+        synchronized (stabilityLock) {
             while (unstableServices != 0) {
-                lock.wait();
+                stabilityLock.wait();
             }
-            provideStatistics(failed, problems, statistics);
+            // propagate failures
+            if (failed != null) {
+                failed.addAll(this.failed);
+            }
+            failedCount = this.failed.size();
+            // propagate problems
+            if (problems != null) {
+                problems.addAll(this.problems);
+            }
+            problemsCount = this.problems.size();
         }
-    }
-
-    public boolean awaitStability(final long timeout, final TimeUnit unit, final Set<? super ServiceController<?>> failed, final Set<? super ServiceController<?>> problem) throws InterruptedException {
-        return awaitStability(timeout, unit, failed, problem, null);
+        // propagate statistics
+        provideStatistics(failedCount, problemsCount, statistics);
     }
 
     public boolean awaitStability(final long timeout, final TimeUnit unit, final Set<? super ServiceController<?>> failed, final Set<? super ServiceController<?>> problems, final StabilityStatistics statistics) throws InterruptedException {
         long now = System.nanoTime();
         long remaining = unit.toNanos(timeout);
-        synchronized (lock) {
+        final int failedCount;
+        final int problemsCount;
+        synchronized (stabilityLock) {
             while (unstableServices != 0) {
                 if (remaining <= 0L) {
                     return false;
                 }
-                lock.wait(remaining / 1000000L, (int) (remaining % 1000000L));
+                stabilityLock.wait(remaining / 1000000L, (int) (remaining % 1000000L));
                 remaining -= (-now + (now = System.nanoTime()));
             }
-            provideStatistics(failed, problems, statistics);
-            return true;
+            // propagate failures
+            if (failed != null) {
+                failed.addAll(this.failed);
+            }
+            failedCount = this.failed.size();
+            // propagate problems
+            if (problems != null) {
+                problems.addAll(this.problems);
+            }
+            problemsCount = this.problems.size();
         }
+        // propagate statistics
+        provideStatistics(failedCount, problemsCount, statistics);
+        return true;
     }
 
     void addProblem(final ServiceController<?> controller) {
         assert holdsLock(controller);
-        synchronized (lock) {
+        if (cleanupInProgress.get()) return;
+        synchronized (stabilityLock) {
             problems.add(controller);
         }
     }
 
     void removeProblem(final ServiceController<?> controller) {
         assert holdsLock(controller);
-        synchronized (lock) {
+        if (cleanupInProgress.get()) return;
+        synchronized (stabilityLock) {
             problems.remove(controller);
         }
     }
 
     void addFailed(final ServiceController<?> controller) {
         assert holdsLock(controller);
-        synchronized (lock) {
+        if (cleanupInProgress.get()) return;
+        synchronized (stabilityLock) {
             failed.add(controller);
         }
     }
 
     void removeFailed(final ServiceController<?> controller) {
         assert holdsLock(controller);
-        synchronized (lock) {
+        if (cleanupInProgress.get()) return;
+        synchronized (stabilityLock) {
             failed.remove(controller);
         }
     }
 
     void incrementUnstableServices() {
-        synchronized (lock) {
+        if (cleanupInProgress.get()) return;
+        synchronized (stabilityLock) {
             unstableServices++;
         }
     }
 
     void decrementUnstableServices() {
-        synchronized (lock) {
+        if (cleanupInProgress.get()) return;
+        synchronized (stabilityLock) {
             if (--unstableServices == 0) {
-                lock.notifyAll();
+                stabilityLock.notifyAll();
             }
             assert unstableServices >= 0;
         }
     }
 
-    private void provideStatistics(final Set<? super ServiceController<?>> failed, final Set<? super ServiceController<?>> problems, final StabilityStatistics statistics) {
-        assert holdsLock(lock);
-        if (failed != null) {
-            failed.addAll(this.failed);
-        }
-        if (problems != null) {
-            problems.addAll(this.problems);
-        }
+    private void provideStatistics(final int failedCount, final int problemsCount, final StabilityStatistics statistics) {
+        assert !holdsLock(stabilityLock);
+        assert !holdsLock(controllersLock);
         if (statistics == null) return;
-        int active = 0, lazy = 0, onDemand = 0, never = 0, passive = 0, remove = 0;
+        // We cannot obtain controllers snapshot and we cannot collect controllers statistics
+        // under stabilityLock because of deadlock possibility. Thus we tolerate that
+        // the snapshot can be little bit out of date until controllersLock is obtained
+        // plus controllers mode and state can be changed during the statistics collection phase.
+        final Set<ServiceControllerImpl<?>> controllers;
+        synchronized (controllersLock) {
+            controllers = this.controllers; 
+        }
+        // collect statistics
+        int active = 0, lazy = 0, onDemand = 0, never = 0, passive = 0, started = 0, remove = 0;
         for (final ServiceController<?> controller : controllers) {
+            if (controller.getState() == UP) started++;
             if (controller.getMode() == ACTIVE) active++;
             else if (controller.getMode() == PASSIVE) passive++;
             else if (controller.getMode() == ON_DEMAND) onDemand++;
@@ -186,13 +243,15 @@ public final class StabilityMonitor {
             else if (controller.getMode() == LAZY) lazy++;
             else if (controller.getMode() == REMOVE) remove++;
         }
+        // report statistics
         statistics.setActiveCount(active);
-        statistics.setFailCount(this.failed.size());
+        statistics.setFailedCount(failedCount);
         statistics.setLazyCount(lazy);
         statistics.setOnDemandCount(onDemand);
         statistics.setNeverCount(never);
         statistics.setPassiveCount(passive);
-        statistics.setProblemCount(this.problems.size());
-        statistics.setRemoveCount(remove);
+        statistics.setProblemsCount(problemsCount);
+        statistics.setStartedCount(started);
+        statistics.setRemovedCount(remove);
     }
 }

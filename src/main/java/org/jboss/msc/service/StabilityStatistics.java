@@ -30,20 +30,21 @@ package org.jboss.msc.service;
 public final class StabilityStatistics {
     
     private int active;
-    private int fail;
+    private int failed;
     private int lazy;
     private int never;
     private int onDemand;
     private int passive;
-    private int problem;
-    private int remove;
+    private int problems;
+    private int started;
+    private int removed;
     
     public int getActiveCount() {
         return active;
     }
     
-    public int getFailCount() {
-        return fail;
+    public int getFailedCount() {
+        return failed;
     }
     
     public int getLazyCount() {
@@ -62,20 +63,24 @@ public final class StabilityStatistics {
         return passive;
     }
     
-    public int getProblemCount() {
-        return problem;
+    public int getProblemsCount() {
+        return problems;
     }
 
-    public int getRemoveCount() {
-        return remove;
+    public int getStartedCount() {
+        return started;
+    }
+    
+    public int getRemovedCount() {
+        return removed;
     }
     
     void setActiveCount(final int count) {
         active = count;
     }
     
-    void setFailCount(final int count) {
-        fail = count;
+    void setFailedCount(final int count) {
+        failed = count;
     }
     
     void setLazyCount(final int count) {
@@ -94,11 +99,15 @@ public final class StabilityStatistics {
         passive = count;
     }
     
-    void setProblemCount(final int count) {
-        problem = count;
+    void setProblemsCount(final int count) {
+        problems = count;
     }
 
-    void setRemoveCount(final int count) {
-        remove = count;
+    void setStartedCount(final int count) {
+        started = count;
+    }
+
+    void setRemovedCount(final int count) {
+        removed = count;
     }
 }
