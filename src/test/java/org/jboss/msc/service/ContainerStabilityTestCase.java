@@ -23,13 +23,13 @@
 package org.jboss.msc.service;
 
 import java.util.Set;
-import org.jboss.msc.service.util.FailToStartService;
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class ContainerStabilityTestCase extends AbstractServiceTest {
 
@@ -135,8 +135,9 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         stabilityMonitor.addController(controller2);
         final Set<Object> problem = new IdentityHashSet<Object>();
         final Set<Object> failed = new IdentityHashSet<Object>();
+        final StabilityStatistics statistics = new StabilityStatistics();
         try {
-            stabilityMonitor.awaitStability(failed, problem);
+            stabilityMonitor.awaitStability(failed, problem, statistics);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -144,6 +145,30 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         assertController(controller2.getName(), controller2);
         assertTrue(problem.isEmpty());
         assertTrue(failed.isEmpty());
+        assertTrue(statistics.getActiveCount() == 1);
+        assertTrue(statistics.getOnDemandCount() == 1);
+        assertTrue(statistics.getStartedCount() == 2);
+        assertTrue(statistics.getFailedCount() == 0);
+        assertTrue(statistics.getLazyCount() == 0);
+        assertTrue(statistics.getNeverCount() == 0);
+        assertTrue(statistics.getPassiveCount() == 0);
+        assertTrue(statistics.getProblemsCount() == 0);
+        assertTrue(statistics.getRemovedCount() == 0);
+        stabilityMonitor.clear();
+        try {
+            stabilityMonitor.awaitStability(statistics);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        assertTrue(statistics.getActiveCount() == 0);
+        assertTrue(statistics.getOnDemandCount() == 0);
+        assertTrue(statistics.getStartedCount() == 0);
+        assertTrue(statistics.getFailedCount() == 0);
+        assertTrue(statistics.getLazyCount() == 0);
+        assertTrue(statistics.getNeverCount() == 0);
+        assertTrue(statistics.getPassiveCount() == 0);
+        assertTrue(statistics.getProblemsCount() == 0);
+        assertTrue(statistics.getRemovedCount() == 0);
     }
 
     @Test
@@ -180,8 +205,9 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         stabilityMonitor.addController(controller2);
         final Set<Object> problem = new IdentityHashSet<Object>();
         final Set<Object> failed = new IdentityHashSet<Object>();
+        final StabilityStatistics statistics = new StabilityStatistics();
         try {
-            stabilityMonitor.awaitStability(failed, problem);
+            stabilityMonitor.awaitStability(failed, problem, statistics);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -189,5 +215,29 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         assertController(controller2.getName(), controller2);
         assertTrue(problem.isEmpty());
         assertTrue(failed.size() == 1);
+        assertTrue(statistics.getActiveCount() == 1);
+        assertTrue(statistics.getOnDemandCount() == 1);
+        assertTrue(statistics.getStartedCount() == 2);
+        assertTrue(statistics.getFailedCount() == 1);
+        assertTrue(statistics.getLazyCount() == 0);
+        assertTrue(statistics.getNeverCount() == 0);
+        assertTrue(statistics.getPassiveCount() == 0);
+        assertTrue(statistics.getProblemsCount() == 0);
+        assertTrue(statistics.getRemovedCount() == 0);
+        stabilityMonitor.clear();
+        try {
+            stabilityMonitor.awaitStability(statistics);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        assertTrue(statistics.getActiveCount() == 0);
+        assertTrue(statistics.getOnDemandCount() == 0);
+        assertTrue(statistics.getStartedCount() == 0);
+        assertTrue(statistics.getFailedCount() == 0);
+        assertTrue(statistics.getLazyCount() == 0);
+        assertTrue(statistics.getNeverCount() == 0);
+        assertTrue(statistics.getPassiveCount() == 0);
+        assertTrue(statistics.getProblemsCount() == 0);
+        assertTrue(statistics.getRemovedCount() == 0);
     }
 }
