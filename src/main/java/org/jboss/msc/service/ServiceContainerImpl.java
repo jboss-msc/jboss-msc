@@ -175,7 +175,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
         public List<String> queryServiceNames() {
             final Set<ServiceName> names = registry.keySet();
-            final ArrayList<String> list = new ArrayList<String>(names.size());
+            final List<String> list = new ArrayList<String>(names.size());
             for (ServiceName serviceName : names) {
                 list.add(serviceName.getCanonicalName());
             }
@@ -185,7 +185,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
         public List<ServiceStatus> queryServiceStatuses() {
             final Collection<ServiceRegistrationImpl> registrations = registry.values();
-            final ArrayList<ServiceStatus> list = new ArrayList<ServiceStatus>(registrations.size());
+            final List<ServiceStatus> list = new ArrayList<ServiceStatus>(registrations.size());
             for (ServiceRegistrationImpl registration : registrations) {
                 final ServiceControllerImpl<?> instance = registration.getInstance();
                 if (instance != null) list.add(instance.getStatus());
