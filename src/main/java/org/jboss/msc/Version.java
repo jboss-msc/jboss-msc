@@ -30,19 +30,18 @@ import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
 /**
- * The current version of this module.
+ * The current version of this MSC module.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class Version {
     private Version() {}
 
-    private static final String JAR_NAME;
     private static final String VERSION_STRING;
 
     static {
         final Enumeration<URL> resources;
-        String jarName = "(unknown)";
         String versionString = "(unknown)";
         try {
             final ClassLoader classLoader = Version.class.getClassLoader();
@@ -54,8 +53,7 @@ public final class Version {
                     final Manifest manifest = new Manifest(stream);
                     final Attributes mainAttributes = manifest.getMainAttributes();
                     if (mainAttributes != null && "JBoss Modular Service Container".equals(mainAttributes.getValue("Specification-Title"))) {
-                        jarName = mainAttributes.getValue("Jar-Name");
-                        versionString = mainAttributes.getValue("Jar-Version");
+                        versionString = mainAttributes.getValue("Specification-Version");
                     }
                 } finally {
                     try { stream.close(); } catch (Throwable ignored) {}
@@ -63,21 +61,11 @@ public final class Version {
             }
         } catch (IOException ignored) {
         }
-        JAR_NAME = jarName;
         VERSION_STRING = versionString;
     }
 
     /**
-     * Get the name of the JBoss Modules JAR.
-     *
-     * @return the name
-     */
-    public static String getJarName() {
-        return JAR_NAME;
-    }
-
-    /**
-     * Get the version string of JBoss Modules.
+     * Get the current version string of JBoss MSC.
      *
      * @return the version string
      */
