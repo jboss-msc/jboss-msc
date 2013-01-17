@@ -23,6 +23,7 @@
 package org.jboss.msc.service;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static java.lang.Thread.holdsLock;
 
@@ -83,7 +84,7 @@ final class ServiceRegistrationImpl implements Dependency {
         assert !holdsLock(this);
         assert !holdsLock(dependent);
         final ServiceControllerImpl<?> instance;
-        final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
+        final List<Runnable> tasks = new ArrayList<Runnable>();
         synchronized (this) {
             synchronized (dependents) {
                 if (dependents.contains(dependent)) {
