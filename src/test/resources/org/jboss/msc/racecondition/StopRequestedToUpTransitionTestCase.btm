@@ -53,7 +53,7 @@ CLASS org.jboss.msc.service.ServiceControllerImpl
 METHOD setMode
 AT EXIT
 BIND NOTHING
-IF  ! $0.shouldStop() && $0.state.toString().equals("STOP_REQUESTED")
+IF $1 == org.jboss.msc.service.ServiceController$Mode.ACTIVE AND $0.state.toString().equals("STOP_REQUESTED")
 DO
     # signal UpRequested, making the service controller to enter the exact transition that we need to
     # test: STOP_REQUESTED_to_UP

@@ -323,7 +323,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * @return {@code true} if so
      */
     private boolean shouldStart() {
-//        assert holdsLock(this);
+        assert holdsLock(this);
         return unstartedDependencies == 0 && (mode == Mode.ACTIVE || mode == Mode.PASSIVE || demandedByCount > 0 && (mode == Mode.ON_DEMAND || mode == Mode.LAZY));
     }
 
@@ -333,7 +333,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * @return {@code true} if so
      */
     private boolean shouldStop() {
-//        assert holdsLock(this);
+        assert holdsLock(this);
         return unstartedDependencies > 0 || (mode == Mode.NEVER || mode == Mode.REMOVE || demandedByCount == 0 && mode == Mode.ON_DEMAND);
     }
 
