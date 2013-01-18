@@ -18,7 +18,6 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.txn.CommitContext;
 import org.jboss.msc.txn.Committable;
 import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.Revertible;
@@ -44,7 +43,8 @@ public interface Service<T> {
     void start(ExecuteContext<T> startContext);
 
     /**
+     * TODO discuss this change
      * Commit the service stop.  Expected to succeed; any exceptions thrown will be ignored.
      */
-    void stop(CommitContext context);
+    void stop(ExecuteContext<Void> context);
 }

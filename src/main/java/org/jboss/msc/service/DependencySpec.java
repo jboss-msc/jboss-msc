@@ -20,10 +20,15 @@ package org.jboss.msc.service;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.value.WritableValue;
 
 /**
+ * Spec for creating a dependency during service installation.
+ * 
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
 final class DependencySpec<T> {
     private final ServiceContainer container;
@@ -45,15 +50,17 @@ final class DependencySpec<T> {
         return name;
     }
 
-    public DependencyFlag[] getFlags() {
-        return flags;
-    }
-
-    public List<WritableValue<? super T>> getInjections() {
-        return injections;
-    }
-
     public void addInjection(final WritableValue<? super T> injector) {
         injections.add(injector);
+    }
+
+    public Dependency<T> createDependency(Transaction transaction, ServiceBuilder<?> serviceBuilder) {
+        @SuppressWarnings("unchecked")
+        final WritableValue<? super T>[] injectionArray = (WritableValue<? super T>[]) injections.toArray(new WritableValue<?>[injections.size()]);
+        final boolean dependencyUp = DependencyFlag.isDependencyUpRequired(flags);
+        final boolean propagateDemand = DependencyFlag.propagateDemand(flags);
+        final Registration dependencyRegistration = container.getOrCreateRegistration(transaction, name);
+        Dependency<T> dependency = new SimpleDependency<T>(injectionArray, dependencyRegistration, dependencyUp, propagateDemand);
+        return DependencyFlag.decorate(dependency, serviceBuilder, flags);
     }
 }

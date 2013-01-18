@@ -18,35 +18,35 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.txn.CommitContext;
-import org.jboss.msc.txn.Committable;
+import org.jboss.msc.txn.Executable;
+import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.Revertible;
 import org.jboss.msc.txn.RollbackContext;
-import org.jboss.msc.txn.Validatable;
-import org.jboss.msc.txn.ValidateContext;
+import org.jboss.msc.txn.Transaction;
 
 /**
+ * Service installation task.
+ * 
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
-final class ServiceInstallTask<T> implements Revertible, Validatable, Committable {
-    private final Registration primaryReg;
-    private final Registration[] aliasReg;
-    private final Service<T> service;
+final class ServiceInstallTask<T> implements Executable<ServiceController<T>>, Revertible {
+    private final ServiceBuilder<T> serviceBuilder;
+    private final Transaction transaction;
 
-    ServiceInstallTask(final Registration primaryReg, final Registration[] aliasReg, final Service<T> service) {
-        this.primaryReg = primaryReg;
-        this.aliasReg = aliasReg;
-        this.service = service;
+    ServiceInstallTask(final Transaction transaction, final ServiceBuilder<T> serviceBuilder) {
+        this.transaction = transaction;
+        this.serviceBuilder = serviceBuilder;
     }
 
-    public void validate(final ValidateContext context) {
+    @Override
+    public void execute(final ExecuteContext<ServiceController<T>> context) {
+        final ServiceController<T> serviceController = serviceBuilder.performInstallation(transaction);
+        CheckDependencyCycleTask.checkDependencyCycle(transaction, serviceController);
+        context.complete(serviceController);
     }
 
     public void rollback(final RollbackContext context) {
-        // delete registration
-    }
-
-    public void commit(final CommitContext context) {
-        // commit registration
+        serviceBuilder.remove(transaction);
     }
 }

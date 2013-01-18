@@ -25,45 +25,80 @@ import java.util.Collection;
  * for varargs use when no flags are desired.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
 public enum DependencyFlag {
+
     /**
      * The dependency is met when the target is down, rather than up.  Implies {@link #UNREQUIRED}.  Injection is
      * not allowed for {@code ANTI} dependencies.
      */
-    ANTI,
+    ANTI(true, false),
     /**
      * A missing dependency will cause a transaction error.  This is implied by default.
      */
-    REQUIRED,
+    REQUIRED (false, true),
     /**
      * A missing dependency will not cause an error, though unmet dependencies will still prevent start.
      */
-    UNREQUIRED,
+    UNREQUIRED (false, true),
     /**
      * Start without the dependency when the dependency is not met at the time the service is otherwise ready.
      * Cannot coexist with {@link #ANTI}.
      */
-    OPTIONAL,
+    OPTIONAL (false, false) {
+        <T> Dependency<T> decorate(Dependency<T> dependency) {
+            return new OptionalDependency<T>(dependency);
+        }
+    },
     /**
      * Do not place a demand on this dependency even if the mode otherwise would.
      */
-    UNDEMANDED,
+    UNDEMANDED (false, false),
     /**
      * Always place a demand on this dependency even if the mode otherwise wouldn't.
      */
-    DEMANDED,
+    DEMANDED (false, true),
     /**
      * Treat the dependency as a parent; that is, when the dependency is stopped, this service should be removed.  Be
      * sure to consider what happens if the parent re-starts however - this flag should only be used when the parent
      * adds the service as part of its start process.  Implies {@link #REQUIRED}.
      */
-    PARENT,
+    PARENT (false, true) {
+        @Override
+        <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilder<?> serviceBuilder) {
+            return new ParentDependency<T>(dependency, serviceBuilder);
+        }
+    },
     /**
      * Indicate that the dependency can be replaced without stopping this service.
      */
-    REPLACEABLE,
+    REPLACEABLE (false, false) {
+        @Override
+        <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilder<?> serviceBuilder) {
+            return new ReplaceableDependency<T>(dependency);
+        }
+    },
     ;
+
+    /**
+     * Indicates if this flag requires the dependency to be up. If false, indicates that this dependency requires it be
+     * down in order for the dependency to be satisfied.
+     */
+    private final boolean dependencyUp;
+    /**
+     * Indicates if the dependency should be demanded to be satisfied when service is attempting to start.
+     */
+    private final boolean demand;
+
+    private DependencyFlag(boolean dependencyUp, boolean demand) {
+        this.dependencyUp = dependencyUp;
+        this.demand = demand;
+    }
+
+    <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilder<?> serviceBuilder) {
+        return dependency;
+    }
 
     public final boolean in(DependencyFlag flag) {
         return this == flag;
@@ -125,4 +160,32 @@ public enum DependencyFlag {
             throw new IllegalArgumentException("OPTIONAL requires REPLACEABLE");
         }
     }
+
+    static boolean isDependencyUpRequired(DependencyFlag... flags) {
+        for (DependencyFlag flag: flags) {
+            if (!flag.dependencyUp) {
+                return false;
+            }
+        }
+        // notice that, when there are no flags, the service is required to be UP
+        return true;
+    }
+
+    static boolean propagateDemand(DependencyFlag... flags) {
+        for (DependencyFlag flag: flags) {
+            if (!flag.demand) {
+                return false;
+            }
+        }
+        // notice that, when there are no flags, the service is required to propagate demand requests
+        return true;
+    }
+
+    static <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilder<?> serviceBuilder, DependencyFlag... flags) {
+        for (DependencyFlag flag: flags) {
+            dependency = flag.decorate(dependency, serviceBuilder);
+        }
+        return dependency;
+    }
+
 }

@@ -18,31 +18,73 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.value.WritableValue;
 
-final class  Dependency<T> {
-    private final Registration dependencyRegistration;
-    private final DependencyFlag[] flags;
-    private final WritableValue<? super T>[] injections;
+/**
+ * A dependency. This interface represents the dependency relationship from both the dependent
+ * and dependency point of view.
+ * 
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
+ *
+ * @param <T>
+ */
+interface  Dependency<T> {
 
     @SuppressWarnings("unchecked")
     static final WritableValue<Object>[] NO_INJECTIONS = new WritableValue[0];
 
-    Dependency(final WritableValue<? super T>[] injections, final DependencyFlag[] flags, final Registration dependencyRegistration) {
-        this.injections = injections;
-        this.flags = flags;
-        this.dependencyRegistration = dependencyRegistration;
-    }
+    /**
+     * Sets the dependency dependent, invoked during {@link dependentController} installation.
+     * 
+     * @param transaction          the active transaction
+     * @param dependentController  dependent associated with this dependency
+     */
+    public void setDependent(Transaction transaction, ServiceController<?> dependentController);
 
-    public Registration getDependencyRegistration() {
-        return dependencyRegistration;
-    }
+    /**
+     * Return the dependency registration.
+     * 
+     * @return the dependency registration
+     */
+    public Registration getDependencyRegistration();
 
-    public DependencyFlag[] getFlags() {
-        return flags;
-    }
+    /**
+     * Perform injections.
+     */
+    public void performInjections();
 
-    public WritableValue<? super T>[] getInjections() {
-        return injections;
-    }
+    /**
+     * Demand this dependency to be satisfied.
+     * 
+     * @param transaction the active transaction
+     */
+    public void demand(Transaction transaction);
+
+    /**
+     * Remove demand for this dependency to be satisfied.
+     * 
+     * @param transaction the active transaction
+     */
+    public void undemand(Transaction transaction);
+
+    /**
+     * Notifies that dependency state is changed.
+     *  
+     * @param transaction   the active transaction
+     * @param dependencyUp  {@code true} if dependency is now {@link ServiceController.State#UP}; {@code false} if it is
+     *                      now {@link ServiceController.State#DOWN}.
+     */
+    public void newDependencyState(Transaction transaction, boolean dependencyUp);
+
+    /**
+     * Notifies that dependency current service is about to be replaced by a different service.
+     */
+    public void dependencyReplacementStarted(Transaction transaction);
+
+    /**
+     * Notifies that dependency replacement is concluded and now the newly installed service is available.
+     */
+    public void dependencyReplacementConcluded(Transaction transaction);
 }

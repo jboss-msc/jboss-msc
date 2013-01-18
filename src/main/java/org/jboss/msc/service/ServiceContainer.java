@@ -18,38 +18,33 @@
 
 package org.jboss.msc.service;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import org.jboss.msc.txn.AttachmentKey;
+
 import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.value.ReadableValue;
 
 /**
  * A transactional service container.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
-public final class ServiceContainer {
-    private static final AtomicReferenceFieldUpdater<ServiceContainer, Transaction> transactionUpdater = AtomicReferenceFieldUpdater.newUpdater(ServiceContainer.class, Transaction.class, "transaction");
-
+public final class ServiceContainer extends TransactionalObject {
     private final ConcurrentMap<ServiceName, Registration> registry = new ConcurrentHashMap<ServiceName, Registration>();
-    private final AttachmentKey<ServiceTxn> key = AttachmentKey.create();
 
-    private Registration getOrCreateRegistration(ServiceName name) {
+    Registration getOrCreateRegistration(Transaction transaction, ServiceName name) {
         Registration registration = registry.get(name);
         if (registration == null) {
-            registration = new Registration();
+            lockWrite(transaction);
+            registration = new Registration(name);
             Registration appearing = registry.putIfAbsent(name, registration);
             if (appearing != null) {
                 registration = appearing;
             }
         }
         return registration;
-    }
-
-    private ServiceTxn getTxn(Transaction transaction) {
-        return null;
     }
 
     /**
@@ -59,40 +54,30 @@ public final class ServiceContainer {
      * @param name the service to remove
      */
     public void removeService(Transaction transaction, ServiceName name) {
-        final ServiceTxn txn = getTxn(transaction);
-        synchronized (txn) {
-            // todo
+        if (!registry.containsKey(name)) {
+            return;
         }
-    }
-
-    /**
-     * Start building a new simple service.
-     *
-     * @param transaction the transaction
-     * @param name the service to add
-     * @param service the service
-     *
-     * @return the service builder
-     */
-    public ServiceBuilder<Void> installService(Transaction transaction, ServiceName name, Service service) {
-        return null;
-    }
-
-    /**
-     * Start building a new simple service.
-     *
-     * @param transaction the transaction
-     * @param name the service to add
-     * @param value the injectable service value
-     * @param service the service
-     *
-     * @return the service builder
-     */
-    public <T> ServiceBuilder<T> installService(Transaction transaction, ServiceName name, ReadableValue<T> value, Service service) {
-        return null;
+        final ServiceController<?> serviceController = registry.get(name).getController();
+        if (serviceController != null) {
+            serviceController.remove(transaction);
+        }
     }
 
     Registration getRegistration(final ServiceName serviceName) {
         return registry.get(serviceName);
+    }
+
+    @Override
+    protected Object takeSnapshot() {
+        Map<ServiceName, Registration> registrySnapshot = new HashMap<ServiceName, Registration>(registry.size());
+        registrySnapshot.putAll(registry);
+        return registrySnapshot;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    protected void revert(Object snapshot) {
+        registry.clear();
+        registry.putAll((Map<ServiceName, Registration>)snapshot);
     }
 }

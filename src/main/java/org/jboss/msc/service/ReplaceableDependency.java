@@ -1,7 +1,7 @@
 /*
- * JBoss, Home of Professional Open Source.
- * Copyright 2012 Red Hat, Inc., and individual contributors
- * as indicated by the @author tags.
+ * JBoss, Home of Professional Open Source
+ *
+ * Copyright 2013 Red Hat, Inc. and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,24 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.jboss.msc.service;
 
-import org.jboss.msc.txn.Executable;
-import org.jboss.msc.txn.ExecuteContext;
-
 /**
- * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
+ *
  */
-final class SimpleServiceStopTask implements Executable<Void> {
+final class ReplaceableDependency<T> extends DependencyDecorator<T> {
 
-    private final Service<?> service;
-
-    public SimpleServiceStopTask(final Service<?> service) {
-        this.service = service;
+    /**
+     * @param dependency
+     */
+    public ReplaceableDependency(Dependency<T> dependency) {
+        super(dependency);
     }
 
-    public void execute(final ExecuteContext<Void> context) {
-        service.stop(context);
-    }
 }

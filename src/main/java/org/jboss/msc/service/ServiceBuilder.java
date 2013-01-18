@@ -18,29 +18,43 @@
 
 package org.jboss.msc.service;
 
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
+
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
-import org.jboss.msc.value.WritableValue;
 import org.jboss.msc.txn.Transaction;
+import org.jboss.msc.value.WritableValue;
 
 /**
  * A service builder.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
 public final class ServiceBuilder<T> {
     private final ServiceContainer container;
     private final ServiceName name;
+    private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
     private final Service<T> service;
     private final Map<ServiceName, DependencySpec<?>> specs = new LinkedHashMap<ServiceName, DependencySpec<?>>();
+    private final boolean replacement;
     private ServiceMode mode;
+    private TaskController<ServiceController<T>> installTask;
+    private DependencySpec<?> parentDependencySpec;
+    private final Set<TaskController<?>> taskDependencies = new HashSet<TaskController<?>>(0);
 
     public ServiceBuilder(final ServiceContainer container, final ServiceName name, final Service<T> service) {
+        this(container, name, service, false);
+    }
+
+    public ServiceBuilder(final ServiceContainer container, final ServiceName name, final Service<T> service, final boolean replaceService) {
         this.container = container;
         this.name = name;
         this.service = service;
+        this.replacement = true;
     }
 
     /**
@@ -58,10 +72,27 @@ public final class ServiceBuilder<T> {
      * @param mode the service mode
      */
     public void setMode(final ServiceMode mode) {
+        checkAlreadyInstalled();
         if (mode == null) {
             throw new IllegalArgumentException("mode is null");
         }
         this.mode = mode;
+    }
+
+    /**
+     * Add aliases for this service.
+     *
+     * @param aliases the service names to use as aliases
+     * @return the builder
+     */
+    public ServiceBuilder<T> addAliases(ServiceName... aliases) {
+        checkAlreadyInstalled();
+        if (aliases != null) for(ServiceName alias : aliases) {
+            if(alias != null && !alias.equals(name)) {
+                this.aliases.add(alias);
+            }
+        }
+        return this;
     }
 
     /**
@@ -83,6 +114,25 @@ public final class ServiceBuilder<T> {
         addDependency(container, name, DependencyFlag.NONE);
     }
 
+    private void addDependencySpec(DependencySpec<?> dependencySpec, ServiceName name, DependencyFlag... flags) {
+        for (DependencyFlag flag: flags) {
+            if (flag == DependencyFlag.PARENT) {
+                synchronized (this) {
+                    if (parentDependencySpec != null) {
+                        throw new IllegalStateException("Service cannot have more than one parent dependency");
+                    }
+                    parentDependencySpec = dependencySpec;
+                    specs.remove(name);
+                    return;
+                }
+            }
+        }
+        if (name == parentDependencySpec.getName()) {
+            parentDependencySpec = null;
+        }
+        specs.put(name, dependencySpec);
+    }
+
     /**
      * Add a dependency to the service being built.
      *
@@ -90,7 +140,8 @@ public final class ServiceBuilder<T> {
      * @param flags the flags for the service
      */
     public void addDependency(ServiceContainer container, ServiceName name, DependencyFlag... flags) {
-        specs.put(name, new DependencySpec(container, name, flags));
+        checkAlreadyInstalled();
+        addDependencySpec(new DependencySpec(container, name, flags), name, flags);
     }
 
     /**
@@ -100,7 +151,8 @@ public final class ServiceBuilder<T> {
      * @param flags the flags for the service
      */
     public void addDependency(ServiceName name, DependencyFlag... flags) {
-        specs.put(name, new DependencySpec(container, name, flags));
+        checkAlreadyInstalled();
+        addDependencySpec(new DependencySpec(container, name, flags), name, flags);
     }
 
     /**
@@ -111,6 +163,7 @@ public final class ServiceBuilder<T> {
      * @param injector the injector for the dependency value
      */
     public void addDependency(ServiceContainer container, ServiceName name, WritableValue<?> injector) {
+        checkAlreadyInstalled();
         addDependency(container, name, injector, DependencyFlag.NONE);
     };
 
@@ -122,6 +175,7 @@ public final class ServiceBuilder<T> {
      * @param injector the injector for the dependency value
      */
     public void addDependency(ServiceName name, WritableValue<?> injector) {
+        checkAlreadyInstalled();
         addDependency(name, injector, DependencyFlag.NONE);
     };
 
@@ -134,9 +188,10 @@ public final class ServiceBuilder<T> {
      * @param flags the flags for the service
      */
     public <T> void addDependency(ServiceContainer container, ServiceName name, WritableValue<T> injector, DependencyFlag... flags) {
+        checkAlreadyInstalled();
         DependencySpec<T> spec = new DependencySpec<T>(container, name, flags);
         spec.addInjection(injector);
-        specs.put(name, spec);
+        addDependencySpec(spec, name, flags);
     }
 
     /**
@@ -148,9 +203,10 @@ public final class ServiceBuilder<T> {
      * @param flags the flags for the service
      */
     public <T> void addDependency(ServiceName name, WritableValue<T> injector, DependencyFlag... flags) {
+        checkAlreadyInstalled();
         DependencySpec<T> spec = new DependencySpec<T>(container, name, flags);
         spec.addInjection(injector);
-        specs.put(name, spec);
+        addDependencySpec(spec, name, flags);
     }
 
     /**
@@ -159,35 +215,122 @@ public final class ServiceBuilder<T> {
      *
      * @param task the task
      */
-    public void addDependency(Object task) {
+    public void addDependency(TaskController<?> task) {
+        checkAlreadyInstalled();
+        taskDependencies.add(task);
     }
 
     /**
      * Initiate installation of this service as configured.  If the service was already installed, this method has no
      * effect.
      */
-    public void install(Transaction transaction) {
-        // todo install into registry (throws {@link org.jboss.msc.service.DuplicateServiceException})
-        //  - wire up dependency graph
-        final ServiceInstallTask<T> installTask = new ServiceInstallTask<T>(null, null, service);
-        final TaskBuilder<Void> taskBuilder = transaction.newTask();
-        taskBuilder.setTraits(installTask);
-        final TaskController<Void> installController = taskBuilder.release();
-        // todo put this controller on the transaction
-        // todo examine the service
-        //  - check mode & dependency state, determine task
-        /* maybe */ {
-            SimpleServiceStartTask<T> startTask = new SimpleServiceStartTask<T>(service);
-            final TaskBuilder<T> startBuilder = transaction.newTask(startTask);
-            startBuilder.addDependency(installController);
-            final TaskController<T> startController = startBuilder.release();
-            // todo put this controller on the transaction
+    public synchronized void install(Transaction transaction) {
+        checkAlreadyInstalled();
+        final TaskBuilder<ServiceController<T>> taskBuilder = transaction.newTask(new ServiceInstallTask<T>(transaction, this));
+        taskBuilder.addDependencies(taskDependencies);
+        if (replacement) {
+            startReplacement(transaction, taskBuilder);
+        }
+        installTask = taskBuilder.release();
+    }
+
+    /**
+     * Manually rollback this service installation.  If the service was already installed, it will be removed.
+     */
+    public void remove(Transaction transaction) {
+        // TODO review this method
+        final ServiceController<?> serviceController;
+        synchronized (this) {
+            serviceController = installTask.getResult();
+        }
+        if (serviceController != null) {
+            serviceController.remove(transaction);
+        }
+    }
+
+    private synchronized void checkAlreadyInstalled() {
+        if (installTask != null) {
+            throw new IllegalStateException("ServiceBuilder installation already requested.");
         }
     }
 
     /**
-     * Initiate rollback of this service installation.  If the service was already installed, it will be removed.
+     * Perform installation of this service builder into container.
+     * 
+     * @param transaction active transaction
+     * @return            the installed service controller. May be {@code null} if the service is being created with a
+     *                    parent dependency.
      */
-    public void remove() {
+    ServiceController<T> performInstallation(Transaction transaction) {
+        if (parentDependencySpec != null) {
+            parentDependencySpec.createDependency(transaction, this);
+            return null;
+        }
+        return installController(transaction, null);
+    }
+
+    /**
+     * Concludes service installation by creating and installing the service controller into the container.
+     * 
+     * @param transaction      active transaction
+     * @param parentDependency parent dependency, if any
+     * @return the installed service controller
+     */
+    ServiceController<T> installController(Transaction transaction, Dependency<?> parentDependency) {
+        final Registration registration = container.getOrCreateRegistration(transaction, name);
+        final ServiceName[] aliasArray = aliases.toArray(new ServiceName[aliases.size()]);
+        final Registration[] aliasRegistrations = new Registration[aliasArray.length];
+        int i = 0; 
+        for (ServiceName alias: aliases) {
+            aliasRegistrations[i++] = container.getOrCreateRegistration(transaction, alias);
+        }
+        i = 0;
+        final Dependency<?>[] dependencies;
+        if (parentDependency == null) {
+            dependencies = new Dependency<?>[specs.size()];
+        } else {
+            dependencies = new Dependency<?>[specs.size() + 1];
+            dependencies[i++] = parentDependency;
+        }
+        for (DependencySpec<?> spec : specs.values()) {
+            dependencies[i++] = spec.createDependency(transaction, this);
+        }
+        final ServiceController<T> serviceController =  new ServiceController<T>(transaction, dependencies, aliasRegistrations, registration);
+        serviceController.getWriteValue().setValue(service);
+        serviceController.setMode(transaction, mode);
+        if (replacement) {
+            concludeReplacement(transaction, serviceController);
+        }
+        return serviceController;
+    }
+
+    private void startReplacement(Transaction transaction, TaskBuilder<ServiceController<T>> serviceInstallTaskBuilder) {
+        startReplacement(transaction, container.getOrCreateRegistration(transaction, name), serviceInstallTaskBuilder);
+        for (ServiceName alias: aliases) {
+            startReplacement(transaction, container.getOrCreateRegistration(transaction, alias), serviceInstallTaskBuilder);
+        }
+    }
+
+    private void startReplacement(Transaction transaction, Registration registration, TaskBuilder<ServiceController<T>> serviceInstallTaskBuilder) {
+        for (Dependency<?> dependency: registration.getIncomingDependencies()) {
+            dependency.dependencyReplacementStarted(transaction);
+        }
+        ServiceController<?> serviceController = registration.getController();
+        if (serviceController != null) {
+            serviceInstallTaskBuilder.addDependency(serviceController.remove(transaction));
+        }
+    }
+
+    private void concludeReplacement(Transaction transaction, ServiceController<?> serviceController) {
+        concludeReplacement(transaction, serviceController.getPrimaryRegistration());
+        for (Registration registration: serviceController.getAliasRegistrations()) {
+            concludeReplacement(transaction,  registration);
+        }
+    }
+
+    private void concludeReplacement(Transaction transaction, Registration registration) {
+        for (Dependency<?> dependency: registration.getIncomingDependencies()) {
+            dependency.dependencyReplacementConcluded(transaction);
+        }
     }
 }
