@@ -36,6 +36,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -725,7 +726,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                     cycle[i] = cycle[j];
                     cycle[j] = temp;
                 }
-                throw new CircularDependencyException("Service " + name + " has a circular dependency", cycle);
+                throw new CircularDependencyException("Container " + name + " has a circular dependency: " + Arrays.asList(cycle), cycle);
             }
             if (visited.add(controller)) {
                 synchronized (controller) {
