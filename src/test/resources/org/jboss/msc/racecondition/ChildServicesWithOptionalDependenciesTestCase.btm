@@ -1,0 +1,109 @@
+#
+# JBoss, Home of Professional Open Source.
+# Copyright 2013, Red Hat, Inc., and individual contributors
+# as indicated by the @author tags. See the copyright.txt file in the
+# distribution for a full listing of individual contributors.
+#
+# This is free software; you can redistribute it and/or modify it
+# under the terms of the GNU Lesser General Public License as
+# published by the Free Software Foundation; either version 2.1 of
+# the License, or (at your option) any later version.
+#
+# This software is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with this software; if not, write to the Free
+# Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+# 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+#
+
+RULE after OptionalDependency.dependentStopped
+CLASS org.jboss.msc.service.OptionalDependency
+METHOD dependentStopped
+AT EXIT
+BIND NOTHING
+IF TRUE
+DO
+   # block child2 inside ServiceControllerImpl.DependentStoppedTask.run() method
+   debug("blocking child2 controller - waiting for REMOVE mode"),
+   waitFor("setMode(REMOVE) finished"),
+   debug("unblocking child2 controller");
+ENDRULE
+
+RULE after ServiceControllerImpl.setMode(REMOVE)
+CLASS org.jboss.msc.service.ServiceControllerImpl
+METHOD setMode
+AT EXIT
+BIND serviceName = $0.primaryRegistration.name.getSimpleName()
+IF serviceName.equals("child2") AND $0.mode.toString().equals("REMOVE") AND incrementCounter("block child2.setMode(REMOVE) only once") == 1
+DO
+   # signal OptionalDependency.removeDependent() call is finished
+   debug("signalling child2.setMode(REMOVE) was called"),
+   signalWake("setMode(REMOVE) finished", true),
+   debug("signalled child2.setMode(REMOVE) was called");
+ENDRULE
+
+RULE before OptionalDependency.removeDemand()
+CLASS org.jboss.msc.service.OptionalDependency
+METHOD removeDemand
+AT ENTRY
+IF TRUE
+DO
+   # block optional dependency at the beginning of removeDemand method
+   debug("blocking optional dependency - waiting for removeDependent() to be called first"),
+   waitFor("removeDependent() finished"),
+   debug("unblocking optional dependency");
+ENDRULE
+
+RULE after OptionalDependency.removeDependent()
+CLASS org.jboss.msc.service.OptionalDependency
+METHOD removeDependent
+AT EXIT
+BIND NOTHING
+IF TRUE
+DO
+   # signal OptionalDependency.removeDependent() call is finished
+   debug("signalling optionalDependency.removeDependent() have finished"),
+   signalWake("removeDependent() finished", true),
+   debug("signalled optionalDependency.removeDependent() have finished");
+ENDRULE
+
+RULE before OptionalDependency.immediateDependencyUnavailable()
+CLASS org.jboss.msc.service.OptionalDependency
+METHOD immediateDependencyUnavailable
+AT ENTRY
+BIND NOTHING
+IF TRUE
+DO
+   # block OptionalDependency.immediateDependencyUnavailable until OptionalDependency.removeDemand() method is finished
+   debug("blocking OptionalDependency.immediateDependencyUnavailable until OptionalDependency.removeDemand() method is finished"),
+   waitFor("removeDemand() finished"),
+   debug("unblocking OptionalDependency.immediateDependencyUnavailable");
+ENDRULE
+
+RULE after OptionalDependency.removeDemand()
+CLASS org.jboss.msc.service.OptionalDependency
+METHOD removeDemand
+AT EXIT
+BIND NOTHING
+IF TRUE
+DO
+   # signal OptionalDependency.removeDemand() call is finished
+   debug("signalling optionalDependency.removeDemand() have finished"),
+   signalWake("removeDemand() finished", true),
+   debug("signalled optionalDependency.removeDemand() have finished");
+ENDRULE
+
+RULE clear counters and flags
+CLASS org.jboss.msc.service.AbstractServiceTest
+METHOD tearDown
+AT EXIT
+BIND NOTHING
+IF TRUE
+DO
+    debug("clearing counters and flags"),
+    deleteCounter("block child2.setMode(REMOVE) only once");
+ENDRULE
