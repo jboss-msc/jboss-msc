@@ -180,6 +180,7 @@ class OptionalDependency implements Dependency, Dependent {
         final boolean depFailed;
         final Dependent dependent;
         synchronized (this) {
+            dependent = this.dependent;
             demandedByDependent = false;
             depState = dependencyState;
             transDepUnavailable = transitiveDependencyUnavailable;
@@ -189,9 +190,8 @@ class OptionalDependency implements Dependency, Dependent {
                 startNotifying = false;
             } else {
                 notifyOptionalDependency = false;
-                startNotifying = forwardNotifications = dependencyState.compareTo(DependencyState.AVAILABLE) >= 0;//);
+                startNotifying = forwardNotifications = dependencyState.compareTo(DependencyState.AVAILABLE) >= 0 && dependent != null;
             }
-            dependent = this.dependent;
         }
         if (startNotifying) {
             if (depState == DependencyState.AVAILABLE) {
@@ -291,7 +291,7 @@ class OptionalDependency implements Dependency, Dependent {
             depState = dependencyState;
             transitiveDepUnavailable = transitiveDependencyUnavailable;
             depFailed = dependencyFailed;
-            notificationsForwarded = forwardNotifications;
+            notificationsForwarded = forwardNotifications && dependent != null;
             forwardNotifications = false;
             dependencyState = DependencyState.UNAVAILABLE;
             demandNotified = demandedByDependent;
