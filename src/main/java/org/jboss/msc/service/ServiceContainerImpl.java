@@ -96,9 +96,9 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
     private final Set<ServiceController<?>> problems = new IdentityHashSet<ServiceController<?>>();
     private final Set<ServiceController<?>> failed = new IdentityHashSet<ServiceController<?>>();
-    private final Object lock = new Object();
+    private final Object stabilityLock = new Object();
 
-    private int unstableServices;
+    private final AtomicInteger unstableServices = new AtomicInteger();
     private long shutdownInitiated;
 
     private final List<TerminateListener> terminateListeners = new ArrayList<TerminateListener>(1);
@@ -176,7 +176,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
         public List<String> queryServiceNames() {
             final Set<ServiceName> names = registry.keySet();
-            final ArrayList<String> list = new ArrayList<String>(names.size());
+            final List<String> list = new ArrayList<String>(names.size());
             for (ServiceName serviceName : names) {
                 list.add(serviceName.getCanonicalName());
             }
@@ -186,7 +186,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
         public List<ServiceStatus> queryServiceStatuses() {
             final Collection<ServiceRegistrationImpl> registrations = registry.values();
-            final ArrayList<ServiceStatus> list = new ArrayList<ServiceStatus>(registrations.size());
+            final List<ServiceStatus> list = new ArrayList<ServiceStatus>(registrations.size());
             for (ServiceRegistrationImpl registration : registrations) {
                 final ServiceControllerImpl<?> instance = registration.getInstance();
                 if (instance != null) list.add(instance.getStatus());
@@ -239,6 +239,76 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 }
             }
             return null;
+        }
+
+        @Override
+        public void dumpServicesByStatus(String status) {
+            System.out.printf("Services for %s with status:%s\n", getName(), status);
+            Collection<ServiceStatus> services = this.queryServicesByStatus(status);
+            if (services.isEmpty()) {
+                System.out.printf("There are no services with status: %s\n", status);
+            } else {
+                this.printServiceStatus(services, System.out);
+            }
+        }
+
+        @Override
+        public String dumpServicesToStringByStatus(String status) {
+            Collection<ServiceStatus> services = this.queryServicesByStatus(status);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PrintStream ps = null;
+            try {
+                ps = new PrintStream(baos, false, "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                throw new IllegalStateException(e);
+            }
+            ps.printf("Services for %s with status:%s\n", getName(), status);
+            if (services.isEmpty()) {
+                ps.printf("There are no services with status: %s\n", status);
+            } else {
+                this.printServiceStatus(services, ps);
+            }
+            ps.flush();
+            try {
+                return new String(baos.toByteArray(), "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+
+        /**
+         * Returns a collection of {@link ServiceStatus} of services, whose {@link org.jboss.msc.service.management.ServiceStatus#getStateName() status}
+         * matches the passed <code>status</code>. Returns an empty collection if there's no such services.
+         * @param status The status that we are interested in.
+         * @return
+         */
+        private Collection<ServiceStatus> queryServicesByStatus(String status) {
+            final Collection<ServiceRegistrationImpl> registrations = registry.values();
+            final ArrayList<ServiceStatus> list = new ArrayList<ServiceStatus>(registrations.size());
+            for (ServiceRegistrationImpl registration : registrations) {
+                final ServiceControllerImpl<?> instance = registration.getInstance();
+                if (instance != null) {
+                    ServiceStatus serviceStatus = instance.getStatus();
+                    if (serviceStatus.getStateName().equals(status)) {
+                        list.add(serviceStatus);
+                    }
+                }
+            }
+            return list;
+        }
+
+        /**
+         * Print the passed {@link ServiceStatus}es to the {@link PrintStream}
+         * @param serviceStatuses
+         * @param out
+         */
+        private void printServiceStatus(Collection<ServiceStatus> serviceStatuses, PrintStream out) {
+            if (serviceStatuses == null || serviceStatuses.isEmpty()) {
+                return;
+            }
+            for (ServiceStatus status : serviceStatuses) {
+                out.printf("%s\n", status);
+            }
         }
     };
 
@@ -299,41 +369,40 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     }
 
     void removeProblem(ServiceController<?> controller) {
-        synchronized (lock) {
+        synchronized (stabilityLock) {
             problems.remove(controller);
         }
     }
 
     void removeFailed(ServiceController<?> controller) {
-        synchronized (lock) {
+        synchronized (stabilityLock) {
             failed.remove(controller);
         }
     }
 
     void incrementUnstableServices() {
-        synchronized (lock) {
-            unstableServices++;
-        }
+        unstableServices.incrementAndGet();
     }
 
     void addProblem(ServiceController<?> controller) {
-        synchronized (lock) {
+        synchronized (stabilityLock) {
             problems.add(controller);
         }
     }
 
     void addFailed(ServiceController<?> controller) {
-        synchronized (lock) {
+        synchronized (stabilityLock) {
             failed.add(controller);
         }
     }
 
     void decrementUnstableServices() {
-        synchronized (lock) {
-            if (--unstableServices == 0) {
-                lock.notifyAll();
+        final int unstableServices = this.unstableServices.decrementAndGet();
+        assert unstableServices >= 0;
+        if (unstableServices == 0) {
+            synchronized (stabilityLock) {
+                stabilityLock.notifyAll();
             }
-            assert unstableServices >= 0; 
         }
     }
 
@@ -389,9 +458,9 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
     @Override
     public void awaitStability(Set<? super ServiceController<?>> failed, Set<? super ServiceController<?>> problem) throws InterruptedException {
-        synchronized (lock) {
-            while (unstableServices != 0) {
-                lock.wait();
+        synchronized (stabilityLock) {
+            while (unstableServices.get() != 0) {
+                stabilityLock.wait();
             }
             if (failed != null) {
                 failed.addAll(this.failed);
@@ -406,12 +475,12 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     public boolean awaitStability(final long timeout, final TimeUnit unit, Set<? super ServiceController<?>> failed, Set<? super ServiceController<?>> problem) throws InterruptedException {
         long now = System.nanoTime();
         long remaining = unit.toNanos(timeout);
-        synchronized (lock) {
-            while (unstableServices != 0) {
+        synchronized (stabilityLock) {
+            while (unstableServices.get() != 0) {
                 if (remaining <= 0L) {
                     return false;
                 }
-                lock.wait(remaining / 1000000L, (int) (remaining % 1000000L));
+                stabilityLock.wait(remaining / 1000000L, (int) (remaining % 1000000L));
                 remaining -= (-now + (now = System.nanoTime()));
             }
             if (failed != null) {

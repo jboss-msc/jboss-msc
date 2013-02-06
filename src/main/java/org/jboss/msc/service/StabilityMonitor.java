@@ -34,6 +34,7 @@ import static org.jboss.msc.service.ServiceController.State.UP;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A stability detection utility. It can be used to detect
@@ -94,7 +95,7 @@ public final class StabilityMonitor {
     private final Set<ServiceController<?>> failed = new IdentityHashSet<ServiceController<?>>();
     private final AtomicBoolean cleanupInProgress = new AtomicBoolean();
     private Set<ServiceControllerImpl<?>> controllers = new IdentityHashSet<ServiceControllerImpl<?>>();
-    private int unstableServices;
+    private final AtomicInteger unstableServices = new AtomicInteger();
 
     /**
      * Register controller with this monitor.
@@ -141,8 +142,8 @@ public final class StabilityMonitor {
                     this.controllers = new IdentityHashSet<ServiceControllerImpl<?>>();
                     failed.clear();
                     problems.clear();
-                    unstableServices = 0;
                 }
+                unstableServices.set(0);
                 // We cannot call removeMonitorNoCallback under stabilityLock
                 // because of deadlock possibility. In order for removing controllers
                 // to don't break stability invariants we're setting cleanupInProgress flag
@@ -246,7 +247,7 @@ public final class StabilityMonitor {
         final int failedCount;
         final int problemsCount;
         synchronized (stabilityLock) {
-            while (unstableServices != 0) {
+            while (unstableServices.get() != 0) {
                 stabilityLock.wait();
             }
             // propagate failures
@@ -283,7 +284,7 @@ public final class StabilityMonitor {
         final int failedCount;
         final int problemsCount;
         synchronized (stabilityLock) {
-            while (unstableServices != 0) {
+            while (unstableServices.get() != 0) {
                 if (remaining <= 0L) {
                     return false;
                 }
@@ -340,18 +341,17 @@ public final class StabilityMonitor {
 
     void incrementUnstableServices() {
         if (cleanupInProgress.get()) return;
-        synchronized (stabilityLock) {
-            unstableServices++;
-        }
+        unstableServices.incrementAndGet();
     }
 
     void decrementUnstableServices() {
         if (cleanupInProgress.get()) return;
-        synchronized (stabilityLock) {
-            if (--unstableServices == 0) {
+        final int unstableServices = this.unstableServices.decrementAndGet();
+        assert unstableServices >= 0;
+        if (unstableServices == 0) {
+            synchronized (stabilityLock) {
                 stabilityLock.notifyAll();
             }
-            assert unstableServices >= 0;
         }
     }
 
