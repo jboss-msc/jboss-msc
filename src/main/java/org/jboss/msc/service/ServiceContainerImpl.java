@@ -96,9 +96,9 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
     private final Set<ServiceController<?>> problems = new IdentityHashSet<ServiceController<?>>();
     private final Set<ServiceController<?>> failed = new IdentityHashSet<ServiceController<?>>();
-    private final Object lock = new Object();
+    private final Object stabilityLock = new Object();
 
-    private int unstableServices;
+    private final AtomicInteger unstableServices = new AtomicInteger();
     private long shutdownInitiated;
 
     private final List<TerminateListener> terminateListeners = new ArrayList<TerminateListener>(1);
@@ -299,41 +299,40 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     }
 
     void removeProblem(ServiceController<?> controller) {
-        synchronized (lock) {
+        synchronized (stabilityLock) {
             problems.remove(controller);
         }
     }
 
     void removeFailed(ServiceController<?> controller) {
-        synchronized (lock) {
+        synchronized (stabilityLock) {
             failed.remove(controller);
         }
     }
 
     void incrementUnstableServices() {
-        synchronized (lock) {
-            unstableServices++;
-        }
+        unstableServices.incrementAndGet();
     }
 
     void addProblem(ServiceController<?> controller) {
-        synchronized (lock) {
+        synchronized (stabilityLock) {
             problems.add(controller);
         }
     }
 
     void addFailed(ServiceController<?> controller) {
-        synchronized (lock) {
+        synchronized (stabilityLock) {
             failed.add(controller);
         }
     }
 
     void decrementUnstableServices() {
-        synchronized (lock) {
-            if (--unstableServices == 0) {
-                lock.notifyAll();
+        final int unstableServices = this.unstableServices.decrementAndGet();
+        assert unstableServices >= 0;
+        if (unstableServices == 0) {
+            synchronized (stabilityLock) {
+                stabilityLock.notifyAll();
             }
-            assert unstableServices >= 0; 
         }
     }
 
@@ -389,9 +388,9 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
     @Override
     public void awaitStability(Set<? super ServiceController<?>> failed, Set<? super ServiceController<?>> problem) throws InterruptedException {
-        synchronized (lock) {
-            while (unstableServices != 0) {
-                lock.wait();
+        synchronized (stabilityLock) {
+            while (unstableServices.get() != 0) {
+                stabilityLock.wait();
             }
             if (failed != null) {
                 failed.addAll(this.failed);
@@ -406,12 +405,12 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     public boolean awaitStability(final long timeout, final TimeUnit unit, Set<? super ServiceController<?>> failed, Set<? super ServiceController<?>> problem) throws InterruptedException {
         long now = System.nanoTime();
         long remaining = unit.toNanos(timeout);
-        synchronized (lock) {
-            while (unstableServices != 0) {
+        synchronized (stabilityLock) {
+            while (unstableServices.get() != 0) {
                 if (remaining <= 0L) {
                     return false;
                 }
-                lock.wait(remaining / 1000000L, (int) (remaining % 1000000L));
+                stabilityLock.wait(remaining / 1000000L, (int) (remaining % 1000000L));
                 remaining -= (-now + (now = System.nanoTime()));
             }
             if (failed != null) {
