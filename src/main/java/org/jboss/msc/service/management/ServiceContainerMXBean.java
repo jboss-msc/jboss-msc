@@ -81,4 +81,20 @@ public interface ServiceContainerMXBean {
      * @return the details, as a string
      */
     String dumpServiceDetails(String serviceName);
+
+    /**
+     * Dump the services, whose status matches the passed <code>status</code> to the console
+     *
+     * @param status The status of the services that we are interested in
+     */
+    void dumpServicesByStatus(String status);
+
+    /**
+     * Dump the services, whose status matches the passed <code>status</code>, state to a big string.
+     * The string has no particular standard format and may change over time; this method is simply a convenience.
+     *
+     * @param status The status of the services that we are interested in
+     * @return Returns the string representation of the services whose status matches the passed <code>status</code>
+     */
+    String dumpServicesToStringByStatus(String status);
 }

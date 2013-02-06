@@ -240,6 +240,76 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             }
             return null;
         }
+
+        @Override
+        public void dumpServicesByStatus(String status) {
+            System.out.printf("Services for %s with status:%s\n", getName(), status);
+            Collection<ServiceStatus> services = this.queryServicesByStatus(status);
+            if (services.isEmpty()) {
+                System.out.printf("There are no services with status: %s\n", status);
+            } else {
+                this.printServiceStatus(services, System.out);
+            }
+        }
+
+        @Override
+        public String dumpServicesToStringByStatus(String status) {
+            Collection<ServiceStatus> services = this.queryServicesByStatus(status);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            PrintStream ps = null;
+            try {
+                ps = new PrintStream(baos, false, "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                throw new IllegalStateException(e);
+            }
+            ps.printf("Services for %s with status:%s\n", getName(), status);
+            if (services.isEmpty()) {
+                ps.printf("There are no services with status: %s\n", status);
+            } else {
+                this.printServiceStatus(services, ps);
+            }
+            ps.flush();
+            try {
+                return new String(baos.toByteArray(), "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+
+        /**
+         * Returns a collection of {@link ServiceStatus} of services, whose {@link org.jboss.msc.service.management.ServiceStatus#getStateName() status}
+         * matches the passed <code>status</code>. Returns an empty collection if there's no such services.
+         * @param status The status that we are interested in.
+         * @return
+         */
+        private Collection<ServiceStatus> queryServicesByStatus(String status) {
+            final Collection<ServiceRegistrationImpl> registrations = registry.values();
+            final ArrayList<ServiceStatus> list = new ArrayList<ServiceStatus>(registrations.size());
+            for (ServiceRegistrationImpl registration : registrations) {
+                final ServiceControllerImpl<?> instance = registration.getInstance();
+                if (instance != null) {
+                    ServiceStatus serviceStatus = instance.getStatus();
+                    if (serviceStatus.getStateName().equals(status)) {
+                        list.add(serviceStatus);
+                    }
+                }
+            }
+            return list;
+        }
+
+        /**
+         * Print the passed {@link ServiceStatus}es to the {@link PrintStream}
+         * @param serviceStatuses
+         * @param out
+         */
+        private void printServiceStatus(Collection<ServiceStatus> serviceStatuses, PrintStream out) {
+            if (serviceStatuses == null || serviceStatuses.isEmpty()) {
+                return;
+            }
+            for (ServiceStatus status : serviceStatuses) {
+                out.printf("%s\n", status);
+            }
+        }
     };
 
     ServiceContainerImpl(String name, int coreSize, long timeOut, TimeUnit timeOutUnit, final boolean autoShutdown) {
