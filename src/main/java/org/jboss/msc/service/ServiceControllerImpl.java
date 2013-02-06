@@ -514,17 +514,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case ON_DEMAND:
                 case PASSIVE: {
-                    if (demandedByCount > 0 && dependenciesDemanded == false) {
+                    if (demandedByCount > 0 && !dependenciesDemanded) {
                         tasks.add(new DemandDependenciesTask());
                         dependenciesDemanded = true;
-                    } else if (demandedByCount == 0 && dependenciesDemanded == true) {
+                    } else if (demandedByCount == 0 && dependenciesDemanded) {
                         tasks.add(new UndemandDependenciesTask());
                         dependenciesDemanded = false;
                     }
                     break;
                 }
                 case ACTIVE: {
-                    if (dependenciesDemanded == false) {
+                    if (!dependenciesDemanded) {
                         tasks.add(new DemandDependenciesTask());
                         dependenciesDemanded = true;
                     }
@@ -586,7 +586,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case UP_to_STOP_REQUESTED: {
                     if (mode == Mode.LAZY && demandedByCount == 0) {
-                        assert dependenciesDemanded == true;
+                        assert dependenciesDemanded;
                         tasks.add(new UndemandDependenciesTask());
                         dependenciesDemanded = false;
                     }

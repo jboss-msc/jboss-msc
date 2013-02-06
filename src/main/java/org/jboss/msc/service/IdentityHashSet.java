@@ -473,7 +473,7 @@ class IdentityHashSet<E> extends AbstractSet<E> implements Set<E>, Cloneable, Se
         Object table[] = IdentityHashSet.this.table;
 
         public boolean hasNext() {
-            if (hasNext == true)
+            if (hasNext)
                 return true;
 
             Object table[] = this.table;
