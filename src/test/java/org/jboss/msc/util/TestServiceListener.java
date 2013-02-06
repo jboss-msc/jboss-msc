@@ -414,8 +414,8 @@ public class TestServiceListener implements ServiceListener<Object> {
         private final TimeUnit delayTimeUnit;
 
         ServiceFuture() {
-            delay = 500L;
-            delayTimeUnit = TimeUnit.MILLISECONDS;
+            delay = 3L;
+            delayTimeUnit = TimeUnit.SECONDS;
         }
 
         ServiceFuture(long timeInMs) {
