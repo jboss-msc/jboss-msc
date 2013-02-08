@@ -193,6 +193,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         this.aliasRegistrations = aliasRegistrations;
         this.listeners = new IdentityHashMap<ServiceListener<? super S>, ServiceListener.Inheritance>(listeners);
         this.monitors = new IdentityHashSet<StabilityMonitor>(monitors);
+        // We also need to register this controller with monitors explicitly.
+        // This allows inherited monitors to have registered all child controllers
+        // and later to remove them when inherited stability monitor is cleared.
+        for (final StabilityMonitor monitor : monitors) {
+            monitor.addControllerNoCallback(this);
+        }
         this.parent = parent;
         int depCount = dependencies.length;
         unstartedDependencies = 0;
