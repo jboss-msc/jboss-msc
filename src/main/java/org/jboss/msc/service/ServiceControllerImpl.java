@@ -193,6 +193,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         this.aliasRegistrations = aliasRegistrations;
         this.listeners = new IdentityHashMap<ServiceListener<? super S>, ServiceListener.Inheritance>(listeners);
         this.monitors = new IdentityHashSet<StabilityMonitor>(monitors);
+        // We also need to register this controller with monitors explicitly.
+        // This allows inherited monitors to have registered all child controllers
+        // and later to remove them when inherited stability monitor is cleared.
+        for (final StabilityMonitor monitor : monitors) {
+            monitor.addControllerNoCallback(this);
+        }
         this.parent = parent;
         int depCount = dependencies.length;
         unstartedDependencies = 0;
@@ -247,11 +253,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks = new ArrayList<Runnable>(16);
 
         synchronized (this) {
+            final boolean leavingRestState = isStableRestState();
             getListenerTasks(ListenerNotification.LISTENER_ADDED, listenerAddedTasks);
             internalSetMode(initialMode, tasks);
             // placeholder async task for running listener added tasks
             asyncTasks += listenerAddedTasks.size() + tasks.size() + 1;
-            updateStabilityState(true);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
         tasks.clear();
@@ -293,16 +300,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * Roll back the service install.
      */
     void rollbackInstallation() {
-        final boolean stabilityNotification;
         synchronized(this) {
-            stabilityNotification = state != Substate.NEW;
             final boolean leavingRestState = isStableRestState();
             mode = Mode.REMOVE;
             asyncTasks ++;
             state = Substate.CANCELLED;
-            if (stabilityNotification) updateStabilityState(leavingRestState);
+            updateStabilityState(leavingRestState);
         }
-        (new RemoveTask(stabilityNotification)).run();
+        (new RemoveTask()).run();
     }
 
     /**
@@ -347,15 +352,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     void updateStabilityState(final boolean leavingStableRestState) {
         assert holdsLock(this);
+        final boolean enteringStableRestState = state.isRestState() && asyncTasks == 0;
         if (leavingStableRestState) {
-            if (asyncTasks > 0 || !state.isRestState()) {
+            if (!enteringStableRestState) {
                 primaryRegistration.getContainer().incrementUnstableServices();
                 for (StabilityMonitor monitor : monitors) {
                     monitor.incrementUnstableServices();
                 }
             }
         } else {
-            if (state.isRestState() && asyncTasks == 0) {
+            if (enteringStableRestState) {
                 primaryRegistration.getContainer().decrementUnstableServices();
                 for (StabilityMonitor monitor : monitors) {
                     monitor.decrementUnstableServices();
@@ -671,7 +677,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (failCount > 0) {
                         tasks.add(new DependencyRetryingTask(dependents));
                     }
-                    tasks.add(new RemoveTask(true));
+                    tasks.add(new RemoveTask());
                     break;
                 }
                 case REMOVING_to_REMOVED: {
@@ -1495,9 +1501,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert !holdsLock(this);
         synchronized (this) {
             if (monitors.remove(stabilityMonitor) && !isStableRestState()) {
-                stabilityMonitor.decrementUnstableServices();
-                stabilityMonitor.removeFailed(this);
                 stabilityMonitor.removeProblem(this);
+                stabilityMonitor.removeFailed(this);
+                stabilityMonitor.decrementUnstableServices();
             }
         }
     }
@@ -2002,10 +2008,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         StopTask(final boolean onlyUninject) {
             this.onlyUninject = onlyUninject;
             if (!onlyUninject && !ServiceControllerImpl.this.children.isEmpty()) {
-                this.children = ServiceControllerImpl.this.children.toScatteredArray(NO_CONTROLLERS);
-                // placeholder async task for child removal; last removed child will decrement this count
-                // see removeChild method to verify when this count is decremented
-                ServiceControllerImpl.this.asyncTasks ++;
+                synchronized (ServiceControllerImpl.this) {
+                    final boolean leavingRestState = isStableRestState();
+                    this.children = ServiceControllerImpl.this.children.toScatteredArray(NO_CONTROLLERS);
+                    // placeholder async task for child removal; last removed child will decrement this count
+                    // see removeChild method to verify when this count is decremented
+                    ServiceControllerImpl.this.asyncTasks ++;
+                    updateStabilityState(leavingRestState);
+                }
             }
             else {
                 this.children = null;
@@ -2185,10 +2195,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         DependencyFailedTask(final Dependent[][] dependents, final boolean removeChildren) {
             this.dependents = dependents;
             if (removeChildren && !ServiceControllerImpl.this.children.isEmpty()) {
-                this.children = ServiceControllerImpl.this.children.toScatteredArray(NO_CONTROLLERS);
-                // placeholder async task for child removal; last removed child will decrement this count
-                // see removeChild method to verify when this count is decremented
-                ServiceControllerImpl.this.asyncTasks ++;
+                synchronized (ServiceControllerImpl.this) {
+                    final boolean leavingRestState = isStableRestState();
+                    this.children = ServiceControllerImpl.this.children.toScatteredArray(NO_CONTROLLERS);
+                    // placeholder async task for child removal; last removed child will decrement this count
+                    // see removeChild method to verify when this count is decremented
+                    ServiceControllerImpl.this.asyncTasks ++;
+                    updateStabilityState(leavingRestState);
+                }
             }
             else {
                 this.children = null;
@@ -2255,12 +2269,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private class RemoveTask implements Runnable {
-        
-        private final boolean stabilityNotification;
-
-        RemoveTask(final boolean stabilityNotification) {
-            this.stabilityNotification = stabilityNotification;
-        }
 
         public void run() {
             try {
@@ -2282,7 +2290,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     asyncTasks --;
                     transition(tasks);
                     asyncTasks += tasks.size();
-                    if (stabilityNotification) updateStabilityState(leavingRestState);
+                    updateStabilityState(leavingRestState);
                 }
                 doExecute(tasks);
             } catch (Throwable t) {

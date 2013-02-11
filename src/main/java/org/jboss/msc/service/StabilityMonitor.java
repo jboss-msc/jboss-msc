@@ -105,10 +105,21 @@ public final class StabilityMonitor {
         if (controller == null) return;
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
         synchronized (controllersLock) {
+            controllers.add(serviceController);
             // It is safe to call controller.addMonitor() under controllersLock because
             // controller.addMonitor() may callback only stabilityLock protected methods.
             serviceController.addMonitor(this);
-            controllers.add(serviceController);
+        }
+    }
+
+    /**
+     * Register controller with this monitor but don't call serviceController.addMonitor() at all.
+     *
+     * @param controller to be registered for stability detection.
+     */
+    void addControllerNoCallback(final ServiceControllerImpl<?> controller) {
+        synchronized (controllersLock) {
+            controllers.add(controller);
         }
     }
 

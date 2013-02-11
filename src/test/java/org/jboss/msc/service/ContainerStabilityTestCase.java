@@ -145,9 +145,9 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         assertController(controller2.getName(), controller2);
         assertTrue(problem.isEmpty());
         assertTrue(failed.isEmpty());
-        assertTrue(statistics.getActiveCount() == 1);
+        assertTrue(statistics.getActiveCount() == 2);
         assertTrue(statistics.getOnDemandCount() == 1);
-        assertTrue(statistics.getStartedCount() == 2);
+        assertTrue(statistics.getStartedCount() == 3);
         assertTrue(statistics.getFailedCount() == 0);
         assertTrue(statistics.getLazyCount() == 0);
         assertTrue(statistics.getNeverCount() == 0);
@@ -215,7 +215,7 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         assertController(controller2.getName(), controller2);
         assertTrue(problem.isEmpty());
         assertTrue(failed.size() == 1);
-        assertTrue(statistics.getActiveCount() == 1);
+        assertTrue(statistics.getActiveCount() == 2);
         assertTrue(statistics.getOnDemandCount() == 1);
         assertTrue(statistics.getStartedCount() == 2);
         assertTrue(statistics.getFailedCount() == 1);
