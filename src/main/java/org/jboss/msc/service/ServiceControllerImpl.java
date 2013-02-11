@@ -353,15 +353,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     void updateStabilityState(final boolean leavingStableRestState) {
         assert holdsLock(this);
+        final boolean enteringStableRestState = state.isRestState() && asyncTasks == 0;
         if (leavingStableRestState) {
-            if (asyncTasks > 0 || !state.isRestState()) {
+            if (!enteringStableRestState) {
                 primaryRegistration.getContainer().incrementUnstableServices();
                 for (StabilityMonitor monitor : monitors) {
                     monitor.incrementUnstableServices();
                 }
             }
         } else {
-            if (state.isRestState() && asyncTasks == 0) {
+            if (enteringStableRestState) {
                 primaryRegistration.getContainer().decrementUnstableServices();
                 for (StabilityMonitor monitor : monitors) {
                     monitor.decrementUnstableServices();
