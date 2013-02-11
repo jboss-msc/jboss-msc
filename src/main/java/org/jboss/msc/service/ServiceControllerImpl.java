@@ -1502,9 +1502,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert !holdsLock(this);
         synchronized (this) {
             if (monitors.remove(stabilityMonitor) && !isStableRestState()) {
-                stabilityMonitor.decrementUnstableServices();
-                stabilityMonitor.removeFailed(this);
                 stabilityMonitor.removeProblem(this);
+                stabilityMonitor.removeFailed(this);
+                stabilityMonitor.decrementUnstableServices();
             }
         }
     }
