@@ -292,7 +292,7 @@ public interface ServiceController<S> extends Value<S> {
         /**
          * New controller being installed.
          */
-        NEW(State.DOWN, false),
+        NEW(State.DOWN, true),
         /**
          * Cancelled controller installation due to duplicate or other problem.
          */
