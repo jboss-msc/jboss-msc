@@ -2009,10 +2009,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         StopTask(final boolean onlyUninject) {
             this.onlyUninject = onlyUninject;
             if (!onlyUninject && !ServiceControllerImpl.this.children.isEmpty()) {
-                this.children = ServiceControllerImpl.this.children.toScatteredArray(NO_CONTROLLERS);
-                // placeholder async task for child removal; last removed child will decrement this count
-                // see removeChild method to verify when this count is decremented
-                ServiceControllerImpl.this.asyncTasks ++;
+                synchronized (ServiceControllerImpl.this) {
+                    final boolean leavingRestState = isStableRestState();
+                    this.children = ServiceControllerImpl.this.children.toScatteredArray(NO_CONTROLLERS);
+                    // placeholder async task for child removal; last removed child will decrement this count
+                    // see removeChild method to verify when this count is decremented
+                    ServiceControllerImpl.this.asyncTasks ++;
+                    updateStabilityState(leavingRestState);
+                }
             }
             else {
                 this.children = null;
@@ -2192,10 +2196,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         DependencyFailedTask(final Dependent[][] dependents, final boolean removeChildren) {
             this.dependents = dependents;
             if (removeChildren && !ServiceControllerImpl.this.children.isEmpty()) {
-                this.children = ServiceControllerImpl.this.children.toScatteredArray(NO_CONTROLLERS);
-                // placeholder async task for child removal; last removed child will decrement this count
-                // see removeChild method to verify when this count is decremented
-                ServiceControllerImpl.this.asyncTasks ++;
+                synchronized (ServiceControllerImpl.this) {
+                    final boolean leavingRestState = isStableRestState();
+                    this.children = ServiceControllerImpl.this.children.toScatteredArray(NO_CONTROLLERS);
+                    // placeholder async task for child removal; last removed child will decrement this count
+                    // see removeChild method to verify when this count is decremented
+                    ServiceControllerImpl.this.asyncTasks ++;
+                    updateStabilityState(leavingRestState);
+                }
             }
             else {
                 this.children = null;
