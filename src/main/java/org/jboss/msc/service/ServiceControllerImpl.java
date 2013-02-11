@@ -253,11 +253,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks = new ArrayList<Runnable>(16);
 
         synchronized (this) {
+            final boolean leavingRestState = isStableRestState();
             getListenerTasks(ListenerNotification.LISTENER_ADDED, listenerAddedTasks);
             internalSetMode(initialMode, tasks);
             // placeholder async task for running listener added tasks
             asyncTasks += listenerAddedTasks.size() + tasks.size() + 1;
-            updateStabilityState(true);
+            updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
         tasks.clear();
@@ -299,16 +300,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * Roll back the service install.
      */
     void rollbackInstallation() {
-        final boolean stabilityNotification;
         synchronized(this) {
-            stabilityNotification = state != Substate.NEW;
             final boolean leavingRestState = isStableRestState();
             mode = Mode.REMOVE;
             asyncTasks ++;
             state = Substate.CANCELLED;
-            if (stabilityNotification) updateStabilityState(leavingRestState);
+            updateStabilityState(leavingRestState);
         }
-        (new RemoveTask(stabilityNotification)).run();
+        (new RemoveTask()).run();
     }
 
     /**
@@ -678,7 +677,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (failCount > 0) {
                         tasks.add(new DependencyRetryingTask(dependents));
                     }
-                    tasks.add(new RemoveTask(true));
+                    tasks.add(new RemoveTask());
                     break;
                 }
                 case REMOVING_to_REMOVED: {
@@ -2270,12 +2269,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private class RemoveTask implements Runnable {
-        
-        private final boolean stabilityNotification;
-
-        RemoveTask(final boolean stabilityNotification) {
-            this.stabilityNotification = stabilityNotification;
-        }
 
         public void run() {
             try {
@@ -2297,7 +2290,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     asyncTasks --;
                     transition(tasks);
                     asyncTasks += tasks.size();
-                    if (stabilityNotification) updateStabilityState(leavingRestState);
+                    updateStabilityState(leavingRestState);
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
