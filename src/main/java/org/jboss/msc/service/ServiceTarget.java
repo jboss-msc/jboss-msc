@@ -35,6 +35,7 @@ import org.jboss.msc.value.Value;
  * are not installed are ignored.
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public interface ServiceTarget {
 
@@ -79,33 +80,6 @@ public interface ServiceTarget {
      * @return this target
      */
     ServiceTarget addListener(Collection<ServiceListener<Object>> listeners);
-
-    /**
-     * Add a service listener that will be added to all the ServiceBuilders installed in this target.
-     *
-     * @param inheritance the inheritance type for this listener
-     * @param listener the listener to add to the target
-     * @return this target
-     */
-    ServiceTarget addListener(ServiceListener.Inheritance inheritance, ServiceListener<Object> listener);
-
-    /**
-     * Add a list of service listener that will be added to all ServiceBuilders installed in this target.
-     *
-     * @param inheritance the inheritance type for this listener
-     * @param listeners a list of listeners to add to the target
-     * @return this target
-     */
-    ServiceTarget addListener(ServiceListener.Inheritance inheritance, ServiceListener<Object>... listeners);
-
-    /**
-     * Add a collection of service listener that will be added to all ServiceBuilders installed in this target.
-     *
-     * @param inheritance the inheritance type for this listener
-     * @param listeners a collection of listeners to add to the target
-     * @return this target
-     */
-    ServiceTarget addListener(ServiceListener.Inheritance inheritance, Collection<ServiceListener<Object>> listeners);
 
     /**
      * Remove a listener from this target, if it exists.
