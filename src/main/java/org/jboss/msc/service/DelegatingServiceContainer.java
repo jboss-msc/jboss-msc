@@ -35,6 +35,7 @@ import org.jboss.msc.value.Value;
  * target or registry instance.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class DelegatingServiceContainer implements ServiceContainer {
     private final ServiceTarget delegateTarget;
@@ -77,24 +78,6 @@ public final class DelegatingServiceContainer implements ServiceContainer {
     /** {@inheritDoc} */
     public ServiceContainer addListener(final Collection<ServiceListener<Object>> listeners) {
         delegateTarget.addListener(listeners);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceContainer addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<Object> listener) {
-        delegateTarget.addListener(inheritance, listener);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceContainer addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<Object>... listeners) {
-        delegateTarget.addListener(inheritance, listeners);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceContainer addListener(final ServiceListener.Inheritance inheritance, final Collection<ServiceListener<Object>> listeners) {
-        delegateTarget.addListener(inheritance, listeners);
         return this;
     }
 

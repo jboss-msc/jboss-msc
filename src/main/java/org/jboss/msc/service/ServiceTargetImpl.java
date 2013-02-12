@@ -22,11 +22,10 @@
 
 package org.jboss.msc.service;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Map;
 import java.util.Set;
 
 import org.jboss.msc.value.ImmediateValue;
@@ -38,11 +37,12 @@ import org.jboss.msc.value.Value;
  * @author John Bailey
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 class ServiceTargetImpl implements ServiceTarget {
 
     private final ServiceTargetImpl parent;
-    private final Map<ServiceListener<Object>, ServiceListener.Inheritance> listeners = Collections.synchronizedMap(new IdentityHashMap<ServiceListener<Object>, ServiceListener.Inheritance>());
+    private final Set<ServiceListener<Object>> listeners = Collections.synchronizedSet(new IdentityHashSet<ServiceListener<Object>>());
     private final Set<ServiceName> dependencies = Collections.synchronizedSet(new HashSet<ServiceName>());
 
     ServiceTargetImpl(final ServiceTargetImpl parent) {
@@ -76,49 +76,23 @@ class ServiceTargetImpl implements ServiceTarget {
         return createServiceBuilder(name, new ImmediateValue<Service<T>>(service), null);
     }
 
-    @Override
-    public ServiceTarget addListener(ServiceListener<Object> listener) {
-        return addListener(ServiceListener.Inheritance.NONE, listener);
-    }
-
-    @Override
-    public ServiceTarget addListener(ServiceListener<Object>... listeners) {
-        return addListener(ServiceListener.Inheritance.NONE, listeners);
-    }
-
-    @Override
-    public ServiceTarget addListener(Collection<ServiceListener<Object>> listeners) {
-        return addListener(ServiceListener.Inheritance.NONE, listeners);
-    }
-
-    public ServiceTarget addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<Object> listener) {
-        if (listener == null) {
-            return this;
-        }
-        listeners.put(listener, inheritance);
-        return this;
-    }
-
-    public ServiceTarget addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<Object>... listeners) {
-        if (listeners == null) {
-            return this;
-        }
-        final Map<ServiceListener<Object>,ServiceListener.Inheritance> ourListeners = this.listeners;
-
-        for(ServiceListener<Object> listener : listeners) {
-            ourListeners.put(listener, inheritance);
+    public ServiceTarget addListener(final ServiceListener<Object> listener) {
+        if (listener != null) {
+            listeners.add(listener);
         }
         return this;
     }
 
-    public ServiceTarget addListener(final ServiceListener.Inheritance inheritance, final Collection<ServiceListener<Object>> listeners) {
-        if (listeners == null) {
-            return this;
+    public ServiceTarget addListener(final ServiceListener<Object>... listeners) {
+        if (listeners != null) {
+            this.listeners.addAll(Arrays.asList(listeners));
         }
-        final Map<ServiceListener<Object>,ServiceListener.Inheritance> ourListeners = this.listeners;
+        return this;
+    }
 
-        for(ServiceListener<Object> listener : listeners) {
-            ourListeners.put(listener, inheritance);
+    public ServiceTarget addListener(final Collection<ServiceListener<Object>> listeners) {
+        if (listeners != null) {
+            this.listeners.addAll(listeners);
         }
         return this;
     }
@@ -134,7 +108,7 @@ class ServiceTargetImpl implements ServiceTarget {
 
     @Override
     public Set<ServiceListener<Object>> getListeners() {
-        return Collections.unmodifiableSet(listeners.keySet());
+        return Collections.unmodifiableSet(listeners);
     }
 
     @Override

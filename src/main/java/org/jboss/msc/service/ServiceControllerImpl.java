@@ -29,7 +29,6 @@ import java.io.Writer;
 import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -72,7 +71,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     /**
      * The set of registered service listeners.
      */
-    private final IdentityHashMap<ServiceListener<? super S>, ServiceListener.Inheritance> listeners;
+    private final IdentityHashSet<ServiceListener<? super S>> listeners;
     /**
      * The set of registered stability monitors.
      */
@@ -183,7 +182,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     static final int MAX_DEPENDENCIES = (1 << 14) - 1;
 
-    ServiceControllerImpl(final Value<? extends Service<S>> serviceValue, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<StabilityMonitor> monitors, final Map<? extends ServiceListener<? super S>, ServiceListener.Inheritance> listeners, final ServiceControllerImpl<?> parent) {
+    ServiceControllerImpl(final Value<? extends Service<S>> serviceValue, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<StabilityMonitor> monitors, final Set<? extends ServiceListener<? super S>> listeners, final ServiceControllerImpl<?> parent) {
         assert dependencies.length <= MAX_DEPENDENCIES;
         this.serviceValue = serviceValue;
         this.dependencies = dependencies;
@@ -191,7 +190,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         this.outInjections = outInjections;
         this.primaryRegistration = primaryRegistration;
         this.aliasRegistrations = aliasRegistrations;
-        this.listeners = new IdentityHashMap<ServiceListener<? super S>, ServiceListener.Inheritance>(listeners);
+        this.listeners = new IdentityHashSet<ServiceListener<? super S>>(listeners);
         this.monitors = new IdentityHashSet<StabilityMonitor>(monitors);
         // We also need to register this controller with monitors explicitly.
         // This allows inherited monitors to have registered all child controllers
@@ -721,15 +720,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private void getListenerTasks(final Transition transition, final ArrayList<Runnable> tasks) {
-        final IdentityHashMap<ServiceListener<? super S>,ServiceListener.Inheritance> listeners = this.listeners;
-        for (ServiceListener<? super S> listener : listeners.keySet()) {
+        for (ServiceListener<? super S> listener : listeners) {
             tasks.add(new ListenerTask(listener, transition));
         }
     }
 
     private void getListenerTasks(final ListenerNotification notification, final ArrayList<Runnable> tasks) {
-        final IdentityHashMap<ServiceListener<? super S>,ServiceListener.Inheritance> listeners = this.listeners;
-        for (ServiceListener<? super S> listener : listeners.keySet()) {
+        for (ServiceListener<? super S> listener : listeners) {
             tasks.add(new ListenerTask(listener, notification));
         }
     }
@@ -1238,36 +1235,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             state = this.state;
             // Always run listener if removed.
             if (state != Substate.REMOVED) {
-                if (listeners.containsKey(listener)) {
+                if (listeners.contains(listener)) {
                     // Duplicates not allowed
                     throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + primaryRegistration.getName());
                 }
-                listeners.put(listener, ServiceListener.Inheritance.NONE);
-                asyncTasks ++;
-            } else {
-                asyncTasks += 2;
-            }
-            updateStabilityState(leavingRestState);
-        }
-        invokeListener(listener, ListenerNotification.LISTENER_ADDED, null);
-        if (state == Substate.REMOVED) {
-            invokeListener(listener, ListenerNotification.TRANSITION, Transition.REMOVING_to_REMOVED);
-        }
-    }
-
-    public void addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<Object> listener) {
-        assert !holdsLock(this);
-        final Substate state;
-        synchronized (this) {
-            final boolean leavingRestState = isStableRestState();
-            state = this.state;
-            // Always run listener if removed.
-            if (state != Substate.REMOVED) {
-                if (listeners.containsKey(listener)) {
-                    // Duplicates not allowed
-                    throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + primaryRegistration.getName());
-                }
-                listeners.put(listener, inheritance);
+                listeners.add(listener);
                 asyncTasks ++;
             } else {
                 asyncTasks += 2;
@@ -1379,10 +1351,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     !immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount != 0
             );
         }
-    }
-
-    IdentityHashMap<ServiceListener<? super S>, ServiceListener.Inheritance> getListeners() {
-        return listeners;
     }
 
     String dumpServiceDetails() {
