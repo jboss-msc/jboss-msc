@@ -98,20 +98,24 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     private final List<TaskControllerImpl<?>> topLevelTasks = new ArrayList<TaskControllerImpl<?>>();
     private final ProblemReport problemReport = new ProblemReport();
     private final TaskParent topParent = new TaskParent() {
-        public void childExecutionFinished(TaskChild child) {
-            doChildExecutionFinished();
+        public void childExecutionFinished(TaskChild child, final boolean userThread) {
+            doChildExecutionFinished(userThread);
         }
 
-        public void childValidationFinished(TaskChild child) {
-            doChildValidationFinished();
+        public void childValidationFinished(TaskChild child, final boolean userThread) {
+            doChildValidationFinished(userThread);
         }
 
-        public void childRollbackFinished(TaskChild child) {
-            doChildRollbackFinished();
+        public void childRollbackFinished(TaskChild child, final boolean userThread) {
+            doChildRollbackFinished(userThread);
         }
 
-        public void childCommitFinished(TaskChild child) {
-            doChildCommitFinished();
+        public void childCommitFinished(TaskChild child, final boolean userThread) {
+            doChildCommitFinished(userThread);
+        }
+
+        public void childAdded(final TaskChild child, final boolean userThread) throws InvalidTransactionStateException {
+            doChildAdded(child, userThread);
         }
 
         public TransactionImpl getTransaction() {
@@ -178,7 +182,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             }
         } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
         if (stateOf(newVal) == PREPARING) {
-            initiatePrepare();
+            initiatePrepare(true);
         } else if (stateOf(newVal) == PREPARED) {
             callValidationListener();
         }
@@ -210,13 +214,21 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             }
         } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
         if (stateOf(newVal) == COMMITTING) {
-            initiateCommit();
+            initiateCommit(true);
         } else if (stateOf(newVal) == COMMITTED) {
             callCommitListener();
         }
     }
 
     public void rollback(final Listener<? super Transaction> completionListener) throws InvalidTransactionStateException {
+    }
+
+    public boolean canCommit() throws InvalidTransactionStateException {
+        if (stateOf(state) != PREPARED) {
+            throw new InvalidTransactionStateException();
+        }
+        // todo: allow the problem severity threshold to be configured per txn
+        return problemReport.getMaxSeverity().compareTo(Problem.Severity.ERROR) <= 0;
     }
 
     public final <T> TaskBuilder<T> newTask(Executable<T> task) throws IllegalStateException {
@@ -381,7 +393,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         safeUnpark(waitersUpdater.getAndSet(this, DEAD));
     }
 
-    private void doChildExecutionFinished() {
+    private void doChildExecutionFinished(final boolean userThread) {
         long oldVal, newVal;
         do {
             oldVal = state;
@@ -411,7 +423,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         if (stateOf(newVal) == ACTIVE) {
             return;
         } else if (stateOf(newVal) == PREPARING) {
-            initiatePrepare();
+            initiatePrepare(userThread);
             return;
         } else if (stateOf(newVal) == PREPARED) {
             callValidationListener();
@@ -421,12 +433,12 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             callCommitListener();
             return;
         } else if (stateOf(newVal) == ROLLBACK) {
-            initiateRollback();
+            initiateRollback(userThread);
             return;
         }
     }
 
-    private void doChildValidationFinished() {
+    private void doChildValidationFinished(final boolean userThread) {
         long oldVal, newVal;
         do {
             oldVal = state;
@@ -460,7 +472,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             return;
         } else if (stateOf(newVal) == COMMITTING) {
             callValidationListener();
-            initiateCommit();
+            initiateCommit(userThread);
             return;
         } else if (stateOf(newVal) == ROLLBACK) {
             return;
@@ -475,15 +487,15 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         }
     }
 
-    private void doChildCommitFinished() {
+    private void doChildCommitFinished(final boolean userThread) {
         long oldVal, newVal;
         do {
             oldVal = state;
-            if ((oldVal & STATE_MASK) != COMMITTING) {
+            if (stateOf(oldVal) != COMMITTING) {
                 // todo log internal state error
                 return;
             }
-            if ((oldVal & COUNT_MASK) == 1) {
+            if ((oldVal & COUNT_MASK) == COUNT_ONE) {
                 newVal = newState(oldVal, COMMITTED, 0);
             } else {
                 newVal = oldVal - COUNT_ONE;
@@ -517,15 +529,15 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         safeCall(validationListenerUpdater.getAndSet(this, null));
     }
 
-    private void doChildRollbackFinished() {
+    private void doChildRollbackFinished(final boolean userThread) {
         long oldVal, newVal;
         do {
             oldVal = state;
-            if ((oldVal & STATE_MASK) != ROLLBACK) {
+            if (stateOf(oldVal) != ROLLBACK) {
                 // todo log internal state error
                 return;
             }
-            if ((oldVal & COUNT_MASK) == 1) {
+            if ((oldVal & COUNT_MASK) == COUNT_ONE) {
                 newVal = newState(oldVal, ROLLED_BACK, 0);
             } else {
                 newVal = oldVal - COUNT_ONE;
@@ -542,6 +554,18 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         }
     }
 
+    private void doChildAdded(TaskChild child, final boolean userThread) throws InvalidTransactionStateException {
+        long oldVal, newVal;
+        do {
+            oldVal = state;
+            if (stateOf(oldVal) != ACTIVE) {
+                throw new InvalidTransactionStateException("Transaction is not active");
+            }
+            newVal = oldVal + COUNT_ONE;
+        } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
+        child.dependencyExecutionComplete(topParent, userThread);
+    }
+
     private static void safeUnpark(final Thread[] threads) {
         if (threads != null) for (Thread thread : threads) {
             unpark(thread);
@@ -554,7 +578,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         } catch (Throwable ignored) {}
     }
 
-    private void initiatePrepare() {
+    private void initiatePrepare(final boolean userThread) {
         Iterator<TaskControllerImpl<?>> iterator = topLevelTasks.iterator();
         if (iterator.hasNext()) {
             final TaskControllerImpl<?> controller = iterator.next();
@@ -562,11 +586,11 @@ final class TransactionImpl extends Transaction implements TaskTarget {
                 final TaskControllerImpl<?> execController = iterator.next();
                 taskExecutor.execute(new InitiateValidationTask(execController));
             }
-            controller.childInitiateValidate();
+            controller.childInitiateValidate(userThread);
         }
     }
 
-    private void initiateCommit() {
+    private void initiateCommit(final boolean userThread) {
         Iterator<TaskControllerImpl<?>> iterator = topLevelTasks.iterator();
         if (iterator.hasNext()) {
             final TaskControllerImpl<?> controller = iterator.next();
@@ -574,11 +598,11 @@ final class TransactionImpl extends Transaction implements TaskTarget {
                 final TaskControllerImpl<?> execController = iterator.next();
                 taskExecutor.execute(new InitiateCommitTask(execController));
             }
-            controller.childInitiateCommit();
+            controller.childInitiateCommit(userThread);
         }
     }
 
-    private void initiateRollback() {
+    private void initiateRollback(final boolean userThread) {
         Iterator<TaskControllerImpl<?>> iterator = topLevelTasks.iterator();
         if (iterator.hasNext()) {
             final TaskControllerImpl<?> controller = iterator.next();
@@ -586,7 +610,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
                 final TaskControllerImpl<?> execController = iterator.next();
                 taskExecutor.execute(new InitiateRollbackTask(execController));
             }
-            controller.childInitiateRollback();
+            controller.childInitiateRollback(userThread);
         }
     }
 
@@ -607,7 +631,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         }
 
         public void run() {
-            controller.childInitiateValidate();
+            controller.childInitiateValidate(false);
         }
     }
 
@@ -620,7 +644,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         }
 
         public void run() {
-            controller.childInitiateCommit();
+            controller.childInitiateCommit(false);
         }
     }
 
@@ -633,7 +657,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         }
 
         public void run() {
-            controller.childInitiateRollback();
+            controller.childInitiateRollback(false);
         }
     }
 }

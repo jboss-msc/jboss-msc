@@ -94,15 +94,11 @@ public abstract class Transaction extends SimpleAttachable implements TaskTarget
      */
     public abstract void rollback(Listener<? super Transaction> completionListener) throws InvalidTransactionStateException;
 
-    public enum State {
-        OPEN,
-        ROLLBACK,
-        PREPARE,
-        PREPARE_COMPLETE,
-        PREPARE_FAILED,
-        ABORT,
-        COMMIT,
-        COMPLETE,
-        ;
-    }
+    /**
+     * Determine whether a prepared transaction can be committed.  If it cannot, it must be rolled back.
+     *
+     * @return {@code true} if the transaction can be committed, {@code false} if it must be rolled back
+     * @throws InvalidTransactionStateException if the transaction is not prepared
+     */
+    public abstract boolean canCommit() throws InvalidTransactionStateException;
 }

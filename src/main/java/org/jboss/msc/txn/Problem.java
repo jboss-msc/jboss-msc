@@ -30,7 +30,7 @@ public final class Problem implements Serializable {
 
     private static final long serialVersionUID = 7378993289655554246L;
 
-    private final TaskControllerImpl subtask;
+    private final TaskController taskController;
     private final String message;
     private final Throwable cause;
     private final Severity severity;
@@ -38,13 +38,13 @@ public final class Problem implements Serializable {
     /**
      * Construct a new instance.
      *
-     * @param task the task that failed
+     * @param taskController the task that failed
      * @param message the error description
      * @param cause the optional exception cause
      * @param severity the severity of the problem
      */
-    public Problem(final TaskControllerImpl task, final String message, final Throwable cause, final Severity severity) {
-        if (task == null) {
+    public Problem(final TaskController taskController, final String message, final Throwable cause, final Severity severity) {
+        if (taskController == null) {
             throw new IllegalArgumentException("task is null");
         }
         if (message == null) {
@@ -56,7 +56,7 @@ public final class Problem implements Serializable {
         this.severity = severity;
         this.cause = cause;
         this.message = message;
-        this.subtask = task;
+        this.taskController = taskController;
     }
 
     /**
@@ -66,7 +66,7 @@ public final class Problem implements Serializable {
      * @param message the error description
      * @param cause the optional exception cause
      */
-    public Problem(final TaskControllerImpl task, final String message, final Throwable cause) {
+    public Problem(final TaskController task, final String message, final Throwable cause) {
         this(task, message, cause, Severity.ERROR);
     }
 
@@ -77,7 +77,7 @@ public final class Problem implements Serializable {
      * @param message the error description
      * @param severity the severity of the problem
      */
-    public Problem(final TaskControllerImpl task, final String message, final Severity severity) {
+    public Problem(final TaskController task, final String message, final Severity severity) {
         this(task, message, null, severity);
     }
 
@@ -87,7 +87,7 @@ public final class Problem implements Serializable {
      * @param task the task that failed
      * @param message the error description
      */
-    public Problem(final TaskControllerImpl task, final String message) {
+    public Problem(final TaskController task, final String message) {
         this(task, message, null, Severity.ERROR);
     }
 
@@ -97,7 +97,7 @@ public final class Problem implements Serializable {
      * @param task the task that failed
      * @param cause the exception cause
      */
-    public Problem(final TaskControllerImpl task, final Throwable cause) {
+    public Problem(final TaskController task, final Throwable cause) {
         this(task, "Task failed due to exception", cause);
         if (cause == null) {
             throw new IllegalArgumentException("cause is null");
@@ -109,8 +109,8 @@ public final class Problem implements Serializable {
      *
      * @return the task that failed
      */
-    public TaskControllerImpl getTask() {
-        return subtask;
+    public TaskController getTask() {
+        return taskController;
     }
 
     /**

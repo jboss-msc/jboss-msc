@@ -28,8 +28,7 @@ package org.jboss.msc.txn;
 public interface CancellableContext {
 
     /**
-     * Determine if this task has been requested to be cancelled (due to its containing transaction being
-     * rolled back during processing).
+     * Determine if this task has been requested to be cancelled.
      *
      * @return {@code true} if cancel was requested, {@code false} otherwise
      */

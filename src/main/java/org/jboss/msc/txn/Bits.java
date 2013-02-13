@@ -61,6 +61,17 @@ final class Bits {
     //--- Flags methods
 
     /**
+     * Determine if exactly one of the {@code flags} in the given {@code var} is set.
+     *
+     * @param var the value to test
+     * @param flags the flags to test for
+     * @return {@code true} if exactly one of {@code flags} are in {@code var}, {@code false} otherwise
+     */
+    public static boolean oneIsSet(int var, int flags) {
+        return Integer.bitCount(var & flags) == 1;
+    }
+
+    /**
      * Determine if any of the {@code flags} in the given {@code var} are set.
      *
      * @param var the value to test

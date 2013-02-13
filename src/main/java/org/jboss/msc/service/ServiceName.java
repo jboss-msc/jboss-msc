@@ -41,7 +41,6 @@ import java.util.regex.Pattern;
 public final class ServiceName implements Comparable<ServiceName>, Serializable {
 
     private static final long serialVersionUID = 2336190201880964151L;
-    private static final Pattern validNameSegmentPattern = Pattern.compile("[^\\p{Cntrl}\\p{Space}]+");
 
     private final String name;
     @SuppressWarnings("unused")
@@ -276,7 +275,21 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
      * @return {@code true} if {@code part} is valid
      */
     public static boolean isValidNameSegment(String part) {
-        return part != null && validNameSegmentPattern.matcher(part).matches();
+        if (part == null) {
+            return false;
+        }
+        final int length = part.length();
+        int ch;
+        for (int i = 0; i < length; i = part.offsetByCodePoints(i, 1)) {
+            ch = part.codePointAt(i);
+            if (Character.isISOControl(ch)) {
+                return false;
+            }
+            if (! Character.isDefined(ch)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

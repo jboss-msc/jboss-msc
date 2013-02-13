@@ -29,29 +29,41 @@ interface TaskParent {
      * Indicate that a child's execution has finished.
      *
      * @param child the child
+     * @param userThread {@code true} if executed from a user thread
      */
-    void childExecutionFinished(TaskChild child);
+    void childExecutionFinished(TaskChild child, boolean userThread);
 
     /**
      * Indicate that a child's validation has finished.
      *
      * @param child the child
+     * @param userThread {@code true} if executed from a user thread
      */
-    void childValidationFinished(TaskChild child);
+    void childValidationFinished(TaskChild child, boolean userThread);
 
     /**
      * Indicate that a child's rollback has finished.
      *
      * @param child the child
+     * @param userThread {@code true} if executed from a user thread
      */
-    void childRollbackFinished(TaskChild child);
+    void childRollbackFinished(TaskChild child, boolean userThread);
 
     /**
      * Indicate that a child's commit has finished.
      *
      * @param child the child
+     * @param userThread {@code true} if executed from a user thread
      */
-    void childCommitFinished(TaskChild child);
+    void childCommitFinished(TaskChild child, boolean userThread);
+
+    /**
+     * Indicate to a parent that a child was added.
+     *
+     * @param child the child to add
+     * @param userThread {@code true} if executed from a user thread
+     */
+    void childAdded(TaskChild child, boolean userThread) throws InvalidTransactionStateException;
 
     /**
      * Get the transaction implementation for this parent.

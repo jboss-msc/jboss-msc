@@ -24,7 +24,7 @@ package org.jboss.msc.txn;
  * @param <T> the result type of the associated task
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public interface ExecuteContext<T> extends TransactionalContext, ReportableContext, CancellableContext, SimpleWorkContext {
+public interface ExecuteContext<T> extends TransactionalContext, ReportableContext, CancellableContext, SimpleWorkContext, TaskTarget {
 
     /**
      * Register the completion of this task with a value.  This method returns without blocking.
@@ -39,7 +39,7 @@ public interface ExecuteContext<T> extends TransactionalContext, ReportableConte
     void complete();
 
     /**
-     * Indicate that the task cannot complete execution.
+     * Indicate that the task cannot complete execution.  This simply prevents dependent tasks from executing.
      */
     void failed();
 }
