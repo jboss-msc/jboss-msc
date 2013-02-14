@@ -36,6 +36,16 @@ import org.jboss.logging.MessageLogger;
 @MessageLogger(projectCode = "MSC")
 interface InjectorLogger {
 
+    // **********************************************************
+    // **********************************************************
+    // **                                                      **
+    // ** IMPORTANT - Be sure to check against the 2.x         **
+    // **     codebase before assigning additional IDs         **
+    // **     in this file!                                    **
+    // **                                                      **
+    // **********************************************************
+    // **********************************************************
+
     @LogMessage(level = Logger.Level.WARN)
     @Message(id = 100, value = "Unexpected failure to uninject %s")
     void uninjectFailed(@Cause Throwable cause, Object target);
