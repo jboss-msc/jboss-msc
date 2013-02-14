@@ -18,6 +18,8 @@
 
 package org.jboss.msc.txn;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 
 /**
@@ -30,6 +32,8 @@ public final class TaskBuilder<T> {
 
     private final Transaction transaction;
     private final TaskParent parent;
+    private final ArrayList<TaskControllerImpl<?>> dependencies = new ArrayList<TaskControllerImpl<?>>();
+    private ClassLoader classLoader;
     private Executable<T> executable;
     private Validatable validatable;
     private Revertible revertible;
@@ -111,6 +115,7 @@ public final class TaskBuilder<T> {
      * @return this task builder
      */
     public TaskBuilder<T> setClassLoader(ClassLoader classLoader) {
+        this.classLoader = classLoader;
         return this;
     }
 
@@ -121,6 +126,9 @@ public final class TaskBuilder<T> {
      * @return this builder
      */
     public TaskBuilder<T> addDependencies(TaskController<?>... dependencies) throws IllegalStateException {
+        for (TaskController<?> dependency : dependencies) {
+            addDependency(dependency);
+        }
         return this;
     }
 
@@ -131,6 +139,9 @@ public final class TaskBuilder<T> {
      * @return this builder
      */
     public TaskBuilder<T> addDependencies(Collection<TaskController<?>> dependencies) throws IllegalStateException {
+        for (TaskController<?> dependency : dependencies) {
+            addDependency(dependency);
+        }
         return this;
     }
 
@@ -141,6 +152,7 @@ public final class TaskBuilder<T> {
      * @return this builder
      */
     public TaskBuilder<T> addDependency(TaskController<?> dependency) throws IllegalStateException {
+        dependencies.add((TaskControllerImpl<?>) dependency);
         return this;
     }
 
@@ -151,7 +163,9 @@ public final class TaskBuilder<T> {
      * @return the new controller
      */
     public TaskController<T> release() {
-        return null;
+        final TaskControllerImpl<T> controller = new TaskControllerImpl<T>(parent, dependencies.toArray(new TaskControllerImpl[dependencies.size()]), executable, revertible, validatable, committable);
+        controller.install();
+        return controller;
     }
 
 }

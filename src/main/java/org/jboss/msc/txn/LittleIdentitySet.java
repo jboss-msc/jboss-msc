@@ -29,7 +29,7 @@ import java.util.NoSuchElementException;
 final class LittleIdentitySet<T> extends AbstractSet<T> {
 
     private static final Object[][] NADA = new Object[0][];
-    private static final int MAX_CAPACITY = 1 << 31;
+    private static final int MAX_CAPACITY = 1 << 30;
 
     private int size;
 
@@ -80,7 +80,7 @@ final class LittleIdentitySet<T> extends AbstractSet<T> {
         int length = table.length;
         if (size + 1 > length >> 2 && length < MAX_CAPACITY) {
             // resize
-            final int newLength = length << 1;
+            final int newLength = length == 0 ? 4 : length << 1;
             final int newMask = newLength - 1;
             final T[][] newTable = Arrays.copyOf(table, newLength);
             for (T[] row : newTable) {
@@ -93,7 +93,7 @@ final class LittleIdentitySet<T> extends AbstractSet<T> {
                     }
                 }
             }
-            final boolean res = addItem(this.table = newTable, hash(t) & length - 1, t);
+            final boolean res = addItem(this.table = newTable, hash(t) & newMask, t);
             if (res) size ++;
             return res;
         } else {
@@ -109,6 +109,7 @@ final class LittleIdentitySet<T> extends AbstractSet<T> {
         if (row == null) {
             row = (T[]) new Object[3];
             row[0] = item;
+            table[i] = row;
             return true;
         }
         final int rowLength = row.length;

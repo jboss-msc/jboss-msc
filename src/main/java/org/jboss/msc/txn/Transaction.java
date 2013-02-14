@@ -34,7 +34,24 @@ public abstract class Transaction extends SimpleAttachable implements TaskTarget
      * @return the transaction
      */
     public static Transaction create(Executor executor) {
-        return TransactionImpl.createTransactionImpl(executor);
+        return TransactionImpl.createTransactionImpl(executor, Problem.Severity.WARNING);
+    }
+
+    /**
+     * Create a new task transaction.
+     *
+     * @param executor the executor to use to run tasks
+     * @param maxSeverity the maximum severity to allow
+     * @return the transaction
+     */
+    public static Transaction create(Executor executor, final Problem.Severity maxSeverity) {
+        if (maxSeverity == null) {
+            throw new IllegalArgumentException("maxSeverity is null");
+        }
+        if (maxSeverity.compareTo(Problem.Severity.CRITICAL) >= 0) {
+            throw new IllegalArgumentException("maxSeverity must be at most ERROR");
+        }
+        return TransactionImpl.createTransactionImpl(executor, maxSeverity);
     }
 
     public abstract Executor getExecutor();

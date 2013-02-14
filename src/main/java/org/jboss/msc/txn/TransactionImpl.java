@@ -19,18 +19,17 @@
 package org.jboss.msc.txn;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import org.jboss.msc.value.Listener;
 
 import static java.lang.Math.min;
 import static java.lang.System.arraycopy;
 import static java.lang.Thread.currentThread;
+import static java.lang.Thread.holdsLock;
 import static java.util.Arrays.copyOf;
 import static java.util.Arrays.copyOfRange;
 import static java.util.concurrent.locks.LockSupport.getBlocker;
@@ -38,7 +37,7 @@ import static java.util.concurrent.locks.LockSupport.park;
 import static java.util.concurrent.locks.LockSupport.unpark;
 import static org.jboss.msc.txn.Bits.allAreClear;
 import static org.jboss.msc.txn.Bits.allAreSet;
-import static org.jboss.msc.txn.Bits.longBitMask;
+import static org.jboss.msc.txn.Bits.anyAreSet;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -53,44 +52,59 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     private static final Thread[] NO_THREADS = new Thread[0];
     private static final Thread[] DEAD = new Thread[0];
 
-    private static final AtomicLong ID_HOLDER = new AtomicLong();
-
-    private static final AtomicReferenceFieldUpdater<TransactionImpl, Listener> validationListenerUpdater = AtomicReferenceFieldUpdater.newUpdater(TransactionImpl.class, Listener.class, "validationListener");
-    private static final AtomicReferenceFieldUpdater<TransactionImpl, Listener> commitListenerUpdater = AtomicReferenceFieldUpdater.newUpdater(TransactionImpl.class, Listener.class, "commitListener");
-    private static final AtomicReferenceFieldUpdater<TransactionImpl, Listener> rollbackListenerUpdater = AtomicReferenceFieldUpdater.newUpdater(TransactionImpl.class, Listener.class, "rollbackListener");
     private static final AtomicReferenceFieldUpdater<TransactionImpl, Thread[]> waitersUpdater = AtomicReferenceFieldUpdater.newUpdater(TransactionImpl.class, Thread[].class, "waiters");
 
-    private static final AtomicLongFieldUpdater<TransactionImpl> stateUpdater = AtomicLongFieldUpdater.newUpdater(TransactionImpl.class, "state");
+    private static final AtomicLong ID_HOLDER = new AtomicLong();
 
-    private static final int  COUNT_SHIFT       = 0;
-    private static final int  COUNT_BITS        = 30;
-    private static final long COUNT_ONE         = 1L << COUNT_SHIFT;
-    private static final long COUNT_MAX         = longBitMask(0, COUNT_BITS - 1);
-    private static final long COUNT_MASK        = COUNT_MAX << COUNT_SHIFT;
+    private static final int FLAG_ROLLBACK_REQ = 1 << 3; // set if rollback of the current txn was requested
+    private static final int FLAG_PREPARE_REQ  = 1 << 4; // set if prepare of the current txn was requested
+    private static final int FLAG_COMMIT_REQ   = 1 << 5; // set if commit of the current txn was requested
 
-    private static final int  STATE_SHIFT       = COUNT_SHIFT + COUNT_BITS;
-    private static final int  STATE_BITS        = 3;
-    private static final long STATE_MAX         = longBitMask(0, STATE_BITS - 1);
-    private static final long STATE_MASK        = STATE_MAX << STATE_SHIFT;
+    private static final int FLAG_PREPARE_DONE = 1 << 6;
+    private static final int FLAG_COMMIT_DONE = 1 << 7;
+    private static final int FLAG_ROLLBACK_DONE = 1 << 8;
 
-    private static final int  FLAGS_SHIFT       = STATE_SHIFT + STATE_BITS;
-    private static final int  FLAGS_BITS        = 3;
+    private static final int FLAG_DO_PREPARE_LISTENER = 1 << 9;
+    private static final int FLAG_DO_COMMIT_LISTENER = 1 << 10;
+    private static final int FLAG_DO_ROLLBACK_LISTENER = 1 << 11;
 
-    @SuppressWarnings("unused")
-    private static final long LAST_SHIFT        = FLAGS_SHIFT + FLAGS_BITS;
+    private static final int FLAG_SEND_VALIDATE_REQ = 1 << 12;
+    private static final int FLAG_SEND_COMMIT_REQ = 1 << 13;
+    private static final int FLAG_SEND_ROLLBACK_REQ = 1 << 14;
 
-    private static final long FLAG_ROLLBACK_REQ = 1L << FLAGS_SHIFT + 0; // set if rollback of the current txn was requested
-    private static final long FLAG_PREPARE_REQ  = 1L << FLAGS_SHIFT + 1; // set if prepare of the current txn was requested
-    private static final long FLAG_COMMIT_REQ   = 1L << FLAGS_SHIFT + 2; // set if commit of the current txn was requested
+    private static final int FLAG_WAKE_UP_WAITERS = 1 << 15;
 
-    private static final int ACTIVE                = 0x0; // adding tasks and subtransactions; counts = # added
-    private static final int PREPARING             = 0x1; // preparing all our tasks
-    private static final int PREPARED              = 0x2; // prepare finished, wait for commit/abort decision from user or parent
-    private static final int PREPARE_UNDOING       = 0x3; // prepare failed, undoing all work via abort or rollback
-    private static final int ROLLBACK              = 0x4; // rolling back all our tasks; count = # remaining
-    private static final int COMMITTING            = 0x5; // performing commit actions
-    private static final int ROLLED_BACK           = 0x6; // "dead" state
-    private static final int COMMITTED             = 0x7; // "success" state
+    private static final int FLAG_USER_THREAD = 1 << 31;
+
+    private static final int STATE_ACTIVE           = 0x0; // adding tasks and subtransactions; counts = # added
+    private static final int STATE_PREPARING        = 0x1; // preparing all our tasks
+    private static final int STATE_PREPARED         = 0x2; // prepare finished, wait for commit/abort decision from user or parent
+    private static final int STATE_PREPARE_UNDOING  = 0x3; // prepare failed, undoing all work via abort or rollback
+    private static final int STATE_ROLLBACK         = 0x4; // rolling back all our tasks; count = # remaining
+    private static final int STATE_COMMITTING       = 0x5; // performing commit actions
+    private static final int STATE_ROLLED_BACK      = 0x6; // "dead" state
+    private static final int STATE_COMMITTED        = 0x7; // "success" state
+
+    private static final int STATE_MASK = 0x07;
+
+    private static final int PERSISTENT_STATE = STATE_MASK | FLAG_ROLLBACK_REQ | FLAG_PREPARE_REQ | FLAG_COMMIT_REQ;
+
+    private static final int T_NONE = 0;
+
+    private static final int T_ACTIVE_to_PREPARING  = 1;
+    private static final int T_ACTIVE_to_ROLLBACK   = 2;
+
+    private static final int T_PREPARING_to_PREPARED        = 3;
+    private static final int T_PREPARING_to_PREPARE_UNDOING = 4;
+
+    private static final int T_PREPARED_to_COMMITTING   = 5;
+    private static final int T_PREPARED_to_ROLLBACK     = 6;
+
+    private static final int T_PREPARE_UNDOING_to_ROLLBACK = 7;
+
+    private static final int T_ROLLBACK_to_ROLLED_BACK  = 8;
+
+    private static final int T_COMMITTING_to_COMMITTED  = 9;
 
     private final int id;
     private final long startTime = System.nanoTime();
@@ -122,26 +136,25 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             return TransactionImpl.this;
         }
     };
+    private final Problem.Severity maxSeverity;
 
-    private volatile long endTime;
+    private long endTime;
+    private int state;
+    private int unfinishedChildren;
+    private int unvalidatedChildren;
+    private int uncommittedChildren;
+    private int unrevertedChildren;
 
-    /**
-     * Threads currently waiting for this transaction *or* for another transaction from this one.
-     */
-    @SuppressWarnings("unused")
-    private volatile Thread[] waiters;
-    @SuppressWarnings("unused")
-    private volatile long state;
-    @SuppressWarnings("unused")
-    private volatile Listener<? super Transaction> validationListener;
-    @SuppressWarnings("unused")
-    private volatile Listener<? super Transaction> commitListener;
-    @SuppressWarnings("unused")
-    private volatile Listener<? super Transaction> rollbackListener;
+    private Listener<? super Transaction> validationListener;
+    private Listener<? super Transaction> commitListener;
+    private Listener<? super Transaction> rollbackListener;
 
-    private TransactionImpl(final int id, final Executor taskExecutor) {
+    private volatile Thread[] waiters = NO_THREADS;
+
+    private TransactionImpl(final int id, final Executor taskExecutor, final Problem.Severity maxSeverity) {
         this.id = id;
         this.taskExecutor = taskExecutor;
+        this.maxSeverity = maxSeverity;
     }
 
     public Executor getExecutor() {
@@ -149,10 +162,13 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     }
 
     public long getDuration(TimeUnit unit) {
-        if (stateOf(state) == COMMITTED || stateOf(state) == ROLLED_BACK) {
-            return unit.convert(endTime - startTime, TimeUnit.NANOSECONDS);
-        } else {
-            return unit.convert(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
+        assert ! holdsLock(this);
+        synchronized (this) {
+            if (stateIsIn(state, STATE_COMMITTED, STATE_ROLLED_BACK)) {
+                return unit.convert(endTime - startTime, TimeUnit.NANOSECONDS);
+            } else {
+                return unit.convert(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
+            }
         }
     }
 
@@ -160,75 +176,236 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         return problemReport;
     }
 
-    public void prepare(Listener<? super Transaction> completionListener) throws TransactionRolledBackException, InvalidTransactionStateException {
-        if (completionListener == null) completionListener = NOTHING_LISTENER;
-        validationListenerUpdater.compareAndSet(this, null, completionListener);
-        long oldVal, newVal;
-        do {
-            oldVal = state;
-            if (allAreSet(oldVal, FLAG_ROLLBACK_REQ) || stateOf(oldVal) == PREPARE_UNDOING || stateOf(oldVal) == ROLLBACK || stateOf(oldVal) == ROLLED_BACK) {
-                throw new TransactionRolledBackException("Transaction was rolled back");
-            } else if (allAreSet(oldVal, FLAG_PREPARE_REQ) || stateOf(oldVal) == PREPARING || stateOf(oldVal) == PREPARED) {
-                throw new IllegalThreadStateException("Prepare already called");
-            } else if (allAreSet(oldVal, FLAG_COMMIT_REQ) || stateOf(oldVal) == COMMITTING || stateOf(oldVal) == COMMITTED) {
-                throw new IllegalThreadStateException("Commit already called");
+    /**
+     * Annotate an unlikely condition.
+     *
+     * @param cond the condition
+     * @return the condition
+     */
+    private static boolean unlikely(boolean cond) { return cond; }
+
+    /**
+     * Calculate the transition to take from the current state.
+     *
+     * @param state the current state
+     * @return the transition to take
+     */
+    private int getTransition(int state) {
+        assert holdsLock(this);
+        int sid = stateOf(state);
+        switch (sid) {
+            case STATE_ACTIVE: {
+                if (allAreSet(state, FLAG_ROLLBACK_REQ) && unfinishedChildren == 0) {
+                    return T_ACTIVE_to_ROLLBACK;
+                } else if (anyAreSet(state, FLAG_PREPARE_REQ | FLAG_COMMIT_REQ) && unfinishedChildren == 0) {
+                    return T_ACTIVE_to_PREPARING;
+                } else {
+                    return T_NONE;
+                }
             }
-            assert stateOf(oldVal) == ACTIVE;
-            if (allAreClear(oldVal, COUNT_MASK)) {
-                final int size = topLevelTasks.size();
-                newVal = size == 0 ? newState(oldVal | FLAG_PREPARE_REQ, PREPARED, 0) : newState(oldVal | FLAG_PREPARE_REQ, PREPARING, size);
-            } else {
-                newVal = oldVal | FLAG_PREPARE_REQ;
+            case STATE_PREPARING: {
+                if (allAreSet(state, FLAG_ROLLBACK_REQ)) {
+                    return T_PREPARING_to_PREPARE_UNDOING;
+                } else if (unvalidatedChildren == 0) {
+                    return T_PREPARING_to_PREPARED;
+                } else {
+                    return T_NONE;
+                }
             }
-        } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
-        if (stateOf(newVal) == PREPARING) {
-            initiatePrepare(true);
-        } else if (stateOf(newVal) == PREPARED) {
-            callValidationListener();
+            case STATE_PREPARED: {
+                if (allAreSet(state, FLAG_ROLLBACK_REQ)) {
+                    return T_PREPARED_to_ROLLBACK;
+                } else if (allAreSet(state, FLAG_COMMIT_REQ)) {
+                    return T_PREPARED_to_COMMITTING;
+                } else {
+                     return T_NONE;
+                }
+            }
+            case STATE_PREPARE_UNDOING: {
+                // todo
+                if (false) {
+                    return T_PREPARE_UNDOING_to_ROLLBACK;
+                } else {
+                    return T_NONE;
+                }
+            }
+            case STATE_ROLLBACK: {
+                if (unrevertedChildren == 0) {
+                    return T_ROLLBACK_to_ROLLED_BACK;
+                } else {
+                    return T_NONE;
+                }
+            }
+            case STATE_COMMITTING: {
+                if (uncommittedChildren == 0) {
+                    return T_COMMITTING_to_COMMITTED;
+                } else {
+                    return T_NONE;
+                }
+            }
+            case STATE_ROLLED_BACK: {
+                return T_NONE;
+            }
+            case STATE_COMMITTED: {
+                return T_NONE;
+            }
+            default: {
+                throw new IllegalStateException();
+            }
         }
     }
 
-    public void commit(Listener<? super Transaction> completionListener) throws InvalidTransactionStateException, TransactionRolledBackException {
-        if (completionListener == null) completionListener = NOTHING_LISTENER;
-        commitListenerUpdater.compareAndSet(this, null, completionListener);
-        long oldVal, newVal;
-        do {
-            oldVal = state;
-            if (allAreSet(oldVal, FLAG_ROLLBACK_REQ) || stateOf(oldVal) == PREPARE_UNDOING || stateOf(oldVal) == ROLLBACK || stateOf(oldVal) == ROLLED_BACK) {
-                throw new TransactionRolledBackException("Transaction was rolled back");
-            } else if (allAreClear(oldVal, FLAG_PREPARE_REQ) && (stateOf(oldVal) == ACTIVE || stateOf(oldVal) == PREPARING)) {
-                throw new IllegalThreadStateException("Prepare not yet called");
-            } else if (allAreSet(oldVal, FLAG_COMMIT_REQ) || stateOf(oldVal) == COMMITTING || stateOf(oldVal) == COMMITTED) {
-                throw new IllegalThreadStateException("Commit already called");
-            }
-            assert stateOf(oldVal) == PREPARED || (stateOf(oldVal) == ACTIVE || stateOf(oldVal) == PREPARING) && allAreSet(oldVal, FLAG_PREPARE_REQ);
-            if (stateOf(oldVal) == PREPARED) {
-                if (allAreClear(oldVal, COUNT_MASK)) {
-                    final int size = topLevelTasks.size();
-                    newVal = size == 0 ? newState(oldVal | FLAG_COMMIT_REQ, COMMITTED, 0) : newState(oldVal | FLAG_COMMIT_REQ, COMMITTING, size);
-                } else {
-                    newVal = oldVal | FLAG_COMMIT_REQ;
+    /**
+     * Perform any necessary/possible transition.
+     *
+     * @param state the current state
+     * @return the new state
+     */
+    private int transition(int state) {
+        assert holdsLock(this);
+        for (;;) {
+            int t = getTransition(state);
+            switch (t) {
+                case T_NONE: return state;
+                case T_ACTIVE_to_PREPARING: {
+                    state = newState(STATE_PREPARING, state);
+                    continue;
                 }
-            } else {
-                newVal = oldVal | FLAG_COMMIT_REQ;
+                case T_ACTIVE_to_ROLLBACK: {
+                    state = newState(STATE_ROLLBACK, state);
+                    continue;
+                }
+                case T_PREPARING_to_PREPARED: {
+                    if (validationListener == null) {
+                        state = newState(STATE_PREPARED, state | FLAG_PREPARE_DONE);
+                        continue;
+                    } else {
+                        return newState(STATE_PREPARED, state | FLAG_DO_PREPARE_LISTENER);
+                    }
+                }
+                case T_PREPARING_to_PREPARE_UNDOING: {
+                    // todo
+                    throw new UnsupportedOperationException();
+                }
+                case T_PREPARED_to_COMMITTING: {
+                    state = newState(STATE_COMMITTING, state);
+                    continue;
+                }
+                case T_PREPARED_to_ROLLBACK: {
+                    state = newState(STATE_ROLLBACK, state);
+                    continue;
+                }
+                case T_COMMITTING_to_COMMITTED: {
+                    if (commitListener == null) {
+                        state = newState(STATE_COMMITTED, state | FLAG_COMMIT_DONE);
+                        continue;
+                    } else {
+                        return newState(STATE_COMMITTED, state | FLAG_DO_COMMIT_LISTENER);
+                    }
+                }
+                case T_ROLLBACK_to_ROLLED_BACK: {
+                    if (rollbackListener == null) {
+                        state = newState(STATE_ROLLED_BACK, state | FLAG_ROLLBACK_DONE);
+                        continue;
+                    } else {
+                        return newState(STATE_ROLLED_BACK, state | FLAG_DO_ROLLBACK_LISTENER);
+                    }
+                }
+                default: throw new IllegalStateException();
             }
-        } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
-        if (stateOf(newVal) == COMMITTING) {
-            initiateCommit(true);
-        } else if (stateOf(newVal) == COMMITTED) {
-            callCommitListener();
         }
+    }
+
+    private void executeTasks(int state) {
+        if (allAreSet(state, FLAG_SEND_VALIDATE_REQ)) {
+            for (TaskControllerImpl<?> task : topLevelTasks) {
+                task.childInitiateValidate(allAreSet(state, FLAG_USER_THREAD));
+            }
+        }
+        if (allAreSet(state, FLAG_SEND_COMMIT_REQ)) {
+            for (TaskControllerImpl<?> task : topLevelTasks) {
+                task.childInitiateCommit(allAreSet(state, FLAG_USER_THREAD));
+            }
+        }
+        if (allAreSet(state, FLAG_SEND_ROLLBACK_REQ)) {
+            for (TaskControllerImpl<?> task : topLevelTasks) {
+                task.childInitiateRollback(allAreSet(state, FLAG_USER_THREAD));
+            }
+        }
+        if (allAreSet(state, FLAG_WAKE_UP_WAITERS)) {
+            unparkWaiters();
+        }
+
+        if (allAreSet(state, FLAG_USER_THREAD)) {
+            if (allAreSet(state, FLAG_DO_COMMIT_LISTENER)) {
+                taskExecutor.execute(new AsyncTask(FLAG_DO_COMMIT_LISTENER));
+            }
+            if (allAreSet(state, FLAG_DO_PREPARE_LISTENER)) {
+                taskExecutor.execute(new AsyncTask(FLAG_DO_PREPARE_LISTENER));
+            }
+            if (allAreSet(state, FLAG_DO_ROLLBACK_LISTENER)) {
+                taskExecutor.execute(new AsyncTask(FLAG_DO_ROLLBACK_LISTENER));
+            }
+        } else {
+            if (allAreSet(state, FLAG_DO_COMMIT_LISTENER)) {
+                callCommitListener();
+            }
+            if (allAreSet(state, FLAG_DO_PREPARE_LISTENER)) {
+                callValidationListener();
+            }
+            if (allAreSet(state, FLAG_DO_ROLLBACK_LISTENER)) {
+                callRollbackListener();
+            }
+        }
+    }
+
+    public void prepare(Listener<? super Transaction> completionListener) throws TransactionRolledBackException, InvalidTransactionStateException {
+        assert ! holdsLock(this);
+        int state;
+        synchronized (this) {
+            state = this.state | FLAG_ROLLBACK_REQ | FLAG_USER_THREAD;
+            if (stateOf(state) == STATE_ACTIVE) {
+                if (allAreSet(state, FLAG_PREPARE_REQ)) {
+                    throw new InvalidTransactionStateException("Prepare already called");
+                }
+                state |= FLAG_PREPARE_REQ;
+            } else if (stateIsIn(state, STATE_ROLLBACK, STATE_ROLLED_BACK)) {
+                throw new TransactionRolledBackException("Transaction was rolled back");
+            } else {
+                throw new InvalidTransactionStateException("Wrong transaction state for prepare");
+            }
+            state = transition(state);
+            this.state = state & PERSISTENT_STATE;
+        }
+        executeTasks(state);
+    }
+
+    public void commit(Listener<? super Transaction> completionListener) throws InvalidTransactionStateException, TransactionRolledBackException {
+        assert ! holdsLock(this);
+        int state;
+        synchronized (this) {
+            state = this.state | FLAG_ROLLBACK_REQ | FLAG_USER_THREAD;
+            if (stateIsIn(state, STATE_ACTIVE, STATE_PREPARING, STATE_PREPARED) && canCommit()) {
+                if (allAreSet(state, FLAG_COMMIT_REQ)) {
+                    throw new InvalidTransactionStateException("Commit already called");
+                }
+                state |= FLAG_COMMIT_REQ;
+            } else if (stateIsIn(state, STATE_ROLLBACK, STATE_ROLLED_BACK)) {
+                throw new TransactionRolledBackException("Transaction was rolled back");
+            } else {
+                throw new InvalidTransactionStateException("Transaction cannot be committed");
+            }
+            state = transition(state);
+            this.state = state & PERSISTENT_STATE;
+        }
+        executeTasks(state);
     }
 
     public void rollback(final Listener<? super Transaction> completionListener) throws InvalidTransactionStateException {
     }
 
     public boolean canCommit() throws InvalidTransactionStateException {
-        if (stateOf(state) != PREPARED) {
-            throw new InvalidTransactionStateException();
-        }
-        // todo: allow the problem severity threshold to be configured per txn
-        return problemReport.getMaxSeverity().compareTo(Problem.Severity.ERROR) <= 0;
+        return problemReport.getMaxSeverity().compareTo(maxSeverity) <= 0;
     }
 
     public final <T> TaskBuilder<T> newTask(Executable<T> task) throws IllegalStateException {
@@ -247,7 +424,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             try {
                 int ourState = stateOf(state);
                 int otherState = stateOf(otherTxn.state);
-                while (! (otherState == COMMITTED || otherState == ROLLED_BACK || ourState == COMMITTED || ourState == ROLLED_BACK)) {
+                while (! (otherState == STATE_COMMITTED || otherState == STATE_ROLLED_BACK || ourState == STATE_COMMITTED || ourState == STATE_ROLLED_BACK)) {
                     checkDeadlock(0, 0);
                     park(other);
                     if (Thread.interrupted()) {
@@ -307,7 +484,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         return checked;
     }
 
-    static TransactionImpl createTransactionImpl(final Executor taskExecutor) {
+    static TransactionImpl createTransactionImpl(final Executor taskExecutor, final Problem.Severity maxSeverity) {
         int id;
         long oldVal, newVal;
         long bit;
@@ -320,7 +497,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             }
             newVal = oldVal | bit;
         } while (! ID_HOLDER.compareAndSet(oldVal, newVal));
-        return new TransactionImpl(id, taskExecutor);
+        return new TransactionImpl(id, taskExecutor, maxSeverity);
     }
 
     /**
@@ -394,176 +571,104 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     }
 
     private void doChildExecutionFinished(final boolean userThread) {
-        long oldVal, newVal;
-        do {
-            oldVal = state;
-            if ((oldVal & STATE_MASK) != ACTIVE) {
-                // todo log internal state error
-                return;
-            }
-            if ((oldVal & COUNT_MASK) == 1) {
-                final int size = topLevelTasks.size();
-                if (allAreSet(oldVal, FLAG_ROLLBACK_REQ)) {
-                    // we transition to rollback
-                    // safe to query collection sizes because their last modifier has just exited
-                    newVal = size == 0 ? newState(oldVal, ROLLED_BACK, 0) : newState(oldVal, ROLLBACK, size);
-                } else if (allAreSet(oldVal, FLAG_PREPARE_REQ)) {
-                    // we transition to prepare
-                    // safe to query collection sizes because their last modifier has just exited
-                    newVal = size == 0 ? allAreSet(oldVal, FLAG_COMMIT_REQ) ? newState(oldVal, COMMITTED, 0) : newState(oldVal, PREPARED, 0) : newState(oldVal, PREPARING, size);
-                } else {
-                    newVal = oldVal - COUNT_ONE;
-                }
-            } else {
-                newVal = oldVal - COUNT_ONE;
-            }
-        } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
-        // Use an if/else tree to get good branch prediction (unlike switch)
-        // Put most likely case first
-        if (stateOf(newVal) == ACTIVE) {
-            return;
-        } else if (stateOf(newVal) == PREPARING) {
-            initiatePrepare(userThread);
-            return;
-        } else if (stateOf(newVal) == PREPARED) {
-            callValidationListener();
-            return;
-        } else if (stateOf(newVal) == COMMITTED) {
-            callValidationListener();
-            callCommitListener();
-            return;
-        } else if (stateOf(newVal) == ROLLBACK) {
-            initiateRollback(userThread);
-            return;
+        assert ! holdsLock(this);
+        int state;
+        synchronized (this) {
+            state = this.state;
+            if (userThread) state |= FLAG_USER_THREAD;
+            unfinishedChildren--;
+            state = transition(state);
+            this.state = state & PERSISTENT_STATE;
         }
+        executeTasks(state);
     }
 
     private void doChildValidationFinished(final boolean userThread) {
-        long oldVal, newVal;
-        do {
-            oldVal = state;
-            if ((oldVal & STATE_MASK) != PREPARING) {
-                // todo log internal state error
-                return;
-            }
-            if ((oldVal & COUNT_MASK) == 1) {
-                final int size = topLevelTasks.size();
-                if (allAreSet(oldVal, FLAG_ROLLBACK_REQ)) {
-                    // we transition to rollback
-                    // safe to query collection sizes because their last modifier has just exited
-                    newVal = size == 0 ? newState(oldVal, ROLLED_BACK, 0) : newState(oldVal, ROLLBACK, size);
-                } else if (allAreSet(oldVal, FLAG_COMMIT_REQ)) {
-                    // we transition to rollback
-                    // safe to query collection sizes because their last modifier has just exited
-                    newVal = size == 0 ? newState(oldVal, COMMITTED, 0) : newState(oldVal, COMMITTING, size);
-                } else {
-                    newVal = newState(oldVal, PREPARED, 0);
-                }
-            } else {
-                newVal = oldVal - COUNT_ONE;
-            }
-        } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
-        // Use an if/else tree to get good branch prediction (unlike switch)
-        // Put most likely case first
-        if (stateOf(newVal) == PREPARING) {
-            return;
-        } else if (stateOf(newVal) == PREPARED) {
-            callValidationListener();
-            return;
-        } else if (stateOf(newVal) == COMMITTING) {
-            callValidationListener();
-            initiateCommit(userThread);
-            return;
-        } else if (stateOf(newVal) == ROLLBACK) {
-            return;
-        } else if (stateOf(newVal) == ROLLED_BACK) {
-            callRollbackListener();
-            unparkWaiters();
-            return;
-        } else if (stateOf(newVal) == COMMITTED) {
-            callCommitListener();
-            unparkWaiters();
-            return;
+        assert ! holdsLock(this);
+        int state;
+        synchronized (this) {
+            state = this.state;
+            if (userThread) state |= FLAG_USER_THREAD;
+            unvalidatedChildren--;
+            state = transition(state);
+            this.state = state & PERSISTENT_STATE;
         }
+        executeTasks(state);
     }
 
     private void doChildCommitFinished(final boolean userThread) {
-        long oldVal, newVal;
-        do {
-            oldVal = state;
-            if (stateOf(oldVal) != COMMITTING) {
-                // todo log internal state error
-                return;
-            }
-            if ((oldVal & COUNT_MASK) == COUNT_ONE) {
-                newVal = newState(oldVal, COMMITTED, 0);
-            } else {
-                newVal = oldVal - COUNT_ONE;
-            }
-        } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
-        // Use an if/else tree to get good branch prediction (unlike switch)
-        // Put most likely case first
-        if (stateOf(newVal) == COMMITTING) {
-            return;
-        } else if (stateOf(newVal) == COMMITTED) {
-            callCommitListener();
-            unparkWaiters();
-            return;
+        assert ! holdsLock(this);
+        int state;
+        synchronized (this) {
+            state = this.state;
+            if (userThread) state |= FLAG_USER_THREAD;
+            uncommittedChildren--;
+            state = transition(state);
+            this.state = state & PERSISTENT_STATE;
         }
+        executeTasks(state);
     }
 
-    @SuppressWarnings("unchecked")
     private void callCommitListener() {
-        endTime = System.nanoTime();
-        safeCall(commitListenerUpdater.getAndSet(this, null));
+        Listener<? super Transaction> listener;
+        synchronized (this) {
+            endTime = System.nanoTime();
+            listener = commitListener;
+            commitListener = null;
+        }
+        safeCall(listener);
     }
 
-    @SuppressWarnings("unchecked")
     private void callRollbackListener() {
-        endTime = System.nanoTime();
-        safeCall(rollbackListenerUpdater.getAndSet(this, null));
+        Listener<? super Transaction> listener;
+        synchronized (this) {
+            endTime = System.nanoTime();
+            listener = rollbackListener;
+            rollbackListener = null;
+        }
+        safeCall(listener);
     }
 
-    @SuppressWarnings("unchecked")
     private void callValidationListener() {
-        safeCall(validationListenerUpdater.getAndSet(this, null));
+        Listener<? super Transaction> listener;
+        synchronized (this) {
+            listener = validationListener;
+            validationListener = null;
+        }
+        safeCall(listener);
     }
 
     private void doChildRollbackFinished(final boolean userThread) {
-        long oldVal, newVal;
-        do {
-            oldVal = state;
-            if (stateOf(oldVal) != ROLLBACK) {
-                // todo log internal state error
-                return;
-            }
-            if ((oldVal & COUNT_MASK) == COUNT_ONE) {
-                newVal = newState(oldVal, ROLLED_BACK, 0);
-            } else {
-                newVal = oldVal - COUNT_ONE;
-            }
-        } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
-        // Use an if/else tree to get good branch prediction (unlike switch)
-        // Put most likely case first
-        if (stateOf(newVal) == ROLLED_BACK) {
-            unparkWaiters();
-            callRollbackListener();
-            return;
-        } else if (stateOf(newVal) == ROLLBACK) {
-            return;
+        assert ! holdsLock(this);
+        int state;
+        synchronized (this) {
+            state = this.state;
+            if (userThread) state |= FLAG_USER_THREAD;
+            unrevertedChildren--;
+            state = transition(state);
+            this.state = state & PERSISTENT_STATE;
         }
+        executeTasks(state);
     }
 
     private void doChildAdded(TaskChild child, final boolean userThread) throws InvalidTransactionStateException {
-        long oldVal, newVal;
-        do {
-            oldVal = state;
-            if (stateOf(oldVal) != ACTIVE) {
+        assert ! holdsLock(this);
+        int state;
+        synchronized (this) {
+            state = this.state;
+            if (stateOf(state) != STATE_ACTIVE || anyAreSet(state, FLAG_COMMIT_REQ | FLAG_PREPARE_REQ | FLAG_ROLLBACK_REQ)) {
                 throw new InvalidTransactionStateException("Transaction is not active");
             }
-            newVal = oldVal + COUNT_ONE;
-        } while (! stateUpdater.compareAndSet(this, oldVal, newVal));
-        child.dependencyExecutionComplete(topParent, userThread);
+            if (userThread) state |= FLAG_USER_THREAD;
+            topLevelTasks.add((TaskControllerImpl<?>) child);
+            unfinishedChildren++;
+            unrevertedChildren++;
+            unvalidatedChildren++;
+            uncommittedChildren++;
+            state = transition(state);
+            this.state = state & PERSISTENT_STATE;
+        }
+        executeTasks(state);
     }
 
     private static void safeUnpark(final Thread[] threads) {
@@ -578,86 +683,33 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         } catch (Throwable ignored) {}
     }
 
-    private void initiatePrepare(final boolean userThread) {
-        Iterator<TaskControllerImpl<?>> iterator = topLevelTasks.iterator();
-        if (iterator.hasNext()) {
-            final TaskControllerImpl<?> controller = iterator.next();
-            while (iterator.hasNext()) {
-                final TaskControllerImpl<?> execController = iterator.next();
-                taskExecutor.execute(new InitiateValidationTask(execController));
-            }
-            controller.childInitiateValidate(userThread);
-        }
+    private static int stateOf(final int val) {
+        return val & 0x03;
     }
 
-    private void initiateCommit(final boolean userThread) {
-        Iterator<TaskControllerImpl<?>> iterator = topLevelTasks.iterator();
-        if (iterator.hasNext()) {
-            final TaskControllerImpl<?> controller = iterator.next();
-            while (iterator.hasNext()) {
-                final TaskControllerImpl<?> execController = iterator.next();
-                taskExecutor.execute(new InitiateCommitTask(execController));
-            }
-            controller.childInitiateCommit(userThread);
-        }
+    private static int newState(int sid, int oldState) {
+        return sid & 0x03 | oldState & ~0x03;
     }
 
-    private void initiateRollback(final boolean userThread) {
-        Iterator<TaskControllerImpl<?>> iterator = topLevelTasks.iterator();
-        if (iterator.hasNext()) {
-            final TaskControllerImpl<?> controller = iterator.next();
-            while (iterator.hasNext()) {
-                final TaskControllerImpl<?> execController = iterator.next();
-                taskExecutor.execute(new InitiateRollbackTask(execController));
-            }
-            controller.childInitiateRollback(userThread);
-        }
+    private static boolean stateIsIn(int state, int sid1, int sid2) {
+        final int sid = stateOf(state);
+        return sid == sid1 || sid == sid2;
     }
 
-    private static int stateOf(final long val) {
-        return (int) ((val & STATE_MASK) >> STATE_SHIFT);
+    private static boolean stateIsIn(int state, int sid1, int sid2, int sid3) {
+        final int sid = stateOf(state);
+        return sid == sid1 || sid == sid2 || sid == sid3;
     }
 
-    private static long newState(long oldVal, long state, int newCount) {
-        return oldVal & ~STATE_MASK | state | (long)newCount << COUNT_SHIFT;
-    }
+    class AsyncTask implements Runnable {
+        private final int state;
 
-    private static class InitiateValidationTask implements Runnable {
-
-        private final TaskControllerImpl<?> controller;
-
-        public InitiateValidationTask(final TaskControllerImpl<?> controller) {
-            this.controller = controller;
+        AsyncTask(final int state) {
+            this.state = state;
         }
 
         public void run() {
-            controller.childInitiateValidate(false);
-        }
-    }
-
-    private static class InitiateCommitTask implements Runnable {
-
-        private final TaskControllerImpl<?> controller;
-
-        public InitiateCommitTask(final TaskControllerImpl<?> controller) {
-            this.controller = controller;
-        }
-
-        public void run() {
-            controller.childInitiateCommit(false);
-        }
-    }
-
-    private static class InitiateRollbackTask implements Runnable {
-
-        private final TaskControllerImpl<?> controller;
-
-        public InitiateRollbackTask(final TaskControllerImpl<?> controller) {
-            this.controller = controller;
-        }
-
-        public void run() {
-            controller.childInitiateRollback(false);
+            executeTasks(state);
         }
     }
 }

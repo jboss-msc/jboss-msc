@@ -152,7 +152,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         this.revertible = revertible;
         this.validatable = validatable;
         this.committable = committable;
-        state = STATE_EXECUTE_WAIT;
+        state = STATE_NEW;
     }
 
     public <T> TaskBuilder<T> newTask(final Executable<T> task) throws IllegalStateException {
@@ -1034,10 +1034,10 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         executeTasks(state);
     }
 
-    private class AsyncTask implements Runnable {
+    class AsyncTask implements Runnable {
         private final int state;
 
-        private AsyncTask(final int state) {
+        AsyncTask(final int state) {
             this.state = state;
         }
 
