@@ -30,6 +30,7 @@ import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.Revertible;
 import org.jboss.msc.txn.Validatable;
 import org.jboss.msc.value.Listener;
+import org.jboss.msc.value.WritableValue;
 
 import static org.jboss.logging.Logger.Level.ERROR;
 import static org.jboss.logging.Logger.Level.INFO;
@@ -78,9 +79,12 @@ public interface MSCLogger {
     @Message(id = 5, value = "Unexpected disappearance of %s during stop")
     void stopServiceMissing(ServiceName serviceName);
 
-    @LogMessage(level = Logger.Level.WARN)
-    @Message(id = 6, value = "Unexpected failure to uninject %s")
-    void uninjectFailed(@Cause Throwable cause, Object target);
+    /*
+     * This method is for uninjection failures on behalf of a service.  See also id = 100
+     */
+    @LogMessage(level = WARN)
+    @Message(id = 6, value = "Uninjection \"%2$s\" of %1$s failed unexpectedly")
+    void uninjectFailed(@Cause Throwable cause, ServiceName serviceName, WritableValue<?> valueInjection);
 
     @LogMessage(level = WARN)
     @Message(id = 7, value = "An internal service error has occurred while processing an operation on %s")
@@ -110,4 +114,14 @@ public interface MSCLogger {
     @LogMessage(level = ERROR)
     @Message(id = 15, value = "Rollback of task \"%s\" caused an exception")
     void taskRollbackFailed(@Cause Throwable cause, Revertible task);
+
+    // jump to 100...
+
+    /*
+     * This method is for uninjection failures which are not service-related.  See also id = 6
+     */
+    @LogMessage(level = Logger.Level.WARN)
+    @Message(id = 100, value = "Unexpected failure to uninject %s")
+    void uninjectFailed(@Cause Throwable cause, Object target);
+
 }
