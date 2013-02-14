@@ -287,6 +287,9 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                     return T_NONE;
                 }
             }
+            case STATE_TERMINATED: {
+                return T_NONE;
+            }
             default: throw new IllegalStateException();
         }
     }

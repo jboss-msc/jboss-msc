@@ -268,11 +268,11 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             switch (t) {
                 case T_NONE: return state;
                 case T_ACTIVE_to_PREPARING: {
-                    state = newState(STATE_PREPARING, state);
+                    state = newState(STATE_PREPARING, state | FLAG_SEND_VALIDATE_REQ);
                     continue;
                 }
                 case T_ACTIVE_to_ROLLBACK: {
-                    state = newState(STATE_ROLLBACK, state);
+                    state = newState(STATE_ROLLBACK, state | FLAG_SEND_ROLLBACK_REQ);
                     continue;
                 }
                 case T_PREPARING_to_PREPARED: {
@@ -288,27 +288,27 @@ final class TransactionImpl extends Transaction implements TaskTarget {
                     throw new UnsupportedOperationException();
                 }
                 case T_PREPARED_to_COMMITTING: {
-                    state = newState(STATE_COMMITTING, state);
+                    state = newState(STATE_COMMITTING, state | FLAG_SEND_COMMIT_REQ);
                     continue;
                 }
                 case T_PREPARED_to_ROLLBACK: {
-                    state = newState(STATE_ROLLBACK, state);
+                    state = newState(STATE_ROLLBACK, state | FLAG_SEND_ROLLBACK_REQ);
                     continue;
                 }
                 case T_COMMITTING_to_COMMITTED: {
                     if (commitListener == null) {
-                        state = newState(STATE_COMMITTED, state | FLAG_COMMIT_DONE);
+                        state = newState(STATE_COMMITTED, state | FLAG_COMMIT_DONE | FLAG_WAKE_UP_WAITERS);
                         continue;
                     } else {
-                        return newState(STATE_COMMITTED, state | FLAG_DO_COMMIT_LISTENER);
+                        return newState(STATE_COMMITTED, state | FLAG_DO_COMMIT_LISTENER | FLAG_WAKE_UP_WAITERS);
                     }
                 }
                 case T_ROLLBACK_to_ROLLED_BACK: {
                     if (rollbackListener == null) {
-                        state = newState(STATE_ROLLED_BACK, state | FLAG_ROLLBACK_DONE);
+                        state = newState(STATE_ROLLED_BACK, state | FLAG_ROLLBACK_DONE | FLAG_WAKE_UP_WAITERS);
                         continue;
                     } else {
-                        return newState(STATE_ROLLED_BACK, state | FLAG_DO_ROLLBACK_LISTENER);
+                        return newState(STATE_ROLLED_BACK, state | FLAG_DO_ROLLBACK_LISTENER | FLAG_WAKE_UP_WAITERS);
                     }
                 }
                 default: throw new IllegalStateException();
@@ -363,7 +363,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
-            state = this.state | FLAG_ROLLBACK_REQ | FLAG_USER_THREAD;
+            state = this.state | FLAG_USER_THREAD;
             if (stateOf(state) == STATE_ACTIVE) {
                 if (allAreSet(state, FLAG_PREPARE_REQ)) {
                     throw new InvalidTransactionStateException("Prepare already called");
@@ -373,6 +373,11 @@ final class TransactionImpl extends Transaction implements TaskTarget {
                 throw new TransactionRolledBackException("Transaction was rolled back");
             } else {
                 throw new InvalidTransactionStateException("Wrong transaction state for prepare");
+            }
+            if (completionListener == null) {
+                validationListener = NOTHING_LISTENER;
+            } else {
+                validationListener = completionListener;
             }
             state = transition(state);
             this.state = state & PERSISTENT_STATE;
@@ -384,7 +389,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
-            state = this.state | FLAG_ROLLBACK_REQ | FLAG_USER_THREAD;
+            state = this.state | FLAG_USER_THREAD;
             if (stateIsIn(state, STATE_ACTIVE, STATE_PREPARING, STATE_PREPARED) && canCommit()) {
                 if (allAreSet(state, FLAG_COMMIT_REQ)) {
                     throw new InvalidTransactionStateException("Commit already called");
@@ -395,6 +400,11 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             } else {
                 throw new InvalidTransactionStateException("Transaction cannot be committed");
             }
+            if (completionListener == null) {
+                commitListener = NOTHING_LISTENER;
+            } else {
+                commitListener = completionListener;
+            }
             state = transition(state);
             this.state = state & PERSISTENT_STATE;
         }
@@ -402,6 +412,26 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     }
 
     public void rollback(final Listener<? super Transaction> completionListener) throws InvalidTransactionStateException {
+        assert ! holdsLock(this);
+        int state;
+        synchronized (this) {
+            state = this.state | FLAG_USER_THREAD;
+            if (stateIsIn(state, STATE_ACTIVE, STATE_PREPARING, STATE_PREPARED)) {
+                state |= FLAG_ROLLBACK_REQ;
+            } else if (stateIsIn(state, STATE_ROLLBACK, STATE_ROLLED_BACK)) {
+                return;
+            } else {
+                throw new InvalidTransactionStateException("Transaction cannot be rolled back");
+            }
+            if (completionListener == null) {
+                rollbackListener = NOTHING_LISTENER;
+            } else {
+                rollbackListener = completionListener;
+            }
+            state = transition(state);
+            this.state = state & PERSISTENT_STATE;
+        }
+        executeTasks(state);
     }
 
     public boolean canCommit() throws InvalidTransactionStateException {
@@ -680,15 +710,16 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     private void safeCall(final Listener<? super Transaction> listener) {
         if (listener != null) try {
             listener.handleEvent(this);
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
     }
 
     private static int stateOf(final int val) {
-        return val & 0x03;
+        return val & 0x07;
     }
 
     private static int newState(int sid, int oldState) {
-        return sid & 0x03 | oldState & ~0x03;
+        return sid & 0x07 | oldState & ~0x07;
     }
 
     private static boolean stateIsIn(int state, int sid1, int sid2) {

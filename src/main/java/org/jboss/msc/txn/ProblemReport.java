@@ -30,7 +30,7 @@ import java.util.List;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class ProblemReport implements Iterable<Problem> {
-    private Problem.Severity maxSeverity = null;
+    private Problem.Severity maxSeverity = Problem.Severity.INFO;
     private final List<Problem> problems = new ArrayList<Problem>();
 
     public ProblemReport() {
