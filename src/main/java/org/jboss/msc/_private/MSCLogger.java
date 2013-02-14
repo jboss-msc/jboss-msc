@@ -38,6 +38,16 @@ import static org.jboss.logging.Logger.Level.WARN;
 @MessageLogger(projectCode = "MSC")
 public interface MSCLogger {
 
+    // **********************************************************
+    // **********************************************************
+    // **                                                      **
+    // ** IMPORTANT - Be sure to check against the 1.x         **
+    // **     codebase before assigning additional IDs         **
+    // **     in this file!                                    **
+    // **                                                      **
+    // **********************************************************
+    // **********************************************************
+
     MSCLogger ROOT = Logger.getMessageLogger(MSCLogger.class, "org.jboss.msc");
     MSCLogger SERVICE = Logger.getMessageLogger(MSCLogger.class, "org.jboss.msc.service");
     MSCLogger FAIL = Logger.getMessageLogger(MSCLogger.class, "org.jboss.msc.service.fail");
