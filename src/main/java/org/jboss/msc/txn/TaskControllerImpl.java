@@ -19,6 +19,7 @@
 package org.jboss.msc.txn;
 
 import java.util.ArrayList;
+import org.jboss.msc._private.MSCLogger;
 
 import static java.lang.Thread.holdsLock;
 import static org.jboss.msc.txn.Bits.*;
@@ -631,7 +632,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 }
             });
         } catch (Throwable t) {
-
+            MSCLogger.TASK.taskValidationFailed(t, validatable);
         } finally {
             doEnd();
         }
@@ -697,7 +698,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 }
             });
         } catch (Throwable t) {
-            // log
+            MSCLogger.TASK.taskRollbackFailed(t, rev);
         } finally {
             doEnd();
         }
@@ -770,6 +771,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 }
             });
         } catch (Throwable t) {
+            MSCLogger.TASK.taskExecutionFailed(t, exec);
         } finally {
             doEnd();
         }
@@ -793,6 +795,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 }
             });
         } catch (Throwable t) {
+            MSCLogger.TASK.taskCommitFailed(t, committable);
         } finally {
             doEnd();
         }

@@ -24,6 +24,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import org.jboss.msc.Version;
+import org.jboss.msc._private.MSCLogger;
 import org.jboss.msc.value.Listener;
 
 import static java.lang.Math.min;
@@ -43,6 +45,10 @@ import static org.jboss.msc.txn.Bits.anyAreSet;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 final class TransactionImpl extends Transaction implements TaskTarget {
+
+    static {
+        MSCLogger.ROOT.greeting(Version.getVersionString());
+    }
 
     private static final Listener<Object> NOTHING_LISTENER = new Listener<Object>() {
         public void handleEvent(final Object subject) {
@@ -711,6 +717,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         if (listener != null) try {
             listener.handleEvent(this);
         } catch (Throwable ignored) {
+            MSCLogger.ROOT.listenerFailed(ignored, listener);
         }
     }
 

@@ -96,6 +96,9 @@
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    <trimStackTrace>false</trimStackTrace>
+                    <printSummary>true</printSummary>
                     <systemProperties>
                         <property>
                             <name>test.log.output</name>
@@ -112,6 +115,7 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>2.6.1</version>
                 <configuration>
+                    <excludePackageNames>org.jboss.msc._private</excludePackageNames>
                     <docfilessubdirs>true</docfilessubdirs>
                     <detectJavaApiLink>false</detectJavaApiLink>
                     <detectLinks>false</detectLinks>
@@ -128,6 +132,17 @@
                     <links>
                         <link>http://java.sun.com/javase/6/docs/api/</link>
                     </links>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Jar-Version>${project.version}</Jar-Version>
+                            <Jar-Name>${project.artifactId}</Jar-Name>
+                        </manifestEntries>
+                    </archive>
                 </configuration>
             </plugin>
         </plugins>
