@@ -879,6 +879,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
+            children.add(child);
             state = this.state;
             if (stateIsIn(state, STATE_EXECUTE_WAIT, STATE_EXECUTE)) {
                 unfinishedChildren++;
