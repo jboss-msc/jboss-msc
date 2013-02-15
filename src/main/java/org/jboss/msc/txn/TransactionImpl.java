@@ -344,13 +344,13 @@ final class TransactionImpl extends Transaction implements TaskTarget {
 
         if (allAreSet(state, FLAG_USER_THREAD)) {
             if (allAreSet(state, FLAG_DO_COMMIT_LISTENER)) {
-                taskExecutor.execute(new AsyncTask(FLAG_DO_COMMIT_LISTENER));
+                safeExecute(new AsyncTask(FLAG_DO_COMMIT_LISTENER));
             }
             if (allAreSet(state, FLAG_DO_PREPARE_LISTENER)) {
-                taskExecutor.execute(new AsyncTask(FLAG_DO_PREPARE_LISTENER));
+                safeExecute(new AsyncTask(FLAG_DO_PREPARE_LISTENER));
             }
             if (allAreSet(state, FLAG_DO_ROLLBACK_LISTENER)) {
-                taskExecutor.execute(new AsyncTask(FLAG_DO_ROLLBACK_LISTENER));
+                safeExecute(new AsyncTask(FLAG_DO_ROLLBACK_LISTENER));
             }
         } else {
             if (allAreSet(state, FLAG_DO_COMMIT_LISTENER)) {
@@ -362,6 +362,14 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             if (allAreSet(state, FLAG_DO_ROLLBACK_LISTENER)) {
                 callRollbackListener();
             }
+        }
+    }
+
+    private void safeExecute(final Runnable command) {
+        try {
+            taskExecutor.execute(command);
+        } catch (Throwable t) {
+            MSCLogger.ROOT.runnableExecuteFailed(t, command);
         }
     }
 

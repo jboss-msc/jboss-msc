@@ -23,6 +23,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.jboss.msc.txn.CommitContext;
+import org.jboss.msc.txn.Committable;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.Revertible;
@@ -30,6 +32,8 @@ import org.jboss.msc.txn.RollbackContext;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
+import org.jboss.msc.txn.Validatable;
+import org.jboss.msc.txn.ValidateContext;
 import org.jboss.msc.value.Listener;
 import org.junit.Test;
 
@@ -104,4 +108,73 @@ public class BasicTasksTest {
         controller.getResult();
         assertTrue(executor.shutdownNow().isEmpty());
     }
+
+    @Test
+    public void testSimpleChildren() throws InterruptedException {
+        final ThreadPoolExecutor executor = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
+        final Transaction transaction = Transaction.create(executor);
+        class Task implements Executable<Object>, Revertible, Validatable, Committable {
+            private final int n;
+            private final int d;
+            private final AtomicBoolean ran = new AtomicBoolean();
+            private final AtomicBoolean validated = new AtomicBoolean();
+            private final AtomicBoolean reverted = new AtomicBoolean();
+            private final AtomicBoolean committed = new AtomicBoolean();
+
+            Task(final int n, final int d) {
+                this.n = n;
+                this.d = d;
+            }
+
+            public void execute(final ExecuteContext<Object> context) {
+                if (d > 0) for (int i = 0; i < n; i ++) {
+                    Task task = new Task(n, d - 1);
+                    context.newTask(task).release();
+                }
+                ran.set(true);
+                context.complete();
+            }
+
+            public void rollback(final RollbackContext context) {
+                reverted.set(true);
+                context.complete();
+            }
+
+            public void commit(final CommitContext context) {
+                committed.set(true);
+                context.complete();
+            }
+
+            public void validate(final ValidateContext context) {
+                validated.set(true);
+                context.complete();
+            }
+
+            public boolean isRan() { return ran.get(); }
+            public boolean isReverted() { return reverted.get(); }
+            public boolean isCommitted() { return committed.get(); }
+            public boolean isValidated() { return validated.get(); }
+        }
+        Task task = new Task(3, 4);
+        final TaskBuilder<Object> taskBuilder = transaction.newTask(task);
+        final TaskController<Object> controller = taskBuilder.release();
+        final CountDownLatch latch = new CountDownLatch(1);
+        transaction.prepare(new Listener<Transaction>() {
+            public void handleEvent(final Transaction subject) {
+                subject.commit(new Listener<Transaction>() {
+                    public void handleEvent(final Transaction subject) {
+                        latch.countDown();
+                    }
+                });
+            }
+        });
+        latch.await();
+        assertTrue(task.isRan());
+        assertTrue(task.isValidated());
+        assertTrue(task.isCommitted());
+        controller.getResult();
+        assertTrue(executor.shutdownNow().isEmpty());
+    }
+
+
 }

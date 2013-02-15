@@ -33,6 +33,7 @@ import org.jboss.msc.value.Listener;
 import org.jboss.msc.value.WritableValue;
 
 import static org.jboss.logging.Logger.Level.ERROR;
+import static org.jboss.logging.Logger.Level.FATAL;
 import static org.jboss.logging.Logger.Level.INFO;
 import static org.jboss.logging.Logger.Level.WARN;
 
@@ -114,6 +115,10 @@ public interface MSCLogger {
     @LogMessage(level = ERROR)
     @Message(id = 15, value = "Rollback of task \"%s\" caused an exception")
     void taskRollbackFailed(@Cause Throwable cause, Revertible task);
+
+    @LogMessage(level = FATAL)
+    @Message(id = 16, value = "Internal task \"%s\" execution failed (transaction is likely permanently jammed)")
+    void runnableExecuteFailed(@Cause Throwable cause, Runnable command);
 
     // jump to 100...
 

@@ -39,7 +39,7 @@ final class ServiceInstallTask<T> implements Revertible, Validatable, Committabl
         this.service = service;
     }
 
-    public void validate(final ValidateContext validateContext) {
+    public void validate(final ValidateContext context) {
     }
 
     public void rollback(final RollbackContext context) {

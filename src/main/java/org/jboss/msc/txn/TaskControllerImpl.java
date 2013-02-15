@@ -450,16 +450,16 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
 
         if (allAreSet(state, FLAG_USER_THREAD)) {
             if (allAreSet(state, FLAG_DO_EXECUTE)) {
-                getTransaction().getExecutor().execute(new AsyncTask(FLAG_DO_EXECUTE));
+                safeExecute(new AsyncTask(FLAG_DO_EXECUTE));
             }
             if (allAreSet(state, FLAG_DO_VALIDATE)) {
-                getTransaction().getExecutor().execute(new AsyncTask(FLAG_DO_VALIDATE));
+                safeExecute(new AsyncTask(FLAG_DO_VALIDATE));
             }
             if (allAreSet(state, FLAG_DO_ROLLBACK)) {
-                getTransaction().getExecutor().execute(new AsyncTask(FLAG_DO_ROLLBACK));
+                safeExecute(new AsyncTask(FLAG_DO_ROLLBACK));
             }
             if (allAreSet(state, FLAG_DO_COMMIT)) {
-                getTransaction().getExecutor().execute(new AsyncTask(FLAG_DO_COMMIT));
+                safeExecute(new AsyncTask(FLAG_DO_COMMIT));
             }
         } else {
             if (allAreSet(state, FLAG_DO_EXECUTE)) {
@@ -474,6 +474,14 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
             if (allAreSet(state, FLAG_DO_COMMIT)) {
                 commit();
             }
+        }
+    }
+
+    private void safeExecute(final Runnable command) {
+        try {
+            getTransaction().getExecutor().execute(command);
+        } catch (Throwable t) {
+            MSCLogger.ROOT.runnableExecuteFailed(t, command);
         }
     }
 

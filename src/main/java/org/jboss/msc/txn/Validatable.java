@@ -32,7 +32,7 @@ public interface Validatable {
      * is complete, the context's {@code complete()} method must be called, regardless of whether validation
      * succeeded or failed.
      *
-     * @param validateContext the validation context
+     * @param context the validation context
      */
-    void validate(ValidateContext validateContext);
+    void validate(ValidateContext context);
 }
