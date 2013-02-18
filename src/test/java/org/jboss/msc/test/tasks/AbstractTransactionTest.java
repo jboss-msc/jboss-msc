@@ -25,6 +25,7 @@ import org.jboss.msc.txn.InvalidTransactionStateException;
 import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.txn.TransactionRolledBackException;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -36,7 +37,7 @@ import static org.junit.Assert.fail;
  */
 public abstract class AbstractTransactionTest {
 
-    protected static final void assertPrepared(final Transaction transaction) {
+    protected static void assertPrepared(final Transaction transaction) {
         assertNotNull(transaction);
         assertTrue(transaction.canCommit());
         try {
@@ -46,9 +47,9 @@ public abstract class AbstractTransactionTest {
         }
     }
 
-    protected static final void assertReverted(final Transaction transaction) {
+    protected static void assertReverted(final Transaction transaction) {
         assertNotNull(transaction);
-        // assertFalse(transaction.canCommit()); // TODO: can commit() when transaction have been rolled back?
+        assertFalse(transaction.canCommit());
         try {
             transaction.commit(null); // TODO: shouldn't we also provide parameterless version of commit(), prepare() and rollback()?
             fail("Cannot call commit() on rolled back transaction object");
@@ -56,9 +57,9 @@ public abstract class AbstractTransactionTest {
         }
     }
 
-    protected static final void assertCommitted(final Transaction transaction) {
+    protected static void assertCommitted(final Transaction transaction) {
         assertNotNull(transaction);
-        // assertFalse(transaction.canCommit()); // TODO: can commit() when transaction have been committed?
+        assertFalse(transaction.canCommit());
         try {
             transaction.commit(null);
             fail("Cannot call commit() more than once on transaction object");
@@ -66,7 +67,7 @@ public abstract class AbstractTransactionTest {
         }
     }
 
-    protected static final void prepare(final Transaction transaction) throws InterruptedException {
+    protected static void prepare(final Transaction transaction) throws InterruptedException {
         assertNotNull(transaction);
         final CompletionListener prepareListener = new CompletionListener();
         transaction.prepare(prepareListener);
@@ -74,7 +75,7 @@ public abstract class AbstractTransactionTest {
         assertPrepared(transaction);
     }
 
-    protected static final void commit(final Transaction transaction) throws InterruptedException {
+    protected static void commit(final Transaction transaction) throws InterruptedException {
         assertNotNull(transaction);
         final CompletionListener commitListener = new CompletionListener();
         transaction.commit(commitListener);
@@ -82,7 +83,7 @@ public abstract class AbstractTransactionTest {
         assertCommitted(transaction);
     }
 
-    protected static final void rollback(final Transaction transaction) throws InterruptedException {
+    protected static void rollback(final Transaction transaction) throws InterruptedException {
         assertNotNull(transaction);
         final CompletionListener rollbackListener = new CompletionListener();
         transaction.rollback(rollbackListener);
@@ -90,7 +91,7 @@ public abstract class AbstractTransactionTest {
         assertReverted(transaction);
     }
 
-    protected static final void prepareAndRollbackFromListener(final Transaction transaction) throws InterruptedException {
+    protected static void prepareAndRollbackFromListener(final Transaction transaction) throws InterruptedException {
         assertNotNull(transaction);
         final RevertingListener transactionListener = new RevertingListener();
         transaction.prepare(transactionListener);
@@ -98,7 +99,7 @@ public abstract class AbstractTransactionTest {
         assertReverted(transaction);
     }
 
-    protected static final void prepareAndCommitFromListener(final Transaction transaction) throws InterruptedException {
+    protected static void prepareAndCommitFromListener(final Transaction transaction) throws InterruptedException {
         assertNotNull(transaction);
         final CommittingListener transactionListener = new CommittingListener();
         transaction.prepare(transactionListener);

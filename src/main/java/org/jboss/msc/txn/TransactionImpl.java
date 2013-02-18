@@ -404,7 +404,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         int state;
         synchronized (this) {
             state = this.state | FLAG_USER_THREAD;
-            if (stateIsIn(state, STATE_ACTIVE, STATE_PREPARING, STATE_PREPARED) && canCommit()) {
+            if (stateIsIn(state, STATE_ACTIVE, STATE_PREPARING, STATE_PREPARED) && reportIsCommittable()) {
                 if (allAreSet(state, FLAG_COMMIT_REQ)) {
                     throw new InvalidTransactionStateException("Commit already called");
                 }
@@ -449,6 +449,16 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     }
 
     public boolean canCommit() throws InvalidTransactionStateException {
+        assert ! holdsLock(this);
+        synchronized (this) {
+            if (! stateIsIn(state, STATE_ACTIVE, STATE_PREPARING, STATE_PREPARED)) {
+                return false;
+            }
+        }
+        return reportIsCommittable();
+    }
+
+    private boolean reportIsCommittable() {
         return problemReport.getMaxSeverity().compareTo(maxSeverity) <= 0;
     }
 

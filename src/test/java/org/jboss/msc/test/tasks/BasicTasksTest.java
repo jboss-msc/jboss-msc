@@ -22,9 +22,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.msc.test.utils.CommittingListener;
-import org.jboss.msc.test.utils.CompletionListener;
-import org.jboss.msc.test.utils.RevertingListener;
 import org.jboss.msc.test.utils.TrackingTask;
 import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.InvalidTransactionStateException;
@@ -157,7 +154,8 @@ public class BasicTasksTest extends AbstractTransactionTest {
         assertFalse(task.isReverted());
         assertTrue(task.isValidated());
         controller.getResult();
-        assertTrue(executor.shutdownNow().isEmpty()); // TODO: sometimes this assertion fails
+        executor.shutdown();
+        executor.awaitTermination(5L, TimeUnit.SECONDS);
     }
 
     @Test
@@ -185,7 +183,8 @@ public class BasicTasksTest extends AbstractTransactionTest {
         assertTrue(task2.isReverted());
         assertTrue(task2.isValidated());
         controller2.getResult();
-        assertTrue(executor.shutdownNow().isEmpty());
+        executor.shutdown();
+        executor.awaitTermination(5L, TimeUnit.SECONDS);
     }
 
     @Test
@@ -217,7 +216,8 @@ public class BasicTasksTest extends AbstractTransactionTest {
         assertFalse(task2.isReverted());
         assertFalse(task2.isValidated());
         controller.getResult();
-        assertTrue(executor.shutdownNow().isEmpty());
+        executor.shutdown();
+        executor.awaitTermination(5L, TimeUnit.SECONDS);
     }
 
     @Test
@@ -247,7 +247,8 @@ public class BasicTasksTest extends AbstractTransactionTest {
         assertFalse(task2.isReverted());
         assertFalse(task2.isValidated());
         controller.getResult();
-        assertTrue(executor.shutdownNow().isEmpty());
+        executor.shutdown();
+        executor.awaitTermination(5L, TimeUnit.SECONDS);
     }
 
     @Test
@@ -277,6 +278,7 @@ public class BasicTasksTest extends AbstractTransactionTest {
         assertFalse(task2.isReverted());
         assertFalse(task2.isValidated());
         controller.getResult();
-        assertTrue(executor.shutdownNow().isEmpty());
+        executor.shutdown();
+        executor.awaitTermination(5L, TimeUnit.SECONDS);
     }
 }
