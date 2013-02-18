@@ -26,38 +26,37 @@ public final class TransactionRolledBackException extends IllegalStateException 
     private static final long serialVersionUID = -1821836772997407806L;
 
     /**
-     * Constructs a {@code TransactionRolledBackException} with no detail message. The cause is not initialized, and may
-     * subsequently be initialized by a call to {@link #initCause(Throwable) initCause}.
+     * Constructs a new {@code TransactionRolledBackException} instance.  The message is left blank ({@code null}), and no
+     * cause is specified.
      */
     public TransactionRolledBackException() {
     }
 
     /**
-     * Constructs a {@code TransactionRolledBackException} with the specified detail message. The cause is not
-     * initialized, and may subsequently be initialized by a call to {@link #initCause(Throwable) initCause}.
+     * Constructs a new {@code TransactionRolledBackException} instance with an initial message.  No cause is specified.
      *
-     * @param msg the detail message
+     * @param msg the message
      */
     public TransactionRolledBackException(final String msg) {
         super(msg);
     }
 
     /**
-     * Constructs a {@code TransactionRolledBackException} with the specified cause. The detail message is set to:
-     * <pre>(cause == null ? null : cause.toString())</pre>
-     * (which typically contains the class and detail message of {@code cause}).
+     * Constructs a new {@code TransactionRolledBackException} instance with an initial cause.  If a non-{@code null} cause
+     * is specified, its message is used to initialize the message of this {@code TransactionRolledBackException}; otherwise
+     * the message is left blank ({@code null}).
      *
-     * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method)
+     * @param cause the cause
      */
     public TransactionRolledBackException(final Throwable cause) {
         super(cause);
     }
 
     /**
-     * Constructs a {@code TransactionRolledBackException} with the specified detail message and cause.
+     * Constructs a new {@code TransactionRolledBackException} instance with an initial message and cause.
      *
-     * @param msg the detail message
-     * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method)
+     * @param msg the message
+     * @param cause the cause
      */
     public TransactionRolledBackException(final String msg, final Throwable cause) {
         super(msg, cause);

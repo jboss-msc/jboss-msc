@@ -28,38 +28,37 @@ public class ValueNotSetException extends IllegalStateException {
     private static final long serialVersionUID = 6413200398685740543L;
 
     /**
-     * Constructs a {@code ValueNotSetException} with no detail message. The cause is not initialized, and may
-     * subsequently be initialized by a call to {@link #initCause(Throwable) initCause}.
+     * Constructs a new {@code ValueNotSetException} instance.  The message is left blank ({@code null}), and no cause is
+     * specified.
      */
     public ValueNotSetException() {
     }
 
     /**
-     * Constructs a {@code ValueNotSetException} with the specified detail message. The cause is not initialized, and
-     * may subsequently be initialized by a call to {@link #initCause(Throwable) initCause}.
+     * Constructs a new {@code ValueNotSetException} instance with an initial message.  No cause is specified.
      *
-     * @param msg the detail message
+     * @param msg the message
      */
     public ValueNotSetException(final String msg) {
         super(msg);
     }
 
     /**
-     * Constructs a {@code ValueNotSetException} with the specified cause. The detail message is set to:
-     * <pre>(cause == null ? null : cause.toString())</pre>
-     * (which typically contains the class and detail message of {@code cause}).
+     * Constructs a new {@code ValueNotSetException} instance with an initial cause.  If a non-{@code null} cause is
+     * specified, its message is used to initialize the message of this {@code ValueNotSetException}; otherwise the message
+     * is left blank ({@code null}).
      *
-     * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method)
+     * @param cause the cause
      */
     public ValueNotSetException(final Throwable cause) {
         super(cause);
     }
 
     /**
-     * Constructs a {@code ValueNotSetException} with the specified detail message and cause.
+     * Constructs a new {@code ValueNotSetException} instance with an initial message and cause.
      *
-     * @param msg the detail message
-     * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method)
+     * @param msg the message
+     * @param cause the cause
      */
     public ValueNotSetException(final String msg, final Throwable cause) {
         super(msg, cause);
