@@ -18,29 +18,25 @@
 
 package org.jboss.msc.test.tasks;
 
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import org.jboss.msc.txn.CommitContext;
-import org.jboss.msc.txn.Committable;
-import org.jboss.msc.txn.Executable;
+
+import org.jboss.msc.test.utils.CommittingListener;
+import org.jboss.msc.test.utils.RevertingListener;
+import org.jboss.msc.test.utils.TrackingTask;
 import org.jboss.msc.txn.ExecuteContext;
-import org.jboss.msc.txn.Revertible;
-import org.jboss.msc.txn.RollbackContext;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.txn.Validatable;
-import org.jboss.msc.txn.ValidateContext;
-import org.jboss.msc.value.Listener;
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class BasicTasksTest {
 
@@ -48,26 +44,19 @@ public class BasicTasksTest {
     public void testSimpleExecute() throws InterruptedException {
         final ThreadPoolExecutor executor = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
         final Transaction transaction = Transaction.create(executor);
-        final AtomicBoolean ran = new AtomicBoolean();
-        final TaskBuilder<Object> taskBuilder = transaction.newTask(new Executable<Object>() {
-            public void execute(final ExecuteContext<Object> context) {
-                ran.set(true);
-                context.complete();
-            }
-        });
+        // install task
+        final TrackingTask task = new TrackingTask();
+        final TaskBuilder<Object> taskBuilder = transaction.newTask(task);
         final TaskController<Object> controller = taskBuilder.release();
-        final CountDownLatch latch = new CountDownLatch(1);
-        transaction.prepare(new Listener<Transaction>() {
-            public void handleEvent(final Transaction subject) {
-                subject.commit(new Listener<Transaction>() {
-                    public void handleEvent(final Transaction subject) {
-                        latch.countDown();
-                    }
-                });
-            }
-        });
-        latch.await();
-        assertTrue(ran.get());
+        // commit transaction from listener
+        final CommittingListener transactionListener = new CommittingListener();
+        transaction.prepare(transactionListener);
+        transactionListener.awaitCommit();
+        // asserts
+        assertTrue(task.isCommitted());
+        assertTrue(task.isExecuted());
+        assertFalse(task.isReverted());
+        assertTrue(task.isValidated());
         controller.getResult();
         assertTrue(executor.shutdownNow().isEmpty());
     }
@@ -76,35 +65,19 @@ public class BasicTasksTest {
     public void testSimpleRollback() throws InterruptedException {
         final ThreadPoolExecutor executor = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
         final Transaction transaction = Transaction.create(executor);
-        final AtomicBoolean ran = new AtomicBoolean();
-        final AtomicBoolean reverted = new AtomicBoolean();
-        class Task implements Executable<Object>, Revertible {
-
-            public void execute(final ExecuteContext<Object> context) {
-                ran.set(true);
-                context.complete();
-            }
-
-            public void rollback(final RollbackContext context) {
-                reverted.set(true);
-                context.complete();
-            }
-        }
-        final TaskBuilder<Object> taskBuilder = transaction.newTask(new Task());
+        // install task
+        final TrackingTask task = new TrackingTask();
+        final TaskBuilder<Object> taskBuilder = transaction.newTask(task);
         final TaskController<Object> controller = taskBuilder.release();
-        final CountDownLatch latch = new CountDownLatch(1);
-        transaction.prepare(new Listener<Transaction>() {
-            public void handleEvent(final Transaction subject) {
-                subject.rollback(new Listener<Transaction>() {
-                    public void handleEvent(final Transaction subject) {
-                        latch.countDown();
-                    }
-                });
-            }
-        });
-        latch.await();
-        assertTrue(ran.get());
-        assertTrue(reverted.get());
+        // roll back transaction from listener
+        final RevertingListener transactionListener = new RevertingListener();
+        transaction.prepare(transactionListener);
+        transactionListener.awaitRollback();
+        // asserts
+        assertFalse(task.isCommitted());
+        assertTrue(task.isExecuted());
+        assertTrue(task.isReverted());
+        assertTrue(task.isValidated());
         controller.getResult();
         assertTrue(executor.shutdownNow().isEmpty());
     }
@@ -113,13 +86,9 @@ public class BasicTasksTest {
     public void testSimpleChildren() throws InterruptedException {
         final ThreadPoolExecutor executor = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
         final Transaction transaction = Transaction.create(executor);
-        class Task implements Executable<Object>, Revertible, Validatable, Committable {
+        class Task extends TrackingTask {
             private final int n;
             private final int d;
-            private final AtomicBoolean ran = new AtomicBoolean();
-            private final AtomicBoolean validated = new AtomicBoolean();
-            private final AtomicBoolean reverted = new AtomicBoolean();
-            private final AtomicBoolean committed = new AtomicBoolean();
 
             Task(final int n, final int d) {
                 this.n = n;
@@ -131,50 +100,23 @@ public class BasicTasksTest {
                     Task task = new Task(n, d - 1);
                     context.newTask(task).release();
                 }
-                ran.set(true);
-                context.complete();
+                super.execute(context);
             }
-
-            public void rollback(final RollbackContext context) {
-                reverted.set(true);
-                context.complete();
-            }
-
-            public void commit(final CommitContext context) {
-                committed.set(true);
-                context.complete();
-            }
-
-            public void validate(final ValidateContext context) {
-                validated.set(true);
-                context.complete();
-            }
-
-            public boolean isRan() { return ran.get(); }
-            public boolean isReverted() { return reverted.get(); }
-            public boolean isCommitted() { return committed.get(); }
-            public boolean isValidated() { return validated.get(); }
         }
+        // install task
         Task task = new Task(3, 4);
         final TaskBuilder<Object> taskBuilder = transaction.newTask(task);
         final TaskController<Object> controller = taskBuilder.release();
-        final CountDownLatch latch = new CountDownLatch(1);
-        transaction.prepare(new Listener<Transaction>() {
-            public void handleEvent(final Transaction subject) {
-                subject.commit(new Listener<Transaction>() {
-                    public void handleEvent(final Transaction subject) {
-                        latch.countDown();
-                    }
-                });
-            }
-        });
-        latch.await();
-        assertTrue(task.isRan());
-        assertTrue(task.isValidated());
+        // commit transaction from listener
+        final CommittingListener transactionListener = new CommittingListener();
+        transaction.prepare(transactionListener);
+        transactionListener.awaitCommit();
+        // asserts
         assertTrue(task.isCommitted());
+        assertTrue(task.isExecuted());
+        assertFalse(task.isReverted());
+        assertTrue(task.isValidated());
         controller.getResult();
         assertTrue(executor.shutdownNow().isEmpty());
     }
-
-
 }
