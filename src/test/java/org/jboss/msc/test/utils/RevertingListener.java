@@ -22,20 +22,20 @@ import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.value.Listener;
 
 /**
- * Listener that rolls back the transaction. It provides utility method
- * {@link #awaitRollback()} to wait until transaction have been rolled back.
- *
+ * Listener that rolls back the transaction. It provides utility method {@link #awaitRollback()} to wait until transaction have
+ * been rolled back.
+ * 
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class RevertingListener implements Listener<Transaction> {
-    
+
     private final CompletionListener listener = new CompletionListener();
 
     @Override
     public void handleEvent(final Transaction subject) {
         subject.rollback(listener);
     }
-    
+
     public void awaitRollback() throws InterruptedException {
         listener.awaitCompletion();
     }

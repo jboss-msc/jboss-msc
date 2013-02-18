@@ -24,9 +24,9 @@ import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.value.Listener;
 
 /**
- * Transaction event listener. It provides utility method
- * {@link #awaitCompletion()} to wait for transaction phase to be completed.
- *
+ * Transaction event listener. It provides utility method {@link #awaitCompletion()} to wait for transaction phase to be
+ * completed.
+ * 
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class CompletionListener implements Listener<Transaction> {
@@ -37,7 +37,7 @@ public final class CompletionListener implements Listener<Transaction> {
     public void handleEvent(final Transaction subject) {
         latch.countDown();
     }
-    
+
     public void awaitCompletion() throws InterruptedException {
         latch.await();
     }

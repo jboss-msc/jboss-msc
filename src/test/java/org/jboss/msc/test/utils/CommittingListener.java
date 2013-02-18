@@ -22,20 +22,20 @@ import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.value.Listener;
 
 /**
- * Listener that commits the transaction. It provides utility method
- * {@link #awaitCommit()} to wait until transaction have been committed.
- *
+ * Listener that commits the transaction. It provides utility method {@link #awaitCommit()} to wait until transaction have been
+ * committed.
+ * 
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class CommittingListener implements Listener<Transaction> {
-    
+
     private final CompletionListener listener = new CompletionListener();
 
     @Override
     public void handleEvent(final Transaction subject) {
         subject.commit(listener);
     }
-    
+
     public void awaitCommit() throws InterruptedException {
         listener.awaitCompletion();
     }
