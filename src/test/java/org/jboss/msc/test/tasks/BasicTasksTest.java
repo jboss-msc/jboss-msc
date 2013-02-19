@@ -18,6 +18,8 @@
 
 package org.jboss.msc.test.tasks;
 
+import java.util.Random;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -278,6 +280,48 @@ public class BasicTasksTest extends AbstractTransactionTest {
         assertFalse(task2.isReverted());
         assertFalse(task2.isValidated());
         controller.getResult();
+        executor.shutdown();
+        executor.awaitTermination(5L, TimeUnit.SECONDS);
+    }
+
+    @Test
+    public void simpleDependencies() throws InterruptedException {
+        final ThreadPoolExecutor executor = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
+        final Transaction transaction = Transaction.create(executor);
+        // install task
+        TrackingTask[][] tasks = new TrackingTask[8][8];
+        TaskController<?>[][] controllers = new TaskController<?>[8][8];
+        Random r = new Random(492939L);
+        for (int i = 0; i < 8; i ++) {
+            for (int j = 0; j < 8; j ++) {
+                final TrackingTask task = new TrackingTask();
+                tasks[i][j] = task;
+                final TaskBuilder<Object> builder = transaction.newTask(task);
+                if (i > 0) {
+                    int x = r.nextInt();
+                    for (int b = 0; b < 8; b ++) {
+                        if ((x & (1 << b)) != 0) {
+                            builder.addDependency(controllers[i - 1][b]);
+                        }
+                    }
+                }
+                controllers[i][j] = builder.release();
+            }
+        }
+        // prepare and commit transaction from listener
+        prepareAndCommitFromListener(transaction);
+        // asserts
+        for (int i = 0; i < 8; i ++) {
+            for (int j = 0; j < 8; j ++) {
+                final TrackingTask task = tasks[i][j];
+                assertTrue(task.isCommitted());
+                assertTrue(task.isExecuted());
+                assertFalse(task.isReverted());
+                assertTrue(task.isValidated());
+                final TaskController<?> controller = controllers[i][j];
+                controller.getResult();
+            }
+        }
         executor.shutdown();
         executor.awaitTermination(5L, TimeUnit.SECONDS);
     }

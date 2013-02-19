@@ -54,6 +54,8 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     @SuppressWarnings("unchecked")
     private volatile T result = (T) NO_RESULT;
 
+    private TaskControllerImpl<?>[] cachedDependents;
+
     private static final int STATE_MASK        = 0xF;
 
     private static final int STATE_NEW              = 0;
@@ -143,6 +145,8 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
 
     @SuppressWarnings("unused")
     private static final int TASK_FLAGS = DO_FLAGS | SEND_FLAGS;
+
+    // unused 1 << 30
 
     private static final int FLAG_USER_THREAD       = 1 << 31; // called from user thread; do not block
 
@@ -321,6 +325,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 }
                 case T_EXECUTE_to_EXECUTE_DONE: {
                     state = newState(STATE_EXECUTE_DONE, state | FLAG_SEND_CHILD_DONE | FLAG_SEND_DEPENDENCY_DONE);
+                    cachedDependents = dependents.toArray(new TaskControllerImpl[dependents.size()]);
                     continue;
                 }
                 case T_EXECUTE_DONE_to_VALIDATE: {
@@ -364,13 +369,16 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 }
                 case T_EXECUTE_WAIT_to_TERMINATED: {
                     // not possible to go any farther
+                    cachedDependents = dependents.toArray(new TaskControllerImpl[dependents.size()]);
                     return newState(STATE_TERMINATED, state | FLAG_SEND_CANCEL_DEPENDENTS);
                 }
                 case T_EXECUTE_to_TERMINATED: {
                     // not possible to go any farther
+                    cachedDependents = dependents.toArray(new TaskControllerImpl[dependents.size()]);
                     return newState(STATE_TERMINATED, state | FLAG_SEND_CANCEL_DEPENDENTS);
                 }
                 case T_EXECUTE_to_ROLLBACK: {
+                    cachedDependents = dependents.toArray(new TaskControllerImpl[dependents.size()]);
                     if (revertible == null) {
                         state = newState(STATE_ROLLBACK, state | FLAG_ROLLBACK_DONE | FLAG_SEND_CANCEL_DEPENDENTS);
                         continue;
@@ -396,6 +404,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                         continue;
                     }
                     // not possible to go any farther
+                    cachedDependents = dependents.toArray(new TaskControllerImpl[dependents.size()]);
                     return newState(STATE_ROLLBACK, state | FLAG_DO_ROLLBACK | FLAG_SEND_CANCEL_DEPENDENTS);
                 }
                 case T_ROLLBACK_to_TERMINATED: {
@@ -409,9 +418,10 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
 
     private void executeTasks(int state) {
         if (allAreSet(state, FLAG_SEND_DEPENDENCY_DONE)) {
-            for (TaskControllerImpl<?> dependent : dependents) {
+            for (TaskControllerImpl<?> dependent : cachedDependents) {
                 dependent.dependencyExecutionComplete(this, allAreSet(state, FLAG_USER_THREAD));
             }
+            cachedDependents = null;
         }
         if (allAreSet(state, FLAG_SEND_CHILD_DONE)) {
             parent.childExecutionFinished(this, allAreSet(state, FLAG_USER_THREAD));
@@ -441,9 +451,10 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
             parent.childRollbackFinished(this, allAreSet(state, FLAG_USER_THREAD));
         }
         if (allAreSet(state, FLAG_SEND_CANCEL_DEPENDENTS)) {
-            for (TaskControllerImpl<?> dependent : dependents) {
+            for (TaskControllerImpl<?> dependent : cachedDependents) {
                 dependent.forceCancel(allAreSet(state, FLAG_USER_THREAD));
             }
+            cachedDependents = null;
         }
 
         assert allAreClear(state, DO_FLAGS) || oneIsSet(state, DO_FLAGS);
@@ -984,6 +995,11 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     void dependentAdded(final TaskControllerImpl<?> dependent, final boolean userThread) {
         assert ! holdsLock(this);
         int state;
+        boolean dependencyDone = false;
+        boolean dependencyCancelled = false;
+        boolean dependencyValidated = false;
+        boolean dependencyCommitted = false;
+
         synchronized (this) {
             state = this.state;
             if (userThread) state |= FLAG_USER_THREAD;
@@ -1000,6 +1016,37 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                     return;
                 }
             }
+            switch (stateOf(state)) {
+                case STATE_ROLLBACK:
+
+                case STATE_ROLLBACK_WAIT: {
+                    dependencyCancelled = true;
+                    break;
+                }
+                // no fall thru
+                case STATE_TERMINATED: if (allAreSet(state, FLAG_ROLLBACK_REQ)) {
+                    dependencyCancelled = true;
+                    break;
+                }
+                // else fall thru
+                case STATE_COMMIT_DONE: dependencyCommitted = true;
+                case STATE_COMMIT:
+                case STATE_COMMIT_WAIT:
+                case STATE_VALIDATE_DONE: dependencyValidated = true;
+                case STATE_VALIDATE:
+                case STATE_EXECUTE_DONE: dependencyDone = true;
+            }
+        }
+        if (dependencyDone) {
+            dependent.dependencyExecutionComplete(this, userThread);
+            if (dependencyValidated) {
+                dependent.dependencyValidateComplete(this, userThread);
+                if (dependencyCommitted) {
+                    dependent.dependencyCommitComplete(this, userThread);
+                }
+            }
+        } else if (dependencyCancelled) {
+            dependent.forceCancel(userThread);
         }
         executeTasks(state);
     }

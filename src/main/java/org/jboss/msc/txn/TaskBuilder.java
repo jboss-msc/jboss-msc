@@ -19,7 +19,6 @@
 package org.jboss.msc.txn;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 
 /**
@@ -30,6 +29,7 @@ import java.util.Collection;
  */
 public final class TaskBuilder<T> {
 
+    private static final TaskControllerImpl[] NO_TASKS = new TaskControllerImpl[0];
     private final Transaction transaction;
     private final TaskParent parent;
     private final ArrayList<TaskControllerImpl<?>> dependencies = new ArrayList<TaskControllerImpl<?>>();
@@ -163,9 +163,9 @@ public final class TaskBuilder<T> {
      * @return the new controller
      */
     public TaskController<T> release() {
-        final TaskControllerImpl<T> controller = new TaskControllerImpl<T>(parent, dependencies.toArray(new TaskControllerImpl[dependencies.size()]), executable, revertible, validatable, committable);
+        final TaskControllerImpl[] dependenciesArray = dependencies.isEmpty() ? NO_TASKS : dependencies.toArray(new TaskControllerImpl[dependencies.size()]);
+        final TaskControllerImpl<T> controller = new TaskControllerImpl<T>(parent, dependenciesArray, executable, revertible, validatable, committable);
         controller.install();
         return controller;
     }
-
 }
