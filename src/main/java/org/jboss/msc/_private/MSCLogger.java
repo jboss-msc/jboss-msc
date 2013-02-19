@@ -37,6 +37,12 @@ import static org.jboss.logging.Logger.Level.FATAL;
 import static org.jboss.logging.Logger.Level.INFO;
 import static org.jboss.logging.Logger.Level.WARN;
 
+/**
+ * MSC2 logging utilities.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ */
 @MessageLogger(projectCode = "MSC")
 public interface MSCLogger {
 
@@ -54,6 +60,7 @@ public interface MSCLogger {
     MSCLogger SERVICE = Logger.getMessageLogger(MSCLogger.class, "org.jboss.msc.service");
     MSCLogger FAIL = Logger.getMessageLogger(MSCLogger.class, "org.jboss.msc.service.fail");
     MSCLogger TASK = Logger.getMessageLogger(MSCLogger.class, "org.jboss.msc.task");
+    MSCLogger TXN = Logger.getMessageLogger(MSCLogger.class, "org.jboss.msc.txn");
     MSCLogger INJECT = Logger.getMessageLogger(MSCLogger.class, "org.jboss.msc.inject");
 
     @LogMessage(level = INFO)
@@ -129,4 +136,6 @@ public interface MSCLogger {
     @Message(id = 100, value = "Unexpected failure to uninject %s")
     void uninjectFailed(@Cause Throwable cause, Object target);
 
+    @Message(id = 101, value = "Parameter %s cannot be null")
+    IllegalArgumentException methodParameterIsNull(final String parameterName);
 }
