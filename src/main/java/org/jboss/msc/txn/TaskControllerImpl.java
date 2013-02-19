@@ -33,12 +33,15 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
 
     private static final Object NO_RESULT = new Object();
 
+    private static final ThreadLocal<ClassLoader> CL_HOLDER = new ThreadLocal<ClassLoader>();
+
     private final TaskParent parent;
     private final TaskControllerImpl<?>[] dependencies;
     private final Executable<T> executable;
     private final Revertible revertible;
     private final Validatable validatable;
     private final Committable committable;
+    private final ClassLoader classLoader;
     private final LittleIdentitySet<Thread> threads = new LittleIdentitySet<Thread>();
     private final ArrayList<TaskControllerImpl<?>> dependents = new ArrayList<TaskControllerImpl<?>>();
     private final ArrayList<TaskChild> children = new ArrayList<TaskChild>();
@@ -150,13 +153,14 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
 
     private static final int FLAG_USER_THREAD       = 1 << 31; // called from user thread; do not block
 
-    TaskControllerImpl(final TaskParent parent, final TaskControllerImpl<?>[] dependencies, final Executable<T> executable, final Revertible revertible, final Validatable validatable, final Committable committable) {
+    TaskControllerImpl(final TaskParent parent, final TaskControllerImpl<?>[] dependencies, final Executable<T> executable, final Revertible revertible, final Validatable validatable, final Committable committable, final ClassLoader classLoader) {
         this.parent = parent;
         this.dependencies = dependencies;
         this.executable = executable;
         this.revertible = revertible;
         this.validatable = validatable;
         this.committable = committable;
+        this.classLoader = classLoader;
         state = STATE_NEW;
     }
 
@@ -686,16 +690,28 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     }
 
     void doBegin() {
+        final Thread thread = Thread.currentThread();
         synchronized (this) {
-            if (! threads.add(Thread.currentThread())) {
+            if (! threads.add(thread)) {
                 throw new IllegalStateException("Thread is already doing work on behalf of this task");
             }
+        }
+        final ClassLoader classLoader = this.classLoader;
+        if (classLoader != null) {
+            CL_HOLDER.set(thread.getContextClassLoader());
+            thread.setContextClassLoader(classLoader);
         }
     }
 
     void doEnd() {
+        final Thread thread = Thread.currentThread();
         synchronized (this) {
-            threads.remove(Thread.currentThread());
+            threads.remove(thread);
+        }
+        if (classLoader != null) {
+            final ClassLoader classLoader = CL_HOLDER.get();
+            thread.setContextClassLoader(classLoader);
+            CL_HOLDER.remove();
         }
     }
 
