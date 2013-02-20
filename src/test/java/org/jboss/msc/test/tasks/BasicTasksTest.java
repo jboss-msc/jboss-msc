@@ -19,7 +19,6 @@
 package org.jboss.msc.test.tasks;
 
 import java.util.Random;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -69,6 +68,25 @@ public class BasicTasksTest extends AbstractTransactionTest {
         final TrackingTask task = new TrackingTask();
         final TaskBuilder<Object> taskBuilder = transaction.newTask(task);
         final TaskController<Object> controller = taskBuilder.release();
+        // commit transaction
+        commit(transaction);
+        // asserts
+        assertTrue(task.isCommitted());
+        assertTrue(task.isExecuted());
+        assertFalse(task.isReverted());
+        assertTrue(task.isValidated());
+        controller.getResult();
+        assertTrue(executor.shutdownNow().isEmpty());
+    }
+
+    @Test
+    public void testSimplePrepareCommit() throws InterruptedException {
+        final ThreadPoolExecutor executor = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
+        final Transaction transaction = Transaction.create(executor);
+        // install task
+        final TrackingTask task = new TrackingTask();
+        final TaskBuilder<Object> taskBuilder = transaction.newTask(task);
+        final TaskController<Object> controller = taskBuilder.release();
         // prepare transaction
         prepare(transaction);
         // commit transaction
@@ -102,7 +120,7 @@ public class BasicTasksTest extends AbstractTransactionTest {
     }
 
     @Test
-    public void testSimpleRollback() throws InterruptedException {
+    public void testSimplePrepareRollback() throws InterruptedException {
         final ThreadPoolExecutor executor = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
         final Transaction transaction = Transaction.create(executor);
         // install task
@@ -118,6 +136,25 @@ public class BasicTasksTest extends AbstractTransactionTest {
         assertTrue(task.isExecuted());
         assertTrue(task.isReverted());
         assertTrue(task.isValidated());
+        controller.getResult();
+        assertTrue(executor.shutdownNow().isEmpty());
+    }
+
+    @Test
+    public void testSimpleRollback() throws InterruptedException {
+        final ThreadPoolExecutor executor = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
+        final Transaction transaction = Transaction.create(executor);
+        // install task
+        final TrackingTask task = new TrackingTask();
+        final TaskBuilder<Object> taskBuilder = transaction.newTask(task);
+        final TaskController<Object> controller = taskBuilder.release();
+        // roll back transaction
+        rollback(transaction);
+        // asserts
+        assertFalse(task.isCommitted());
+        assertTrue(task.isExecuted());
+        assertTrue(task.isReverted());
+        assertFalse(task.isValidated());
         controller.getResult();
         assertTrue(executor.shutdownNow().isEmpty());
     }
@@ -267,7 +304,7 @@ public class BasicTasksTest extends AbstractTransactionTest {
         final TrackingTask task2 = new TrackingTask();
         try {
             transaction.newTask(task2).release();
-            fail("cannot add new tasks to committed transaction");
+            fail("cannot add new tasks to rolled back transaction");
         } catch (InvalidTransactionStateException expected) {
         }
         // asserts
