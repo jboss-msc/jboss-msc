@@ -20,7 +20,7 @@ package org.jboss.msc.service;
 
 import org.jboss.msc.value.WritableValue;
 
-final class Dependency<T> {
+final class  Dependency<T> {
     private final Registration dependencyRegistration;
     private final DependencyFlag[] flags;
     private final WritableValue<? super T>[] injections;

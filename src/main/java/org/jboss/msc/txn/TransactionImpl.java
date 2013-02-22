@@ -126,12 +126,8 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             doChildValidationFinished(userThread);
         }
 
-        public void childRollbackFinished(TaskChild child, final boolean userThread) {
-            doChildRollbackFinished(userThread);
-        }
-
-        public void childCommitFinished(TaskChild child, final boolean userThread) {
-            doChildCommitFinished(userThread);
+        public void childTerminated(TaskChild child, final boolean userThread) {
+            doChildTerminated(userThread);
         }
 
         public void childAdded(final TaskChild child, final boolean userThread) throws InvalidTransactionStateException {
@@ -148,8 +144,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     private int state;
     private int unfinishedChildren;
     private int unvalidatedChildren;
-    private int uncommittedChildren;
-    private int unrevertedChildren;
+    private int unterminatedChildren;
 
     private Listener<? super Transaction> validationListener;
     private Listener<? super Transaction> commitListener;
@@ -236,14 +231,14 @@ final class TransactionImpl extends Transaction implements TaskTarget {
                 }
             }
             case STATE_ROLLBACK: {
-                if (unrevertedChildren == 0) {
+                if (unterminatedChildren == 0) {
                     return T_ROLLBACK_to_ROLLED_BACK;
                 } else {
                     return T_NONE;
                 }
             }
             case STATE_COMMITTING: {
-                if (uncommittedChildren == 0) {
+                if (unterminatedChildren == 0) {
                     return T_COMMITTING_to_COMMITTED;
                 } else {
                     return T_NONE;
@@ -650,13 +645,13 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         executeTasks(state);
     }
 
-    private void doChildCommitFinished(final boolean userThread) {
+    private void doChildTerminated(final boolean userThread) {
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
             state = this.state;
             if (userThread) state |= FLAG_USER_THREAD;
-            uncommittedChildren--;
+            unterminatedChildren--;
             state = transition(state);
             this.state = state & PERSISTENT_STATE;
         }
@@ -692,19 +687,6 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         safeCall(listener);
     }
 
-    private void doChildRollbackFinished(final boolean userThread) {
-        assert ! holdsLock(this);
-        int state;
-        synchronized (this) {
-            state = this.state;
-            if (userThread) state |= FLAG_USER_THREAD;
-            unrevertedChildren--;
-            state = transition(state);
-            this.state = state & PERSISTENT_STATE;
-        }
-        executeTasks(state);
-    }
-
     private void doChildAdded(TaskChild child, final boolean userThread) throws InvalidTransactionStateException {
         assert ! holdsLock(this);
         int state;
@@ -716,9 +698,8 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             if (userThread) state |= FLAG_USER_THREAD;
             topLevelTasks.add((TaskControllerImpl<?>) child);
             unfinishedChildren++;
-            unrevertedChildren++;
             unvalidatedChildren++;
-            uncommittedChildren++;
+            unterminatedChildren++;
             state = transition(state);
             this.state = state & PERSISTENT_STATE;
         }

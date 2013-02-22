@@ -42,20 +42,12 @@ interface TaskParent {
     void childValidationFinished(TaskChild child, boolean userThread);
 
     /**
-     * Indicate that a child's rollback has finished.
+     * Indicate that a child is terminated.
      *
      * @param child the child
      * @param userThread {@code true} if executed from a user thread
      */
-    void childRollbackFinished(TaskChild child, boolean userThread);
-
-    /**
-     * Indicate that a child's commit has finished.
-     *
-     * @param child the child
-     * @param userThread {@code true} if executed from a user thread
-     */
-    void childCommitFinished(TaskChild child, boolean userThread);
+    void childTerminated(TaskChild child, boolean userThread);
 
     /**
      * Indicate to a parent that a child was added.

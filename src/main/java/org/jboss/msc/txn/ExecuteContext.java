@@ -37,9 +37,4 @@ public interface ExecuteContext<T> extends TransactionalContext, ReportableConte
      * Register the completion of this task with a {@code null} value.  This method returns without blocking.
      */
     void complete();
-
-    /**
-     * Indicate that the task cannot complete execution.  This simply prevents dependent tasks from executing.
-     */
-    void failed();
 }
