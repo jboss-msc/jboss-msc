@@ -29,6 +29,7 @@ import org.jboss.msc.txn.InvalidTransactionStateException;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
@@ -40,6 +41,40 @@ import static org.junit.Assert.fail;
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class BasicTasksTest extends AbstractTransactionTest {
+    
+    @Test
+    public void emptyTransactionCommit() throws Exception {
+        final ThreadPoolExecutor executor = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
+        final Transaction transaction = Transaction.create(executor);
+        commit(transaction);
+        assertTrue(executor.shutdownNow().isEmpty());
+    }
+
+    @Test
+    public void emptyTransactionRollback() throws Exception {
+        final ThreadPoolExecutor executor = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
+        final Transaction transaction = Transaction.create(executor);
+        rollback(transaction);
+        assertTrue(executor.shutdownNow().isEmpty());
+    }
+
+    @Test
+    public void emptyTransactionPrepareCommit() throws Exception {
+        final ThreadPoolExecutor executor = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
+        final Transaction transaction = Transaction.create(executor);
+        prepare(transaction);
+        commit(transaction);
+        assertTrue(executor.shutdownNow().isEmpty());
+    }
+
+    @Test
+    public void emptyTransactionPrepareRollback() throws Exception {
+        final ThreadPoolExecutor executor = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
+        final Transaction transaction = Transaction.create(executor);
+        prepare(transaction);
+        rollback(transaction);
+        assertTrue(executor.shutdownNow().isEmpty());
+    }
 
     @Test
     public void testCommitFromListener() throws InterruptedException {
@@ -320,7 +355,7 @@ public class BasicTasksTest extends AbstractTransactionTest {
         executor.shutdown();
         executor.awaitTermination(5L, TimeUnit.SECONDS);
     }
-
+    
     @Test
     public void simpleDependencies() throws InterruptedException {
         final ThreadPoolExecutor executor = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
