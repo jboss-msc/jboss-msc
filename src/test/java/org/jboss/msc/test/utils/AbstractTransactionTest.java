@@ -16,16 +16,13 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.test.tasks;
+package org.jboss.msc.test.utils;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.msc.test.utils.CommittingListener;
-import org.jboss.msc.test.utils.CompletionListener;
-import org.jboss.msc.test.utils.RevertingListener;
 import org.jboss.msc.txn.InvalidTransactionStateException;
 import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.txn.TransactionRolledBackException;

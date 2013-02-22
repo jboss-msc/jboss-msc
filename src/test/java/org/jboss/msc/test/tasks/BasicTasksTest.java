@@ -21,6 +21,7 @@ package org.jboss.msc.test.tasks;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import org.jboss.msc.test.utils.AbstractTransactionTest;
 import org.jboss.msc.test.utils.TrackingTask;
 import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.InvalidTransactionStateException;
