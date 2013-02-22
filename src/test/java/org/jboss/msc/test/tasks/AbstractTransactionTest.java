@@ -18,12 +18,19 @@
 
 package org.jboss.msc.test.tasks;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 import org.jboss.msc.test.utils.CommittingListener;
 import org.jboss.msc.test.utils.CompletionListener;
 import org.jboss.msc.test.utils.RevertingListener;
 import org.jboss.msc.txn.InvalidTransactionStateException;
 import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.txn.TransactionRolledBackException;
+import org.junit.After;
+import org.junit.Before;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -36,8 +43,30 @@ import static org.junit.Assert.fail;
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public abstract class AbstractTransactionTest {
+    
+    protected ThreadPoolExecutor defaultExecutor;
+    
+    @Before
+    public void setUp() {
+        defaultExecutor = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
+    }
+    
+    @After
+    public void tearDown() {
+        assertTrue(defaultExecutor.shutdownNow().isEmpty());
+    }
+    
+    protected Transaction newTransaction() {
+        assertNotNull(defaultExecutor);
+        return Transaction.create(defaultExecutor);
+    }
 
-    protected static void assertPrepared(final Transaction transaction) {
+    protected Transaction newTransaction(final Executor executor) {
+        assertNotNull(executor);
+        return Transaction.create(executor);
+    }
+
+    private static void assertPrepared(final Transaction transaction) {
         assertNotNull(transaction);
         assertTrue(transaction.canCommit());
         try {
@@ -47,7 +76,7 @@ public abstract class AbstractTransactionTest {
         }
     }
 
-    protected static void assertReverted(final Transaction transaction) {
+    private static void assertReverted(final Transaction transaction) {
         assertNotNull(transaction);
         assertFalse(transaction.canCommit());
         // ensure it's not possible to call prepare on rolled back transaction
@@ -69,7 +98,7 @@ public abstract class AbstractTransactionTest {
         }
     }
 
-    protected static void assertCommitted(final Transaction transaction) {
+    private static void assertCommitted(final Transaction transaction) {
         assertNotNull(transaction);
         assertFalse(transaction.canCommit());
         // ensure it's not possible to call prepare() on committed transaction
