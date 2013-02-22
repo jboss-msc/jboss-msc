@@ -86,11 +86,10 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     private static final int STATE_ACTIVE           = 0x0; // adding tasks and subtransactions; counts = # added
     private static final int STATE_PREPARING        = 0x1; // preparing all our tasks
     private static final int STATE_PREPARED         = 0x2; // prepare finished, wait for commit/abort decision from user or parent
-    private static final int STATE_PREPARE_UNDOING  = 0x3; // prepare failed, undoing all work via abort or rollback
-    private static final int STATE_ROLLBACK         = 0x4; // rolling back all our tasks; count = # remaining
-    private static final int STATE_COMMITTING       = 0x5; // performing commit actions
-    private static final int STATE_ROLLED_BACK      = 0x6; // "dead" state
-    private static final int STATE_COMMITTED        = 0x7; // "success" state
+    private static final int STATE_ROLLBACK         = 0x3; // rolling back all our tasks; count = # remaining
+    private static final int STATE_COMMITTING       = 0x4; // performing commit actions
+    private static final int STATE_ROLLED_BACK      = 0x5; // "dead" state
+    private static final int STATE_COMMITTED        = 0x6; // "success" state
 
     private static final int STATE_MASK = 0x07;
 
@@ -102,16 +101,14 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     private static final int T_ACTIVE_to_ROLLBACK   = 2;
 
     private static final int T_PREPARING_to_PREPARED        = 3;
-    private static final int T_PREPARING_to_PREPARE_UNDOING = 4;
+    private static final int T_PREPARING_to_ROLLBACK = 4;
 
     private static final int T_PREPARED_to_COMMITTING   = 5;
     private static final int T_PREPARED_to_ROLLBACK     = 6;
 
-    private static final int T_PREPARE_UNDOING_to_ROLLBACK = 7;
+    private static final int T_ROLLBACK_to_ROLLED_BACK  = 7;
 
-    private static final int T_ROLLBACK_to_ROLLED_BACK  = 8;
-
-    private static final int T_COMMITTING_to_COMMITTED  = 9;
+    private static final int T_COMMITTING_to_COMMITTED  = 8;
 
     private final int id;
     private final long startTime = System.nanoTime();
@@ -207,7 +204,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             }
             case STATE_PREPARING: {
                 if (allAreSet(state, FLAG_ROLLBACK_REQ)) {
-                    return T_PREPARING_to_PREPARE_UNDOING;
+                    return T_PREPARING_to_ROLLBACK;
                 } else if (unvalidatedChildren == 0) {
                     return T_PREPARING_to_PREPARED;
                 } else {
@@ -221,14 +218,6 @@ final class TransactionImpl extends Transaction implements TaskTarget {
                     return T_PREPARED_to_COMMITTING;
                 } else {
                      return T_NONE;
-                }
-            }
-            case STATE_PREPARE_UNDOING: {
-                // todo
-                if (false) {
-                    return T_PREPARE_UNDOING_to_ROLLBACK;
-                } else {
-                    return T_NONE;
                 }
             }
             case STATE_ROLLBACK: {
@@ -285,9 +274,9 @@ final class TransactionImpl extends Transaction implements TaskTarget {
                         return newState(STATE_PREPARED, state | FLAG_DO_PREPARE_LISTENER);
                     }
                 }
-                case T_PREPARING_to_PREPARE_UNDOING: {
-                    // todo
-                    throw new UnsupportedOperationException();
+                case T_PREPARING_to_ROLLBACK: {
+                    state = newState(STATE_ROLLBACK, state | FLAG_SEND_ROLLBACK_REQ);
+                    continue;
                 }
                 case T_PREPARED_to_COMMITTING: {
                     state = newState(STATE_COMMITTING, state | FLAG_SEND_COMMIT_REQ);

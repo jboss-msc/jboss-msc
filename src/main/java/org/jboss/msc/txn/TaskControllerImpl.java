@@ -321,7 +321,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 }
             }
             case STATE_VALIDATE: {
-                if (allAreSet(state, FLAG_VALIDATE_CANCELLED)) {
+                if (anyAreSet(state, FLAG_VALIDATE_CANCELLED | FLAG_ROLLBACK_REQ)) {
                     return T_VALIDATE_to_ROLLBACK_WAIT;
                 } else if (allAreSet(state, FLAG_VALIDATE_DONE)) {
                     return T_VALIDATE_to_VALIDATE_DONE;
