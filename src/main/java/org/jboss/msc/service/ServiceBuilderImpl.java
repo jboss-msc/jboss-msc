@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,7 +41,8 @@ import org.jboss.msc.value.Value;
  * @param <T> the type of service being built
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
-*/
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ */
 class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     private final ServiceControllerImpl<?> parent;
@@ -53,7 +53,7 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
     private final IdentityHashSet<StabilityMonitor> monitors = new IdentityHashSet<StabilityMonitor>();
     private final Map<ServiceName, Dependency> dependencies = new HashMap<ServiceName, Dependency>(0);
-    private final Map<ServiceListener<? super T>, ServiceListener.Inheritance> listeners = new IdentityHashMap<ServiceListener<? super T>, ServiceListener.Inheritance>(0);
+    private final Set<ServiceListener<? super T>> listeners = new IdentityHashSet<ServiceListener<? super T>>(0);
     private final List<ValueInjection<?>> valueInjections = new ArrayList<ValueInjection<?>>(0);
     private final List<Injector<? super T>> outInjections = new ArrayList<Injector<? super T>>(0);
     private boolean installed = false;
@@ -237,7 +237,7 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         outInjections.add(target);
         return this;
     }
-    
+
     @Override
     public ServiceBuilder<T> addMonitor(final StabilityMonitor monitor) {
         checkAlreadyInstalled();
@@ -257,7 +257,7 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     @Override
     public ServiceBuilderImpl<T> addListener(final ServiceListener<? super T> listener) {
         checkAlreadyInstalled();
-        listeners.put(listener, ServiceListener.Inheritance.NONE);
+        listeners.add(listener);
         return this;
     }
 
@@ -265,7 +265,7 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     public ServiceBuilderImpl<T> addListener(final ServiceListener<? super T>... serviceListeners) {
         checkAlreadyInstalled();
         for (ServiceListener<? super T> listener : serviceListeners) {
-            listeners.put(listener, ServiceListener.Inheritance.NONE);
+            listeners.add(listener);
         }
         return this;
     }
@@ -273,29 +273,8 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     @Override
     public ServiceBuilderImpl<T> addListener(final Collection<? extends ServiceListener<? super T>> serviceListeners) {
         checkAlreadyInstalled();
-        return addListenerNoCheck(ServiceListener.Inheritance.NONE, serviceListeners);
-    }
-
-    @Override
-    public ServiceBuilder<T> addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<? super T> listener) {
-        checkAlreadyInstalled();
-        listeners.put(listener, inheritance);
+        listeners.addAll(serviceListeners);
         return this;
-    }
-
-    @Override
-    public ServiceBuilder<T> addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<? super T>... serviceListeners) {
-        checkAlreadyInstalled();
-        for (ServiceListener<? super T> listener : serviceListeners) {
-            listeners.put(listener, inheritance);
-        }
-        return this;
-    }
-
-    @Override
-    public ServiceBuilder<T> addListener(final ServiceListener.Inheritance inheritance, final Collection<? extends ServiceListener<? super T>> serviceListeners) {
-        checkAlreadyInstalled();
-        return addListenerNoCheck(inheritance, serviceListeners);
     }
 
     ServiceBuilderImpl<T> addMonitorNoCheck(final StabilityMonitor monitor) {
@@ -303,15 +282,8 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return this;
     }
 
-    ServiceBuilderImpl<T> addListenerNoCheck(final ServiceListener.Inheritance inheritance, final Collection<? extends ServiceListener<? super T>> serviceListeners) {
-        for (ServiceListener<? super T> listener : serviceListeners) {
-            listeners.put(listener, inheritance);
-        }
-        return this;
-    }
-
-    ServiceBuilderImpl<T> addListenerNoCheck(final Map<? extends ServiceListener<? super T>, ServiceListener.Inheritance> serviceListeners) {
-        listeners.putAll(serviceListeners);
+    ServiceBuilderImpl<T> addListenerNoCheck(final Set<? extends ServiceListener<? super T>> serviceListeners) {
+        listeners.addAll(serviceListeners);
         return this;
     }
 
@@ -352,10 +324,10 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return monitors;
     }
 
-    Map<ServiceListener<? super T>,ServiceListener.Inheritance> getListeners() {
+    Set<ServiceListener<? super T>> getListeners() {
         return listeners;
     }
-    
+
     List<ValueInjection<?>> getValueInjections() {
         return valueInjections;
     }

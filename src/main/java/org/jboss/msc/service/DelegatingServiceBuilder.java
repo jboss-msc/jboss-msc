@@ -32,6 +32,7 @@ import org.jboss.msc.value.Value;
  * @param <T> the service type
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     private final ServiceBuilder<T> delegate;
@@ -162,24 +163,6 @@ public final class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     /** {@inheritDoc} */
     public ServiceBuilder<T> addListener(final Collection<? extends ServiceListener<? super T>> listeners) {
         delegate.addListener(listeners);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceBuilder<T> addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<? super T> listener) {
-        delegate.addListener(inheritance, listener);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceBuilder<T> addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<? super T>... listeners) {
-        delegate.addListener(inheritance, listeners);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceBuilder<T> addListener(final ServiceListener.Inheritance inheritance, final Collection<? extends ServiceListener<? super T>> listeners) {
-        delegate.addListener(inheritance, listeners);
         return this;
     }
 

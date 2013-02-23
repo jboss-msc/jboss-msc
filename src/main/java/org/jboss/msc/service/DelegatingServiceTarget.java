@@ -31,6 +31,7 @@ import org.jboss.msc.value.Value;
  * An "insulated" view of a service target which prevents access to other public methods on the delegate target object.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class DelegatingServiceTarget implements ServiceTarget {
     private final ServiceTarget delegate;
@@ -69,21 +70,6 @@ public final class DelegatingServiceTarget implements ServiceTarget {
     /** {@inheritDoc} */
     public ServiceTarget addListener(final Collection<ServiceListener<Object>> listeners) {
         delegate.addListener(listeners);
-        return this;
-    }
-
-    public ServiceTarget addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<Object> listener) {
-        delegate.addListener(inheritance, listener);
-        return this;
-    }
-
-    public ServiceTarget addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<Object>... listeners) {
-        delegate.addListener(inheritance, listeners);
-        return this;
-    }
-
-    public ServiceTarget addListener(final ServiceListener.Inheritance inheritance, final Collection<ServiceListener<Object>> listeners) {
-        delegate.addListener(inheritance, listeners);
         return this;
     }
 
