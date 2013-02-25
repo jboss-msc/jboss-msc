@@ -108,6 +108,7 @@ import static org.jboss.msc.txn.Bits.*;
  *  +------------------------------------------------------------+
  * </pre>
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 final class TaskControllerImpl<T> extends TaskController<T> implements TaskParent, TaskChild {
 
@@ -158,7 +159,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     private static final int T_NONE = 0;
 
     private static final int T_NEW_to_EXECUTE_WAIT = 1;
-    private static final int T_NEW_to_CANCELLED = 2;
+    private static final int T_NEW_to_TERMINATED = 2;
 
     private static final int T_EXECUTE_WAIT_to_TERMINATE_WAIT = 3;
     private static final int T_EXECUTE_WAIT_to_EXECUTE = 4;
@@ -288,7 +289,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         switch (sid) {
             case STATE_NEW: {
                 if (allAreSet(state, FLAG_INSTALL_FAILED)) {
-                    return T_NEW_to_CANCELLED;
+                    return T_NEW_to_TERMINATED;
                 } else {
                     return T_NEW_to_EXECUTE_WAIT;
                 }
@@ -444,7 +445,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
 
                 // exceptional cases
 
-                case T_NEW_to_CANCELLED: {
+                case T_NEW_to_TERMINATED: {
                     // not possible to go any farther
                     return newState(STATE_TERMINATED, state);
                 }
