@@ -594,7 +594,8 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         synchronized (this) {
             state = this.state;
             if (userThread) state |= FLAG_USER_THREAD;
-            state = transition(state | FLAG_CANCEL_REQ);
+            state |= FLAG_CANCEL_REQ;
+            state = transition(state);
             this.state = state & PERSISTENT_STATE;
         }
         executeTasks(state);
@@ -655,7 +656,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         int state;
         synchronized (this) {
             state = this.state | FLAG_USER_THREAD | FLAG_EXECUTE_CANCELLED;
-            if (unlikely(stateOf(state) != STATE_EXECUTE || allAreClear(state, FLAG_CANCEL_REQ))) {
+            if (unlikely(stateOf(state) != STATE_EXECUTE)) {
                 throw new IllegalStateException("Task may not be cancelled now");
             }
             state = transition(state);
