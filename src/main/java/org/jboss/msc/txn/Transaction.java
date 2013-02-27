@@ -24,6 +24,7 @@ import org.jboss.msc.value.Listener;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public abstract class Transaction extends SimpleAttachable implements TaskTarget {
 
@@ -107,9 +108,10 @@ public abstract class Transaction extends SimpleAttachable implements TaskTarget
      * Roll back this transaction, undoing all work executed up until this time.
      *
      * @param completionListener the listener to call when the rollback is complete
+     * @throws TransactionRolledBackException if the transaction was previously rolled back
      * @throws InvalidTransactionStateException if commit has already been initiated
      */
-    public abstract void rollback(Listener<? super Transaction> completionListener) throws InvalidTransactionStateException;
+    public abstract void rollback(Listener<? super Transaction> completionListener) throws TransactionRolledBackException, InvalidTransactionStateException;
 
     /**
      * Determine whether a prepared transaction can be committed.  If it cannot, it must be rolled back.

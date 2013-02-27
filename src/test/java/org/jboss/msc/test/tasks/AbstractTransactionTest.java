@@ -42,7 +42,7 @@ public abstract class AbstractTransactionTest {
         assertTrue(transaction.canCommit());
         try {
             transaction.prepare(null);
-            fail("Cannot call prepare() more than once on transaction object");
+            fail("Cannot call prepare() more than once on transaction");
         } catch (final InvalidTransactionStateException expected) {
         }
     }
@@ -50,9 +50,21 @@ public abstract class AbstractTransactionTest {
     protected static void assertReverted(final Transaction transaction) {
         assertNotNull(transaction);
         assertFalse(transaction.canCommit());
+        // ensure it's not possible to call prepare on rolled back transaction
         try {
-            transaction.commit(null); // TODO: shouldn't we also provide parameterless version of commit(), prepare() and rollback()?
-            fail("Cannot call commit() on rolled back transaction object");
+            transaction.prepare(null);
+            fail("Cannot call prepare() on rolled back transaction");
+        } catch (final TransactionRolledBackException expected) {
+        }
+        try {
+            transaction.commit(null);
+            fail("Cannot call commit() on rolled back transaction");
+        } catch (final TransactionRolledBackException expected) {
+        }
+        // ensure it's not possible to call rollback on rolled back transaction more than once
+        try {
+            transaction.rollback(null);
+            fail("Cannot call rollback() on rolled back transaction");
         } catch (final TransactionRolledBackException expected) {
         }
     }
@@ -60,9 +72,22 @@ public abstract class AbstractTransactionTest {
     protected static void assertCommitted(final Transaction transaction) {
         assertNotNull(transaction);
         assertFalse(transaction.canCommit());
+        // ensure it's not possible to call prepare() on committed transaction
+        try {
+            transaction.prepare(null);
+            fail("Cannot call prepare() on committed transaction");
+        } catch (final InvalidTransactionStateException expected) {
+        }
+        // ensure it's not possible to call commit on committed transaction more than once
         try {
             transaction.commit(null);
-            fail("Cannot call commit() more than once on transaction object");
+            fail("Cannot call commit() on committed transaction");
+        } catch (final InvalidTransactionStateException expected) {
+        }
+        // ensure it's not possible to call rollback() on committed transaction
+        try {
+            transaction.rollback(null);
+            fail("Cannot call rollback() on committed transaction");
         } catch (final InvalidTransactionStateException expected) {
         }
     }

@@ -43,6 +43,7 @@ import static org.jboss.msc.txn.Bits.anyAreSet;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 final class TransactionImpl extends Transaction implements TaskTarget {
 
@@ -368,7 +369,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         }
     }
 
-    public void prepare(Listener<? super Transaction> completionListener) throws TransactionRolledBackException, InvalidTransactionStateException {
+    public void prepare(final Listener<? super Transaction> completionListener) throws TransactionRolledBackException, InvalidTransactionStateException {
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
@@ -378,10 +379,12 @@ final class TransactionImpl extends Transaction implements TaskTarget {
                     throw new InvalidTransactionStateException("Prepare already called");
                 }
                 state |= FLAG_PREPARE_REQ;
+            } else if (stateIsIn(state, STATE_PREPARING, STATE_PREPARED)) {
+                throw new InvalidTransactionStateException("Transaction was prepared");
             } else if (stateIsIn(state, STATE_ROLLBACK, STATE_ROLLED_BACK)) {
                 throw new TransactionRolledBackException("Transaction was rolled back");
-            } else {
-                throw new InvalidTransactionStateException("Wrong transaction state for prepare");
+            } else if (stateIsIn(state, STATE_COMMITTING, STATE_COMMITTED)) {
+                throw new InvalidTransactionStateException("Transaction was committed");
             }
             if (completionListener == null) {
                 validationListener = NOTHING_LISTENER;
@@ -394,7 +397,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         executeTasks(state);
     }
 
-    public void commit(Listener<? super Transaction> completionListener) throws InvalidTransactionStateException, TransactionRolledBackException {
+    public void commit(final Listener<? super Transaction> completionListener) throws InvalidTransactionStateException, TransactionRolledBackException {
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
@@ -406,8 +409,8 @@ final class TransactionImpl extends Transaction implements TaskTarget {
                 state |= FLAG_COMMIT_REQ;
             } else if (stateIsIn(state, STATE_ROLLBACK, STATE_ROLLED_BACK)) {
                 throw new TransactionRolledBackException("Transaction was rolled back");
-            } else {
-                throw new InvalidTransactionStateException("Transaction cannot be committed");
+            } else if (stateIsIn(state, STATE_COMMITTING, STATE_COMMITTED)) {
+                throw new InvalidTransactionStateException("Transaction was committed");
             }
             if (completionListener == null) {
                 commitListener = NOTHING_LISTENER;
@@ -426,11 +429,14 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         synchronized (this) {
             state = this.state | FLAG_USER_THREAD;
             if (stateIsIn(state, STATE_ACTIVE, STATE_PREPARING, STATE_PREPARED)) {
+                if (allAreSet(state, FLAG_ROLLBACK_REQ)) {
+                    throw new InvalidTransactionStateException("Rollback already called");
+                }
                 state |= FLAG_ROLLBACK_REQ;
             } else if (stateIsIn(state, STATE_ROLLBACK, STATE_ROLLED_BACK)) {
-                return;
-            } else {
-                throw new InvalidTransactionStateException("Transaction cannot be rolled back");
+                throw new TransactionRolledBackException("Transaction was rolled back");
+            } else if (stateIsIn(state, STATE_COMMITTING, STATE_COMMITTED)) {
+                throw new InvalidTransactionStateException("Transaction was committed");
             }
             if (completionListener == null) {
                 rollbackListener = NOTHING_LISTENER;
