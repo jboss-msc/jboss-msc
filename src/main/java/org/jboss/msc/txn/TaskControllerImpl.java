@@ -164,28 +164,27 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     private static final int T_EXECUTE_WAIT_to_TERMINATE_WAIT = 3;
     private static final int T_EXECUTE_WAIT_to_EXECUTE = 4;
 
-    private static final int T_EXECUTE_to_ROLLBACK = 5;
-    private static final int T_EXECUTE_to_TERMINATE_WAIT = 6;
-    private static final int T_EXECUTE_to_EXECUTE_DONE = 7;
+    private static final int T_EXECUTE_to_TERMINATE_WAIT = 5;
+    private static final int T_EXECUTE_to_EXECUTE_DONE = 6;
 
-    private static final int T_EXECUTE_DONE_to_ROLLBACK_WAIT = 8;
-    private static final int T_EXECUTE_DONE_to_VALIDATE = 9;
+    private static final int T_EXECUTE_DONE_to_ROLLBACK_WAIT = 7;
+    private static final int T_EXECUTE_DONE_to_VALIDATE = 8;
 
-    private static final int T_VALIDATE_to_ROLLBACK_WAIT = 10;
-    private static final int T_VALIDATE_to_VALIDATE_DONE = 11;
+    private static final int T_VALIDATE_to_ROLLBACK_WAIT = 9;
+    private static final int T_VALIDATE_to_VALIDATE_DONE = 10;
 
-    private static final int T_VALIDATE_DONE_to_ROLLBACK_WAIT = 12;
-    private static final int T_VALIDATE_DONE_to_COMMIT_WAIT = 13;
+    private static final int T_VALIDATE_DONE_to_ROLLBACK_WAIT = 11;
+    private static final int T_VALIDATE_DONE_to_COMMIT_WAIT = 12;
 
-    private static final int T_COMMIT_WAIT_to_COMMIT = 14;
+    private static final int T_COMMIT_WAIT_to_COMMIT = 13;
 
-    private static final int T_COMMIT_to_TERMINATE_WAIT = 15;
+    private static final int T_COMMIT_to_TERMINATE_WAIT = 14;
 
-    private static final int T_ROLLBACK_WAIT_to_ROLLBACK = 16;
+    private static final int T_ROLLBACK_WAIT_to_ROLLBACK = 15;
 
-    private static final int T_ROLLBACK_to_TERMINATE_WAIT = 17;
+    private static final int T_ROLLBACK_to_TERMINATE_WAIT = 16;
 
-    private static final int T_TERMINATE_WAIT_to_TERMINATED = 18;
+    private static final int T_TERMINATE_WAIT_to_TERMINATED = 17;
 
     /**
      * A cancel request, due to rollback or dependency failure.
@@ -466,15 +465,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                         state = newState(STATE_TERMINATE_WAIT, state);
                     }
                     continue;
-                }
-                case T_EXECUTE_to_ROLLBACK: {
-                    cachedDependents = dependents.toArray(new TaskControllerImpl[dependents.size()]);
-                    if (revertible == null) {
-                        state = newState(STATE_ROLLBACK, state | FLAG_ROLLBACK_DONE | FLAG_SEND_CANCEL_DEPENDENTS);
-                        continue;
-                    }
-                    // not possible to go any farther
-                    return newState(STATE_ROLLBACK, state | FLAG_DO_ROLLBACK | FLAG_SEND_CANCEL_DEPENDENTS);
                 }
                 case T_EXECUTE_DONE_to_ROLLBACK_WAIT: {
                     state = newState(STATE_ROLLBACK_WAIT, state);
