@@ -18,6 +18,8 @@
 
 package org.jboss.msc.test.utils;
 
+import java.util.concurrent.CountDownLatch;
+
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
 
@@ -26,10 +28,19 @@ import org.jboss.msc.txn.ExecuteContext;
  *
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class CancelingExecutable<T> implements Executable<T> {
+public final class CancelingExecutable<T> extends Latchable implements Executable<T> {
 
+    public CancelingExecutable() {
+        super();
+    }
+    
+    public CancelingExecutable(final CountDownLatch signal) {
+        super(signal);
+    }
+    
     @Override
     public void execute(final ExecuteContext<T> ctx) {
+        super.awaitSignal();
         ctx.cancelled();
     }
 

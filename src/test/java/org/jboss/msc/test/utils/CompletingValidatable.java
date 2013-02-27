@@ -19,32 +19,30 @@
 package org.jboss.msc.test.utils;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
-import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.value.Listener;
+import org.jboss.msc.txn.Validatable;
+import org.jboss.msc.txn.ValidateContext;
 
 /**
- * Transaction event listener. It provides utility methods {@link #awaitCompletion()} to wait for transaction phase to be
- * completed.
- * 
+ * Validatable that always calls complete.
+ *
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class CompletionListener implements Listener<Transaction> {
-
-    private final CountDownLatch latch = new CountDownLatch(1);
-
-    @Override
-    public void handleEvent(final Transaction subject) {
-        latch.countDown();
-    }
-
-    public void awaitCompletion() throws InterruptedException {
-        latch.await();
+public final class CompletingValidatable extends Latchable implements Validatable {
+    
+    public CompletingValidatable() {
+        super();
     }
     
-    public boolean awaitCompletion(final long timeout, final TimeUnit unit) throws InterruptedException {
-        return latch.await(timeout, unit);
+    public CompletingValidatable(final CountDownLatch signal) {
+        super(signal);
     }
 
+    @Override
+    public void validate(final ValidateContext ctx) {
+        super.awaitSignal();
+        ctx.complete();
+    }
+    
 }
+

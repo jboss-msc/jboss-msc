@@ -18,6 +18,11 @@
 
 package org.jboss.msc.test.utils;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -28,11 +33,6 @@ import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.txn.TransactionRolledBackException;
 import org.junit.After;
 import org.junit.Before;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * Test base providing some utility methods.

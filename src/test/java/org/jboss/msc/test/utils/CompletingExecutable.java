@@ -19,32 +19,39 @@
 package org.jboss.msc.test.utils;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
-import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.value.Listener;
+import org.jboss.msc.txn.Executable;
+import org.jboss.msc.txn.ExecuteContext;
 
 /**
- * Transaction event listener. It provides utility methods {@link #awaitCompletion()} to wait for transaction phase to be
- * completed.
- * 
+ * Executable that always calls complete.
+ *
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class CompletionListener implements Listener<Transaction> {
-
-    private final CountDownLatch latch = new CountDownLatch(1);
-
-    @Override
-    public void handleEvent(final Transaction subject) {
-        latch.countDown();
-    }
-
-    public void awaitCompletion() throws InterruptedException {
-        latch.await();
+public final class CompletingExecutable<T> extends Latchable implements Executable<T> {
+    
+    private final T result;
+    
+    public CompletingExecutable() {
+        this(null, null);
     }
     
-    public boolean awaitCompletion(final long timeout, final TimeUnit unit) throws InterruptedException {
-        return latch.await(timeout, unit);
+    public CompletingExecutable(final T result) {
+        this(result, null);
+    }
+    
+    public CompletingExecutable(final CountDownLatch signal) {
+        this(null, signal);
+    }
+    
+    public CompletingExecutable(final T result, final CountDownLatch signal) {
+        super(signal);
+        this.result = result;
     }
 
+    @Override
+    public void execute(final ExecuteContext<T> ctx) {
+        ctx.complete(result);
+    }
 }
+

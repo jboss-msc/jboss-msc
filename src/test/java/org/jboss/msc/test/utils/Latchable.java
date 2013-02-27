@@ -19,32 +19,31 @@
 package org.jboss.msc.test.utils;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.value.Listener;
 
 /**
- * Transaction event listener. It provides utility methods {@link #awaitCompletion()} to wait for transaction phase to be
- * completed.
- * 
+ * Utility class to allow latches to be passed to test transaction tasks.
+ *
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class CompletionListener implements Listener<Transaction> {
-
-    private final CountDownLatch latch = new CountDownLatch(1);
-
-    @Override
-    public void handleEvent(final Transaction subject) {
-        latch.countDown();
-    }
-
-    public void awaitCompletion() throws InterruptedException {
-        latch.await();
+abstract class Latchable {
+    
+    private final CountDownLatch signal;
+    
+    Latchable() {
+        this(null);
     }
     
-    public boolean awaitCompletion(final long timeout, final TimeUnit unit) throws InterruptedException {
-        return latch.await(timeout, unit);
+    Latchable(final CountDownLatch signal) {
+        this.signal = signal;
+    }
+    
+    void awaitSignal() {
+        if (signal != null) {
+            try {
+                signal.await();
+            } catch (final InterruptedException ignored) {
+            }
+        }
     }
 
 }
