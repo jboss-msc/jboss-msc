@@ -28,9 +28,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.jboss.msc.txn.Committable;
+import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.InvalidTransactionStateException;
+import org.jboss.msc.txn.Revertible;
+import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.txn.TransactionRolledBackException;
+import org.jboss.msc.txn.Validatable;
 import org.junit.After;
 import org.junit.Before;
 
@@ -40,19 +45,24 @@ import org.junit.Before;
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public abstract class AbstractTransactionTest {
-    
+
     protected ThreadPoolExecutor defaultExecutor;
-    
+
     @Before
     public void setUp() {
         defaultExecutor = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
+        defaultExecutor.prestartAllCoreThreads();
     }
-    
+
     @After
     public void tearDown() {
         assertTrue(defaultExecutor.shutdownNow().isEmpty());
     }
-    
+
+    protected static <T> TaskController<T> newTask(final Transaction transaction, final Executable<T> e, final Validatable v, final Revertible r, final Committable c, final TaskController<?>... dependencies) {
+        return transaction.newTask(e).addDependencies(dependencies).setValidatable(v).setRevertible(r).setCommittable(c).release();
+    }
+
     protected Transaction newTransaction() {
         assertNotNull(defaultExecutor);
         return Transaction.create(defaultExecutor);
@@ -61,6 +71,33 @@ public abstract class AbstractTransactionTest {
     protected Transaction newTransaction(final Executor executor) {
         assertNotNull(executor);
         return Transaction.create(executor);
+    }
+
+    protected static void assertCalled(final TestTask task) {
+        assertNotNull(task);
+        assertTrue("Task " + task + " was not called", task.wasCalled());
+    }
+
+    protected static void assertNotCalled(final TestTask task) {
+        assertNotNull(task);
+        assertFalse("Task " + task + " was called", task.wasCalled());
+    }
+
+    protected static void assertCallOrder(final TestTask firstTask, final TestTask secondTask) {
+        assertCalled(firstTask);
+        assertCalled(secondTask);
+        assertTrue("Task " + firstTask + " have been called after " + secondTask, firstTask.getCallTime() <= secondTask.getCallTime());
+    }
+
+    protected static void assertCallOrder(final TestTask firstTask, final TestTask secondTask, final TestTask... otherTasks) {
+        assertCallOrder(firstTask, secondTask);
+        if (otherTasks != null && otherTasks.length > 0) {
+            TestTask previousTask = secondTask;
+            for (final TestTask currentTask : otherTasks) {
+                assertCallOrder(previousTask, currentTask);
+                previousTask = currentTask;
+            }
+        }
     }
 
     private static void assertPrepared(final Transaction transaction) {

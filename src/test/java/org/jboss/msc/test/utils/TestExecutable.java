@@ -24,34 +24,55 @@ import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
 
 /**
- * Executable that always calls complete.
- *
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class CompletingExecutable<T> extends Latchable implements Executable<T> {
-    
+public final class TestExecutable<T> extends TestTask implements Executable<T> {
+
+    private final boolean cancel;
     private final T result;
-    
-    public CompletingExecutable() {
-        this(null, null);
+
+    public TestExecutable() {
+        this(false, null, null);
     }
-    
-    public CompletingExecutable(final T result) {
-        this(result, null);
+
+    public TestExecutable(final T result) {
+        this(false, result, null);
     }
-    
-    public CompletingExecutable(final CountDownLatch signal) {
-        this(null, signal);
+
+    public TestExecutable(final CountDownLatch signal) {
+        this(false, null, signal);
     }
-    
-    public CompletingExecutable(final T result, final CountDownLatch signal) {
+
+    public TestExecutable(final T result, final CountDownLatch signal) {
+        this(false, result, signal);
+    }
+
+    public TestExecutable(final boolean cancel) {
+        this(cancel, null, null);
+    }
+
+    public TestExecutable(final boolean cancel, final T result) {
+        this(cancel, result, null);
+    }
+
+    public TestExecutable(final boolean cancel, final CountDownLatch signal) {
+        this(cancel, null, signal);
+    }
+
+    public TestExecutable(final boolean cancel, final T result, final CountDownLatch signal) {
         super(signal);
+        this.cancel = cancel;
         this.result = result;
     }
 
     @Override
     public void execute(final ExecuteContext<T> ctx) {
-        ctx.complete(result);
+        super.call();
+        if (cancel) {
+            ctx.cancelled();
+        } else {
+            ctx.complete(result);
+        }
     }
-}
 
+}

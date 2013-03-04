@@ -42,7 +42,7 @@ public final class CompletionListener implements Listener<Transaction> {
     public void awaitCompletion() throws InterruptedException {
         latch.await();
     }
-    
+
     public boolean awaitCompletion(final long timeout, final TimeUnit unit) throws InterruptedException {
         return latch.await(timeout, unit);
     }

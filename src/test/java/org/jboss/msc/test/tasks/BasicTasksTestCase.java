@@ -18,6 +18,11 @@
 
 package org.jboss.msc.test.tasks;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -30,17 +35,12 @@ import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public class BasicTasksTest extends AbstractTransactionTest {
-    
+public class BasicTasksTestCase extends AbstractTransactionTest {
+
     @Test
     public void emptyTransactionCommit() throws Exception {
         final Transaction transaction = newTransaction();
@@ -191,6 +191,7 @@ public class BasicTasksTest extends AbstractTransactionTest {
                 this.d = d;
             }
 
+            @Override
             public void execute(final ExecuteContext<Object> context) {
                 if (d > 0)
                     for (int i = 0; i < n; i++) {

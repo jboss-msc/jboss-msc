@@ -24,24 +24,23 @@ import org.jboss.msc.txn.Validatable;
 import org.jboss.msc.txn.ValidateContext;
 
 /**
- * Validatable that always calls cancel.
- *
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class CancelingValidatable extends Latchable implements Validatable {
-    
-    public CancelingValidatable() {
+public final class TestValidatable extends TestTask implements Validatable {
+
+    public TestValidatable() {
         super();
     }
-    
-    public CancelingValidatable(final CountDownLatch signal) {
+
+    public TestValidatable(final CountDownLatch signal) {
         super(signal);
     }
 
     @Override
     public void validate(final ValidateContext ctx) {
-        super.awaitSignal();
-        ctx.cancelled();
+        super.call();
+        ctx.complete();
     }
-    
+
 }
+

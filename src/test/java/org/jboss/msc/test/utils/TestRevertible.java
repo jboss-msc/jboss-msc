@@ -20,30 +20,26 @@ package org.jboss.msc.test.utils;
 
 import java.util.concurrent.CountDownLatch;
 
+import org.jboss.msc.txn.Revertible;
+import org.jboss.msc.txn.RollbackContext;
+
 /**
- * Utility class to allow latches to be passed to test transaction tasks.
- *
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-abstract class Latchable {
-    
-    private final CountDownLatch signal;
-    
-    Latchable() {
+public final class TestRevertible extends TestTask implements Revertible {
+
+    public TestRevertible() {
         this(null);
     }
-    
-    Latchable(final CountDownLatch signal) {
-        this.signal = signal;
+
+    public TestRevertible(final CountDownLatch signal) {
+        super(signal);
     }
-    
-    void awaitSignal() {
-        if (signal != null) {
-            try {
-                signal.await();
-            } catch (final InterruptedException ignored) {
-            }
-        }
+
+    @Override
+    public void rollback(final RollbackContext ctx) {
+        super.call();
+        ctx.complete();
     }
 
 }

@@ -20,29 +20,26 @@ package org.jboss.msc.test.utils;
 
 import java.util.concurrent.CountDownLatch;
 
-import org.jboss.msc.txn.Validatable;
-import org.jboss.msc.txn.ValidateContext;
+import org.jboss.msc.txn.CommitContext;
+import org.jboss.msc.txn.Committable;
 
 /**
- * Validatable that always calls complete.
- *
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class CompletingValidatable extends Latchable implements Validatable {
-    
-    public CompletingValidatable() {
-        super();
+public final class TestCommittable extends TestTask implements Committable {
+
+    public TestCommittable() {
+        this(null);
     }
-    
-    public CompletingValidatable(final CountDownLatch signal) {
+
+    public TestCommittable(final CountDownLatch signal) {
         super(signal);
     }
 
     @Override
-    public void validate(final ValidateContext ctx) {
-        super.awaitSignal();
+    public void commit(final CommitContext ctx) {
+        super.call();
         ctx.complete();
     }
-    
-}
 
+}
