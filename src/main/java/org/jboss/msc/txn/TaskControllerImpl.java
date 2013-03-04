@@ -621,9 +621,9 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         return sid == sid1 || sid == sid2;
     }
 
-    private static boolean stateIsIn(int state, int sid1, int sid2, int sid3) {
+    private static boolean stateIsIn(int state, int sid1, int sid2, int sid3, int sid4, int sid5) {
         final int sid = stateOf(state);
-        return sid == sid1 || sid == sid2 || sid == sid3;
+        return sid == sid1 || sid == sid2 || sid == sid3 || sid == sid4 || sid == sid5;
     }
 
     private void execComplete(final T result) {
@@ -1069,7 +1069,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
             state = this.state;
             if (userThread) state |= FLAG_USER_THREAD;
             // todo - allow dependent adding in any state
-            if (stateIsIn(state, STATE_EXECUTE_WAIT, STATE_EXECUTE, STATE_EXECUTE_DONE)) {
+            if (stateIsIn(state, STATE_EXECUTE_WAIT, STATE_EXECUTE, STATE_EXECUTE_DONE, STATE_TERMINATE_WAIT, STATE_TERMINATED)) {
                 dependents.add(dependent);
                 unrevertedDependents++;
                 state = transition(state);
