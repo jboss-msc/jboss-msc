@@ -133,7 +133,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     private int unvalidatedChildren;
     private int uncommittedDependencies;
     private int unterminatedChildren;
-    private int unrevertedDependents;
+    private int unterminatedDependents;
 
     @SuppressWarnings("unchecked")
     private volatile T result = (T) NO_RESULT;
@@ -201,7 +201,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
 //  private static final int FLAG_                      = 1 << 9;
     private static final int FLAG_EXECUTE_CANCELLED     = 1 << 10;
     private static final int FLAG_VALIDATE_DONE         = 1 << 11;
-    private static final int FLAG_VALIDATE_CANCELLED    = 1 << 12;
+//  private static final int FLAG                       = 1 << 12;
     private static final int FLAG_COMMIT_DONE           = 1 << 13;
     private static final int FLAG_ROLLBACK_DONE         = 1 << 14;
     private static final int FLAG_INSTALL_FAILED        = 1 << 15;
@@ -213,7 +213,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     private static final int FLAG_SEND_CHILD_VALIDATE_DONE  = 1 << 19; // to parents
     private static final int FLAG_SEND_COMMIT_DONE          = 1 << 20; // to dependents
     private static final int FLAG_SEND_CHILD_TERMINATED     = 1 << 21; // to parents
-    private static final int FLAG_SEND_ROLLBACK_DONE        = 1 << 22; // to dependencies
+    private static final int FLAG_SEND_TERMINATED           = 1 << 22; // to dependencies
     private static final int FLAG_SEND_COMMIT_REQ           = 1 << 23; // to children
     private static final int FLAG_SEND_CANCEL_DEPENDENTS    = 1 << 24; // to dependents
 
@@ -321,7 +321,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 }
             }
             case STATE_VALIDATE: {
-                if (anyAreSet(state, FLAG_VALIDATE_CANCELLED | FLAG_ROLLBACK_REQ)) {
+                if (allAreSet(state, FLAG_ROLLBACK_REQ)) {
                     return T_VALIDATE_to_ROLLBACK_WAIT;
                 } else if (allAreSet(state, FLAG_VALIDATE_DONE)) {
                     return T_VALIDATE_to_VALIDATE_DONE;
@@ -353,7 +353,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 }
             }
             case STATE_ROLLBACK_WAIT: {
-                if (unrevertedDependents == 0) {
+                if (unterminatedDependents == 0) {
                     return T_ROLLBACK_WAIT_to_ROLLBACK;
                 } else {
                     return T_NONE;
@@ -438,7 +438,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                     continue;
                 }
                 case T_TERMINATE_WAIT_to_TERMINATED: {
-                    state = newState(STATE_TERMINATED, state | FLAG_SEND_CHILD_TERMINATED);
+                    state = newState(STATE_TERMINATED, state | FLAG_SEND_CHILD_TERMINATED | FLAG_SEND_TERMINATED);
                     continue;
                 }
 
@@ -485,10 +485,10 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                     }
                     // not possible to go any farther
                     cachedDependents = dependents.toArray(new TaskControllerImpl[dependents.size()]);
-                    return newState(STATE_ROLLBACK, state | FLAG_DO_ROLLBACK | FLAG_SEND_CANCEL_DEPENDENTS);
+                    return newState(STATE_ROLLBACK, state | FLAG_DO_ROLLBACK);
                 }
                 case T_ROLLBACK_to_TERMINATE_WAIT: {
-                    state = newState(STATE_TERMINATE_WAIT, state | FLAG_SEND_ROLLBACK_DONE);
+                    state = newState(STATE_TERMINATE_WAIT, state);
                     continue;
                 }
                 default: throw new IllegalStateException();
@@ -527,9 +527,9 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         if (allAreSet(state, FLAG_SEND_CHILD_TERMINATED)) {
             parent.childTerminated(this, allAreSet(state, FLAG_USER_THREAD));
         }
-        if (allAreSet(state, FLAG_SEND_ROLLBACK_DONE)) {
+        if (allAreSet(state, FLAG_SEND_TERMINATED)) {
             for (TaskControllerImpl<?> dependency : dependencies) {
-                dependency.dependentRollbackDone(allAreSet(state, FLAG_USER_THREAD));
+                dependency.dependentTerminated(allAreSet(state, FLAG_USER_THREAD));
             }
         }
         if (allAreSet(state, FLAG_SEND_CANCEL_DEPENDENTS)) {
@@ -591,11 +591,11 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         executeTasks(state);
     }
 
-    private void dependentRollbackDone(final boolean userThread) {
+    private void dependentTerminated(final boolean userThread) {
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
-            unrevertedDependents--;
+            unterminatedDependents--;
             state = this.state;
             if (userThread) state |= FLAG_USER_THREAD;
             this.state = state = transition(state);
@@ -675,14 +675,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         if (validatable != null) try {
             doBegin();
             validatable.validate(new ValidateContext() {
-                public boolean isCancelRequested() {
-                    return checkCancel();
-                }
-
-                public void cancelled() {
-                    validateCancelled();
-                }
-
                 public void addProblem(final Problem reason) {
                     problemReport.addProblem(reason);
                 }
@@ -731,20 +723,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         int state;
         synchronized (this) {
             state = this.state | FLAG_USER_THREAD | FLAG_VALIDATE_DONE;
-            if (unlikely(stateOf(state) != STATE_VALIDATE)) {
-                throw new IllegalStateException("Task may not be completed now");
-            }
-            state = transition(state);
-            this.state = state & PERSISTENT_STATE;
-        }
-        executeTasks(state);
-    }
-
-    void validateCancelled() {
-        assert ! holdsLock(this);
-        int state;
-        synchronized (this) {
-            state = this.state | FLAG_USER_THREAD | FLAG_VALIDATE_CANCELLED;
             if (unlikely(stateOf(state) != STATE_VALIDATE)) {
                 throw new IllegalStateException("Task may not be completed now");
             }
@@ -1071,7 +1049,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
             // todo - allow dependent adding in any state
             if (stateIsIn(state, STATE_EXECUTE_WAIT, STATE_EXECUTE, STATE_EXECUTE_DONE, STATE_TERMINATE_WAIT, STATE_TERMINATED)) {
                 dependents.add(dependent);
-                unrevertedDependents++;
+                unterminatedDependents++;
                 state = transition(state);
                 this.state = state & PERSISTENT_STATE;
             } else {
@@ -1147,7 +1125,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
             } catch (IllegalStateException e) {
                 for (; i >= 0; i --) {
                     dependency = dependencies[i];
-                    dependency.dependentRollbackDone(true);
+                    dependency.dependentTerminated(true);
                 }
                 parent.childTerminated(this, true);
                 synchronized (this) {
