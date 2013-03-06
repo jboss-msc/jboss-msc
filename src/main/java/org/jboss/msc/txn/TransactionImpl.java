@@ -76,6 +76,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     private static final int FLAG_SEND_ROLLBACK_REQ = 1 << 11;
 
     private static final int FLAG_WAKE_UP_WAITERS = 1 << 12;
+    private static final int FLAG_RELEASE_ID = 1 << 13;
 
     private static final int FLAG_USER_THREAD = 1 << 31;
 
@@ -279,11 +280,11 @@ final class TransactionImpl extends Transaction implements TaskTarget {
                     continue;
                 }
                 case T_COMMITTING_to_COMMITTED: {
-                    state = newState(STATE_COMMITTED, state | FLAG_DO_COMMIT_LISTENER | FLAG_WAKE_UP_WAITERS);
+                    state = newState(STATE_COMMITTED, state | FLAG_DO_COMMIT_LISTENER | FLAG_WAKE_UP_WAITERS | FLAG_RELEASE_ID);
                     continue;
                 }
                 case T_ROLLBACK_to_ROLLED_BACK: {
-                    state = newState(STATE_ROLLED_BACK, state | FLAG_DO_ROLLBACK_LISTENER | FLAG_WAKE_UP_WAITERS);
+                    state = newState(STATE_ROLLED_BACK, state | FLAG_DO_ROLLBACK_LISTENER | FLAG_WAKE_UP_WAITERS | FLAG_RELEASE_ID);
                     continue;
                 }
                 default: throw new IllegalStateException();
@@ -310,7 +311,9 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         if (allAreSet(state, FLAG_WAKE_UP_WAITERS)) {
             unparkWaiters();
         }
-
+        if (allAreSet(state, FLAG_RELEASE_ID)) {
+            releaseId();
+        }
         if (allAreSet(state, FLAG_USER_THREAD)) {
             if (allAreSet(state, FLAG_DO_COMMIT_LISTENER)) {
                 safeExecute(new AsyncTask(FLAG_DO_COMMIT_LISTENER));
@@ -513,6 +516,11 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     }
 
     static TransactionImpl createTransactionImpl(final Executor taskExecutor, final Problem.Severity maxSeverity) {
+        final int id = acquireId();
+        return new TransactionImpl(id, taskExecutor, maxSeverity);
+    }
+
+    private static int acquireId() {
         int id;
         long oldVal, newVal;
         long bit;
@@ -521,11 +529,21 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             bit = Long.lowestOneBit(~oldVal);
             id = Long.numberOfTrailingZeros(bit);
             if (id == 64) {
-                throw new IllegalStateException("Too many transactions");
+                throw new IllegalStateException("Too many active transactions");
             }
             newVal = oldVal | bit;
         } while (! ID_HOLDER.compareAndSet(oldVal, newVal));
-        return new TransactionImpl(id, taskExecutor, maxSeverity);
+        return id;
+    }
+
+    private void releaseId() {
+        long oldVal, newVal;
+        long bit;
+        do {
+            oldVal = ID_HOLDER.get();
+            bit = 1L << id;
+            newVal = oldVal & ~bit;
+        } while (! ID_HOLDER.compareAndSet(oldVal, newVal));
     }
 
     /**
