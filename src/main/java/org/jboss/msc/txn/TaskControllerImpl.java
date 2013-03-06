@@ -661,7 +661,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         synchronized (this) {
             state = this.state | FLAG_USER_THREAD | FLAG_ROLLBACK_DONE;
             if (unlikely(stateOf(state) != STATE_ROLLBACK)) {
-                throw new IllegalStateException("Task may not be completed now");
+                throw new IllegalStateException("Task may not be reverted now");
             }
             state = transition(state);
             this.state = state & PERSISTENT_STATE;
