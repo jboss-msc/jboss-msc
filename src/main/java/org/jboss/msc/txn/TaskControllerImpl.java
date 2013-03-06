@@ -199,9 +199,9 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     // non-persistent status flags
     private static final int FLAG_EXECUTE_DONE          = 1 << 8;
 //  private static final int FLAG_                      = 1 << 9;
-    private static final int FLAG_EXECUTE_CANCELLED     = 1 << 10;
+//  private static final int FLAG_                      = 1 << 10;
     private static final int FLAG_VALIDATE_DONE         = 1 << 11;
-//  private static final int FLAG                       = 1 << 12;
+//  private static final int FLAG_                      = 1 << 12;
     private static final int FLAG_COMMIT_DONE           = 1 << 13;
     private static final int FLAG_ROLLBACK_DONE         = 1 << 14;
     private static final int FLAG_INSTALL_FAILED        = 1 << 15;
@@ -305,7 +305,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
             case STATE_EXECUTE: {
                 if (allAreSet(state, FLAG_EXECUTE_DONE)) {
                     return T_EXECUTE_to_EXECUTE_DONE;
-                } else if (allAreSet(state, FLAG_EXECUTE_CANCELLED)) {
+                } else if (allAreSet(state, FLAG_CANCEL_REQ)) {
                     return T_EXECUTE_to_TERMINATE_WAIT;
                 } else {
                     return T_NONE;
@@ -645,7 +645,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
-            state = this.state | FLAG_USER_THREAD | FLAG_EXECUTE_CANCELLED;
+            state = this.state | FLAG_USER_THREAD | FLAG_CANCEL_REQ;
             if (unlikely(stateOf(state) != STATE_EXECUTE)) {
                 throw new IllegalStateException("Task may not be cancelled now");
             }
