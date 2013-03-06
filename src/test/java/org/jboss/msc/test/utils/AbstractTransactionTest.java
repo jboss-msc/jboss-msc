@@ -56,7 +56,11 @@ public abstract class AbstractTransactionTest {
 
     @After
     public void tearDown() {
-        assertTrue(defaultExecutor.shutdownNow().isEmpty());
+        defaultExecutor.shutdown();
+        try {
+            defaultExecutor.awaitTermination(60, TimeUnit.SECONDS);
+        } catch (final InterruptedException ignored) {}
+        assertTrue(defaultExecutor.getQueue().size() == 0);
     }
 
     protected static <T> TaskController<T> newTask(final Transaction transaction, final Executable<T> e, final Validatable v, final Revertible r, final Committable c, final TaskController<?>... dependencies) {
