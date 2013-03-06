@@ -67,19 +67,15 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     private static final int FLAG_PREPARE_REQ  = 1 << 4; // set if prepare of the current txn was requested
     private static final int FLAG_COMMIT_REQ   = 1 << 5; // set if commit of the current txn was requested
 
-    private static final int FLAG_PREPARE_DONE = 1 << 6;
-    private static final int FLAG_COMMIT_DONE = 1 << 7;
-    private static final int FLAG_ROLLBACK_DONE = 1 << 8;
+    private static final int FLAG_DO_PREPARE_LISTENER = 1 << 6;
+    private static final int FLAG_DO_COMMIT_LISTENER = 1 << 7;
+    private static final int FLAG_DO_ROLLBACK_LISTENER = 1 << 8;
 
-    private static final int FLAG_DO_PREPARE_LISTENER = 1 << 9;
-    private static final int FLAG_DO_COMMIT_LISTENER = 1 << 10;
-    private static final int FLAG_DO_ROLLBACK_LISTENER = 1 << 11;
+    private static final int FLAG_SEND_VALIDATE_REQ = 1 << 9;
+    private static final int FLAG_SEND_COMMIT_REQ = 1 << 10;
+    private static final int FLAG_SEND_ROLLBACK_REQ = 1 << 11;
 
-    private static final int FLAG_SEND_VALIDATE_REQ = 1 << 12;
-    private static final int FLAG_SEND_COMMIT_REQ = 1 << 13;
-    private static final int FLAG_SEND_ROLLBACK_REQ = 1 << 14;
-
-    private static final int FLAG_WAKE_UP_WAITERS = 1 << 15;
+    private static final int FLAG_WAKE_UP_WAITERS = 1 << 12;
 
     private static final int FLAG_USER_THREAD = 1 << 31;
 
@@ -267,12 +263,8 @@ final class TransactionImpl extends Transaction implements TaskTarget {
                     continue;
                 }
                 case T_PREPARING_to_PREPARED: {
-                    if (validationListener == null) {
-                        state = newState(STATE_PREPARED, state | FLAG_PREPARE_DONE);
-                        continue;
-                    } else {
-                        return newState(STATE_PREPARED, state | FLAG_DO_PREPARE_LISTENER);
-                    }
+                    state = newState(STATE_PREPARED, state | FLAG_DO_PREPARE_LISTENER);
+                    continue;
                 }
                 case T_PREPARING_to_ROLLBACK: {
                     state = newState(STATE_ROLLBACK, state | FLAG_SEND_ROLLBACK_REQ);
@@ -287,20 +279,12 @@ final class TransactionImpl extends Transaction implements TaskTarget {
                     continue;
                 }
                 case T_COMMITTING_to_COMMITTED: {
-                    if (commitListener == null) {
-                        state = newState(STATE_COMMITTED, state | FLAG_COMMIT_DONE | FLAG_WAKE_UP_WAITERS);
-                        continue;
-                    } else {
-                        return newState(STATE_COMMITTED, state | FLAG_DO_COMMIT_LISTENER | FLAG_WAKE_UP_WAITERS);
-                    }
+                    state = newState(STATE_COMMITTED, state | FLAG_DO_COMMIT_LISTENER | FLAG_WAKE_UP_WAITERS);
+                    continue;
                 }
                 case T_ROLLBACK_to_ROLLED_BACK: {
-                    if (rollbackListener == null) {
-                        state = newState(STATE_ROLLED_BACK, state | FLAG_ROLLBACK_DONE | FLAG_WAKE_UP_WAITERS);
-                        continue;
-                    } else {
-                        return newState(STATE_ROLLED_BACK, state | FLAG_DO_ROLLBACK_LISTENER | FLAG_WAKE_UP_WAITERS);
-                    }
+                    state = newState(STATE_ROLLED_BACK, state | FLAG_DO_ROLLBACK_LISTENER | FLAG_WAKE_UP_WAITERS);
+                    continue;
                 }
                 default: throw new IllegalStateException();
             }
