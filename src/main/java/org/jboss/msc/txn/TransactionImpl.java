@@ -702,11 +702,11 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     }
 
     private static int stateOf(final int val) {
-        return val & 0x07;
+        return val & STATE_MASK;
     }
 
     private static int newState(int sid, int oldState) {
-        return sid & 0x07 | oldState & ~0x07;
+        return sid & STATE_MASK | oldState & ~STATE_MASK;
     }
 
     private static boolean stateIsIn(int state, int sid1, int sid2) {

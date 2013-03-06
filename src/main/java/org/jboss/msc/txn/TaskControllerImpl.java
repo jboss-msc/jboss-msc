@@ -613,7 +613,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     }
 
     private static int stateOf(int oldVal) {
-        return oldVal & 0xf;
+        return oldVal & STATE_MASK;
     }
 
     private static boolean stateIsIn(int state, int sid1, int sid2) {
