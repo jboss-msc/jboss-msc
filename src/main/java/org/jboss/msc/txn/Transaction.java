@@ -18,6 +18,8 @@
 
 package org.jboss.msc.txn;
 
+import static org.jboss.msc._private.MSCLogger.TXN;
+
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import org.jboss.msc.value.Listener;
@@ -34,7 +36,7 @@ public abstract class Transaction extends SimpleAttachable implements TaskTarget
      * @param executor the executor to use to run tasks
      * @return the transaction
      */
-    public static Transaction create(Executor executor) {
+    public static Transaction create(final Executor executor) {
         return TransactionImpl.createTransactionImpl(executor, Problem.Severity.WARNING);
     }
 
@@ -45,12 +47,15 @@ public abstract class Transaction extends SimpleAttachable implements TaskTarget
      * @param maxSeverity the maximum severity to allow
      * @return the transaction
      */
-    public static Transaction create(Executor executor, final Problem.Severity maxSeverity) {
+    public static Transaction create(final Executor executor, final Problem.Severity maxSeverity) {
+        if (executor == null) {
+            throw TXN.methodParameterIsNull("executor");
+        }
         if (maxSeverity == null) {
-            throw new IllegalArgumentException("maxSeverity is null");
+            throw TXN.methodParameterIsNull("maxSeverity");
         }
         if (maxSeverity.compareTo(Problem.Severity.CRITICAL) >= 0) {
-            throw new IllegalArgumentException("maxSeverity must be at most ERROR");
+            throw TXN.illegalSeverity("maxSeverity");
         }
         return TransactionImpl.createTransactionImpl(executor, maxSeverity);
     }

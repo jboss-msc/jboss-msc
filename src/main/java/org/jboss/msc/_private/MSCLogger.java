@@ -136,6 +136,9 @@ public interface MSCLogger {
     @Message(id = 100, value = "Unexpected failure to uninject %s")
     void uninjectFailed(@Cause Throwable cause, Object target);
 
-    @Message(id = 101, value = "Parameter %s cannot be null")
+    @Message(id = 101, value = "Parameter %s is null")
     IllegalArgumentException methodParameterIsNull(final String parameterName);
+
+    @Message(id = 102, value = "%s must be at most ERROR")
+    IllegalArgumentException illegalSeverity(final String parameterName);
 }
