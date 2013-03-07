@@ -453,16 +453,12 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             int idx1 = addWaiter();
             int idx2 = otherTxn.addWaiter();
             try {
-                int ourState = stateOf(state);
-                int otherState = stateOf(otherTxn.state);
-                while (! (otherState == STATE_COMMITTED || otherState == STATE_ROLLED_BACK || ourState == STATE_COMMITTED || ourState == STATE_ROLLED_BACK)) {
+                while (! (isTerminated() || otherTxn.isTerminated())) {
                     checkDeadlock(0, 0);
                     park(other);
                     if (Thread.interrupted()) {
                         throw new InterruptedException();
                     }
-                    ourState = stateOf(state);
-                    otherState = stateOf(otherTxn.state);
                 }
             } finally {
                 removeWaiter(idx1);
@@ -470,6 +466,13 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             }
         } else {
             throw new IllegalArgumentException(); // todo i18n
+        }
+    }
+
+    private boolean isTerminated() {
+        assert ! holdsLock(this);
+        synchronized (this) {
+            return stateIsIn(state, STATE_COMMITTED, STATE_ROLLED_BACK);
         }
     }
 
