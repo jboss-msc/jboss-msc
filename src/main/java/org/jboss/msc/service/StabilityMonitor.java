@@ -93,7 +93,7 @@ public final class StabilityMonitor {
     private final Set<ServiceController<?>> problems = new IdentityHashSet<ServiceController<?>>();
     private final Set<ServiceController<?>> failed = new IdentityHashSet<ServiceController<?>>();
     private final AtomicBoolean cleanupInProgress = new AtomicBoolean();
-    private Set<ServiceControllerImpl<?>> controllers = new IdentityHashSet<ServiceControllerImpl<?>>();
+    private IdentityHashSet<ServiceControllerImpl<?>> controllers = new IdentityHashSet<ServiceControllerImpl<?>>();
     private int unstableServices;
 
     /**
@@ -376,7 +376,7 @@ public final class StabilityMonitor {
         // plus controllers mode and state can be changed during the statistics collection phase.
         final Set<ServiceControllerImpl<?>> controllers;
         synchronized (controllersLock) {
-            controllers = this.controllers; 
+            controllers = this.controllers.clone(); 
         }
         // collect statistics
         int active = 0, lazy = 0, onDemand = 0, never = 0, passive = 0, started = 0, remove = 0;
