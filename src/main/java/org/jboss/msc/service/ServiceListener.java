@@ -30,6 +30,7 @@ package org.jboss.msc.service;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public interface ServiceListener<S> {
 
@@ -126,25 +127,4 @@ public interface ServiceListener<S> {
      */
     void transitiveDependencyAvailable(ServiceController<? extends S> controller);
 
-    /**
-     * The inheritance type for a listener.
-     *
-     * @deprecated Listeners inherently degrade performance.  Inheritance only compounds the problem.  Ultimately listener inheritance will be eliminated.
-     */
-    @Deprecated
-    enum Inheritance {
-        /**
-         * This listener is never inherited.
-         */
-        NONE,
-        /**
-         * This listener is inherited only to one level.
-         */
-        ONCE,
-        /**
-         * This listener is inherited to all levels.
-         */
-        ALL,
-        ;
-    }
 }

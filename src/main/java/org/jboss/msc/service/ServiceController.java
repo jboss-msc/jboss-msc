@@ -34,6 +34,7 @@ import org.jboss.msc.value.Value;
  * @param <S> the service type
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public interface ServiceController<S> extends Value<S> {
 
@@ -150,15 +151,6 @@ public interface ServiceController<S> extends Value<S> {
      * @param serviceListener the service listener
      */
     void addListener(ServiceListener<? super S> serviceListener);
-
-    /**
-     * Add a service listener.  The listener's "listener added" callback will be invoked from the same thread that calls
-     * this method.  Then, the method corresponding to the current service state is called.
-     *
-     * @param inheritance the inheritance type for this listener
-     * @param serviceListener the service listener
-     */
-    void addListener(ServiceListener.Inheritance inheritance, ServiceListener<Object> serviceListener);
 
     /**
      * Remove a service listener.
