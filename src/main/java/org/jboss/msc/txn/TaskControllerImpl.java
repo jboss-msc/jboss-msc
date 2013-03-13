@@ -598,7 +598,8 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
             unterminatedDependents--;
             state = this.state;
             if (userThread) state |= FLAG_USER_THREAD;
-            this.state = state = transition(state);
+            state = transition(state);
+            this.state = state & PERSISTENT_STATE;
         }
         executeTasks(state);
     }
