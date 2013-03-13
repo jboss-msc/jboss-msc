@@ -469,7 +469,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         }
     }
 
-    private boolean isTerminated() {
+    public boolean isTerminated() {
         assert ! holdsLock(this);
         synchronized (this) {
             return stateIsIn(state, STATE_COMMITTED, STATE_ROLLED_BACK);

@@ -61,6 +61,12 @@ public abstract class Transaction extends SimpleAttachable implements TaskTarget
     }
 
     public abstract Executor getExecutor();
+    
+    /**
+     * Indicate whether the transaction was terminated.
+     * @return {@code true} if the transaction have been committed or reverted, {@code false} otherwise.
+     */
+    public abstract boolean isTerminated();
 
     /**
      * Get the duration of the current transaction.

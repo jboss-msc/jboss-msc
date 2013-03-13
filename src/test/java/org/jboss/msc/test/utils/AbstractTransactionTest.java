@@ -134,6 +134,7 @@ public abstract class AbstractTransactionTest {
             fail("Cannot call rollback() on rolled back transaction");
         } catch (final TransactionRolledBackException expected) {
         }
+        assertTrue(transaction.isTerminated());
     }
 
     private static void assertCommitted(final Transaction transaction) {
@@ -157,6 +158,7 @@ public abstract class AbstractTransactionTest {
             fail("Cannot call rollback() on committed transaction");
         } catch (final InvalidTransactionStateException expected) {
         }
+        assertTrue(transaction.isTerminated());
     }
 
     protected static void prepare(final Transaction transaction) throws InterruptedException {
