@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 import org.jboss.msc.test.utils.AbstractTransactionTest;
 import org.jboss.msc.test.utils.TrackingTask;
@@ -214,8 +213,6 @@ public class BasicTasksTestCase extends AbstractTransactionTest {
         assertTrue(task.isValidated());
         assertEquals(controller.getTransaction(), transaction);
         controller.getResult();
-        defaultExecutor.shutdown();
-        defaultExecutor.awaitTermination(5L, TimeUnit.SECONDS);
     }
 
     @Test
@@ -373,7 +370,5 @@ public class BasicTasksTestCase extends AbstractTransactionTest {
                 controller.getResult();
             }
         }
-        defaultExecutor.shutdown();
-        defaultExecutor.awaitTermination(5L, TimeUnit.SECONDS);
     }
 }
