@@ -141,4 +141,7 @@ public interface MSCLogger {
 
     @Message(id = 102, value = "%s must be at most ERROR")
     IllegalArgumentException illegalSeverity(final String parameterName);
+
+    @Message(id = 103, value = "Too many active transactions")
+    IllegalStateException tooManyActiveTransactions();
 }

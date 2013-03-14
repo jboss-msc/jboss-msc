@@ -22,22 +22,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import org.jboss.msc.Version;
 import org.jboss.msc._private.MSCLogger;
 import org.jboss.msc.value.Listener;
 
-import static java.lang.Math.min;
-import static java.lang.System.arraycopy;
-import static java.lang.Thread.currentThread;
 import static java.lang.Thread.holdsLock;
-import static java.util.Arrays.copyOf;
-import static java.util.Arrays.copyOfRange;
-import static java.util.concurrent.locks.LockSupport.getBlocker;
-import static java.util.concurrent.locks.LockSupport.park;
-import static java.util.concurrent.locks.LockSupport.unpark;
-import static org.jboss.msc.txn.Bits.allAreClear;
 import static org.jboss.msc.txn.Bits.allAreSet;
 import static org.jboss.msc.txn.Bits.anyAreSet;
 
@@ -56,13 +45,6 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         }
     };
 
-    private static final Thread[] NO_THREADS = new Thread[0];
-    private static final Thread[] DEAD = new Thread[0];
-
-    private static final AtomicReferenceFieldUpdater<TransactionImpl, Thread[]> waitersUpdater = AtomicReferenceFieldUpdater.newUpdater(TransactionImpl.class, Thread[].class, "waiters");
-
-    private static final AtomicLong ID_HOLDER = new AtomicLong();
-
     private static final int FLAG_ROLLBACK_REQ = 1 << 3; // set if rollback of the current txn was requested
     private static final int FLAG_PREPARE_REQ  = 1 << 4; // set if prepare of the current txn was requested
     private static final int FLAG_COMMIT_REQ   = 1 << 5; // set if commit of the current txn was requested
@@ -75,8 +57,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     private static final int FLAG_SEND_COMMIT_REQ = 1 << 10;
     private static final int FLAG_SEND_ROLLBACK_REQ = 1 << 11;
 
-    private static final int FLAG_WAKE_UP_WAITERS = 1 << 12;
-    private static final int FLAG_RELEASE_ID = 1 << 13;
+    private static final int FLAG_CLEAN_UP = 1 << 12;
 
     private static final int FLAG_USER_THREAD = 1 << 31;
 
@@ -107,7 +88,6 @@ final class TransactionImpl extends Transaction implements TaskTarget {
 
     private static final int T_COMMITTING_to_COMMITTED  = 8;
 
-    private final int id;
     private final long startTime = System.nanoTime();
     private final Executor taskExecutor;
     private final List<TaskControllerImpl<?>> topLevelTasks = new ArrayList<TaskControllerImpl<?>>();
@@ -145,10 +125,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     private Listener<? super Transaction> commitListener;
     private Listener<? super Transaction> rollbackListener;
 
-    private volatile Thread[] waiters = NO_THREADS;
-
-    private TransactionImpl(final int id, final Executor taskExecutor, final Problem.Severity maxSeverity) {
-        this.id = id;
+    private TransactionImpl(final Executor taskExecutor, final Problem.Severity maxSeverity) {
         this.taskExecutor = taskExecutor;
         this.maxSeverity = maxSeverity;
     }
@@ -171,14 +148,6 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     public ProblemReport getProblemReport() {
         return problemReport;
     }
-
-    /**
-     * Annotate an unlikely condition.
-     *
-     * @param cond the condition
-     * @return the condition
-     */
-    private static boolean unlikely(boolean cond) { return cond; }
 
     /**
      * Calculate the transition to take from the current state.
@@ -280,11 +249,11 @@ final class TransactionImpl extends Transaction implements TaskTarget {
                     continue;
                 }
                 case T_COMMITTING_to_COMMITTED: {
-                    state = newState(STATE_COMMITTED, state | FLAG_DO_COMMIT_LISTENER | FLAG_WAKE_UP_WAITERS | FLAG_RELEASE_ID);
+                    state = newState(STATE_COMMITTED, state | FLAG_DO_COMMIT_LISTENER | FLAG_CLEAN_UP);
                     continue;
                 }
                 case T_ROLLBACK_to_ROLLED_BACK: {
-                    state = newState(STATE_ROLLED_BACK, state | FLAG_DO_ROLLBACK_LISTENER | FLAG_WAKE_UP_WAITERS | FLAG_RELEASE_ID);
+                    state = newState(STATE_ROLLED_BACK, state | FLAG_DO_ROLLBACK_LISTENER | FLAG_CLEAN_UP);
                     continue;
                 }
                 default: throw new IllegalStateException();
@@ -308,11 +277,8 @@ final class TransactionImpl extends Transaction implements TaskTarget {
                 task.childInitiateRollback(allAreSet(state, FLAG_USER_THREAD));
             }
         }
-        if (allAreSet(state, FLAG_WAKE_UP_WAITERS)) {
-            unparkWaiters();
-        }
-        if (allAreSet(state, FLAG_RELEASE_ID)) {
-            releaseId();
+        if (allAreSet(state, FLAG_CLEAN_UP)) {
+            Transactions.unregister(this);
         }
         if (allAreSet(state, FLAG_USER_THREAD)) {
             if (allAreSet(state, FLAG_DO_COMMIT_LISTENER)) {
@@ -449,21 +415,7 @@ final class TransactionImpl extends Transaction implements TaskTarget {
 
     public void waitFor(final Transaction other) throws InterruptedException, DeadlockException {
         if (other instanceof TransactionImpl) {
-            final TransactionImpl otherTxn = (TransactionImpl) other;
-            int idx1 = addWaiter();
-            int idx2 = otherTxn.addWaiter();
-            try {
-                while (! (isTerminated() || otherTxn.isTerminated())) {
-                    checkDeadlock(0, 0);
-                    park(other);
-                    if (Thread.interrupted()) {
-                        throw new InterruptedException();
-                    }
-                }
-            } finally {
-                removeWaiter(idx1);
-                otherTxn.removeWaiter(idx2);
-            }
+            Transactions.waitFor(this,  other);
         } else {
             throw new IllegalArgumentException(); // todo i18n
         }
@@ -488,135 +440,10 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         }
     }
 
-    /**
-     * Check to see (recursively) if the given waiter is deadlocked with this transaction.
-     *
-     * @param matched the matched transaction ID set
-     * @param checked the checked transaction ID set
-     * @return the new checked transaction ID set
-     * @throws DeadlockException if there is a deadlock
-     */
-    private long checkDeadlock(long matched, long checked) throws DeadlockException {
-        final long bit = 1L << id;
-        if (allAreSet(matched, bit)) {
-            throw new DeadlockException();
-        }
-        matched |= bit;
-        checked |= bit;
-        Thread[] waiters = this.waiters;
-        for (Thread thread : waiters) {
-            final Object blocker = getBlocker(thread);
-            // might be null or something else
-            if (blocker instanceof TransactionImpl) {
-                final TransactionImpl transaction = (TransactionImpl) blocker;
-                final int id = transaction.id;
-                if (allAreClear(checked, 1L << id)) {
-                    checked = transaction.checkDeadlock(matched, checked);
-                }
-            }
-        }
-        return checked;
-    }
-
     static TransactionImpl createTransactionImpl(final Executor taskExecutor, final Problem.Severity maxSeverity) {
-        final int id = acquireId();
-        return new TransactionImpl(id, taskExecutor, maxSeverity);
-    }
-
-    private static int acquireId() {
-        int id;
-        long oldVal, newVal;
-        long bit;
-        do {
-            oldVal = ID_HOLDER.get();
-            bit = Long.lowestOneBit(~oldVal);
-            id = Long.numberOfTrailingZeros(bit);
-            if (id == 64) {
-                throw new IllegalStateException("Too many active transactions");
-            }
-            newVal = oldVal | bit;
-        } while (! ID_HOLDER.compareAndSet(oldVal, newVal));
-        return id;
-    }
-
-    private void releaseId() {
-        long oldVal, newVal;
-        long bit;
-        do {
-            oldVal = ID_HOLDER.get();
-            bit = 1L << id;
-            newVal = oldVal & ~bit;
-        } while (! ID_HOLDER.compareAndSet(oldVal, newVal));
-    }
-
-    /**
-     * Add the current thread as a waiter on this transaction.
-     *
-     * @return the index of the thread; on removal, the thread's index will be no higher than this
-     */
-    private int addWaiter() {
-        final Thread thread = currentThread();
-        Thread[] oldVal, newVal;
-        int length;
-        do {
-            oldVal = waiters;
-            if (oldVal == DEAD) {
-                return 0;
-            }
-            length = oldVal.length;
-            for (int i = 0; i < length; i++) {
-                if (oldVal[i] == thread) {
-                    return i;
-                }
-            }
-            newVal = copyOf(oldVal, length + 1);
-            newVal[length] = thread;
-        } while (! waitersUpdater.compareAndSet(this, oldVal, newVal));
-        return length;
-    }
-
-    /**
-     * Remove the current thread as a waiter on this transaction.
-     *
-     * @param maxIndex the maximum index the current thread will be found at
-     */
-    private void removeWaiter(int maxIndex) {
-        final Thread thread = currentThread();
-        Thread[] oldVal, newVal;
-        int length;
-        cas: do {
-            oldVal = waiters;
-            length = oldVal.length;
-            if (length == 0) {
-                return;
-            } else if (length == 1) {
-                if (oldVal[0] == thread) {
-                    newVal = NO_THREADS;
-                } else {
-                    return;
-                }
-            } else if (oldVal[0] == thread) {
-                newVal = copyOfRange(oldVal, 1, length);
-            } else if (oldVal[length - 1] == thread) {
-                newVal = copyOf(oldVal, length - 1);
-            } else {
-                // we've already checked 0 and length-1
-                for (int i = min(length - 2, maxIndex - 1); i > 0; i--) {
-                    if (oldVal[i] == thread) {
-                        newVal = new Thread[length - 1];
-                        arraycopy(oldVal, 0, newVal, 0, i);
-                        arraycopy(oldVal, i+1, newVal, i, length - i - 1);
-                        continue cas;
-                    }
-                }
-                // not found
-                return;
-            }
-        } while (! waitersUpdater.compareAndSet(this, oldVal, newVal));
-    }
-
-    private void unparkWaiters() {
-        safeUnpark(waitersUpdater.getAndSet(this, DEAD));
+        final TransactionImpl txn = new TransactionImpl(taskExecutor, maxSeverity);
+        Transactions.register(txn);
+        return txn;
     }
 
     private void doChildExecutionFinished(final boolean userThread) {
@@ -706,12 +533,6 @@ final class TransactionImpl extends Transaction implements TaskTarget {
             this.state = state & PERSISTENT_STATE;
         }
         executeTasks(state);
-    }
-
-    private static void safeUnpark(final Thread[] threads) {
-        if (threads != null) for (Thread thread : threads) {
-            unpark(thread);
-        }
     }
 
     private void safeCall(final Listener<? super Transaction> listener) {

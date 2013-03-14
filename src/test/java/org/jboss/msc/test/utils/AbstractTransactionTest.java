@@ -50,8 +50,7 @@ public abstract class AbstractTransactionTest {
 
     @Before
     public void setUp() {
-        defaultExecutor = new ThreadPoolExecutor(8, 8, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
-        defaultExecutor.prestartAllCoreThreads();
+        defaultExecutor = newExecutor(8, true);
     }
 
     @After
@@ -61,6 +60,18 @@ public abstract class AbstractTransactionTest {
             defaultExecutor.awaitTermination(60, TimeUnit.SECONDS);
         } catch (final InterruptedException ignored) {}
         assertTrue(defaultExecutor.getQueue().size() == 0);
+    }
+    
+    protected static ThreadPoolExecutor newExecutor(final int maximumPoolSize) {
+        return newExecutor(maximumPoolSize, false);
+    }
+
+    protected static ThreadPoolExecutor newExecutor(final int maximumPoolSize, final boolean prestartCoreThreads) {
+        final ThreadPoolExecutor executor = new ThreadPoolExecutor(maximumPoolSize, maximumPoolSize, 0L, TimeUnit.DAYS, new LinkedBlockingQueue<Runnable>());
+        if (prestartCoreThreads) {
+            executor.prestartAllCoreThreads();
+        }
+        return executor;
     }
 
     protected static <T> TaskController<T> newTask(final Transaction transaction, final Executable<T> e, final Validatable v, final Revertible r, final Committable c, final TaskController<?>... dependencies) {
