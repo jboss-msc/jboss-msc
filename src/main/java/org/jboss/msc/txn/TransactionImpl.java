@@ -430,7 +430,9 @@ final class TransactionImpl extends Transaction implements TaskTarget {
 
     protected void finalize() {
         try {
-            rollback(null);
+            if (!isTerminated()) {
+                rollback(null);
+            }
         } catch (Throwable ignored) {
         } finally {
             try {
@@ -442,7 +444,14 @@ final class TransactionImpl extends Transaction implements TaskTarget {
 
     static TransactionImpl createTransactionImpl(final Executor taskExecutor, final Problem.Severity maxSeverity) {
         final TransactionImpl txn = new TransactionImpl(taskExecutor, maxSeverity);
-        Transactions.register(txn);
+        try {
+            Transactions.register(txn);
+        } catch (final IllegalStateException e) {
+            synchronized (txn) {
+                txn.state = STATE_ROLLED_BACK;
+            }
+            throw e;
+        }
         return txn;
     }
 
