@@ -499,12 +499,12 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     private void executeTasks(int state) {
         if (allAreSet(state, FLAG_SEND_DEPENDENCY_DONE)) {
             for (TaskControllerImpl<?> dependent : cachedDependents) {
-                dependent.dependencyExecutionComplete(this, allAreSet(state, FLAG_USER_THREAD));
+                dependent.dependencyExecutionComplete(allAreSet(state, FLAG_USER_THREAD));
             }
             cachedDependents = null;
         }
         if (allAreSet(state, FLAG_SEND_CHILD_DONE)) {
-            parent.childExecutionFinished(this, allAreSet(state, FLAG_USER_THREAD));
+            parent.childExecutionFinished(allAreSet(state, FLAG_USER_THREAD));
         }
         if (allAreSet(state, FLAG_SEND_VALIDATE_REQ)) {
             for (TaskChild child : children) {
@@ -517,15 +517,15 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
             }
         }
         if (allAreSet(state, FLAG_SEND_CHILD_VALIDATE_DONE)) {
-            parent.childValidationFinished(this, allAreSet(state, FLAG_USER_THREAD));
+            parent.childValidationFinished(allAreSet(state, FLAG_USER_THREAD));
         }
         if (allAreSet(state, FLAG_SEND_COMMIT_DONE)) {
             for (TaskControllerImpl<?> dependent : dependents) {
-                dependent.dependencyCommitComplete(this, allAreSet(state, FLAG_USER_THREAD));
+                dependent.dependencyCommitComplete(allAreSet(state, FLAG_USER_THREAD));
             }
         }
         if (allAreSet(state, FLAG_SEND_CHILD_TERMINATED)) {
-            parent.childTerminated(this, allAreSet(state, FLAG_USER_THREAD));
+            parent.childTerminated(allAreSet(state, FLAG_USER_THREAD));
         }
         if (allAreSet(state, FLAG_SEND_TERMINATED)) {
             for (TaskControllerImpl<?> dependency : dependencies) {
@@ -890,7 +890,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         executeTasks(state);
     }
 
-    public void childExecutionFinished(final TaskChild child, final boolean userThread) {
+    public void childExecutionFinished(final boolean userThread) {
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
@@ -903,7 +903,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         executeTasks(state);
     }
 
-    public void childValidationFinished(final TaskChild child, final boolean userThread) {
+    public void childValidationFinished(final boolean userThread) {
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
@@ -916,8 +916,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         executeTasks(state);
     }
 
-    public void childTerminated(final TaskChild child, final boolean userThread) {
-        // a dependent has finished its commit operation.
+    public void childTerminated(final boolean userThread) {
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
@@ -955,8 +954,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         executeTasks(state);
     }
 
-    public void dependencyExecutionComplete(final TaskParent dependency, final boolean userThread) {
-        // another dependency has completed execution, thus getting us one step closer to having permission to execute.
+    public void dependencyExecutionComplete(final boolean userThread) {
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
@@ -969,7 +967,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         executeTasks(state);
     }
 
-    public void dependencyValidateComplete(final TaskParent dependency, final boolean userThread) {
+    public void dependencyValidationComplete(final boolean userThread) {
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
@@ -981,7 +979,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         executeTasks(state);
     }
 
-    public void dependencyCommitComplete(final TaskParent dependency, final boolean userThread) {
+    public void dependencyCommitComplete(final boolean userThread) {
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
@@ -1088,11 +1086,11 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
             }
         }
         if (dependencyDone) {
-            dependent.dependencyExecutionComplete(this, userThread);
+            dependent.dependencyExecutionComplete(userThread);
             if (dependencyValidated) {
-                dependent.dependencyValidateComplete(this, userThread);
+                dependent.dependencyValidationComplete(userThread);
                 if (dependencyCommitted) {
-                    dependent.dependencyCommitComplete(this, userThread);
+                    dependent.dependencyCommitComplete(userThread);
                 }
             }
         } else if (dependencyCancelled) {
@@ -1128,7 +1126,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                     dependency = dependencies[i];
                     dependency.dependentTerminated(true);
                 }
-                parent.childTerminated(this, true);
+                parent.childTerminated(true);
                 synchronized (this) {
                     state = this.state | FLAG_USER_THREAD | FLAG_INSTALL_FAILED;
                     state = transition(state);

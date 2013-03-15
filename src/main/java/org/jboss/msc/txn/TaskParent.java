@@ -22,37 +22,35 @@ package org.jboss.msc.txn;
  * Internal interface for task parent operations.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 interface TaskParent {
 
     /**
-     * Indicate that a child's execution has finished.
+     * Indicate to this parent that a child's execution has finished.
      *
-     * @param child the child
      * @param userThread {@code true} if executed from a user thread
      */
-    void childExecutionFinished(TaskChild child, boolean userThread);
+    void childExecutionFinished(boolean userThread);
 
     /**
-     * Indicate that a child's validation has finished.
+     * Indicate to this parent that a child's validation has finished.
      *
-     * @param child the child
      * @param userThread {@code true} if executed from a user thread
      */
-    void childValidationFinished(TaskChild child, boolean userThread);
+    void childValidationFinished(boolean userThread);
 
     /**
-     * Indicate that a child is terminated.
+     * Indicate to this parent that a child is terminated.
      *
-     * @param child the child
      * @param userThread {@code true} if executed from a user thread
      */
-    void childTerminated(TaskChild child, boolean userThread);
+    void childTerminated(boolean userThread);
 
     /**
-     * Indicate to a parent that a child was added.
+     * Indicate to this parent that a child is added.
      *
-     * @param child the child to add
+     * @param child the child added
      * @param userThread {@code true} if executed from a user thread
      */
     void childAdded(TaskChild child, boolean userThread) throws InvalidTransactionStateException;

@@ -23,36 +23,34 @@ package org.jboss.msc.txn;
  * "dependency...".  Methods called from parents start with "child...".
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 interface TaskChild {
 
     /**
      * Indicate to this child that a dependency's execution has completed.
      *
-     * @param dependency the dependency
      * @param userThread {@code true} if executed from a user thread
      */
-    void dependencyExecutionComplete(TaskParent dependency, boolean userThread);
+    void dependencyExecutionComplete(boolean userThread);
 
     /**
      * Indicate to this child that a dependency's validation has completed.
      *
-     * @param dependency the dependency
      * @param userThread {@code true} if executed from a user thread
      */
-    void dependencyValidateComplete(TaskParent dependency, boolean userThread);
+    void dependencyValidationComplete(boolean userThread);
 
     /**
-     * Indicate to this child that a dependency's commit has completed.  Once all dependencies have
+     * Indicate to this child that a dependency's commit has completed. Once all dependencies have
      * completed commit, this child may proceed with commit.
      *
-     * @param dependency the dependency
      * @param userThread {@code true} if executed from a user thread
      */
-    void dependencyCommitComplete(TaskParent dependency, boolean userThread);
+    void dependencyCommitComplete(boolean userThread);
 
     /**
-     * Request that this child initiate rollback when possible.  Neither {@link #childInitiateValidate(boolean)} nor
+     * Request this child to initiate rollback when possible. Neither {@link #childInitiateValidate(boolean)} nor
      * {@link #childInitiateCommit(boolean)} may be called after this method is called.
      *
      * @param userThread {@code true} if executed from a user thread
@@ -60,7 +58,7 @@ interface TaskChild {
     void childInitiateRollback(boolean userThread);
 
     /**
-     * Request that this child initiate validation when possible.  May never be called after
+     * Request this child to initiate validation when possible. May never be called after
      * {@link #childInitiateRollback(boolean)}.  Will always be followed by either {@link #childInitiateRollback(boolean)} or
      * {@link #childInitiateCommit(boolean)}.
      *
@@ -69,8 +67,8 @@ interface TaskChild {
     void childInitiateValidate(boolean userThread);
 
     /**
-     * Request that this child initiate commit when possible.  Will always be called after
-     * {@link #childInitiateValidate(boolean)}.  Will never be called after {@link #childInitiateRollback(boolean)}.
+     * Request this child to initiate commit when possible. Will always be called after
+     * {@link #childInitiateValidate(boolean)}. Will never be called after {@link #childInitiateRollback(boolean)}.
      *
      * @param userThread {@code true} if executed from a user thread
      */

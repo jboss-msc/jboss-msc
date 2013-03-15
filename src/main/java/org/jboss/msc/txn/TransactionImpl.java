@@ -93,15 +93,15 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     private final List<TaskControllerImpl<?>> topLevelTasks = new ArrayList<TaskControllerImpl<?>>();
     private final ProblemReport problemReport = new ProblemReport();
     private final TaskParent topParent = new TaskParent() {
-        public void childExecutionFinished(TaskChild child, final boolean userThread) {
+        public void childExecutionFinished(final boolean userThread) {
             doChildExecutionFinished(userThread);
         }
 
-        public void childValidationFinished(TaskChild child, final boolean userThread) {
+        public void childValidationFinished(final boolean userThread) {
             doChildValidationFinished(userThread);
         }
 
-        public void childTerminated(TaskChild child, final boolean userThread) {
+        public void childTerminated(final boolean userThread) {
             doChildTerminated(userThread);
         }
 
