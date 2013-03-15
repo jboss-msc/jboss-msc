@@ -229,8 +229,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     @SuppressWarnings("unused")
     private static final int TASK_FLAGS = DO_FLAGS | SEND_FLAGS;
 
-    // unused 1 << 30
-
     private static final int FLAG_USER_THREAD       = 1 << 31; // called from user thread; do not block
 
     TaskControllerImpl(final TaskParent parent, final TaskControllerImpl<?>[] dependencies, final Executable<T> executable, final Revertible revertible, final Validatable validatable, final Committable committable, final ClassLoader classLoader) {
@@ -405,8 +403,12 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                     return newState(STATE_EXECUTE, state | FLAG_DO_EXECUTE);
                 }
                 case T_EXECUTE_to_EXECUTE_DONE: {
-                    state = newState(STATE_EXECUTE_DONE, state | FLAG_SEND_CHILD_DONE | FLAG_SEND_DEPENDENCY_DONE);
-                    cachedDependents = dependents.toArray(new TaskControllerImpl[dependents.size()]);
+                    if (! dependents.isEmpty()) {
+                        cachedDependents = dependents.toArray(new TaskControllerImpl[dependents.size()]);
+                        state = newState(STATE_EXECUTE_DONE, state | FLAG_SEND_CHILD_DONE | FLAG_SEND_DEPENDENCY_DONE);
+                    } else {
+                        state = newState(STATE_EXECUTE_DONE, state | FLAG_SEND_CHILD_DONE);
+                    }
                     continue;
                 }
                 case T_EXECUTE_DONE_to_VALIDATE: {
@@ -484,7 +486,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                         continue;
                     }
                     // not possible to go any farther
-                    cachedDependents = dependents.toArray(new TaskControllerImpl[dependents.size()]);
                     return newState(STATE_ROLLBACK, state | FLAG_DO_ROLLBACK);
                 }
                 case T_ROLLBACK_to_TERMINATE_WAIT: {
