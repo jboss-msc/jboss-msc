@@ -261,26 +261,27 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         }
     }
 
-    private void executeTasks(int state) {
+    private void executeTasks(final int state) {
+        final boolean userThread = allAreSet(state, FLAG_USER_THREAD);
         if (allAreSet(state, FLAG_SEND_VALIDATE_REQ)) {
             for (TaskControllerImpl<?> task : topLevelTasks) {
-                task.childInitiateValidate(allAreSet(state, FLAG_USER_THREAD));
+                task.childInitiateValidate(userThread);
             }
         }
         if (allAreSet(state, FLAG_SEND_COMMIT_REQ)) {
             for (TaskControllerImpl<?> task : topLevelTasks) {
-                task.childInitiateCommit(allAreSet(state, FLAG_USER_THREAD));
+                task.childInitiateCommit(userThread);
             }
         }
         if (allAreSet(state, FLAG_SEND_ROLLBACK_REQ)) {
             for (TaskControllerImpl<?> task : topLevelTasks) {
-                task.childInitiateRollback(allAreSet(state, FLAG_USER_THREAD));
+                task.childInitiateRollback(userThread);
             }
         }
         if (allAreSet(state, FLAG_CLEAN_UP)) {
             Transactions.unregister(this);
         }
-        if (allAreSet(state, FLAG_USER_THREAD)) {
+        if (userThread) {
             if (allAreSet(state, FLAG_DO_COMMIT_LISTENER)) {
                 safeExecute(new AsyncTask(FLAG_DO_COMMIT_LISTENER));
             }

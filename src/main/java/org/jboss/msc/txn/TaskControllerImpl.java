@@ -496,52 +496,53 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         }
     }
 
-    private void executeTasks(int state) {
+    private void executeTasks(final int state) {
+        final boolean userThread = allAreSet(state, FLAG_USER_THREAD);
         if (allAreSet(state, FLAG_SEND_DEPENDENCY_DONE)) {
             for (TaskControllerImpl<?> dependent : cachedDependents) {
-                dependent.dependencyExecutionComplete(allAreSet(state, FLAG_USER_THREAD));
+                dependent.dependencyExecutionComplete(userThread);
             }
             cachedDependents = null;
         }
         if (allAreSet(state, FLAG_SEND_CHILD_DONE)) {
-            parent.childExecutionFinished(allAreSet(state, FLAG_USER_THREAD));
+            parent.childExecutionFinished(userThread);
         }
         if (allAreSet(state, FLAG_SEND_VALIDATE_REQ)) {
             for (TaskChild child : children) {
-                child.childInitiateValidate(allAreSet(state, FLAG_USER_THREAD));
+                child.childInitiateValidate(userThread);
             }
         }
         if (allAreSet(state, FLAG_SEND_COMMIT_REQ)) {
             for (TaskChild child : children) {
-                child.childInitiateCommit(allAreSet(state, FLAG_USER_THREAD));
+                child.childInitiateCommit(userThread);
             }
         }
         if (allAreSet(state, FLAG_SEND_CHILD_VALIDATE_DONE)) {
-            parent.childValidationFinished(allAreSet(state, FLAG_USER_THREAD));
+            parent.childValidationFinished(userThread);
         }
         if (allAreSet(state, FLAG_SEND_COMMIT_DONE)) {
             for (TaskControllerImpl<?> dependent : dependents) {
-                dependent.dependencyCommitComplete(allAreSet(state, FLAG_USER_THREAD));
+                dependent.dependencyCommitComplete(userThread);
             }
         }
         if (allAreSet(state, FLAG_SEND_CHILD_TERMINATED)) {
-            parent.childTerminated(allAreSet(state, FLAG_USER_THREAD));
+            parent.childTerminated(userThread);
         }
         if (allAreSet(state, FLAG_SEND_TERMINATED)) {
             for (TaskControllerImpl<?> dependency : dependencies) {
-                dependency.dependentTerminated(allAreSet(state, FLAG_USER_THREAD));
+                dependency.dependentTerminated(userThread);
             }
         }
         if (allAreSet(state, FLAG_SEND_CANCEL_DEPENDENTS)) {
             for (TaskControllerImpl<?> dependent : cachedDependents) {
-                dependent.forceCancel(allAreSet(state, FLAG_USER_THREAD));
+                dependent.forceCancel(userThread);
             }
             cachedDependents = null;
         }
 
         assert allAreClear(state, DO_FLAGS) || oneIsSet(state, DO_FLAGS);
 
-        if (allAreSet(state, FLAG_USER_THREAD)) {
+        if (userThread) {
             if (allAreSet(state, FLAG_DO_EXECUTE)) {
                 safeExecute(new AsyncTask(FLAG_DO_EXECUTE));
             }
