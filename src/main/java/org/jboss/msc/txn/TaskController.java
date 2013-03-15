@@ -34,7 +34,7 @@ public abstract class TaskController<T> implements TaskTarget {
 
     public abstract T getResult() throws IllegalStateException;
 
-    public abstract <T> TaskBuilder<T> newTask(Executable<T> task) throws IllegalStateException;
+    public abstract <N> TaskBuilder<N> newTask(Executable<N> task) throws IllegalStateException;
 
     public abstract TaskBuilder<Void> newTask() throws IllegalStateException;
 }

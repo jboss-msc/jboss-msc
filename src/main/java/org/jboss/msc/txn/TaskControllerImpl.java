@@ -242,8 +242,8 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         state = STATE_NEW;
     }
 
-    public <T> TaskBuilder<T> newTask(final Executable<T> task) throws IllegalStateException {
-        return new TaskBuilder<T>(getTransaction(), this, task);
+    public <N> TaskBuilder<N> newTask(final Executable<N> task) throws IllegalStateException {
+        return new TaskBuilder<N>(getTransaction(), this, task);
     }
 
     public TaskBuilder<Void> newTask() throws IllegalStateException {
@@ -831,8 +831,8 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                     addProblem(new Problem(TaskControllerImpl.this, cause));
                 }
 
-                public <T> TaskBuilder<T> newTask(final Executable<T> task) throws IllegalStateException {
-                    return new TaskBuilder<T>(getTransaction(), TaskControllerImpl.this, task);
+                public <N> TaskBuilder<N> newTask(final Executable<N> task) throws IllegalStateException {
+                    return new TaskBuilder<N>(getTransaction(), TaskControllerImpl.this, task);
                 }
 
                 public TaskBuilder<Void> newTask() throws IllegalStateException {
