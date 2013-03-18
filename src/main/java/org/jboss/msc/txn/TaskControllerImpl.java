@@ -267,14 +267,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     // ===================================================
 
     /**
-     * Annotate an unlikely condition.
-     *
-     * @param cond the condition
-     * @return the condition
-     */
-    private static boolean unlikely(boolean cond) { return cond; }
-
-    /**
      * Calculate the transition to take from the current state.
      *
      * @param state the current state
@@ -634,7 +626,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         int state;
         synchronized (this) {
             state = this.state | FLAG_USER_THREAD | FLAG_EXECUTE_DONE;
-            if (unlikely(stateOf(state) != STATE_EXECUTE)) {
+            if (stateOf(state) != STATE_EXECUTE) {
                 throw new IllegalStateException("Task may not be completed now");
             }
             this.result = result;
@@ -649,7 +641,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         int state;
         synchronized (this) {
             state = this.state | FLAG_USER_THREAD | FLAG_CANCEL_REQ;
-            if (unlikely(stateOf(state) != STATE_EXECUTE)) {
+            if (stateOf(state) != STATE_EXECUTE) {
                 throw new IllegalStateException("Task may not be cancelled now");
             }
             state = transition(state);
@@ -663,7 +655,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         int state;
         synchronized (this) {
             state = this.state | FLAG_USER_THREAD | FLAG_ROLLBACK_DONE;
-            if (unlikely(stateOf(state) != STATE_ROLLBACK)) {
+            if (stateOf(state) != STATE_ROLLBACK) {
                 throw new IllegalStateException("Task may not be reverted now");
             }
             state = transition(state);
@@ -726,7 +718,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         int state;
         synchronized (this) {
             state = this.state | FLAG_USER_THREAD | FLAG_VALIDATE_DONE;
-            if (unlikely(stateOf(state) != STATE_VALIDATE)) {
+            if (stateOf(state) != STATE_VALIDATE) {
                 throw new IllegalStateException("Task may not be completed now");
             }
             state = transition(state);
@@ -883,7 +875,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         int state;
         synchronized (this) {
             state = this.state | FLAG_USER_THREAD | FLAG_COMMIT_DONE;
-            if (unlikely(stateOf(state) != STATE_COMMIT)) {
+            if (stateOf(state) != STATE_COMMIT) {
                 throw new IllegalStateException("Task may not be completed now");
             }
             state = transition(state);
