@@ -919,6 +919,8 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         synchronized (this) {
             state = this.state;
             if (userThread) state |= FLAG_USER_THREAD;
+            unfinishedChildren--;
+            unvalidatedChildren--;
             unterminatedChildren--;
             state = transition(state);
             this.state = state & PERSISTENT_STATE;
