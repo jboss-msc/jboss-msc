@@ -198,33 +198,31 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
 
     // non-persistent status flags
     private static final int FLAG_EXECUTE_DONE          = 1 << 8;
-//  private static final int FLAG_                      = 1 << 9;
-//  private static final int FLAG_                      = 1 << 10;
-    private static final int FLAG_VALIDATE_DONE         = 1 << 11;
-//  private static final int FLAG_                      = 1 << 12;
-    private static final int FLAG_COMMIT_DONE           = 1 << 13;
-    private static final int FLAG_ROLLBACK_DONE         = 1 << 14;
-    private static final int FLAG_INSTALL_FAILED        = 1 << 15;
+    private static final int FLAG_VALIDATE_DONE         = 1 << 9;
+    private static final int FLAG_COMMIT_DONE           = 1 << 10;
+    private static final int FLAG_ROLLBACK_DONE         = 1 << 11;
+    private static final int FLAG_INSTALL_FAILED        = 1 << 12;
 
     // non-persistent job flags
-    private static final int FLAG_SEND_CHILD_DONE           = 1 << 16; // to parents
-    private static final int FLAG_SEND_DEPENDENCY_DONE      = 1 << 17; // to dependents
-    private static final int FLAG_SEND_VALIDATE_REQ         = 1 << 18; // to children
-    private static final int FLAG_SEND_CHILD_VALIDATE_DONE  = 1 << 19; // to parents
-    private static final int FLAG_SEND_COMMIT_DONE          = 1 << 20; // to dependents
-    private static final int FLAG_SEND_CHILD_TERMINATED     = 1 << 21; // to parents
-    private static final int FLAG_SEND_TERMINATED           = 1 << 22; // to dependencies
-    private static final int FLAG_SEND_COMMIT_REQ           = 1 << 23; // to children
-    private static final int FLAG_SEND_CANCEL_DEPENDENTS    = 1 << 24; // to dependents
+    private static final int FLAG_SEND_CHILD_DONE           = 1 << 13; // to parents
+    private static final int FLAG_SEND_DEPENDENCY_DONE      = 1 << 14; // to dependents
+    private static final int FLAG_SEND_VALIDATE_REQ         = 1 << 15; // to children
+    private static final int FLAG_SEND_CHILD_VALIDATE_DONE  = 1 << 16; // to parents
+    private static final int FLAG_SEND_COMMIT_DONE          = 1 << 17; // to dependents
+    private static final int FLAG_SEND_CHILD_TERMINATED     = 1 << 18; // to parents
+    private static final int FLAG_SEND_TERMINATED           = 1 << 19; // to dependencies
+    private static final int FLAG_SEND_ROLLBACK_REQ         = 1 << 20; // to children
+    private static final int FLAG_SEND_COMMIT_REQ           = 1 << 21; // to children
+    private static final int FLAG_SEND_CANCEL_DEPENDENTS    = 1 << 22; // to dependents
 
-    private static final int SEND_FLAGS = intBitMask(16, 24);
+    private static final int SEND_FLAGS = intBitMask(13, 22);
 
-    private static final int FLAG_DO_EXECUTE        = 1 << 25;
-    private static final int FLAG_DO_VALIDATE       = 1 << 26;
-    private static final int FLAG_DO_COMMIT         = 1 << 27;
-    private static final int FLAG_DO_ROLLBACK       = 1 << 28;
+    private static final int FLAG_DO_EXECUTE        = 1 << 23;
+    private static final int FLAG_DO_VALIDATE       = 1 << 24;
+    private static final int FLAG_DO_COMMIT         = 1 << 25;
+    private static final int FLAG_DO_ROLLBACK       = 1 << 26;
 
-    private static final int DO_FLAGS = intBitMask(25, 28);
+    private static final int DO_FLAGS = intBitMask(23, 26);
 
     @SuppressWarnings("unused")
     private static final int TASK_FLAGS = DO_FLAGS | SEND_FLAGS;
@@ -461,15 +459,15 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                     continue;
                 }
                 case T_EXECUTE_DONE_to_ROLLBACK_WAIT: {
-                    state = newState(STATE_ROLLBACK_WAIT, state);
+                    state = newState(STATE_ROLLBACK_WAIT, state | FLAG_SEND_ROLLBACK_REQ);
                     continue;
                 }
                 case T_VALIDATE_to_ROLLBACK_WAIT: {
-                    state = newState(STATE_ROLLBACK_WAIT, state);
+                    state = newState(STATE_ROLLBACK_WAIT, state | FLAG_SEND_ROLLBACK_REQ);
                     continue;
                 }
                 case T_VALIDATE_DONE_to_ROLLBACK_WAIT: {
-                    state = newState(STATE_ROLLBACK_WAIT, state);
+                    state = newState(STATE_ROLLBACK_WAIT, state | FLAG_SEND_ROLLBACK_REQ);
                     continue;
                 }
                 case T_ROLLBACK_WAIT_to_ROLLBACK: {
@@ -503,6 +501,11 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         if (allAreSet(state, FLAG_SEND_VALIDATE_REQ)) {
             for (TaskChild child : children) {
                 child.childInitiateValidate(userThread);
+            }
+        }
+        if (allAreSet(state, FLAG_SEND_ROLLBACK_REQ)) {
+            for (TaskChild child : children) {
+                child.childInitiateRollback(userThread);
             }
         }
         if (allAreSet(state, FLAG_SEND_COMMIT_REQ)) {
@@ -990,14 +993,14 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
-            state = this.state | FLAG_ROLLBACK_REQ;
-            if (userThread) state |= FLAG_USER_THREAD;
-            if (stateOf(state) == STATE_EXECUTE && allAreClear(state, FLAG_CANCEL_REQ)) {
-                state |= FLAG_CANCEL_REQ;
+            state = this.state;
+            if (stateOf(state) == STATE_EXECUTE && allAreClear(state, FLAG_ROLLBACK_REQ)) {
                 for (Thread thread : threads) {
                     thread.interrupt();
                 }
             }
+            if (userThread) state |= FLAG_USER_THREAD;
+            state |= FLAG_ROLLBACK_REQ;
             state = transition(state);
             this.state = state & PERSISTENT_STATE;
         }
