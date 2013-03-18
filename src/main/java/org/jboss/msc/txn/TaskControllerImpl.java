@@ -1041,13 +1041,10 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         int state;
         boolean dependencyDone = false;
         boolean dependencyCancelled = false;
-        boolean dependencyValidated = false;
-        boolean dependencyCommitted = false;
 
         synchronized (this) {
             state = this.state;
             if (userThread) state |= FLAG_USER_THREAD;
-            // todo - allow dependent adding in any state
             if (stateIsIn(state, STATE_EXECUTE_WAIT, STATE_EXECUTE, STATE_EXECUTE_DONE, STATE_TERMINATE_WAIT, STATE_TERMINATED)) {
                 dependents.add(dependent);
                 unterminatedDependents++;
@@ -1062,39 +1059,18 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 }
             }
             switch (stateOf(state)) {
-                case STATE_ROLLBACK:
-
-                case STATE_ROLLBACK_WAIT: {
-                    dependencyCancelled = true;
-                    break;
-                }
-                // no fall thru
                 case STATE_TERMINATED:
                 case STATE_TERMINATE_WAIT: {
-                    // todo - need a separate state for success vs failure?
-                    if (anyAreSet(state, FLAG_ROLLBACK_REQ | FLAG_CANCEL_REQ)) {
+                    if (anyAreSet(state, FLAG_CANCEL_REQ)) {
                         dependencyCancelled = true;
                         break;
-                    } else {
-                        dependencyCommitted = true;
-                        // fall thru
                     }
                 }
-                case STATE_COMMIT:
-                case STATE_COMMIT_WAIT:
-                case STATE_VALIDATE_DONE: dependencyValidated = true;
-                case STATE_VALIDATE:
                 case STATE_EXECUTE_DONE: dependencyDone = true;
             }
         }
         if (dependencyDone) {
             dependent.dependencyExecutionComplete(userThread);
-            if (dependencyValidated) {
-                dependent.dependencyValidationComplete(userThread);
-                if (dependencyCommitted) {
-                    dependent.dependencyCommitComplete(userThread);
-                }
-            }
         } else if (dependencyCancelled) {
             dependent.forceCancel(userThread);
         }
