@@ -18,8 +18,10 @@
 
 package org.jboss.msc.txn;
 
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
 
 import static org.jboss.msc._private.MSCLogger.TXN;
 
@@ -36,7 +38,7 @@ public final class TaskBuilder<T> {
     private static final TaskControllerImpl[] NO_TASKS = new TaskControllerImpl[0];
     private final Transaction transaction;
     private final TaskParent parent;
-    private final ArrayList<TaskControllerImpl<?>> dependencies = new ArrayList<TaskControllerImpl<?>>();
+    private final Set<TaskControllerImpl<?>> dependencies = Collections.newSetFromMap(new IdentityHashMap<TaskControllerImpl<?>, Boolean>());
     private ClassLoader classLoader;
     private Executable<T> executable;
     private Validatable validatable;
