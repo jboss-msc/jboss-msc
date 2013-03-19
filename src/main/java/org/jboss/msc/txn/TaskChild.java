@@ -73,4 +73,11 @@ interface TaskChild {
      * @param userThread {@code true} if executed from a user thread
      */
     void childInitiateCommit(boolean userThread);
+
+    /**
+     * Request this child to initiate cancellation when possible.
+     *
+     * @param userThread {@code true} if executed from a user thread
+     */
+    void forceCancel(boolean userThread);
 }

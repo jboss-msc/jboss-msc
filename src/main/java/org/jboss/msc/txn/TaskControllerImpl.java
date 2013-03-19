@@ -211,18 +211,19 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     private static final int FLAG_SEND_COMMIT_DONE          = 1 << 17; // to dependents
     private static final int FLAG_SEND_CHILD_TERMINATED     = 1 << 18; // to parents
     private static final int FLAG_SEND_TERMINATED           = 1 << 19; // to dependencies
-    private static final int FLAG_SEND_ROLLBACK_REQ         = 1 << 20; // to children
-    private static final int FLAG_SEND_COMMIT_REQ           = 1 << 21; // to children
-    private static final int FLAG_SEND_CANCEL_DEPENDENTS    = 1 << 22; // to dependents
+    private static final int FLAG_SEND_CANCEL_REQ           = 1 << 20; // to children
+    private static final int FLAG_SEND_ROLLBACK_REQ         = 1 << 21; // to children
+    private static final int FLAG_SEND_COMMIT_REQ           = 1 << 22; // to children
+    private static final int FLAG_SEND_CANCEL_DEPENDENTS    = 1 << 23; // to dependents
 
-    private static final int SEND_FLAGS = intBitMask(13, 22);
+    private static final int SEND_FLAGS = intBitMask(13, 23);
 
-    private static final int FLAG_DO_EXECUTE        = 1 << 23;
-    private static final int FLAG_DO_VALIDATE       = 1 << 24;
-    private static final int FLAG_DO_COMMIT         = 1 << 25;
-    private static final int FLAG_DO_ROLLBACK       = 1 << 26;
+    private static final int FLAG_DO_EXECUTE        = 1 << 24;
+    private static final int FLAG_DO_VALIDATE       = 1 << 25;
+    private static final int FLAG_DO_COMMIT         = 1 << 26;
+    private static final int FLAG_DO_ROLLBACK       = 1 << 27;
 
-    private static final int DO_FLAGS = intBitMask(23, 26);
+    private static final int DO_FLAGS = intBitMask(24, 27);
 
     @SuppressWarnings("unused")
     private static final int TASK_FLAGS = DO_FLAGS | SEND_FLAGS;
@@ -452,9 +453,9 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 case T_EXECUTE_to_TERMINATE_WAIT: {
                     if (! dependents.isEmpty()) {
                         cachedDependents = dependents.toArray(new TaskControllerImpl[dependents.size()]);
-                        state = newState(STATE_TERMINATE_WAIT, state | FLAG_SEND_CANCEL_DEPENDENTS);
+                        state = newState(STATE_TERMINATE_WAIT, state | FLAG_SEND_CANCEL_DEPENDENTS | FLAG_SEND_CANCEL_REQ);
                     } else {
-                        state = newState(STATE_TERMINATE_WAIT, state);
+                        state = newState(STATE_TERMINATE_WAIT, state | FLAG_SEND_CANCEL_REQ);
                     }
                     continue;
                 }
@@ -501,6 +502,11 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         if (allAreSet(state, FLAG_SEND_VALIDATE_REQ)) {
             for (TaskChild child : children) {
                 child.childInitiateValidate(userThread);
+            }
+        }
+        if (allAreSet(state, FLAG_SEND_CANCEL_REQ)) {
+            for (TaskChild child : children) {
+                child.forceCancel(userThread);
             }
         }
         if (allAreSet(state, FLAG_SEND_ROLLBACK_REQ)) {
@@ -575,13 +581,17 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         }
     }
 
-    private void forceCancel(final boolean userThread) {
+    public void forceCancel(final boolean userThread) {
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
             state = this.state;
             if (userThread) state |= FLAG_USER_THREAD;
-            state |= FLAG_CANCEL_REQ;
+            if (stateIsIn(state, STATE_NEW, STATE_EXECUTE_WAIT)) {
+                state |= FLAG_CANCEL_REQ;
+            } else if (stateIsIn(state, STATE_EXECUTE, STATE_EXECUTE_DONE)) {
+                state |= FLAG_ROLLBACK_REQ;
+            }
             state = transition(state);
             this.state = state & PERSISTENT_STATE;
         }
@@ -617,6 +627,11 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     private static boolean stateIsIn(int state, int sid1) {
         final int sid = stateOf(state);
         return sid == sid1;
+    }
+
+    private static boolean stateIsIn(int state, int sid1, int sid2) {
+        final int sid = stateOf(state);
+        return sid == sid1 || sid == sid2;
     }
 
     private static boolean stateIsIn(int state, int sid1, int sid2, int sid3, int sid4, int sid5) {
@@ -996,11 +1011,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         int state;
         synchronized (this) {
             state = this.state;
-            if (stateOf(state) == STATE_EXECUTE && allAreClear(state, FLAG_ROLLBACK_REQ)) {
-                for (Thread thread : threads) {
-                    thread.interrupt();
-                }
-            }
             if (userThread) state |= FLAG_USER_THREAD;
             state |= FLAG_ROLLBACK_REQ;
             state = transition(state);
