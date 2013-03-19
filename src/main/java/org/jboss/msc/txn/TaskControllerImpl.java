@@ -614,9 +614,9 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         return oldVal & STATE_MASK;
     }
 
-    private static boolean stateIsIn(int state, int sid1, int sid2) {
+    private static boolean stateIsIn(int state, int sid1) {
         final int sid = stateOf(state);
-        return sid == sid1 || sid == sid2;
+        return sid == sid1;
     }
 
     private static boolean stateIsIn(int state, int sid1, int sid2, int sid3, int sid4, int sid5) {
@@ -933,7 +933,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         int state;
         synchronized (this) {
             state = this.state;
-            if (stateIsIn(state, STATE_EXECUTE_WAIT, STATE_EXECUTE)) {
+            if (stateIsIn(state, STATE_EXECUTE)) {
                 children.add(child);
                 unfinishedChildren++;
                 unterminatedChildren++;
