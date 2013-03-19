@@ -414,7 +414,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                     continue;
                 }
                 case T_VALIDATE_DONE_to_COMMIT_WAIT: {
-                    state = newState(STATE_COMMIT_WAIT, state | FLAG_SEND_COMMIT_REQ);
+                    state = newState(STATE_COMMIT_WAIT, state);
                     continue;
                 }
                 case T_COMMIT_WAIT_to_COMMIT: {
@@ -426,7 +426,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                     return newState(STATE_COMMIT, state | FLAG_DO_COMMIT);
                 }
                 case T_COMMIT_to_TERMINATE_WAIT: {
-                    state = newState(STATE_TERMINATE_WAIT, state | FLAG_SEND_COMMIT_DONE);
+                    state = newState(STATE_TERMINATE_WAIT, state | FLAG_SEND_COMMIT_DONE | FLAG_SEND_COMMIT_REQ);
                     continue;
                 }
                 case T_TERMINATE_WAIT_to_TERMINATED: {
