@@ -46,7 +46,7 @@ import static org.jboss.msc.txn.Bits.*;
  *          |                                             |
  *          v                                             |
  *  +---------------+                                     |
- *  |               |   cancelled                         |
+ *  |               |   cancel_req                        |
  *  |    EXECUTE    +----------------------------+        |
  *  |               |                            |        |
  *  +-------+-------+                            |        |
@@ -55,28 +55,36 @@ import static org.jboss.msc.txn.Bits.*;
  *          v                                    |        |
  *  +---------------+                            |        |
  *  |               |   rb_req                   |        |
- *  |  EXECUTE_DONE +-----------------+          |        |
- *  |               |                 |          |        |
- *  +-------+-------+                 |          |        |
- *          |                         |          |        |
- *          |                         |          |        |
- *          v                         |          |        |
- *  +---------------+   cancelled     |          |        |
- *  |               |   rb_req        |          |        |
- *  |    VALIDATE   +-------------+   |          |        |
- *  |               |             |   |          |        |
- *  +-------+-------+             |   |          |        |
- *          |                     |   |          |        |
- *          |                     |   |          |        |
- *          v                     |   |          |        |
- *  +---------------+             |   |          |        |
- *  |               |   rb_req    |   |          |        |
- *  | VALIDATE_DONE +---------+   |   |          |        |
- *  |               |         |   |   |          |        |
- *  +-------+-------+         |   |   |          |        |
- *          |                 |   |   |          |        |
- *          |                 |   |   |          |        |
- *          v                 v   v   v          |        |
+ *  |  EXECUTE_DONE +---------------------+      |        |
+ *  |               |                     |      |        |
+ *  +-------+-------+                     |      |        |
+ *          |                             |      |        |
+ *          |                             |      |        |
+ *          v                             |      |        |
+ *  +---------------+                     |      |        |
+ *  |               |   rb_req            |      |        |
+ *  |    VALIDATE   +-----------------+   |      |        |
+ *  |               |                 |   |      |        |
+ *  +-------+-------+                 |   |      |        |
+ *          |                         |   |      |        |
+ *          |                         |   |      |        |
+ *          v                         |   |      |        |
+ *  +------------------------+        |   |      |        |
+ *  |                        | rb_req |   |      |        |
+ *  | VALIDATE_CHILDREN_WAIT +----+   |   |      |        |
+ *  |                        |    |   |   |      |        |
+ *  +-------+----------------+    |   |   |      |        |
+ *          |                     |   |   |      |        |
+ *          |                     |   |   |      |        |
+ *          v                     |   |   |      |        |
+ *  +---------------+             |   |   |      |        |
+ *  |               |   rb_req    |   |   |      |        |
+ *  | VALIDATE_DONE +---------+   |   |   |      |        |
+ *  |               |         |   |   |   |      |        |
+ *  +-------+-------+         |   |   |   |      |        |
+ *          |                 |   |   |   |      |        |
+ *          |                 |   |   |   |      |        |
+ *          v                 v   v   v   v      |        |
  *  +---------------+     +---------------+      |        |
  *  |               |     |               |      |        |
  *  |  COMMIT_WAIT  |     | ROLLBACK_WAIT |      |        |
@@ -131,6 +139,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     private int unfinishedDependencies;
     private int unfinishedChildren;
     private int unvalidatedChildren;
+    private int unvalidatedDependencies;
     private int uncommittedDependencies;
     private int unterminatedChildren;
     private int unterminatedDependents;
@@ -142,18 +151,19 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
 
     private static final int STATE_MASK        = 0xF;
 
-    private static final int STATE_NEW              = 0;
-    private static final int STATE_EXECUTE_WAIT     = 1;
-    private static final int STATE_EXECUTE          = 2;
-    private static final int STATE_EXECUTE_DONE     = 3;
-    private static final int STATE_VALIDATE         = 4;
-    private static final int STATE_VALIDATE_DONE    = 5;
-    private static final int STATE_COMMIT_WAIT      = 6;
-    private static final int STATE_COMMIT           = 7;
-    private static final int STATE_ROLLBACK_WAIT    = 8;
-    private static final int STATE_ROLLBACK         = 9;
-    private static final int STATE_TERMINATE_WAIT   = 10;
-    private static final int STATE_TERMINATED       = 11;
+    private static final int STATE_NEW                    = 0;
+    private static final int STATE_EXECUTE_WAIT           = 1;
+    private static final int STATE_EXECUTE                = 2;
+    private static final int STATE_EXECUTE_DONE           = 3;
+    private static final int STATE_VALIDATE               = 4;
+    private static final int STATE_VALIDATE_CHILDREN_WAIT = 5;
+    private static final int STATE_VALIDATE_DONE          = 6;
+    private static final int STATE_COMMIT_WAIT            = 7;
+    private static final int STATE_COMMIT                 = 8;
+    private static final int STATE_ROLLBACK_WAIT          = 9;
+    private static final int STATE_ROLLBACK               = 10;
+    private static final int STATE_TERMINATE_WAIT         = 11;
+    private static final int STATE_TERMINATED             = 12;
     private static final int STATE_LAST = STATE_TERMINATED;
 
     private static final int T_NONE = 0;
@@ -170,21 +180,24 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     private static final int T_EXECUTE_DONE_to_ROLLBACK_WAIT = 7;
     private static final int T_EXECUTE_DONE_to_VALIDATE = 8;
 
-    private static final int T_VALIDATE_to_ROLLBACK_WAIT = 9;
-    private static final int T_VALIDATE_to_VALIDATE_DONE = 10;
+    private static final int T_VALIDATE_to_VALIDATE_CHILDREN_WAIT = 9;
+    private static final int T_VALIDATE_to_ROLLBACK_WAIT = 10;
 
-    private static final int T_VALIDATE_DONE_to_ROLLBACK_WAIT = 11;
-    private static final int T_VALIDATE_DONE_to_COMMIT_WAIT = 12;
+    private static final int T_VALIDATE_CHILDREN_WAIT_to_ROLLBACK_WAIT = 11;
+    private static final int T_VALIDATE_CHILDREN_WAIT_to_VALIDATE_DONE = 12;
 
-    private static final int T_COMMIT_WAIT_to_COMMIT = 13;
+    private static final int T_VALIDATE_DONE_to_ROLLBACK_WAIT = 13;
+    private static final int T_VALIDATE_DONE_to_COMMIT_WAIT = 14;
 
-    private static final int T_COMMIT_to_TERMINATE_WAIT = 14;
+    private static final int T_COMMIT_WAIT_to_COMMIT = 15;
 
-    private static final int T_ROLLBACK_WAIT_to_ROLLBACK = 15;
+    private static final int T_COMMIT_to_TERMINATE_WAIT = 16;
 
-    private static final int T_ROLLBACK_to_TERMINATE_WAIT = 16;
+    private static final int T_ROLLBACK_WAIT_to_ROLLBACK = 17;
 
-    private static final int T_TERMINATE_WAIT_to_TERMINATED = 17;
+    private static final int T_ROLLBACK_to_TERMINATE_WAIT = 18;
+
+    private static final int T_TERMINATE_WAIT_to_TERMINATED = 19;
 
     /**
      * A cancel request, due to rollback or dependency failure.
@@ -207,23 +220,24 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     private static final int FLAG_SEND_CHILD_DONE           = 1 << 13; // to parents
     private static final int FLAG_SEND_DEPENDENCY_DONE      = 1 << 14; // to dependents
     private static final int FLAG_SEND_VALIDATE_REQ         = 1 << 15; // to children
-    private static final int FLAG_SEND_CHILD_VALIDATE_DONE  = 1 << 16; // to parents
-    private static final int FLAG_SEND_COMMIT_DONE          = 1 << 17; // to dependents
-    private static final int FLAG_SEND_CHILD_TERMINATED     = 1 << 18; // to parents
-    private static final int FLAG_SEND_TERMINATED           = 1 << 19; // to dependencies
-    private static final int FLAG_SEND_CANCEL_REQ           = 1 << 20; // to children
-    private static final int FLAG_SEND_ROLLBACK_REQ         = 1 << 21; // to children
-    private static final int FLAG_SEND_COMMIT_REQ           = 1 << 22; // to children
-    private static final int FLAG_SEND_CANCEL_DEPENDENTS    = 1 << 23; // to dependents
+    private static final int FLAG_SEND_VALIDATE_DONE        = 1 << 16; // to dependents
+    private static final int FLAG_SEND_CHILD_VALIDATE_DONE  = 1 << 17; // to parents
+    private static final int FLAG_SEND_COMMIT_DONE          = 1 << 18; // to dependents
+    private static final int FLAG_SEND_CHILD_TERMINATED     = 1 << 19; // to parents
+    private static final int FLAG_SEND_TERMINATED           = 1 << 20; // to dependencies
+    private static final int FLAG_SEND_CANCEL_REQ           = 1 << 21; // to children
+    private static final int FLAG_SEND_ROLLBACK_REQ         = 1 << 22; // to children
+    private static final int FLAG_SEND_COMMIT_REQ           = 1 << 23; // to children
+    private static final int FLAG_SEND_CANCEL_DEPENDENTS    = 1 << 24; // to dependents
 
-    private static final int SEND_FLAGS = intBitMask(13, 23);
+    private static final int SEND_FLAGS = intBitMask(13, 24);
 
-    private static final int FLAG_DO_EXECUTE        = 1 << 24;
-    private static final int FLAG_DO_VALIDATE       = 1 << 25;
-    private static final int FLAG_DO_COMMIT         = 1 << 26;
-    private static final int FLAG_DO_ROLLBACK       = 1 << 27;
+    private static final int FLAG_DO_EXECUTE        = 1 << 25;
+    private static final int FLAG_DO_VALIDATE       = 1 << 26;
+    private static final int FLAG_DO_COMMIT         = 1 << 27;
+    private static final int FLAG_DO_ROLLBACK       = 1 << 28;
 
-    private static final int DO_FLAGS = intBitMask(24, 27);
+    private static final int DO_FLAGS = intBitMask(25, 28);
 
     @SuppressWarnings("unused")
     private static final int TASK_FLAGS = DO_FLAGS | SEND_FLAGS;
@@ -303,7 +317,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
             case STATE_EXECUTE_DONE: {
                 if (allAreSet(state, FLAG_ROLLBACK_REQ)) {
                     return T_EXECUTE_DONE_to_ROLLBACK_WAIT;
-                } else if (allAreSet(state, FLAG_VALIDATE_REQ) && unfinishedChildren == 0) {
+                } else if (allAreSet(state, FLAG_VALIDATE_REQ) && unfinishedChildren == 0 && unvalidatedDependencies == 0) {
                     return T_EXECUTE_DONE_to_VALIDATE;
                 } else {
                     return T_NONE;
@@ -313,13 +327,22 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 if (allAreSet(state, FLAG_ROLLBACK_REQ)) {
                     return T_VALIDATE_to_ROLLBACK_WAIT;
                 } else if (allAreSet(state, FLAG_VALIDATE_DONE)) {
-                    return T_VALIDATE_to_VALIDATE_DONE;
+                    return T_VALIDATE_to_VALIDATE_CHILDREN_WAIT;
+                } else {
+                    return T_NONE;
+                }
+            }
+            case STATE_VALIDATE_CHILDREN_WAIT: {
+                if (allAreSet(state, FLAG_ROLLBACK_REQ)) {
+                    return T_VALIDATE_CHILDREN_WAIT_to_ROLLBACK_WAIT;
+                } else if (unvalidatedChildren == 0) {
+                    return T_VALIDATE_CHILDREN_WAIT_to_VALIDATE_DONE;
                 } else {
                     return T_NONE;
                 }
             }
             case STATE_VALIDATE_DONE: {
-                if (allAreSet(state, FLAG_COMMIT_REQ) && unvalidatedChildren == 0) {
+                if (allAreSet(state, FLAG_COMMIT_REQ)) {
                     return T_VALIDATE_DONE_to_COMMIT_WAIT;
                 } else if (allAreSet(state, FLAG_ROLLBACK_REQ)) {
                     return T_VALIDATE_DONE_to_ROLLBACK_WAIT;
@@ -342,7 +365,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 }
             }
             case STATE_ROLLBACK_WAIT: {
-                if (unterminatedDependents == 0) {
+                if (unterminatedDependents == 0 && unterminatedChildren == 0) {
                     return T_ROLLBACK_WAIT_to_ROLLBACK;
                 } else {
                     return T_NONE;
@@ -402,16 +425,20 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                     }
                     continue;
                 }
+                case T_VALIDATE_to_VALIDATE_CHILDREN_WAIT: {
+                    state = newState(STATE_VALIDATE_CHILDREN_WAIT, state | FLAG_SEND_VALIDATE_REQ);
+                    continue;
+                }
                 case T_EXECUTE_DONE_to_VALIDATE: {
                     if (validatable == null) {
-                        state = newState(STATE_VALIDATE, state | FLAG_SEND_VALIDATE_REQ | FLAG_VALIDATE_DONE);
+                        state = newState(STATE_VALIDATE, state | FLAG_VALIDATE_DONE);
                         continue;
                     }
                     // not possible to go any farther
-                    return newState(STATE_VALIDATE, state | FLAG_SEND_VALIDATE_REQ | FLAG_DO_VALIDATE);
+                    return newState(STATE_VALIDATE, state | FLAG_DO_VALIDATE);
                 }
-                case T_VALIDATE_to_VALIDATE_DONE: {
-                    state = newState(STATE_VALIDATE_DONE, state | FLAG_SEND_CHILD_VALIDATE_DONE);
+                case T_VALIDATE_CHILDREN_WAIT_to_VALIDATE_DONE: {
+                    state = newState(STATE_VALIDATE_DONE, state | FLAG_SEND_CHILD_VALIDATE_DONE | FLAG_SEND_VALIDATE_DONE);
                     continue;
                 }
                 case T_VALIDATE_DONE_to_COMMIT_WAIT: {
@@ -460,6 +487,10 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                     continue;
                 }
                 case T_EXECUTE_DONE_to_ROLLBACK_WAIT: {
+                    state = newState(STATE_ROLLBACK_WAIT, state | FLAG_SEND_ROLLBACK_REQ);
+                    continue;
+                }
+                case T_VALIDATE_CHILDREN_WAIT_to_ROLLBACK_WAIT: {
                     state = newState(STATE_ROLLBACK_WAIT, state | FLAG_SEND_ROLLBACK_REQ);
                     continue;
                 }
@@ -517,6 +548,11 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         if (allAreSet(state, FLAG_SEND_COMMIT_REQ)) {
             for (TaskChild child : children) {
                 child.childInitiateCommit(userThread);
+            }
+        }
+        if (allAreSet(state, FLAG_SEND_VALIDATE_DONE)) {
+            for (TaskControllerImpl<?> dependent : dependents) {
+                dependent.dependencyValidationComplete(userThread);
             }
         }
         if (allAreSet(state, FLAG_SEND_CHILD_VALIDATE_DONE)) {
@@ -951,8 +987,8 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
             if (stateIsIn(state, STATE_EXECUTE)) {
                 children.add(child);
                 unfinishedChildren++;
-                unterminatedChildren++;
                 unvalidatedChildren++;
+                unterminatedChildren++;
                 if (userThread) state |= FLAG_USER_THREAD;
                 state = transition(state);
                 this.state = state & PERSISTENT_STATE;
@@ -987,6 +1023,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         synchronized (this) {
             state = this.state;
             if (userThread) state |= FLAG_USER_THREAD;
+            unvalidatedDependencies--;
             state = transition(state);
             this.state = state & PERSISTENT_STATE;
         }
@@ -1088,7 +1125,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
-            uncommittedDependencies = unfinishedDependencies = dependencies.length;
+            unvalidatedDependencies = uncommittedDependencies = unfinishedDependencies = dependencies.length;
         }
         try {
             parent.childAdded(this, true);
