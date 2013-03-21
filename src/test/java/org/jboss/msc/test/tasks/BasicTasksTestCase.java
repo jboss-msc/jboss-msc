@@ -331,7 +331,7 @@ public class BasicTasksTestCase extends AbstractTransactionTest {
         assertEquals(controller.getTransaction(), transaction);
         controller.getResult();
     }
-    
+
     @Test
     public void simpleDependencies() throws InterruptedException {
         final Transaction transaction = newTransaction();
@@ -339,14 +339,14 @@ public class BasicTasksTestCase extends AbstractTransactionTest {
         TrackingTask[][] tasks = new TrackingTask[8][8];
         TaskController<?>[][] controllers = new TaskController<?>[8][8];
         Random r = new Random(492939L);
-        for (int i = 0; i < 8; i ++) {
-            for (int j = 0; j < 8; j ++) {
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
                 final TrackingTask task = new TrackingTask();
                 tasks[i][j] = task;
                 final TaskBuilder<Object> builder = transaction.newTask(task);
                 if (i > 0) {
                     int x = r.nextInt();
-                    for (int b = 0; b < 8; b ++) {
+                    for (int b = 0; b < 8; b++) {
                         if ((x & (1 << b)) != 0) {
                             builder.addDependency(controllers[i - 1][b]);
                         }
@@ -358,8 +358,8 @@ public class BasicTasksTestCase extends AbstractTransactionTest {
         // prepare and commit transaction from listener
         prepareAndCommitFromListener(transaction);
         // asserts
-        for (int i = 0; i < 8; i ++) {
-            for (int j = 0; j < 8; j ++) {
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
                 final TrackingTask task = tasks[i][j];
                 assertTrue(task.isCommitted());
                 assertTrue(task.isExecuted());

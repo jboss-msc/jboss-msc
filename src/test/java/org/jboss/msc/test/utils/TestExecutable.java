@@ -26,7 +26,7 @@ import org.jboss.msc.txn.ExecuteContext;
 /**
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class TestExecutable<T> extends TestTask implements Executable<T> {
+public class TestExecutable<T> extends TestTask implements Executable<T> {
 
     private final boolean cancel;
     private final T result;
@@ -68,11 +68,16 @@ public final class TestExecutable<T> extends TestTask implements Executable<T> {
     @Override
     public void execute(final ExecuteContext<T> ctx) {
         super.call();
+        executeInternal(ctx);
         if (cancel) {
             ctx.cancelled();
         } else {
             ctx.complete(result);
         }
+    }
+
+    protected void executeInternal(final ExecuteContext<T> ctx) {
+        // initial implementation does nothing 
     }
 
 }

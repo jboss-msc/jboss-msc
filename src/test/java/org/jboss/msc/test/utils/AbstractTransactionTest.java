@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.jboss.msc.txn.Committable;
 import org.jboss.msc.txn.Executable;
+import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.InvalidTransactionStateException;
 import org.jboss.msc.txn.Revertible;
 import org.jboss.msc.txn.TaskController;
@@ -78,6 +79,10 @@ public abstract class AbstractTransactionTest {
         return transaction.newTask(e).addDependencies(dependencies).setValidatable(v).setRevertible(r).setCommittable(c).release();
     }
 
+    protected static <T> TaskController<T> newTask(final ExecuteContext<?> ctx, final Executable<T> e, final Validatable v, final Revertible r, final Committable c, final TaskController<?>... dependencies) {
+        return ctx.newTask(e).addDependencies(dependencies).setValidatable(v).setRevertible(r).setCommittable(c).release();
+    }
+
     protected Transaction newTransaction() {
         assertNotNull(defaultExecutor);
         return Transaction.create(defaultExecutor);
@@ -115,7 +120,7 @@ public abstract class AbstractTransactionTest {
         }
     }
 
-    private static void assertPrepared(final Transaction transaction) {
+    protected static void assertPrepared(final Transaction transaction) {
         assertNotNull(transaction);
         assertTrue(transaction.canCommit());
         try {
@@ -125,7 +130,7 @@ public abstract class AbstractTransactionTest {
         }
     }
 
-    private static void assertReverted(final Transaction transaction) {
+    protected static void assertReverted(final Transaction transaction) {
         assertNotNull(transaction);
         assertFalse(transaction.canCommit());
         // ensure it's not possible to call prepare on rolled back transaction
@@ -148,7 +153,7 @@ public abstract class AbstractTransactionTest {
         assertTrue(transaction.isTerminated());
     }
 
-    private static void assertCommitted(final Transaction transaction) {
+    protected static void assertCommitted(final Transaction transaction) {
         assertNotNull(transaction);
         assertFalse(transaction.canCommit());
         // ensure it's not possible to call prepare() on committed transaction

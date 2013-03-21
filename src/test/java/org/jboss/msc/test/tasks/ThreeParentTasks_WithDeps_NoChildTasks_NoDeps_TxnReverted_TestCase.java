@@ -33,16 +33,16 @@ import org.junit.Test;
 /**
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_TestCase extends AbstractTransactionTest {
+public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_TestCase extends AbstractTransactionTest {
 
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 cancels at EXECUTE</LI>
-     *   <LI>task2 cancels at EXECUTE, depends on task1</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 cancels at EXECUTE</LI>
+     * <LI>task2 cancels at EXECUTE, depends on task1</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -86,13 +86,13 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         if (e2.wasCalled()) {
             assertCallOrder(e1, e2);
         }
-        // committing transaction
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertNotCalled(v1);
         assertNotCalled(r1);
@@ -109,11 +109,11 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 cancels at EXECUTE</LI>
-     *   <LI>task2 completes at EXECUTE, depends on task1</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 cancels at EXECUTE</LI>
+     * <LI>task2 completes at EXECUTE, depends on task1</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -160,13 +160,13 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
                 assertCallOrder(e1, e2, v2);
             }
         }
-        // committing transaction
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertNotCalled(v1);
         assertNotCalled(r1);
@@ -188,11 +188,11 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 completes at EXECUTE</LI>
-     *   <LI>task2 cancels at EXECUTE, depends on task1</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 completes at EXECUTE</LI>
+     * <LI>task2 cancels at EXECUTE, depends on task1</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -234,17 +234,17 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         assertNotCalled(r2);
         assertNotCalled(c2);
         assertCallOrder(e1, e2);
-        // committing transaction
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertCalled(v1);
-        assertNotCalled(r1);
-        assertCalled(c1);
+        assertCalled(r1);
+        assertNotCalled(c1);
         assertCalled(e2);
         assertNotCalled(v2);
         assertNotCalled(r2);
@@ -255,11 +255,11 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 completes at EXECUTE</LI>
-     *   <LI>task2 completes at EXECUTE, depends on task1</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 completes at EXECUTE</LI>
+     * <LI>task2 completes at EXECUTE, depends on task1</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -300,34 +300,33 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         assertCalled(v2);
         assertNotCalled(r2);
         assertNotCalled(c2);
-        assertCallOrder(e1, e2);
-        // committing transaction
+        assertCallOrder(e1, e2, v1, v2);
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertCalled(v1);
-        assertNotCalled(r1);
-        assertCalled(c1);
+        assertCalled(r1);
+        assertNotCalled(c1);
         assertCalled(e2);
         assertCalled(v2);
-        assertNotCalled(r2);
-        assertCalled(c2);
-        assertCallOrder(e1, e2);
-        assertCallOrder(c1, c2);
+        assertCalled(r2);
+        assertNotCalled(c2);
+        assertCallOrder(e1, e2, v1, v2, r2, r1);
     }
 
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 cancels at EXECUTE</LI>
-     *   <LI>task2 cancels at EXECUTE, depends on task1 and task0</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 cancels at EXECUTE</LI>
+     * <LI>task2 cancels at EXECUTE, depends on task1 and task0</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -347,7 +346,7 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         final TestCommittable c1 = new TestCommittable();
         final TaskController<Void> task1Controller = newTask(transaction, e1, v1, r1, c1);
         assertNotNull(task1Controller);
-        // installing task2 
+        // installing task2
         final TestExecutable<Void> e2 = new TestExecutable<Void>(true);
         final TestValidatable v2 = new TestValidatable();
         final TestRevertible r2 = new TestRevertible();
@@ -368,17 +367,18 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         assertNotCalled(v2);
         assertNotCalled(r2);
         assertNotCalled(c2);
+        assertCallOrder(e0, v0);
         if (e2.wasCalled()) {
             assertCallOrder(e0, e2);
             assertCallOrder(e1, e2);
         }
-        // committing transaction
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertNotCalled(v1);
         assertNotCalled(r1);
@@ -387,6 +387,7 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         assertNotCalled(v2);
         assertNotCalled(r2);
         assertNotCalled(c2);
+        assertCallOrder(e0, v0, r0);
         if (e2.wasCalled()) {
             assertCallOrder(e0, e2);
             assertCallOrder(e1, e2);
@@ -396,11 +397,11 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 cancels at EXECUTE</LI>
-     *   <LI>task2 completes at EXECUTE, depends on task1 and task0</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 cancels at EXECUTE</LI>
+     * <LI>task2 completes at EXECUTE, depends on task1 and task0</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -441,6 +442,7 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         // v2.wasCalled() can return either true or false, depends on threads scheduling
         assertNotCalled(r2);
         assertNotCalled(c2);
+        assertCallOrder(e0, v0);
         if (e2.wasCalled()) {
             assertCallOrder(e0, e2);
             assertCallOrder(e1, e2);
@@ -449,25 +451,26 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
                 assertCallOrder(e1, e2, v2);
             }
         }
-        // committing transaction
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertNotCalled(v1);
         assertNotCalled(r1);
         assertNotCalled(c1);
         // e2.wasCalled() can return either true or false, depends on threads scheduling
         // v2.wasCalled() can return either true or false, depends on threads scheduling
+        assertCallOrder(e0, v0, r0);
         if (e2.wasCalled()) {
             assertCalled(r2);
-            assertCallOrder(e0, e2, r2);
+            assertCallOrder(e0, e2, v0, r2);
             assertCallOrder(e1, e2, r2);
             if (v2.wasCalled()) {
-                assertCallOrder(e0, e2, v2, r2);
+                assertCallOrder(e0, e2, v0, v2, r2);
                 assertCallOrder(e1, e2, v2, r2);
             }
         } else {
@@ -479,11 +482,11 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 completes at EXECUTE</LI>
-     *   <LI>task2 cancels at EXECUTE, depends on task1 and task0</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 completes at EXECUTE</LI>
+     * <LI>task2 cancels at EXECUTE, depends on task1 and task0</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -526,17 +529,17 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         assertNotCalled(c2);
         assertCallOrder(e0, e2);
         assertCallOrder(e1, e2);
-        // committing transaction
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertCalled(v1);
-        assertNotCalled(r1);
-        assertCalled(c1);
+        assertCalled(r1);
+        assertNotCalled(c1);
         assertCalled(e2);
         assertNotCalled(v2);
         assertNotCalled(r2);
@@ -548,11 +551,11 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 completes at EXECUTE</LI>
-     *   <LI>task2 completes at EXECUTE, depends on task1 and task0</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 completes at EXECUTE</LI>
+     * <LI>task2 completes at EXECUTE, depends on task1 and task0</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -593,37 +596,35 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         assertCalled(v2);
         assertNotCalled(r2);
         assertNotCalled(c2);
-        assertCallOrder(e0, e2);
-        assertCallOrder(e1, e2);
-        // committing transaction
+        assertCallOrder(e0, e2, v0, v2);
+        assertCallOrder(e1, e2, v1, v2);
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertCalled(v1);
-        assertNotCalled(r1);
-        assertCalled(c1);
+        assertCalled(r1);
+        assertNotCalled(c1);
         assertCalled(e2);
         assertCalled(v2);
-        assertNotCalled(r2);
-        assertCalled(c2);
-        assertCallOrder(e0, e2);
-        assertCallOrder(e1, e2);
-        assertCallOrder(c0, c2);
-        assertCallOrder(c1, c2);
+        assertCalled(r2);
+        assertNotCalled(c2);
+        assertCallOrder(e0, e2, v0, v2, r2, r0);
+        assertCallOrder(e1, e2, v1, v2, r2, r1);
     }
 
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 cancels at EXECUTE, depends on task0</LI>
-     *   <LI>task2 cancels at EXECUTE, depends on task1</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 cancels at EXECUTE, depends on task0</LI>
+     * <LI>task2 cancels at EXECUTE, depends on task1</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -668,13 +669,13 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         if (e2.wasCalled()) {
             assertCallOrder(e0, e1, e2);
         }
-        // committing transaction
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertNotCalled(v1);
         assertNotCalled(r1);
@@ -692,11 +693,11 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 cancels at EXECUTE, depends on task0</LI>
-     *   <LI>task2 completes at EXECUTE, depends on task1</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 cancels at EXECUTE, depends on task0</LI>
+     * <LI>task2 completes at EXECUTE, depends on task1</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -737,32 +738,32 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         // v2.wasCalled() can return either true or false, depends on threads scheduling
         assertNotCalled(r2);
         assertNotCalled(c2);
-        assertCallOrder(e0, e1);
+        assertCallOrder(e0, e1, v0);
         if (e2.wasCalled()) {
-            assertCallOrder(e0, e1, e2);
+            assertCallOrder(e0, e1, e2, v0);
             if (v2.wasCalled()) {
-                assertCallOrder(e0, e1, e2, v2);
+                assertCallOrder(e0, e1, e2, v0, v2);
             }
         }
-        // committing transaction
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertNotCalled(v1);
         assertNotCalled(r1);
         assertNotCalled(c1);
         // e2.wasCalled() can return either true or false, depends on threads scheduling
         // v2.wasCalled() can return either true or false, depends on threads scheduling
-        assertCallOrder(e0, e1);
+        assertCallOrder(e0, e1, v0, r0);
         if (e2.wasCalled()) {
             assertCalled(r2);
-            assertCallOrder(e0, e1, e2, r2);
+            assertCallOrder(e0, e1, e2, v0, r2);
             if (v2.wasCalled()) {
-                assertCallOrder(e0, e1, e2, v2, r2);
+                assertCallOrder(e0, e1, e2, v0, v2, r2);
             }
         } else {
             assertNotCalled(r2);
@@ -773,11 +774,11 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 completes at EXECUTE, depends on task0</LI>
-     *   <LI>task2 cancels at EXECUTE, depends on task1</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 completes at EXECUTE, depends on task0</LI>
+     * <LI>task2 cancels at EXECUTE, depends on task1</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -818,34 +819,33 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         assertNotCalled(v2);
         assertNotCalled(r2);
         assertNotCalled(c2);
-        assertCallOrder(e0, e1, e2);
-        // committing transaction
+        assertCallOrder(e0, e1, e2, v0, v1);
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertCalled(v1);
-        assertNotCalled(r1);
-        assertCalled(c1);
+        assertCalled(r1);
+        assertNotCalled(c1);
         assertCalled(e2);
         assertNotCalled(v2);
         assertNotCalled(r2);
         assertNotCalled(c2);
-        assertCallOrder(e0, e1, e2);
-        assertCallOrder(c0, c1);
+        assertCallOrder(e0, e1, e2, v0, v1, r1, r0);
     }
 
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 completes at EXECUTE, depends on task0</LI>
-     *   <LI>task2 completes at EXECUTE, depends on task1</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 completes at EXECUTE, depends on task0</LI>
+     * <LI>task2 completes at EXECUTE, depends on task1</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -886,34 +886,33 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         assertCalled(v2);
         assertNotCalled(r2);
         assertNotCalled(c2);
-        assertCallOrder(e0, e1, e2);
-        // committing transaction
+        assertCallOrder(e0, e1, e2, v0, v1, v2);
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertCalled(v1);
-        assertNotCalled(r1);
-        assertCalled(c1);
+        assertCalled(r1);
+        assertNotCalled(c1);
         assertCalled(e2);
         assertCalled(v2);
-        assertNotCalled(r2);
-        assertCalled(c2);
-        assertCallOrder(e0, e1, e2);
-        assertCallOrder(c0, c1, c2);
+        assertCalled(r2);
+        assertNotCalled(c2);
+        assertCallOrder(e0, e1, e2, v0, v1, v2, r2, r1, r0);
     }
 
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 cancels at EXECUTE, depends on task0</LI>
-     *   <LI>task2 cancels at EXECUTE, depends on task1 and task0</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 cancels at EXECUTE, depends on task0</LI>
+     * <LI>task2 cancels at EXECUTE, depends on task1 and task0</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -954,17 +953,17 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         assertNotCalled(v2);
         assertNotCalled(r2);
         assertNotCalled(c2);
-        assertCallOrder(e0, e1);
+        assertCallOrder(e0, e1, v0);
         if (e2.wasCalled()) {
-            assertCallOrder(e0, e1, e2);
+            assertCallOrder(e0, e1, e2, v0);
         }
-        // committing transaction
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertNotCalled(v1);
         assertNotCalled(r1);
@@ -973,20 +972,20 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         assertNotCalled(v2);
         assertNotCalled(r2);
         assertNotCalled(c2);
-        assertCallOrder(e0, e1);
+        assertCallOrder(e0, e1, v0, r0);
         if (e2.wasCalled()) {
-            assertCallOrder(e0, e1, e2);
+            assertCallOrder(e0, e1, e2, v0, r0);
         }
     }
 
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 cancels at EXECUTE, depends on task0</LI>
-     *   <LI>task2 completes at EXECUTE, depends on task1 and task0</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 cancels at EXECUTE, depends on task0</LI>
+     * <LI>task2 completes at EXECUTE, depends on task1 and task0</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -1027,32 +1026,32 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         // v2.wasCalled() can return either true or false, depends on threads scheduling
         assertNotCalled(r2);
         assertNotCalled(c2);
-        assertCallOrder(e0, e1);
+        assertCallOrder(e0, e1, v0);
         if (e2.wasCalled()) {
-            assertCallOrder(e0, e1, e2);
+            assertCallOrder(e0, e1, e2, v0);
             if (v2.wasCalled()) {
-                assertCallOrder(e0, e1, e2, v2);
+                assertCallOrder(e0, e1, e2, v0, v2);
             }
         }
-        // committing transaction
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertNotCalled(v1);
         assertNotCalled(r1);
         assertNotCalled(c1);
         // e2.wasCalled() can return either true or false, depends on threads scheduling
         // v2.wasCalled() can return either true or false, depends on threads scheduling
-        assertCallOrder(e0, e1);
+        assertCallOrder(e0, e1, v0, r0);
         if (e2.wasCalled()) {
             assertCalled(r2);
-            assertCallOrder(e0, e1, e2, r2);
+            assertCallOrder(e0, e1, e2, v0, r2);
             if (v2.wasCalled()) {
-                assertCallOrder(e0, e1, e2, v2, r2);
+                assertCallOrder(e0, e1, e2, v0, v2, r2);
             }
         } else {
             assertNotCalled(r2);
@@ -1063,11 +1062,11 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 completes at EXECUTE, depends on task0</LI>
-     *   <LI>task2 cancels at EXECUTE, depends on task1 and task0</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 completes at EXECUTE, depends on task0</LI>
+     * <LI>task2 cancels at EXECUTE, depends on task1 and task0</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -1108,34 +1107,33 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         assertNotCalled(v2);
         assertNotCalled(r2);
         assertNotCalled(c2);
-        assertCallOrder(e0, e1, e2);
-        // committing transaction
+        assertCallOrder(e0, e1, e2, v0, v1);
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertCalled(v1);
-        assertNotCalled(r1);
-        assertCalled(c1);
+        assertCalled(r1);
+        assertNotCalled(c1);
         assertCalled(e2);
         assertNotCalled(v2);
         assertNotCalled(r2);
         assertNotCalled(c2);
-        assertCallOrder(e0, e1, e2);
-        assertCallOrder(c0, c1);
+        assertCallOrder(e0, e1, e2, v0, v1, r1, r0);
     }
 
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 completes at EXECUTE, depends on task0</LI>
-     *   <LI>task2 completes at EXECUTE, depends on task1 and task0</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 completes at EXECUTE, depends on task0</LI>
+     * <LI>task2 completes at EXECUTE, depends on task1 and task0</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -1176,23 +1174,22 @@ public final class ThreeTasks_Executable_WithDependencies_NoChildren_Committed_T
         assertCalled(v2);
         assertNotCalled(r2);
         assertNotCalled(c2);
-        assertCallOrder(e0, e1, e2);
-        // committing transaction
+        assertCallOrder(e0, e1, e2, v0, v1, v2);
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertCalled(v1);
-        assertNotCalled(r1);
-        assertCalled(c1);
+        assertCalled(r1);
+        assertNotCalled(c1);
         assertCalled(e2);
         assertCalled(v2);
-        assertNotCalled(r2);
-        assertCalled(c2);
-        assertCallOrder(e0, e1, e2);
-        assertCallOrder(c0, c1, c2);
+        assertCalled(r2);
+        assertNotCalled(c2);
+        assertCallOrder(e0, e1, e2, v0, v1, v2, r2, r1, r0);
     }
 }
