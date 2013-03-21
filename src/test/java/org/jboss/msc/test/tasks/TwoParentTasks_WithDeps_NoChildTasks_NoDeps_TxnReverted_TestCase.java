@@ -33,16 +33,15 @@ import org.junit.Test;
 /**
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class TwoTasks_Executable_NoDependencies_NoChildren_Committed_TestCase extends AbstractTransactionTest {
+public final class TwoParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_TestCase extends AbstractTransactionTest {
 
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 completes at EXECUTE</LI>
-     *   <LI>no dependencies</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 completes at EXECUTE, depends on task0</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
@@ -60,7 +59,7 @@ public final class TwoTasks_Executable_NoDependencies_NoChildren_Committed_TestC
         final TestValidatable v1 = new TestValidatable();
         final TestRevertible r1 = new TestRevertible();
         final TestCommittable c1 = new TestCommittable();
-        final TaskController<Void> task1Controller = newTask(transaction, e1, v1, r1, c1);
+        final TaskController<Void> task1Controller = newTask(transaction, e1, v1, r1, c1, task0Controller);
         assertNotNull(task1Controller);
         // preparing transaction
         prepare(transaction);
@@ -72,81 +71,32 @@ public final class TwoTasks_Executable_NoDependencies_NoChildren_Committed_TestC
         assertCalled(v1);
         assertNotCalled(r1);
         assertNotCalled(c1);
-        // committing transaction
+        assertCallOrder(e0, e1, v0, v1);
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertCalled(v1);
-        assertNotCalled(r1);
-        assertCalled(c1);
+        assertCalled(r1);
+        assertNotCalled(c1);
+        assertCallOrder(e0, e1, v0, v1, r1, r0);
     }
 
     /**
      * Scenario:
      * <UL>
-     *   <LI>task0 cancels at EXECUTE</LI>
-     *   <LI>task1 cancels at EXECUTE</LI>
-     *   <LI>no dependencies</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
+     * <LI>task0 completes at EXECUTE</LI>
+     * <LI>task1 cancels at EXECUTE, depends on task0</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
      * </UL>
      */
     @Test
     public void usecase2() throws Exception {
-        final Transaction transaction = newTransaction();
-        // installing task0
-        final TestExecutable<Void> e0 = new TestExecutable<Void>(true);
-        final TestValidatable v0 = new TestValidatable();
-        final TestRevertible r0 = new TestRevertible();
-        final TestCommittable c0 = new TestCommittable();
-        final TaskController<Void> task0Controller = newTask(transaction, e0, v0, r0, c0);
-        assertNotNull(task0Controller);
-        // installing task1
-        final TestExecutable<Void> e1 = new TestExecutable<Void>(true);
-        final TestValidatable v1 = new TestValidatable();
-        final TestRevertible r1 = new TestRevertible();
-        final TestCommittable c1 = new TestCommittable();
-        final TaskController<Void> task1Controller = newTask(transaction, e1, v1, r1, c1);
-        assertNotNull(task1Controller);
-        // preparing transaction
-        prepare(transaction);
-        assertCalled(e0);
-        assertNotCalled(v0);
-        assertNotCalled(r0);
-        assertNotCalled(c0);
-        assertCalled(e1);
-        assertNotCalled(v1);
-        assertNotCalled(r1);
-        assertNotCalled(c1);
-        // committing transaction
-        assertTrue(transaction.canCommit());
-        commit(transaction);
-        assertCalled(e0);
-        assertNotCalled(v0);
-        assertNotCalled(r0);
-        assertNotCalled(c0);
-        assertCalled(e1);
-        assertNotCalled(v1);
-        assertNotCalled(r1);
-        assertNotCalled(c1);
-    }
-
-    /**
-     * Scenario:
-     * <UL>
-     *   <LI>task0 completes at EXECUTE</LI>
-     *   <LI>task1 cancels at EXECUTE</LI>
-     *   <LI>no dependencies</LI>
-     *   <LI>no children</LI>
-     *   <LI>transaction committed</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase3() throws Exception {
         final Transaction transaction = newTransaction();
         // installing task0
         final TestExecutable<Void> e0 = new TestExecutable<Void>();
@@ -160,7 +110,7 @@ public final class TwoTasks_Executable_NoDependencies_NoChildren_Committed_TestC
         final TestValidatable v1 = new TestValidatable();
         final TestRevertible r1 = new TestRevertible();
         final TestCommittable c1 = new TestCommittable();
-        final TaskController<Void> task1Controller = newTask(transaction, e1, v1, r1, c1);
+        final TaskController<Void> task1Controller = newTask(transaction, e1, v1, r1, c1, task0Controller);
         assertNotNull(task1Controller);
         // preparing transaction
         prepare(transaction);
@@ -172,17 +122,136 @@ public final class TwoTasks_Executable_NoDependencies_NoChildren_Committed_TestC
         assertNotCalled(v1);
         assertNotCalled(r1);
         assertNotCalled(c1);
-        // committing transaction
+        assertCallOrder(e0, e1, v0);
+        // reverting transaction
         assertTrue(transaction.canCommit());
-        commit(transaction);
+        rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
-        assertNotCalled(r0);
-        assertCalled(c0);
+        assertCalled(r0);
+        assertNotCalled(c0);
         assertCalled(e1);
         assertNotCalled(v1);
         assertNotCalled(r1);
         assertNotCalled(c1);
+        assertCallOrder(e0, e1, v0, r0);
     }
 
+    /**
+     * Scenario:
+     * <UL>
+     * <LI>task0 cancels at EXECUTE</LI>
+     * <LI>task1 cancels at EXECUTE, depends on task0</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase3() throws Exception {
+        final Transaction transaction = newTransaction();
+        // installing task0
+        final TestExecutable<Void> e0 = new TestExecutable<Void>(true);
+        final TestValidatable v0 = new TestValidatable();
+        final TestRevertible r0 = new TestRevertible();
+        final TestCommittable c0 = new TestCommittable();
+        final TaskController<Void> task0Controller = newTask(transaction, e0, v0, r0, c0);
+        assertNotNull(task0Controller);
+        // installing task1
+        final TestExecutable<Void> e1 = new TestExecutable<Void>(true);
+        final TestValidatable v1 = new TestValidatable();
+        final TestRevertible r1 = new TestRevertible();
+        final TestCommittable c1 = new TestCommittable();
+        final TaskController<Void> task1Controller = newTask(transaction, e1, v1, r1, c1, task0Controller);
+        assertNotNull(task1Controller);
+        // preparing transaction
+        prepare(transaction);
+        assertCalled(e0);
+        assertNotCalled(v0);
+        assertNotCalled(r0);
+        assertNotCalled(c0);
+        // e1.wasCalled() can return either true or false, depends on threads scheduling
+        assertNotCalled(v1);
+        assertNotCalled(r1);
+        assertNotCalled(c1);
+        if (e1.wasCalled()) {
+            assertCallOrder(e0, e1);
+        }
+        // reverting transaction
+        assertTrue(transaction.canCommit());
+        rollback(transaction);
+        assertCalled(e0);
+        assertNotCalled(v0);
+        assertNotCalled(r0);
+        assertNotCalled(c0);
+        // e1.wasCalled() can return either true or false, depends on threads scheduling
+        assertNotCalled(v1);
+        assertNotCalled(r1);
+        assertNotCalled(c1);
+        if (e1.wasCalled()) {
+            assertCallOrder(e0, e1);
+        }
+    }
+
+    /**
+     * Scenario:
+     * <UL>
+     * <LI>task0 cancels at EXECUTE</LI>
+     * <LI>task1 completes at EXECUTE, depends on task0</LI>
+     * <LI>no children</LI>
+     * <LI>transaction rolled back</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase4() throws Exception {
+        final Transaction transaction = newTransaction();
+        // installing task0
+        final TestExecutable<Void> e0 = new TestExecutable<Void>(true);
+        final TestValidatable v0 = new TestValidatable();
+        final TestRevertible r0 = new TestRevertible();
+        final TestCommittable c0 = new TestCommittable();
+        final TaskController<Void> task0Controller = newTask(transaction, e0, v0, r0, c0);
+        assertNotNull(task0Controller);
+        // installing task1
+        final TestExecutable<Void> e1 = new TestExecutable<Void>();
+        final TestValidatable v1 = new TestValidatable();
+        final TestRevertible r1 = new TestRevertible();
+        final TestCommittable c1 = new TestCommittable();
+        final TaskController<Void> task1Controller = newTask(transaction, e1, v1, r1, c1, task0Controller);
+        assertNotNull(task1Controller);
+        // preparing transaction
+        prepare(transaction);
+        assertCalled(e0);
+        assertNotCalled(v0);
+        assertNotCalled(r0);
+        assertNotCalled(c0);
+        // e1.wasCalled() can return either true or false, depends on threads scheduling
+        // v1.wasCalled() can return either true or false, depends on threads scheduling
+        assertNotCalled(r1);
+        assertNotCalled(c1);
+        if (e1.wasCalled()) {
+            assertCallOrder(e0, e1);
+            if (v1.wasCalled()) {
+                assertCallOrder(e0, e1, v1);
+            }
+        }
+        // reverting transaction
+        assertTrue(transaction.canCommit());
+        rollback(transaction);
+        assertCalled(e0);
+        assertNotCalled(v0);
+        assertNotCalled(r0);
+        assertNotCalled(c0);
+        // e1.wasCalled() can return either true or false, depends on threads scheduling
+        // v1.wasCalled() can return either true or false, depends on threads scheduling
+        if (e1.wasCalled()) {
+            assertCalled(r1);
+            assertCallOrder(e0, e1, r1);
+            if (v1.wasCalled()) {
+                assertCallOrder(e0, e1, v1, r1);
+            }
+        } else {
+            assertNotCalled(r1);
+        }
+        assertNotCalled(c1);
+    }
 }

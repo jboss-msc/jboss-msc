@@ -18,6 +18,11 @@
 
 package org.jboss.msc.test.tasks;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -27,11 +32,6 @@ import org.jboss.msc.txn.DeadlockException;
 import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.value.Listener;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
@@ -224,7 +224,8 @@ public final class TransactionsTestCase extends AbstractTransactionTest {
         }
     }
 
-    private void testWaitForQueueSplittedFromSeparateThread(final boolean callPrepare, final boolean callRollback) throws Exception {
+    private void testWaitForQueueSplittedFromSeparateThread(final boolean callPrepare, final boolean callRollback)
+            throws Exception {
         final ThreadPoolExecutor executor = newExecutor(4);
         // prepare tasks
         final Transaction txn0 = newTransaction();
@@ -339,9 +340,10 @@ public final class TransactionsTestCase extends AbstractTransactionTest {
             this.id = id;
         }
 
+        @Override
         public void run() {
             synchronized (this) {
-                endSignal = new CountDownLatch(1);
+                endSignal = new CountDownLatch(prepare ? 2 : 1);
             }
             try {
                 if (dependency != null) {
@@ -359,6 +361,9 @@ public final class TransactionsTestCase extends AbstractTransactionTest {
                         out.append(" terminated").append(id);
                     }
                     endSignal.countDown();
+                    if (prepare) {
+                        endSignal.countDown();
+                    }
                     return;
                 }
                 synchronized (out) {
@@ -370,6 +375,9 @@ public final class TransactionsTestCase extends AbstractTransactionTest {
                         public void handleEvent(final Transaction subject) {
                             synchronized (out) {
                                 out.append(" prepared").append(id);
+                            }
+                            synchronized (TransactionTask.this) {
+                                endSignal.countDown();
                             }
                         }
                     });
@@ -403,6 +411,9 @@ public final class TransactionsTestCase extends AbstractTransactionTest {
                 synchronized (this) {
                     this.t = t;
                     endSignal.countDown();
+                    if (prepare) {
+                        endSignal.countDown();
+                    }
                 }
             }
         }
@@ -423,7 +434,7 @@ public final class TransactionsTestCase extends AbstractTransactionTest {
         private Transaction getDependent() {
             return this.dependent;
         }
-        
+
         private synchronized void setStartSignal(final CountDownLatch startSignal) {
             this.startSignal = startSignal;
         }
