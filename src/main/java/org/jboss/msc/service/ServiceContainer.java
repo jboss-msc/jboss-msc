@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
  * A service container which manages a set of running services.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
 
@@ -37,6 +38,13 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
      * Stop all services within this container.
      */
     void shutdown();
+    
+    /**
+     * Whether container have been shut down.
+     *
+     * @return {@code true} if container is shutting down 
+     */
+    boolean isShutdown();
 
     /**
      * Determine whether the container is completely shut down.

@@ -157,6 +157,11 @@ public final class DelegatingServiceContainer implements ServiceContainer {
     }
 
     /** {@inheritDoc} */
+    public boolean isShutdown() {
+        throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
     public boolean isShutdownComplete() {
         throw new UnsupportedOperationException();
     }

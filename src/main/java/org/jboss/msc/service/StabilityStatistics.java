@@ -35,7 +35,6 @@ package org.jboss.msc.service;
  *   <li>count of controllers in <b>PASSIVE</b> mode - see method {@link #getPassiveCount()}</li> 
  *   <li>count of controllers that had <b>PROBLEM</b> to start - see method {@link #getProblemsCount()}</li> 
  *   <li>count of controllers in <b>UP</b> state - see method {@link #getStartedCount()}</li> 
- *   <li>count of controllers in <b>REMOVE</b> mode - see method {@link #getRemovedCount()}</li> 
  * </ul>
  * 
  * Sample usage:
@@ -59,7 +58,6 @@ public final class StabilityStatistics {
     private int passive;
     private int problems;
     private int started;
-    private int removed;
 
     /**
      * Returns count of controllers registered with {@link StabilityMonitor} that are in
@@ -133,15 +131,6 @@ public final class StabilityStatistics {
         return started;
     }
     
-    /**
-     * Returns count of controllers registered with {@link StabilityMonitor} that are in
-     * {@link ServiceController.Mode#REMOVE} mode.
-     * @return count of <b>REMOVE</b> controllers
-     */
-    public int getRemovedCount() {
-        return removed;
-    }
-    
     void setActiveCount(final int count) {
         active = count;
     }
@@ -172,9 +161,5 @@ public final class StabilityStatistics {
 
     void setStartedCount(final int count) {
         started = count;
-    }
-
-    void setRemovedCount(final int count) {
-        removed = count;
     }
 }
