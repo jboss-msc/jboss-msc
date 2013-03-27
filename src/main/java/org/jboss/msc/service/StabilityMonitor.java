@@ -105,10 +105,11 @@ public final class StabilityMonitor {
         if (controller == null) return;
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
         synchronized (controllersLock) {
-            controllers.add(serviceController);
-            // It is safe to call controller.addMonitor() under controllersLock because
-            // controller.addMonitor() may callback only stabilityLock protected methods.
-            serviceController.addMonitor(this);
+            if (controllers.add(serviceController)) {
+                // It is safe to call controller.addMonitor() under controllersLock because
+                // controller.addMonitor() may callback only stabilityLock protected methods.
+                serviceController.addMonitor(this);
+            }
         }
     }
 
@@ -132,10 +133,22 @@ public final class StabilityMonitor {
         if (controller == null) return;
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
         synchronized (controllersLock) {
-            // It is safe to call controller.addMonitor() under controllersLock because
-            // controller.addMonitor() may callback only stabilityLock protected methods.
-            serviceController.removeMonitor(this);
-            controllers.remove(serviceController);
+            if (controllers.remove(serviceController)) {
+                // It is safe to call controller.removeMonitor() under controllersLock because
+                // controller.removeMonitor() may callback only stabilityLock protected methods.
+                serviceController.removeMonitor(this);
+            }
+        }
+    }
+
+    /**
+     * Unregister controller with this monitor but don't call serviceController.removeMonitor() at all.
+     *
+     * @param controller to be unregistered from stability detection.
+     */
+    void removeControllerNoCallback(final ServiceControllerImpl<?> controller) {
+        synchronized (controllersLock) {
+            controllers.remove(controller);
         }
     }
 

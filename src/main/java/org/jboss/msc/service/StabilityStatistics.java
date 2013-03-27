@@ -138,6 +138,7 @@ public final class StabilityStatistics {
      * {@link ServiceController.Mode#REMOVE} mode.
      * @return count of <b>REMOVE</b> controllers
      */
+    @Deprecated
     public int getRemovedCount() {
         return removed;
     }
