@@ -88,6 +88,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public final class StabilityMonitor {
 
+    private final boolean unregisterRemovedControllers;
     private final Object stabilityLock = new Object();
     private final Object controllersLock = new Object();
     private final Set<ServiceController<?>> problems = new IdentityHashSet<ServiceController<?>>();
@@ -95,6 +96,26 @@ public final class StabilityMonitor {
     private final AtomicBoolean cleanupInProgress = new AtomicBoolean();
     private IdentityHashSet<ServiceControllerImpl<?>> controllers = new IdentityHashSet<ServiceControllerImpl<?>>();
     private int unstableServices;
+    
+    /**
+     * Constructor.
+     * By default all controllers are removed from this monitor in their removal.
+     */
+    public StabilityMonitor() {
+        this(true);
+    }
+
+    /**
+     * Constructor.
+     * @param unregister whether associated controllers should be unregistered from this monitor on their removal
+     */
+    public StabilityMonitor(final boolean unregister) {
+        this.unregisterRemovedControllers = unregister;
+    }
+
+    boolean unregisterControllersOnRemoval() {
+        return this.unregisterRemovedControllers;
+    }
 
     /**
      * Register controller with this monitor.
@@ -105,10 +126,11 @@ public final class StabilityMonitor {
         if (controller == null) return;
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
         synchronized (controllersLock) {
-            controllers.add(serviceController);
-            // It is safe to call controller.addMonitor() under controllersLock because
-            // controller.addMonitor() may callback only stabilityLock protected methods.
-            serviceController.addMonitor(this);
+            if (controllers.add(serviceController)) {
+                // It is safe to call controller.addMonitor() under controllersLock because
+                // controller.addMonitor() may callback only stabilityLock protected methods.
+                serviceController.addMonitor(this);
+            }
         }
     }
 
@@ -132,10 +154,22 @@ public final class StabilityMonitor {
         if (controller == null) return;
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
         synchronized (controllersLock) {
-            // It is safe to call controller.addMonitor() under controllersLock because
-            // controller.addMonitor() may callback only stabilityLock protected methods.
-            serviceController.removeMonitor(this);
-            controllers.remove(serviceController);
+            if (controllers.remove(serviceController)) {
+                // It is safe to call controller.removeMonitor() under controllersLock because
+                // controller.removeMonitor() may callback only stabilityLock protected methods.
+                serviceController.removeMonitor(this);
+            }
+        }
+    }
+
+    /**
+     * Unregister controller with this monitor but don't call serviceController.removeMonitor() at all.
+     *
+     * @param controller to be unregistered from stability detection.
+     */
+    void removeControllerNoCallback(final ServiceControllerImpl<?> controller) {
+        synchronized (controllersLock) {
+            controllers.remove(controller);
         }
     }
 

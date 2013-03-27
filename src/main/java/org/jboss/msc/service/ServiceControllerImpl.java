@@ -793,6 +793,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         if (newMode == Mode.REMOVE) {
             getListenerTasks(ListenerNotification.REMOVE_REQUESTED, taskList);
         }
+        for (final StabilityMonitor monitor : monitors) {
+            if (monitor.unregisterControllersOnRemoval()) {
+                if (newMode == Mode.REMOVE) {
+                    monitor.removeControllerNoCallback(this);
+                } else {
+                    monitor.addControllerNoCallback(this);
+                }
+            }
+        }
         mode = newMode;
     }
 
@@ -1485,7 +1494,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     void addMonitor(final StabilityMonitor stabilityMonitor) {
         assert !holdsLock(this);
         synchronized (this) {
-            final Substate state = this.state;
             if (monitors.add(stabilityMonitor) && !isStableRestState()) {
                 stabilityMonitor.incrementUnstableServices();
                 if (state == Substate.START_FAILED) {
