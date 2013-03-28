@@ -499,7 +499,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         return this;
     }
 
-    boolean isShutdown() {
+    public boolean isShutdown() {
         return down;
     }
 
