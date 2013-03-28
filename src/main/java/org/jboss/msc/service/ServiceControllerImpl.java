@@ -682,6 +682,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 case REMOVING_to_REMOVED: {
                     getListenerTasks(transition, tasks);
                     listeners.clear();
+                    for (final StabilityMonitor monitor : monitors) {
+                        monitor.removeControllerNoCallback(this);
+                    }
                     break;
                 }
                 case REMOVING_to_DOWN: {
@@ -1453,7 +1456,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     void addMonitor(final StabilityMonitor stabilityMonitor) {
         assert !holdsLock(this);
         synchronized (this) {
-            final Substate state = this.state;
             if (monitors.add(stabilityMonitor) && !isStableRestState()) {
                 stabilityMonitor.incrementUnstableServices();
                 if (state == Substate.START_FAILED) {

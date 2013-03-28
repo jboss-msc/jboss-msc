@@ -105,10 +105,11 @@ public final class StabilityMonitor {
         if (controller == null) return;
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
         synchronized (controllersLock) {
-            controllers.add(serviceController);
-            // It is safe to call controller.addMonitor() under controllersLock because
-            // controller.addMonitor() may callback only stabilityLock protected methods.
-            serviceController.addMonitor(this);
+            if (controllers.add(serviceController)) {
+                // It is safe to call controller.addMonitor() under controllersLock because
+                // controller.addMonitor() may callback only stabilityLock protected methods.
+                serviceController.addMonitor(this);
+            }
         }
     }
 
@@ -132,10 +133,22 @@ public final class StabilityMonitor {
         if (controller == null) return;
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
         synchronized (controllersLock) {
-            // It is safe to call controller.addMonitor() under controllersLock because
-            // controller.addMonitor() may callback only stabilityLock protected methods.
-            serviceController.removeMonitor(this);
-            controllers.remove(serviceController);
+            if (controllers.remove(serviceController)) {
+                // It is safe to call controller.removeMonitor() under controllersLock because
+                // controller.removeMonitor() may callback only stabilityLock protected methods.
+                serviceController.removeMonitor(this);
+            }
+        }
+    }
+
+    /**
+     * Unregister controller with this monitor but don't call serviceController.removeMonitor() at all.
+     *
+     * @param controller to be unregistered from stability detection.
+     */
+    void removeControllerNoCallback(final ServiceControllerImpl<?> controller) {
+        synchronized (controllersLock) {
+            controllers.remove(controller);
         }
     }
 
@@ -379,7 +392,7 @@ public final class StabilityMonitor {
             controllers = this.controllers.clone(); 
         }
         // collect statistics
-        int active = 0, lazy = 0, onDemand = 0, never = 0, passive = 0, started = 0, remove = 0;
+        int active = 0, lazy = 0, onDemand = 0, never = 0, passive = 0, started = 0;
         for (final ServiceController<?> controller : controllers) {
             if (controller.getState() == UP) started++;
             if (controller.getMode() == ACTIVE) active++;
@@ -387,7 +400,6 @@ public final class StabilityMonitor {
             else if (controller.getMode() == ON_DEMAND) onDemand++;
             else if (controller.getMode() == NEVER) never++;
             else if (controller.getMode() == LAZY) lazy++;
-            else if (controller.getMode() == REMOVE) remove++;
         }
         // report statistics
         statistics.setActiveCount(active);
@@ -398,6 +410,5 @@ public final class StabilityMonitor {
         statistics.setPassiveCount(passive);
         statistics.setProblemsCount(problemsCount);
         statistics.setStartedCount(started);
-        statistics.setRemovedCount(remove);
     }
 }

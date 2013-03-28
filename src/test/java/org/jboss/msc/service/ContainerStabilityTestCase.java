@@ -153,7 +153,6 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         assertTrue(statistics.getNeverCount() == 0);
         assertTrue(statistics.getPassiveCount() == 0);
         assertTrue(statistics.getProblemsCount() == 0);
-        assertTrue(statistics.getRemovedCount() == 0);
         stabilityMonitor.clear();
         try {
             stabilityMonitor.awaitStability(statistics);
@@ -168,7 +167,6 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         assertTrue(statistics.getNeverCount() == 0);
         assertTrue(statistics.getPassiveCount() == 0);
         assertTrue(statistics.getProblemsCount() == 0);
-        assertTrue(statistics.getRemovedCount() == 0);
     }
 
     @Test
@@ -223,7 +221,6 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         assertTrue(statistics.getNeverCount() == 0);
         assertTrue(statistics.getPassiveCount() == 0);
         assertTrue(statistics.getProblemsCount() == 0);
-        assertTrue(statistics.getRemovedCount() == 0);
         stabilityMonitor.clear();
         try {
             stabilityMonitor.awaitStability(statistics);
@@ -238,6 +235,5 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         assertTrue(statistics.getNeverCount() == 0);
         assertTrue(statistics.getPassiveCount() == 0);
         assertTrue(statistics.getProblemsCount() == 0);
-        assertTrue(statistics.getRemovedCount() == 0);
     }
 }
