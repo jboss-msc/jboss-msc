@@ -41,6 +41,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -228,6 +229,48 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             } catch (UnsupportedEncodingException e) {
                 throw new IllegalStateException(e);
             }
+        }
+
+        public String dumpServicesToGraphDescription() {
+            final List<ServiceStatus> statuses = queryServiceStatuses();
+            final Map<String, String> aliases = new HashMap<String, String>();
+            final StringBuilder builder = new StringBuilder();
+            builder.append("digraph Services {\n    node [shape=record];\n    graph [rankdir=\"RL\"];\n");
+            for (ServiceStatus status : statuses) {
+                final String serviceName = status.getServiceName();
+                final String[] aliasesStrings = status.getAliases();
+                if (aliasesStrings != null) for (String alias : aliasesStrings) {
+                    aliases.put(alias, serviceName);
+                    aliases.put(serviceName, serviceName);
+                }
+                builder.append("    ");
+                final String quoted = serviceName.replace("\"", "\\\"");
+                builder.append('"').append(quoted).append('"');
+                builder.append(' ');
+                builder.append("[label=\"");
+                builder.append(quoted);
+                builder.append('|');
+                builder.append(status.getStateName()).append("\\ (").append(status.getSubstateName()).append(")");
+                builder.append("\"]");
+                builder.append(";\n");
+            }
+            builder.append('\n');
+            for (ServiceStatus status : statuses) {
+                final String serviceName = status.getServiceName();
+                final String[] dependencies = status.getDependencies();
+                final Set<String> filteredDependencies = new HashSet<String>(Arrays.asList(dependencies));
+                final String parentName = status.getParentName();
+                if (parentName != null) filteredDependencies.add(parentName);
+                for (String dependency : filteredDependencies) {
+                    builder.append("    ").append('"').append(serviceName.replace("\"", "\\\"")).append('"');
+                    String dep = aliases.get(dependency);
+                    if (dep == null) dep = dependency;
+                    builder.append(" -> \"").append(dep.replace("\"", "\\\"")).append('"');
+                    builder.append(";\n");
+                }
+            }
+            builder.append("}\n");
+            return builder.toString();
         }
 
         public String dumpServiceDetails(final String serviceName) {

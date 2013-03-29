@@ -75,6 +75,13 @@ public interface ServiceContainerMXBean {
     String dumpServicesToString();
 
     /**
+     * Dump the container state to a string suitable for rendering in GraphViz or compatible tools.
+     *
+     * @return the container state graph
+     */
+    String dumpServicesToGraphDescription();
+
+    /**
      * Dump all details of a service.
      *
      * @param serviceName the name of the service to examine
