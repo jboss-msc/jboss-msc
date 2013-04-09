@@ -33,7 +33,7 @@ import org.jboss.msc.value.WritableValue;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
-public final class ServiceController<T> extends TransactionalObject {
+final class ServiceController<T> extends TransactionalObject {
 
     /**
      * The service itself.

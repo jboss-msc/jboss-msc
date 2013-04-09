@@ -27,9 +27,9 @@ package org.jboss.msc.service;
 final class ParentDependency<T> extends DependencyDecorator<T> {
 
     @SuppressWarnings("unused")
-    private final ServiceBuilder<?> childServiceBuilder;
+    private final ServiceBuilderImpl<?> childServiceBuilder;
 
-    public ParentDependency(Dependency<T> dependency, ServiceBuilder<?> childServiceBuilder) {
+    public ParentDependency(Dependency<T> dependency, ServiceBuilderImpl<?> childServiceBuilder) {
         super(dependency);
         this.childServiceBuilder = childServiceBuilder;
     }

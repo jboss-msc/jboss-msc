@@ -66,7 +66,7 @@ public enum DependencyFlag {
      */
     PARENT (false, true) {
         @Override
-        <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilder<?> serviceBuilder) {
+        <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilderImpl<?> serviceBuilder) {
             return new ParentDependency<T>(dependency, serviceBuilder);
         }
     },
@@ -75,7 +75,7 @@ public enum DependencyFlag {
      */
     REPLACEABLE (false, false) {
         @Override
-        <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilder<?> serviceBuilder) {
+        <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilderImpl<?> serviceBuilder) {
             return new ReplaceableDependency<T>(dependency);
         }
     },
@@ -96,7 +96,7 @@ public enum DependencyFlag {
         this.demand = demand;
     }
 
-    <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilder<?> serviceBuilder) {
+    <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilderImpl<?> serviceBuilder) {
         return dependency;
     }
 
@@ -181,7 +181,7 @@ public enum DependencyFlag {
         return true;
     }
 
-    static <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilder<?> serviceBuilder, DependencyFlag... flags) {
+    static <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilderImpl<?> serviceBuilder, DependencyFlag... flags) {
         for (DependencyFlag flag: flags) {
             dependency = flag.decorate(dependency, serviceBuilder);
         }

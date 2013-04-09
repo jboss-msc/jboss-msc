@@ -31,18 +31,18 @@ import org.jboss.msc.value.WritableValue;
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
 final class DependencySpec<T> {
-    private final ServiceContainer container;
+    private final ServiceContainerImpl container;
     private final ServiceName name;
     private final DependencyFlag[] flags;
     private final List<WritableValue<? super T>> injections = new ArrayList<WritableValue<? super T>>();
 
-    DependencySpec(final ServiceContainer container, final ServiceName name, final DependencyFlag[] flags) {
+    DependencySpec(final ServiceContainerImpl container, final ServiceName name, final DependencyFlag[] flags) {
         this.container = container;
         this.name = name;
         this.flags = flags;
     }
 
-    public ServiceContainer getContainer() {
+    public ServiceContainerImpl getContainer() {
         return container;
     }
 
@@ -54,7 +54,7 @@ final class DependencySpec<T> {
         injections.add(injector);
     }
 
-    public Dependency<T> createDependency(Transaction transaction, ServiceBuilder<?> serviceBuilder) {
+    public Dependency<T> createDependency(Transaction transaction, ServiceBuilderImpl<?> serviceBuilder) {
         @SuppressWarnings("unchecked")
         final WritableValue<? super T>[] injectionArray = (WritableValue<? super T>[]) injections.toArray(new WritableValue<?>[injections.size()]);
         final boolean dependencyUp = DependencyFlag.isDependencyUpRequired(flags);

@@ -38,7 +38,7 @@ import java.util.regex.Pattern;
  * @author John Bailey
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class ServiceName implements Comparable<ServiceName>, Serializable {
+final class ServiceName implements Comparable<ServiceName>, Serializable {
 
     private static final long serialVersionUID = 2336190201880964151L;
 

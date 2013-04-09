@@ -31,10 +31,10 @@ import org.jboss.msc.txn.Transaction;
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
 final class ServiceInstallTask<T> implements Executable<ServiceController<T>>, Revertible {
-    private final ServiceBuilder<T> serviceBuilder;
+    private final ServiceBuilderImpl<T> serviceBuilder;
     private final Transaction transaction;
 
-    ServiceInstallTask(final Transaction transaction, final ServiceBuilder<T> serviceBuilder) {
+    ServiceInstallTask(final Transaction transaction, final ServiceBuilderImpl<T> serviceBuilder) {
         this.transaction = transaction;
         this.serviceBuilder = serviceBuilder;
     }

@@ -18,319 +18,92 @@
 
 package org.jboss.msc.service;
 
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
-
-import org.jboss.msc.txn.TaskBuilder;
-import org.jboss.msc.txn.TaskController;
-import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.value.WritableValue;
+import java.util.concurrent.Future;
 
 /**
  * A service builder.
+ * The implementations of this interface are not thread safe.
  *
- * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
- * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class ServiceBuilder<T> {
-    private final ServiceContainer container;
-    private final ServiceName name;
-    private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
-    private final Service<T> service;
-    private final Map<ServiceName, DependencySpec<?>> specs = new LinkedHashMap<ServiceName, DependencySpec<?>>();
-    private final boolean replacement;
-    private ServiceMode mode;
-    private TaskController<ServiceController<T>> installTask;
-    private DependencySpec<?> parentDependencySpec;
-    private final Set<TaskController<?>> taskDependencies = new HashSet<TaskController<?>>(0);
-
-    public ServiceBuilder(final ServiceContainer container, final ServiceName name, final Service<T> service) {
-        this(container, name, service, false);
-    }
-
-    public ServiceBuilder(final ServiceContainer container, final ServiceName name, final Service<T> service, final boolean replaceService) {
-        this.container = container;
-        this.name = name;
-        this.service = service;
-        this.replacement = true;
-    }
+public interface ServiceBuilder<T extends Service> {
 
     /**
-     * Get the service mode.
-     *
-     * @return the service mode
-     */
-    public ServiceMode getMode() {
-        return mode;
-    }
-
-    /**
-     * Set the service mode.
+     * Sets the service mode.
      *
      * @param mode the service mode
+     * @return a reference to this object
+     * @throws IllegalStateException if {@link #build()} have been called.
      */
-    public void setMode(final ServiceMode mode) {
-        checkAlreadyInstalled();
-        if (mode == null) {
-            throw new IllegalArgumentException("mode is null");
-        }
-        this.mode = mode;
-    }
+    ServiceBuilder<T> setMode(ServiceMode mode) throws IllegalStateException;
 
     /**
-     * Add aliases for this service.
+     * Adds alias for the service.
+     *
+     * @param alias the service name to use as alias
+     * @return a reference to this object
+     * @throws IllegalStateException if {@link #build()} have been called.
+     */
+    ServiceBuilder<T> addAlias(String alias) throws IllegalStateException;
+
+    /**
+     * Add aliases for the service.
      *
      * @param aliases the service names to use as aliases
-     * @return the builder
+     * @return a reference to this object
+     * @throws IllegalStateException if {@link #build()} have been called.
      */
-    public ServiceBuilder<T> addAliases(ServiceName... aliases) {
-        checkAlreadyInstalled();
-        if (aliases != null) for(ServiceName alias : aliases) {
-            if(alias != null && !alias.equals(name)) {
-                this.aliases.add(alias);
-            }
-        }
-        return this;
-    }
+    ServiceBuilder<T> addAliases(String... aliases) throws IllegalStateException;
 
     /**
-     * Add a dependency to the service being built.
+     * Adds a dependency to the service being built with default flags.
      *
-     * @param container the service container
-     * @param name the service name
+     * @param serviceName the service name
+     * @return a reference to this object
+     * @throws IllegalStateException if {@link #build()} have been called.
      */
-    public void addDependency(ServiceContainer container, ServiceName name) {
-        addDependency(container, name, DependencyFlag.NONE);
-    }
+    ServiceBuilder<T> addDependency(String serviceName) throws IllegalStateException;
 
     /**
-     * Add a dependency to the service being built.
+     * Adds a dependency to the service being built with specified flags.
      *
-     * @param name the service name
+     * @param serviceName the service name
+     * @param flags the flags for the service dependency
+     * @return a reference to this object
+     * @throws IllegalStateException if {@link #build()} have been called.
      */
-    public void addDependency(ServiceName name) {
-        addDependency(container, name, DependencyFlag.NONE);
-    }
-
-    private void addDependencySpec(DependencySpec<?> dependencySpec, ServiceName name, DependencyFlag... flags) {
-        for (DependencyFlag flag: flags) {
-            if (flag == DependencyFlag.PARENT) {
-                synchronized (this) {
-                    if (parentDependencySpec != null) {
-                        throw new IllegalStateException("Service cannot have more than one parent dependency");
-                    }
-                    parentDependencySpec = dependencySpec;
-                    specs.remove(name);
-                    return;
-                }
-            }
-        }
-        if (name == parentDependencySpec.getName()) {
-            parentDependencySpec = null;
-        }
-        specs.put(name, dependencySpec);
-    }
+    ServiceBuilder<T> addDependency(String serviceName, DependencyFlag... flags) throws IllegalStateException;
 
     /**
-     * Add a dependency to the service being built.
+     * Adds an injected dependency to the service being built with default flags.
+     * The dependency will be injected before service starts and uninjected after service stops.
      *
-     * @param name the service name
-     * @param flags the flags for the service
-     */
-    public void addDependency(ServiceContainer container, ServiceName name, DependencyFlag... flags) {
-        checkAlreadyInstalled();
-        addDependencySpec(new DependencySpec(container, name, flags), name, flags);
-    }
-
-    /**
-     * Add a dependency to the service being built.
-     *
-     * @param name the service name
-     * @param flags the flags for the service
-     */
-    public void addDependency(ServiceName name, DependencyFlag... flags) {
-        checkAlreadyInstalled();
-        addDependencySpec(new DependencySpec(container, name, flags), name, flags);
-    }
-
-    /**
-     * Add an injected dependency to the service being built.  The dependency will be injected just before
-     * starting this service and uninjected just before stopping it.
-     *
-     * @param name the service name
+     * @param serviceName the service name
      * @param injector the injector for the dependency value
+     * @return a reference to this object
+     * @throws IllegalStateException if {@link #build()} have been called.
      */
-    public void addDependency(ServiceContainer container, ServiceName name, WritableValue<?> injector) {
-        checkAlreadyInstalled();
-        addDependency(container, name, injector, DependencyFlag.NONE);
-    };
+    ServiceBuilder<T> addDependency(String serviceName, Injector<?> injector) throws IllegalStateException;
 
     /**
-     * Add an injected dependency to the service being built.  The dependency will be injected just before
-     * starting this service and uninjected just before stopping it.
+     * Add an injected dependency to the service being built with specified flags.
+     * The dependency will be injected before service starts and uninjected after service stops.
      *
-     * @param name the service name
+     * @param serviceName the service name
      * @param injector the injector for the dependency value
+     * @param flags the flags for the service dependency
+     * @return a reference to this object
+     * @throws IllegalStateException if {@link #build()} have been called.
      */
-    public void addDependency(ServiceName name, WritableValue<?> injector) {
-        checkAlreadyInstalled();
-        addDependency(name, injector, DependencyFlag.NONE);
-    };
+    ServiceBuilder<T> addDependency(String serviceName, Injector<?> injector, DependencyFlag... flags) throws IllegalStateException;
 
     /**
-     * Add an injected dependency to the service being built.  The dependency will be injected just before starting this
-     * service and uninjected just before stopping it.
+     * Initiate installation of this configured service to the container.
      *
-     * @param name the service name
-     * @param injector the injector for the dependency value
-     * @param flags the flags for the service
+     * @return a reference to the service future
+     * @throws CircularDependencyException if dependencies cycle have been detected
+     * @throws DuplicateServiceException if service with specified name is already installed in the container.
+     * @throws IllegalStateException if {@link #build()} have been already called.
      */
-    public <T> void addDependency(ServiceContainer container, ServiceName name, WritableValue<T> injector, DependencyFlag... flags) {
-        checkAlreadyInstalled();
-        DependencySpec<T> spec = new DependencySpec<T>(container, name, flags);
-        spec.addInjection(injector);
-        addDependencySpec(spec, name, flags);
-    }
-
-    /**
-     * Add an injected dependency to the service being built.  The dependency will be injected just before starting this
-     * service and uninjected just before stopping it.
-     *
-     * @param name the service name
-     * @param injector the injector for the dependency value
-     * @param flags the flags for the service
-     */
-    public <T> void addDependency(ServiceName name, WritableValue<T> injector, DependencyFlag... flags) {
-        checkAlreadyInstalled();
-        DependencySpec<T> spec = new DependencySpec<T>(container, name, flags);
-        spec.addInjection(injector);
-        addDependencySpec(spec, name, flags);
-    }
-
-    /**
-     * Add a dependency on a task.  If the task fails, the service install will also fail.  The task must be
-     * part of the same transaction as the service.
-     *
-     * @param task the task
-     */
-    public void addDependency(TaskController<?> task) {
-        checkAlreadyInstalled();
-        taskDependencies.add(task);
-    }
-
-    /**
-     * Initiate installation of this service as configured.  If the service was already installed, this method has no
-     * effect.
-     */
-    public synchronized void install(Transaction transaction) {
-        checkAlreadyInstalled();
-        final TaskBuilder<ServiceController<T>> taskBuilder = transaction.newTask(new ServiceInstallTask<T>(transaction, this));
-        taskBuilder.addDependencies(taskDependencies);
-        if (replacement) {
-            startReplacement(transaction, taskBuilder);
-        }
-        installTask = taskBuilder.release();
-    }
-
-    /**
-     * Manually rollback this service installation.  If the service was already installed, it will be removed.
-     */
-    public void remove(Transaction transaction) {
-        // TODO review this method
-        final ServiceController<?> serviceController;
-        synchronized (this) {
-            serviceController = installTask.getResult();
-        }
-        if (serviceController != null) {
-            serviceController.remove(transaction);
-        }
-    }
-
-    private synchronized void checkAlreadyInstalled() {
-        if (installTask != null) {
-            throw new IllegalStateException("ServiceBuilder installation already requested.");
-        }
-    }
-
-    /**
-     * Perform installation of this service builder into container.
-     * 
-     * @param transaction active transaction
-     * @return            the installed service controller. May be {@code null} if the service is being created with a
-     *                    parent dependency.
-     */
-    ServiceController<T> performInstallation(Transaction transaction) {
-        if (parentDependencySpec != null) {
-            parentDependencySpec.createDependency(transaction, this);
-            return null;
-        }
-        return installController(transaction, null);
-    }
-
-    /**
-     * Concludes service installation by creating and installing the service controller into the container.
-     * 
-     * @param transaction      active transaction
-     * @param parentDependency parent dependency, if any
-     * @return the installed service controller
-     */
-    ServiceController<T> installController(Transaction transaction, Dependency<?> parentDependency) {
-        final Registration registration = container.getOrCreateRegistration(transaction, name);
-        final ServiceName[] aliasArray = aliases.toArray(new ServiceName[aliases.size()]);
-        final Registration[] aliasRegistrations = new Registration[aliasArray.length];
-        int i = 0; 
-        for (ServiceName alias: aliases) {
-            aliasRegistrations[i++] = container.getOrCreateRegistration(transaction, alias);
-        }
-        i = 0;
-        final Dependency<?>[] dependencies;
-        if (parentDependency == null) {
-            dependencies = new Dependency<?>[specs.size()];
-        } else {
-            dependencies = new Dependency<?>[specs.size() + 1];
-            dependencies[i++] = parentDependency;
-        }
-        for (DependencySpec<?> spec : specs.values()) {
-            dependencies[i++] = spec.createDependency(transaction, this);
-        }
-        final ServiceController<T> serviceController =  new ServiceController<T>(transaction, dependencies, aliasRegistrations, registration);
-        serviceController.getWriteValue().setValue(service);
-        serviceController.setMode(transaction, mode);
-        if (replacement) {
-            concludeReplacement(transaction, serviceController);
-        }
-        return serviceController;
-    }
-
-    private void startReplacement(Transaction transaction, TaskBuilder<ServiceController<T>> serviceInstallTaskBuilder) {
-        startReplacement(transaction, container.getOrCreateRegistration(transaction, name), serviceInstallTaskBuilder);
-        for (ServiceName alias: aliases) {
-            startReplacement(transaction, container.getOrCreateRegistration(transaction, alias), serviceInstallTaskBuilder);
-        }
-    }
-
-    private void startReplacement(Transaction transaction, Registration registration, TaskBuilder<ServiceController<T>> serviceInstallTaskBuilder) {
-        for (Dependency<?> dependency: registration.getIncomingDependencies()) {
-            dependency.dependencyReplacementStarted(transaction);
-        }
-        ServiceController<?> serviceController = registration.getController();
-        if (serviceController != null) {
-            serviceInstallTaskBuilder.addDependency(serviceController.remove(transaction));
-        }
-    }
-
-    private void concludeReplacement(Transaction transaction, ServiceController<?> serviceController) {
-        concludeReplacement(transaction, serviceController.getPrimaryRegistration());
-        for (Registration registration: serviceController.getAliasRegistrations()) {
-            concludeReplacement(transaction,  registration);
-        }
-    }
-
-    private void concludeReplacement(Transaction transaction, Registration registration) {
-        for (Dependency<?> dependency: registration.getIncomingDependencies()) {
-            dependency.dependencyReplacementConcluded(transaction);
-        }
-    }
+    Future<T> build() throws CircularDependencyException, DuplicateServiceException, IllegalStateException;
 }

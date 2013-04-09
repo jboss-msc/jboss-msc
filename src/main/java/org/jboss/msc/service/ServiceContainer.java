@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2012 Red Hat, Inc., and individual contributors
+ * Copyright 2013 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,66 +18,84 @@
 
 package org.jboss.msc.service;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
-import org.jboss.msc.txn.Transaction;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
- * A transactional service container.
+ * A service container. This class is thread safe.
  *
- * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
- * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class ServiceContainer extends TransactionalObject {
-    private final ConcurrentMap<ServiceName, Registration> registry = new ConcurrentHashMap<ServiceName, Registration>();
-
-    Registration getOrCreateRegistration(Transaction transaction, ServiceName name) {
-        Registration registration = registry.get(name);
-        if (registration == null) {
-            lockWrite(transaction);
-            registration = new Registration(name);
-            Registration appearing = registry.putIfAbsent(name, registration);
-            if (appearing != null) {
-                registration = appearing;
-            }
-        }
-        return registration;
-    }
+public interface ServiceContainer {
 
     /**
-     * Initiate a service removal in the given transaction.
+     * Adds service to the container.
      *
-     * @param transaction the transaction
-     * @param name the service to remove
+     * @param serviceName service name
+     * @param service service instance or {@code null}
+     * @param <T> service type
+     * @return service builder to configure service dependencies, service mode and other stuff.
      */
-    public void removeService(Transaction transaction, ServiceName name) {
-        if (!registry.containsKey(name)) {
-            return;
-        }
-        final ServiceController<?> serviceController = registry.get(name).getController();
-        if (serviceController != null) {
-            serviceController.remove(transaction);
-        }
-    }
+    <T extends Service> ServiceBuilder<T> addService(String serviceName, T service);
 
-    Registration getRegistration(final ServiceName serviceName) {
-        return registry.get(serviceName);
-    }
+    /**
+     * Gets service from the container. This method can be called even
+     * {@code #addService(String,T)} have not been yet called on the container.
+     *
+     * @param serviceName service name
+     * @param <T> expected service type
+     * @return service future.
+     */
+    <T extends Service> Future<T> getService(String serviceName);
 
-    @Override
-    protected Object takeSnapshot() {
-        Map<ServiceName, Registration> registrySnapshot = new HashMap<ServiceName, Registration>(registry.size());
-        registrySnapshot.putAll(registry);
-        return registrySnapshot;
-    }
+    /**
+     * Removes service from the container.
+     *
+     * @param serviceName service name
+     * @param <T> service type
+     * @return removed service future. The future will return instance that have been associated with
+     * {@code serviceName} or {@code null} if service was registered but was associated with {@code null} literal.
+     * @throws ServiceNotFoundException if service was not available
+     */
+    <T extends Service> Future<T> removeService(String serviceName) throws ServiceNotFoundException;
 
-    @SuppressWarnings("unchecked")
-    @Override
-    protected void revert(Object snapshot) {
-        registry.clear();
-        registry.putAll((Map<ServiceName, Registration>)snapshot);
-    }
+    /**
+     * Shuts down this container.
+     */
+    void shutdown();
+
+    /**
+     * Returns {@code true} if this container has been shut down.
+     *
+     * @return {@code true} if {@link #shutdown()} have been called, {@code false} otherwise
+     */
+    boolean isShutdown();
+
+    /**
+     * Returns {@code true} if all container tasks have completed following shut down.
+     * Note that {@link #isTerminated()} is never true unless shutdown was called first.
+     *
+     * @return {@code true} if container have been terminated, {@code false} otherwise
+     */
+    boolean isTerminated();
+
+    /**
+     * Blocks until all container tasks have completed execution after a shutdown request,
+     * or the current thread is interrupted, whichever happens first.
+     *
+     * @throws InterruptedException if interrupted while waiting
+     */
+    void awaitTermination() throws InterruptedException;
+
+    /**
+     * Blocks until all container tasks have completed execution after a shutdown request, or the timeout occurs,
+     * or the current thread is interrupted, whichever happens first.
+     *
+     * @param timeout the maximum time to wait
+     * @param unit the time unit of the timeout argument
+     * return {@code true} if this container terminated and {@code false} if the timeout elapsed before termination
+     * @throws InterruptedException if interrupted while waiting
+     */
+    boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException;
+
 }
