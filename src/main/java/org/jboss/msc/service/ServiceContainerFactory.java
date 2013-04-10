@@ -35,12 +35,15 @@ public final class ServiceContainerFactory {
     }
 
     /**
-     * Creates container builder.
+     * Creates new service container.
      *
-     * @return new container builder.
+     * @param autoShutdown {@code true} to automatically shut down the container
+     *        at VM exit, {@code false} otherwise
+     * @return a reference to this object
+     * @throws IllegalStateException if {@link #build()} have been called.
      */
-    public ServiceContainerBuilder newServiceContainer() {
-        return null;
+    public ServiceContainer newServiceContainer(boolean autoShutdown) { // TODO: do we want to support auto shutdown?
+        throw new UnsupportedOperationException();
     }
 
 }
