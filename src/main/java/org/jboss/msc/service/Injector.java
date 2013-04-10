@@ -24,6 +24,8 @@ import java.util.concurrent.atomic.AtomicReference;
  * An injector. Every service that wants to inject some dependencies have to use this class.
  * This class is thread safe.
  *
+ * @param <T> the type of value to be injected
+ *
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class Injector<T> {

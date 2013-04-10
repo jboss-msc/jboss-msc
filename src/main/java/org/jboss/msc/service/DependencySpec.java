@@ -31,26 +31,22 @@ import org.jboss.msc.value.WritableValue;
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
 final class DependencySpec<T> {
-    private final ServiceContainerImpl container;
+    private final ServiceRegistry registry;
     private final ServiceName name;
     private final DependencyFlag[] flags;
-    private final List<WritableValue<? super T>> injections = new ArrayList<WritableValue<? super T>>();
+    private final List<Injector<? super T>> injections = new ArrayList<Injector<? super T>>();
 
-    DependencySpec(final ServiceContainerImpl container, final ServiceName name, final DependencyFlag[] flags) {
-        this.container = container;
+    DependencySpec(final ServiceRegistry registry, final ServiceName name, final DependencyFlag[] flags) {
+        this.registry = registry;
         this.name = name;
         this.flags = flags;
-    }
-
-    public ServiceContainerImpl getContainer() {
-        return container;
     }
 
     public ServiceName getName() {
         return name;
     }
 
-    public void addInjection(final WritableValue<? super T> injector) {
+    public void addInjection(final Injector<? super T> injector) {
         injections.add(injector);
     }
 
@@ -59,7 +55,7 @@ final class DependencySpec<T> {
         final WritableValue<? super T>[] injectionArray = (WritableValue<? super T>[]) injections.toArray(new WritableValue<?>[injections.size()]);
         final boolean dependencyUp = DependencyFlag.isDependencyUpRequired(flags);
         final boolean propagateDemand = DependencyFlag.propagateDemand(flags);
-        final Registration dependencyRegistration = container.getOrCreateRegistration(transaction, name);
+        final Registration dependencyRegistration = registry.getOrCreateRegistration(transaction, name);
         Dependency<T> dependency = new SimpleDependency<T>(injectionArray, dependencyRegistration, dependencyUp, propagateDemand);
         return DependencyFlag.decorate(dependency, serviceBuilder, flags);
     }

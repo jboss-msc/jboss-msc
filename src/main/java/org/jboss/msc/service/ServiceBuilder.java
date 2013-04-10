@@ -18,7 +18,7 @@
 
 package org.jboss.msc.service;
 
-import java.util.concurrent.Future;
+import org.jboss.msc.txn.TaskController;
 
 /**
  * A service builder.
@@ -26,51 +26,42 @@ import java.util.concurrent.Future;
  *
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public interface ServiceBuilder<T extends Service> {
+public interface ServiceBuilder<T> {
 
     /**
      * Sets the service mode.
      *
      * @param mode the service mode
      * @return a reference to this object
-     * @throws IllegalStateException if {@link #build()} have been called.
+     * @throws IllegalStateException if {@link #build()} has been called.
      */
     ServiceBuilder<T> setMode(ServiceMode mode) throws IllegalStateException;
 
     /**
-     * Adds alias for the service.
-     *
-     * @param alias the service name to use as alias
-     * @return a reference to this object
-     * @throws IllegalStateException if {@link #build()} have been called.
-     */
-    ServiceBuilder<T> addAlias(ServiceName alias) throws IllegalStateException;
-
-    /**
      * Add aliases for the service.
      *
-     * @param aliases the service names to use as aliases
+     * @param aliases the dependency names to use as aliases
      * @return a reference to this object
-     * @throws IllegalStateException if {@link #build()} have been called.
+     * @throws IllegalStateException if {@link #build()} has been called.
      */
     ServiceBuilder<T> addAliases(ServiceName... aliases) throws IllegalStateException;
 
     /**
      * Adds a dependency to the service being built with default flags.
      *
-     * @param serviceName the service name
+     * @param serviceName the dependency name
      * @return a reference to this object
-     * @throws IllegalStateException if {@link #build()} have been called.
+     * @throws IllegalStateException if {@link #build()} has been called.
      */
     ServiceBuilder<T> addDependency(ServiceName serviceName) throws IllegalStateException;
 
     /**
      * Adds a dependency to the service being built with specified flags.
      *
-     * @param serviceName the service name
-     * @param flags the flags for the service dependency
+     * @param serviceName the dependency name
+     * @param flags       the flags for the service dependency
      * @return a reference to this object
-     * @throws IllegalStateException if {@link #build()} have been called.
+     * @throws IllegalStateException if {@link #build()} has been called.
      */
     ServiceBuilder<T> addDependency(ServiceName serviceName, DependencyFlag... flags) throws IllegalStateException;
 
@@ -78,33 +69,99 @@ public interface ServiceBuilder<T extends Service> {
      * Adds an injected dependency to the service being built with default flags.
      * The dependency will be injected before service starts and uninjected after service stops.
      *
-     * @param serviceName the service name
-     * @param injector the injector for the dependency value
+     * @param serviceName the dependency name
+     * @param injector    the injector for the dependency value
      * @return a reference to this object
-     * @throws IllegalStateException if {@link #build()} have been called.
+     * @param <I>         the type of value to be injected
+     * @throws IllegalStateException if {@link #build()} has been called.
      */
-    ServiceBuilder<T> addDependency(ServiceName serviceName, Injector<?> injector) throws IllegalStateException;
+    <I> ServiceBuilder<T> addDependency(ServiceName serviceName, Injector<I> injector) throws IllegalStateException;
 
     /**
-     * Add an injected dependency to the service being built with specified flags.
+     * Adds an injected dependency to the service being built with specified flags.
      * The dependency will be injected before service starts and uninjected after service stops.
      *
-     * @param serviceName the service name
-     * @param injector the injector for the dependency value
-     * @param flags the flags for the service dependency
+     * @param serviceName the dependency name
+     * @param injector    the injector for the dependency value
+     * @param flags       the flags for the service dependency
+     * @param <I>         the type of value to be injected
      * @return a reference to this object
-     * @throws IllegalStateException if {@link #build()} have been called.
+     * @throws IllegalStateException if {@link #build()} has been called.
      */
-    ServiceBuilder<T> addDependency(ServiceName serviceName, Injector<?> injector, DependencyFlag... flags) throws IllegalStateException;
+    <I> ServiceBuilder<T> addDependency(ServiceName serviceName, Injector<I> injector, DependencyFlag... flags) throws IllegalStateException;
 
-    // TODO: is this build() throws A,B,C exceptions correct? Shouldn't we use either transaction.addProblem() or Future's ExecuteException to propagate A,B,C exceptions?
     /**
-     * Initiate installation of this configured service to the container.
+     * Adds a dependency to the service being built with default flags.
      *
-     * @return a reference to the service future
-     * @throws CircularDependencyException if dependencies cycle have been detected
-     * @throws DuplicateServiceException if service with specified name is already installed in the container.
-     * @throws IllegalStateException if {@link #build()} have been already called.
+     * @param registry the service registry that contains the dependency
+     * @param name      the dependency name
+     * @throws IllegalStateException if {@link #build()} has been called.
      */
-    Future<T> build() throws CircularDependencyException, DuplicateServiceException, IllegalStateException;
+    ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name) throws IllegalStateException;
+    
+    /**
+     * Adds a dependency to the service being built with specified flags.
+     *
+     * @param registry the service registry that contains the dependency
+     * @param serviceName the dependency name
+     * @param flags       the flags for the service dependency
+     * @return a reference to this object
+     * @throws IllegalStateException if {@link #build()} has been called.
+     */
+    ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName serviceName, DependencyFlag... flags) throws IllegalStateException;
+
+    /**
+     * Adds an injected dependency to the service being built with default flags.
+     * The dependency will be injected before service starts and uninjected after service stops.
+     *
+     * @param registry the service registry that contains the dependency
+     * @param serviceName the dependency name
+     * @param injector    the injector for the dependency value
+     * @return a reference to this object
+     * @param <I>         the type of value to be injected
+     * @throws IllegalStateException if {@link #build()} has been called.
+     */
+    <I> ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName serviceName, Injector<I> injector) throws IllegalStateException;
+
+    /**
+     * Adds an injected dependency to the service being built with specified flags.
+     * The dependency will be injected before service starts and uninjected after service stops.
+     *
+     * @param registry the service registry that contains the dependency
+     * @param serviceName the dependency name
+     * @param injector    the injector for the dependency value
+     * @param flags       the flags for the service dependency
+     * @param <I>         the type of value to be injected
+     * @return a reference to this object
+     * @throws IllegalStateException if {@link #build()} has been called.
+     */
+    <I> ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName serviceName, Injector<I> injector, DependencyFlag... flags) throws IllegalStateException;
+
+    /**
+     * Adds a set of dependencies to the service being built with default flags.
+     *
+     * @param container the service container that contains the dependencies
+     * @param names     the dependencies names
+     * @throws IllegalStateException if {@link #build()} has been called.
+     */
+    ServiceBuilder<T> addDependencies(ServiceRegistry registry, ServiceName... names) throws IllegalStateException;
+
+    /**
+     * Adds a dependency on a task.  If the task fails, the service install will also fail.  The task must be
+     * part of the same transaction as the service.
+     *
+     * @param task the task
+     * @throws IllegalStateException if {@link #build()} has been called.
+     */
+    public ServiceBuilder<T> addDependency(TaskController<?> task) throws IllegalStateException;
+
+    // TODO: is this build() throws DuplicateServiceException correct? Shouldn't we use either transaction.addProblem() or Future's ExecuteException to propagate A,B,C exceptions?
+    // I think we will, lets discuss this.
+    /**
+     * Initiates installation of this configured service to the container.
+     *
+     * @throws DuplicateServiceException if service with specified name is already installed in the container.
+     * @throws IllegalStateException if {@link #build()} has been already called.
+     */
+    void build() throws DuplicateServiceException, IllegalStateException;
 }

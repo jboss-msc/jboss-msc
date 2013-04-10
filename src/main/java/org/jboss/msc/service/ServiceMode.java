@@ -26,15 +26,16 @@ package org.jboss.msc.service;
  */
 public enum ServiceMode {
     /**
-     * Start as soon as all dependencies are met.  Demands dependencies.
+     * Start as soon as all dependencies are met, unless this service is demanded to start by an ANTI dependency. 
+     * Demands dependencies.
      */
     ACTIVE {
         boolean shouldStart(ServiceController<?> service) {
-            return true;
+            return !service.isDownDemanded();
         }
 
         boolean shouldStop(ServiceController<?> service) {
-            return false;
+            return service.isDownDemanded();
         }
 
         Demand shouldDemandDependencies() {

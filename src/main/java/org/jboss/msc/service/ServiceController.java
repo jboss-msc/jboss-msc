@@ -114,6 +114,21 @@ final class ServiceController<T> extends TransactionalObject {
         return dependencies;
     }
 
+    private static final ServiceName[] NO_NAMES = new ServiceName[0];
+
+    public ServiceName[] getAliases() {
+        final Registration[] aliasRegistrations = this.aliasRegistrations;
+        final int len = aliasRegistrations.length;
+        if (len == 0) {
+            return NO_NAMES;
+        }
+        final ServiceName[] names = new ServiceName[len];
+        for (int i = 0; i < len; i++) {
+            names[i] = aliasRegistrations[i].getServiceName();
+        }
+        return names;
+    }
+
     /**
      * Get the service value.
      *
@@ -125,6 +140,16 @@ final class ServiceController<T> extends TransactionalObject {
 
     WritableValue<Service<T>> getWriteValue() {
         return value;
+    }
+
+    // TODO this is just to be able to run tests
+    public StartException getStartException() {
+        return null;
+    }
+
+ // TODO this is just to be able to run tests
+    public int getUnsatisfiedDependencies() {
+        return unsatisfiedDependencies;
     }
 
     /**
@@ -155,7 +180,8 @@ final class ServiceController<T> extends TransactionalObject {
      * may only be changed if has not been {@link #remove(Transaction) removed}.  Calling this method with the
      * controller's current mode has no effect and is always allowed.
      *
-     * @param mode the new controller mode
+     * @param transaction the active transaction
+     * @param mode        the new controller mode
      * @throws IllegalStateException if the mode given is {@code null}, or the caller attempted to change the mode
      *         after the service is removed 
      */
@@ -180,6 +206,57 @@ final class ServiceController<T> extends TransactionalObject {
         }
         transactionalInfo.transition();
         return oldMode;
+    }
+
+    /**
+     * Compare the current mode against {@code expected}; if it matches, change it to {@code newMode}.  The
+     * return value is {@code true} when the mode was matched and changed.
+     *
+     * @param transaction the active transaction
+     * @param expected    the expected mode
+     * @param newMode     the new mode
+     * @return {@code true} if the mode was changed
+     */
+    public boolean compareAndSetMode(final Transaction transaction, final ServiceMode expectedMode, final ServiceMode newMode) {
+        if (expectedMode == null) {
+            throw new IllegalArgumentException("expectedMode is null");
+        }
+        return internalSetMode(transaction, expectedMode, newMode) == expectedMode;
+    }
+
+    private ServiceMode internalSetMode(final Transaction transaction, final ServiceMode expectedMode, final ServiceMode newMode) {
+        if (newMode == null) {
+            throw new IllegalArgumentException("mode is null");
+        }
+        // TODO check if container is shutting down
+        synchronized (this) {
+            if (!isWriteLocked() && (newMode == this.mode || expectedMode != this.mode)) {
+                return this.mode; // do nothing
+            }
+            if (state == State.REMOVED) {
+                throw new IllegalStateException ("Service is removed");
+            }
+        }
+        lockWrite(transaction);
+        final ServiceMode oldMode;
+        synchronized (this) {
+            oldMode = mode;
+            if (expectedMode != oldMode) {
+                return this.mode;
+            }
+            this.mode = mode;
+            if (oldMode.shouldDemandDependencies() == Demand.ALWAYS && mode.shouldDemandDependencies() != Demand.ALWAYS) {
+                UndemandDependenciesTask.create(transaction, this);
+            } else if (mode.shouldDemandDependencies() == Demand.ALWAYS) {
+                DemandDependenciesTask.create(transaction, this);
+            }
+        }
+        transactionalInfo.transition();
+        return oldMode;
+    }
+
+    public synchronized ServiceMode getMode() {
+        return this.mode;
     }
 
     /**
@@ -377,6 +454,10 @@ final class ServiceController<T> extends TransactionalObject {
         }
 
         private synchronized void transition() {
+            // TODO keep track of multiple toggle transitions from UP to DOWN and vice-versa... if 
+            // too  many transitions of this type are performed, a check for cycle involving this service
+            // must be performed. Cycle detected will will result in service removal, besides adding a problem to the
+            // transaction
             if (removeRequested) {
                 return;
             }

@@ -50,19 +50,31 @@ abstract class TransactionalObject {
      * @param transaction the transaction that is attempting to modify current's object state
      */
     protected final void lockWrite(Transaction transaction) {
-        assert Thread.holdsLock(this);
-        if (lock != null) {
-            try {
-                transaction.waitFor(transaction);
-            } catch (DeadlockException e) {
-                // TODO do I need a task controller? what is the correct approach?
-                final Problem problem = new Problem(null, e);
-                transaction.getProblemReport().addProblem(problem);
-            } catch (InterruptedException e) {
-                // TODO just log in this case?
+        assert !Thread.holdsLock(this);
+        while (true) {
+            Transaction currentLock;
+            synchronized (this) {
+                currentLock = lock;
             }
-        }
-        lock = transaction;
+            if (currentLock != null) {
+                try {
+                    transaction.waitFor(lock);
+                } catch (DeadlockException e) {
+                    // TODO do I need a task controller? what is the correct approach?
+                    final Problem problem = new Problem(null, e);
+                    transaction.getProblemReport().addProblem(problem);
+                } catch (InterruptedException e) {
+                    // TODO just log in this case?
+                }
+            } else {
+                synchronized (this) {
+                    if (lock == null) {
+                        lock = transaction;
+                        break;
+                    }
+                }
+            }
+        } 
         final Object snapshot = takeSnapshot();
         transaction.newTask().setTraits(new UnlockWriteTask(snapshot)).release();
         writeLocked(transaction);

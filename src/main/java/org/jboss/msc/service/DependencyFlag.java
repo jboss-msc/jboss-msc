@@ -47,7 +47,7 @@ public enum DependencyFlag {
      * Cannot coexist with {@link #ANTI}.
      */
     OPTIONAL (false, false) {
-        <T> Dependency<T> decorate(Dependency<T> dependency) {
+        <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilderImpl<?> serviceBuilder) {
             return new OptionalDependency<T>(dependency);
         }
     },

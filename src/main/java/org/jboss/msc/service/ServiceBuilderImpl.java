@@ -26,7 +26,6 @@ import java.util.Set;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.value.WritableValue;
 
 /**
  * A service builder.
@@ -34,36 +33,29 @@ import org.jboss.msc.value.WritableValue;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
-final class ServiceBuilderImpl<T> {
-    private final ServiceContainerImpl container;
+final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
+    private final ServiceRegistry registry;
     private final ServiceName name;
     private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
     private final Service<T> service;
     private final Map<ServiceName, DependencySpec<?>> specs = new LinkedHashMap<ServiceName, DependencySpec<?>>();
     private final boolean replacement;
+    private final Transaction transaction;
     private ServiceMode mode;
     private TaskController<ServiceController<T>> installTask;
     private DependencySpec<?> parentDependencySpec;
     private final Set<TaskController<?>> taskDependencies = new HashSet<TaskController<?>>(0);
 
-    public ServiceBuilderImpl(final ServiceContainerImpl container, final ServiceName name, final Service<T> service) {
-        this(container, name, service, false);
+    public ServiceBuilderImpl(final ServiceRegistry registry, final Transaction transaction, final ServiceName name, final Service<T> service) {
+        this(registry, transaction, name, service, false);
     }
 
-    public ServiceBuilderImpl(final ServiceContainerImpl container, final ServiceName name, final Service<T> service, final boolean replaceService) {
-        this.container = container;
+    public ServiceBuilderImpl(final ServiceRegistry registry, final Transaction transaction, final ServiceName name, final Service<T> service, final boolean replaceService) {
+        this.transaction = transaction;
+        this.registry = registry;
         this.name = name;
         this.service = service;
         this.replacement = true;
-    }
-
-    /**
-     * Get the service mode.
-     *
-     * @return the service mode
-     */
-    public ServiceMode getMode() {
-        return mode;
     }
 
     /**
@@ -71,12 +63,14 @@ final class ServiceBuilderImpl<T> {
      *
      * @param mode the service mode
      */
-    public void setMode(final ServiceMode mode) {
+    @Override
+    public ServiceBuilder<T> setMode(final ServiceMode mode) {
         checkAlreadyInstalled();
         if (mode == null) {
             throw new IllegalArgumentException("mode is null");
         }
         this.mode = mode;
+        return this;
     }
 
     /**
@@ -85,6 +79,7 @@ final class ServiceBuilderImpl<T> {
      * @param aliases the service names to use as aliases
      * @return the builder
      */
+    @Override
     public ServiceBuilderImpl<T> addAliases(ServiceName... aliases) {
         checkAlreadyInstalled();
         if (aliases != null) for(ServiceName alias : aliases) {
@@ -96,22 +91,92 @@ final class ServiceBuilderImpl<T> {
     }
 
     /**
-     * Add a dependency to the service being built.
-     *
-     * @param container the service container
-     * @param name the service name
+     * {@inheritDoc}
      */
-    public void addDependency(ServiceContainerImpl container, ServiceName name) {
-        addDependency(container, name, DependencyFlag.NONE);
+    @Override
+    public ServiceBuilder<T> addDependency(ServiceName name) {
+        addDependency(registry, name, DependencyFlag.NONE);
+        return this;
     }
 
     /**
-     * Add a dependency to the service being built.
-     *
-     * @param name the service name
+     * {@inheritDoc}
      */
-    public void addDependency(ServiceName name) {
-        addDependency(container, name, DependencyFlag.NONE);
+    @Override
+    public ServiceBuilder<T> addDependency(ServiceName name, DependencyFlag... flags) {
+        return addDependency(registry, name, flags);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <I> ServiceBuilder<T> addDependency(ServiceName name, Injector<I> injector) throws IllegalStateException {
+        return addDependency(name, injector, DependencyFlag.NONE);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <I> ServiceBuilder<T> addDependency(ServiceName name, Injector<I> injector, DependencyFlag... flags) {
+        checkAlreadyInstalled();
+        DependencySpec<I> spec = new DependencySpec<I>(registry, name, flags);
+        spec.addInjection(injector);
+        addDependencySpec(spec, name, flags);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name) {
+        return addDependency(registry, name, DependencyFlag.NONE);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public ServiceBuilder<T> addDependencies(ServiceRegistry registry, ServiceName... names) {
+        for (ServiceName name : names) {
+            addDependency(registry, name);
+        }
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @SuppressWarnings("rawtypes")
+    @Override
+    public ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, DependencyFlag... flags) {
+        checkAlreadyInstalled();
+        addDependencySpec(new DependencySpec(registry, name, flags), name, flags);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <I> ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, Injector<I> injector) {
+        checkAlreadyInstalled();
+        addDependency(registry, name, injector, DependencyFlag.NONE);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public <I> ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, Injector<I> injector, DependencyFlag... flags) {
+        checkAlreadyInstalled();
+        final DependencySpec<I> spec = new DependencySpec<I>(registry, name, flags);
+        spec.addInjection(injector);
+        addDependencySpec(spec, name, flags);
+        return this;
     }
 
     private void addDependencySpec(DependencySpec<?> dependencySpec, ServiceName name, DependencyFlag... flags) {
@@ -134,97 +199,21 @@ final class ServiceBuilderImpl<T> {
     }
 
     /**
-     * Add a dependency to the service being built.
-     *
-     * @param name the service name
-     * @param flags the flags for the service
+     * {@inheritDoc}
      */
-    public void addDependency(ServiceContainerImpl container, ServiceName name, DependencyFlag... flags) {
-        checkAlreadyInstalled();
-        addDependencySpec(new DependencySpec(container, name, flags), name, flags);
-    }
-
-    /**
-     * Add a dependency to the service being built.
-     *
-     * @param name the service name
-     * @param flags the flags for the service
-     */
-    public void addDependency(ServiceName name, DependencyFlag... flags) {
-        checkAlreadyInstalled();
-        addDependencySpec(new DependencySpec(container, name, flags), name, flags);
-    }
-
-    /**
-     * Add an injected dependency to the service being built.  The dependency will be injected just before
-     * starting this service and uninjected just before stopping it.
-     *
-     * @param name the service name
-     * @param injector the injector for the dependency value
-     */
-    public void addDependency(ServiceContainerImpl container, ServiceName name, WritableValue<?> injector) {
-        checkAlreadyInstalled();
-        addDependency(container, name, injector, DependencyFlag.NONE);
-    };
-
-    /**
-     * Add an injected dependency to the service being built.  The dependency will be injected just before
-     * starting this service and uninjected just before stopping it.
-     *
-     * @param name the service name
-     * @param injector the injector for the dependency value
-     */
-    public void addDependency(ServiceName name, WritableValue<?> injector) {
-        checkAlreadyInstalled();
-        addDependency(name, injector, DependencyFlag.NONE);
-    };
-
-    /**
-     * Add an injected dependency to the service being built.  The dependency will be injected just before starting this
-     * service and uninjected just before stopping it.
-     *
-     * @param name the service name
-     * @param injector the injector for the dependency value
-     * @param flags the flags for the service
-     */
-    public <T> void addDependency(ServiceContainerImpl container, ServiceName name, WritableValue<T> injector, DependencyFlag... flags) {
-        checkAlreadyInstalled();
-        DependencySpec<T> spec = new DependencySpec<T>(container, name, flags);
-        spec.addInjection(injector);
-        addDependencySpec(spec, name, flags);
-    }
-
-    /**
-     * Add an injected dependency to the service being built.  The dependency will be injected just before starting this
-     * service and uninjected just before stopping it.
-     *
-     * @param name the service name
-     * @param injector the injector for the dependency value
-     * @param flags the flags for the service
-     */
-    public <T> void addDependency(ServiceName name, WritableValue<T> injector, DependencyFlag... flags) {
-        checkAlreadyInstalled();
-        DependencySpec<T> spec = new DependencySpec<T>(container, name, flags);
-        spec.addInjection(injector);
-        addDependencySpec(spec, name, flags);
-    }
-
-    /**
-     * Add a dependency on a task.  If the task fails, the service install will also fail.  The task must be
-     * part of the same transaction as the service.
-     *
-     * @param task the task
-     */
-    public void addDependency(TaskController<?> task) {
+    @Override
+    public ServiceBuilder<T> addDependency(TaskController<?> task) {
         checkAlreadyInstalled();
         taskDependencies.add(task);
+        return this;
     }
 
     /**
      * Initiate installation of this service as configured.  If the service was already installed, this method has no
      * effect.
      */
-    public synchronized void install(Transaction transaction) {
+    @Override
+    public synchronized void build() {
         checkAlreadyInstalled();
         final TaskBuilder<ServiceController<T>> taskBuilder = transaction.newTask(new ServiceInstallTask<T>(transaction, this));
         taskBuilder.addDependencies(taskDependencies);
@@ -255,7 +244,7 @@ final class ServiceBuilderImpl<T> {
     }
 
     /**
-     * Perform installation of this service builder into container.
+     * Perform installation of this service builder into registry.
      * 
      * @param transaction active transaction
      * @return            the installed service controller. May be {@code null} if the service is being created with a
@@ -270,19 +259,19 @@ final class ServiceBuilderImpl<T> {
     }
 
     /**
-     * Concludes service installation by creating and installing the service controller into the container.
+     * Concludes service installation by creating and installing the service controller into the registry.
      * 
      * @param transaction      active transaction
      * @param parentDependency parent dependency, if any
      * @return the installed service controller
      */
     ServiceController<T> installController(Transaction transaction, Dependency<?> parentDependency) {
-        final Registration registration = container.getOrCreateRegistration(transaction, name);
+        final Registration registration = registry.getOrCreateRegistration(transaction, name);
         final ServiceName[] aliasArray = aliases.toArray(new ServiceName[aliases.size()]);
         final Registration[] aliasRegistrations = new Registration[aliasArray.length];
         int i = 0; 
         for (ServiceName alias: aliases) {
-            aliasRegistrations[i++] = container.getOrCreateRegistration(transaction, alias);
+            aliasRegistrations[i++] = registry.getOrCreateRegistration(transaction, alias);
         }
         i = 0;
         final Dependency<?>[] dependencies;
@@ -305,9 +294,9 @@ final class ServiceBuilderImpl<T> {
     }
 
     private void startReplacement(Transaction transaction, TaskBuilder<ServiceController<T>> serviceInstallTaskBuilder) {
-        startReplacement(transaction, container.getOrCreateRegistration(transaction, name), serviceInstallTaskBuilder);
+        startReplacement(transaction, registry.getOrCreateRegistration(transaction, name), serviceInstallTaskBuilder);
         for (ServiceName alias: aliases) {
-            startReplacement(transaction, container.getOrCreateRegistration(transaction, alias), serviceInstallTaskBuilder);
+            startReplacement(transaction, registry.getOrCreateRegistration(transaction, alias), serviceInstallTaskBuilder);
         }
     }
 

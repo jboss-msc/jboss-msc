@@ -18,11 +18,15 @@
 
 package org.jboss.msc.service;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
+import org.jboss.msc.txn.CommitContext;
+import org.jboss.msc.txn.Committable;
+import org.jboss.msc.txn.Revertible;
+import org.jboss.msc.txn.RollbackContext;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -31,53 +35,113 @@ import org.jboss.msc.txn.Transaction;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
-final class ServiceContainerImpl extends TransactionalObject {
-    private final ConcurrentMap<ServiceName, Registration> registry = new ConcurrentHashMap<ServiceName, Registration>();
+final class ServiceContainerImpl implements ServiceContainer {
+    private final Set<ServiceRegistry> registries = new HashSet<ServiceRegistry>();
+    private final Set<CountDownLatch> shutDownLatches = new HashSet<CountDownLatch>();
+    private boolean shutdownCompleted;
+    private boolean shutdownInitiated = false;
 
-    Registration getOrCreateRegistration(Transaction transaction, ServiceName name) {
-        Registration registration = registry.get(name);
-        if (registration == null) {
-            lockWrite(transaction);
-            registration = new Registration(name);
-            Registration appearing = registry.putIfAbsent(name, registration);
-            if (appearing != null) {
-                registration = appearing;
+    @Override
+    public void awaitTermination() throws InterruptedException {
+        final CountDownLatch shutdownLatch = createShutdownLatch();
+        try {
+            shutdownLatch.await();
+        } finally {
+            releaseShutdownLatch(shutdownLatch);
+        }
+    }
+
+    @Override
+    public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+        final CountDownLatch shutdownLatch = createShutdownLatch();
+        try {
+            shutdownLatch.await(timeout, unit);
+        } finally {
+            releaseShutdownLatch(shutdownLatch);
+        }
+        synchronized (this) {
+            return shutdownCompleted;
+        }
+    }
+
+    private CountDownLatch createShutdownLatch() {
+        final CountDownLatch shutdownLatch;
+        synchronized (this) {
+            if (shutdownInitiated) {
+                return new CountDownLatch(0);
+            }
+            shutdownLatch = new CountDownLatch(1);
+            synchronized (shutDownLatches) {
+                shutDownLatches.add(shutdownLatch);
             }
         }
-        return registration;
+        return shutdownLatch;
     }
 
-    /**
-     * Initiate a service removal in the given transaction.
-     *
-     * @param transaction the transaction
-     * @param name the service to remove
-     */
-    public void removeService(Transaction transaction, ServiceName name) {
-        if (!registry.containsKey(name)) {
-            return;
-        }
-        final ServiceController<?> serviceController = registry.get(name).getController();
-        if (serviceController != null) {
-            serviceController.remove(transaction);
+    private void releaseShutdownLatch(CountDownLatch shutdownWaiter) {
+        synchronized (shutDownLatches) {
+            shutDownLatches.remove(shutdownWaiter);
         }
     }
 
-    Registration getRegistration(final ServiceName serviceName) {
-        return registry.get(serviceName);
+    @Override
+    public void shutdown(Transaction transaction) {
+        synchronized(this) {
+            if (shutdownInitiated){
+                return;
+            }
+            shutdownInitiated = true;
+        }
+        for (ServiceRegistry registry: registries) {
+            registry.clear(transaction);
+        }
+        transaction.newTask().setTraits(new ShutdownTask()).release();
     }
 
     @Override
-    protected Object takeSnapshot() {
-        Map<ServiceName, Registration> registrySnapshot = new HashMap<ServiceName, Registration>(registry.size());
-        registrySnapshot.putAll(registry);
-        return registrySnapshot;
+    public boolean isShutdown() {
+        synchronized (this) {
+            return shutdownInitiated;
+        }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    protected void revert(Object snapshot) {
-        registry.clear();
-        registry.putAll((Map<ServiceName, Registration>)snapshot);
+    public boolean isTerminated() {
+        synchronized (this) {
+            return shutdownCompleted;
+        }
+    }
+
+    protected void finalize() throws Throwable {
+        // TODO
+        // Transaction transaction = Transaction.create(executor)
+        //shutdown(transaction);
+    }
+
+    private class ShutdownTask implements Committable, Revertible {
+
+        @Override
+        public void commit(CommitContext context) {
+            context.begin();
+            try {
+                shutdownCompleted = true;
+                synchronized (shutDownLatches) {
+                    for (CountDownLatch shutdownLatch: shutDownLatches) {
+                        shutdownLatch.countDown();
+                    }
+                }
+            } finally {
+                context.complete();
+            }
+        }
+
+        @Override
+        public void rollback(RollbackContext context) {
+            context.begin();
+            synchronized (ServiceContainerImpl.this) {
+                shutdownInitiated = false;
+            }
+            context.complete();
+        }
     }
 }

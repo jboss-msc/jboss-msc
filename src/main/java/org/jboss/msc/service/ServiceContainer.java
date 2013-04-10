@@ -18,51 +18,17 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.txn.Transaction;
-
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+
+import org.jboss.msc.txn.Transaction;
 
 /**
  * A service container. This class is thread safe.
  *
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
 public interface ServiceContainer {
-
-    /**
-     * Adds service to the container.
-     *
-     * @param txn transaction
-     * @param serviceName service name
-     * @param service service instance or {@code null}
-     * @param <T> service type
-     * @return service builder to configure service dependencies, service mode and other stuff.
-     */
-    <T extends Service> ServiceBuilder<T> addService(Transaction txn, ServiceName serviceName, T service);
-
-    /**
-     * Gets service from the container. This method can be called even
-     * {@code #addService(String,T)} have not been yet called on the container.
-     *
-     * @param txn transaction
-     * @param serviceName service name
-     * @param <T> expected service type
-     * @return service future.
-     */
-    <T extends Service> Future<T> getService(Transaction txn, ServiceName serviceName);
-
-    /**
-     * Removes service from the container.
-     *
-     * @param txn transaction
-     * @param serviceName service name
-     * @param <T> service type
-     * @return removed service future. The future will return instance that have been associated with
-     * {@code serviceName} or {@code null} if service was registered but was associated with {@code null} literal.
-     * @throws ServiceNotFoundException if service was not available
-     */
-    <T extends Service> Future<T> removeService(Transaction txn, ServiceName serviceName) throws ServiceNotFoundException;
 
     /**
      * Shuts down this container.
