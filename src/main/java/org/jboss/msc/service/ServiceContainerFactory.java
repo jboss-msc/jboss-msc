@@ -40,9 +40,8 @@ public final class ServiceContainerFactory {
      * @param autoShutdown {@code true} to automatically shut down the container
      *        at VM exit, {@code false} otherwise
      * @return a reference to this object
-     * @throws IllegalStateException if {@link #build()} have been called.
      */
-    public ServiceContainer newServiceContainer(boolean autoShutdown) { // TODO: do we want to support auto shutdown?
+    public ServiceContainer newServiceContainer(boolean autoShutdown) { // TODO: do we want to support auto shutdown? ATM ServiceContainer.shutdown() expects Transaction argument, what transation would be used in autoShutdown mode?
         throw new UnsupportedOperationException();
     }
 

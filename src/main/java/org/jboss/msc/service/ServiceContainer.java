@@ -18,6 +18,8 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.txn.Transaction;
+
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -31,43 +33,48 @@ public interface ServiceContainer {
     /**
      * Adds service to the container.
      *
+     * @param txn transaction
      * @param serviceName service name
      * @param service service instance or {@code null}
      * @param <T> service type
      * @return service builder to configure service dependencies, service mode and other stuff.
      */
-    <T extends Service> ServiceBuilder<T> addService(ServiceName serviceName, T service);
+    <T extends Service> ServiceBuilder<T> addService(Transaction txn, ServiceName serviceName, T service);
 
     /**
      * Gets service from the container. This method can be called even
      * {@code #addService(String,T)} have not been yet called on the container.
      *
+     * @param txn transaction
      * @param serviceName service name
      * @param <T> expected service type
      * @return service future.
      */
-    <T extends Service> Future<T> getService(ServiceName serviceName);
+    <T extends Service> Future<T> getService(Transaction txn, ServiceName serviceName);
 
     /**
      * Removes service from the container.
      *
+     * @param txn transaction
      * @param serviceName service name
      * @param <T> service type
      * @return removed service future. The future will return instance that have been associated with
      * {@code serviceName} or {@code null} if service was registered but was associated with {@code null} literal.
      * @throws ServiceNotFoundException if service was not available
      */
-    <T extends Service> Future<T> removeService(ServiceName serviceName) throws ServiceNotFoundException;
+    <T extends Service> Future<T> removeService(Transaction txn, ServiceName serviceName) throws ServiceNotFoundException;
 
     /**
      * Shuts down this container.
+     *
+     * @param txn transaction
      */
-    void shutdown();
+    void shutdown(Transaction txn);
 
     /**
      * Returns {@code true} if this container has been shut down.
      *
-     * @return {@code true} if {@link #shutdown()} have been called, {@code false} otherwise
+     * @return {@code true} if {@link #shutdown(Transaction)} have been called, {@code false} otherwise
      */
     boolean isShutdown();
 
