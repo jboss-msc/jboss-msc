@@ -23,6 +23,7 @@ import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.LogMessage;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
+import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.txn.Committable;
 import org.jboss.msc.txn.Executable;
@@ -68,7 +69,7 @@ public interface MSCLogger {
 
     @LogMessage(level = ERROR)
     @Message(id = 1, value = "Failed to start %s")
-    void startFailed(@Cause StartException cause, Object serviceName);
+    void startFailed(@Cause StartException cause, ServiceName serviceName);
 
     @LogMessage(level = ERROR)
     @Message(id = 2, value = "Invocation of listener \"%s\" failed")
@@ -76,26 +77,26 @@ public interface MSCLogger {
 
     @LogMessage(level = WARN)
     @Message(id = 3, value = "Exception thrown after start was already completed in %s")
-    void exceptionAfterComplete(@Cause Throwable cause, Object serviceName);
+    void exceptionAfterComplete(@Cause Throwable cause, ServiceName serviceName);
 
     @LogMessage(level = WARN)
     @Message(id = 4, value = "Failure during stop of %s")
-    void stopFailed(@Cause Throwable cause, Object serviceName);
+    void stopFailed(@Cause Throwable cause, ServiceName serviceName);
 
     @LogMessage(level = WARN)
     @Message(id = 5, value = "Unexpected disappearance of %s during stop")
-    void stopServiceMissing(Object serviceName);
+    void stopServiceMissing(ServiceName serviceName);
 
     /*
      * This method is for uninjection failures on behalf of a service.  See also id = 100
      */
     @LogMessage(level = WARN)
     @Message(id = 6, value = "Uninjection \"%2$s\" of %1$s failed unexpectedly")
-    void uninjectFailed(@Cause Throwable cause, Object serviceName, WritableValue<?> valueInjection);
+    void uninjectFailed(@Cause Throwable cause, ServiceName serviceName, WritableValue<?> valueInjection);
 
     @LogMessage(level = WARN)
     @Message(id = 7, value = "An internal service error has occurred while processing an operation on %s")
-    void internalServiceError(@Cause Throwable cause, Object serviceName);
+    void internalServiceError(@Cause Throwable cause, ServiceName serviceName);
 
     // id = 8: unexpected worker thread exception (N/A)
 

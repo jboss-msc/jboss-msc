@@ -36,7 +36,7 @@ public interface ServiceContainer {
      * @param <T> service type
      * @return service builder to configure service dependencies, service mode and other stuff.
      */
-    <T extends Service> ServiceBuilder<T> addService(String serviceName, T service);
+    <T extends Service> ServiceBuilder<T> addService(ServiceName serviceName, T service);
 
     /**
      * Gets service from the container. This method can be called even
@@ -46,7 +46,7 @@ public interface ServiceContainer {
      * @param <T> expected service type
      * @return service future.
      */
-    <T extends Service> Future<T> getService(String serviceName);
+    <T extends Service> Future<T> getService(ServiceName serviceName);
 
     /**
      * Removes service from the container.
@@ -57,7 +57,7 @@ public interface ServiceContainer {
      * {@code serviceName} or {@code null} if service was registered but was associated with {@code null} literal.
      * @throws ServiceNotFoundException if service was not available
      */
-    <T extends Service> Future<T> removeService(String serviceName) throws ServiceNotFoundException;
+    <T extends Service> Future<T> removeService(ServiceName serviceName) throws ServiceNotFoundException;
 
     /**
      * Shuts down this container.

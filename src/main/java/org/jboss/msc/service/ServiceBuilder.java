@@ -44,7 +44,7 @@ public interface ServiceBuilder<T extends Service> {
      * @return a reference to this object
      * @throws IllegalStateException if {@link #build()} have been called.
      */
-    ServiceBuilder<T> addAlias(String alias) throws IllegalStateException;
+    ServiceBuilder<T> addAlias(ServiceName alias) throws IllegalStateException;
 
     /**
      * Add aliases for the service.
@@ -53,7 +53,7 @@ public interface ServiceBuilder<T extends Service> {
      * @return a reference to this object
      * @throws IllegalStateException if {@link #build()} have been called.
      */
-    ServiceBuilder<T> addAliases(String... aliases) throws IllegalStateException;
+    ServiceBuilder<T> addAliases(ServiceName... aliases) throws IllegalStateException;
 
     /**
      * Adds a dependency to the service being built with default flags.
@@ -62,7 +62,7 @@ public interface ServiceBuilder<T extends Service> {
      * @return a reference to this object
      * @throws IllegalStateException if {@link #build()} have been called.
      */
-    ServiceBuilder<T> addDependency(String serviceName) throws IllegalStateException;
+    ServiceBuilder<T> addDependency(ServiceName serviceName) throws IllegalStateException;
 
     /**
      * Adds a dependency to the service being built with specified flags.
@@ -72,7 +72,7 @@ public interface ServiceBuilder<T extends Service> {
      * @return a reference to this object
      * @throws IllegalStateException if {@link #build()} have been called.
      */
-    ServiceBuilder<T> addDependency(String serviceName, DependencyFlag... flags) throws IllegalStateException;
+    ServiceBuilder<T> addDependency(ServiceName serviceName, DependencyFlag... flags) throws IllegalStateException;
 
     /**
      * Adds an injected dependency to the service being built with default flags.
@@ -83,7 +83,7 @@ public interface ServiceBuilder<T extends Service> {
      * @return a reference to this object
      * @throws IllegalStateException if {@link #build()} have been called.
      */
-    ServiceBuilder<T> addDependency(String serviceName, Injector<?> injector) throws IllegalStateException;
+    ServiceBuilder<T> addDependency(ServiceName serviceName, Injector<?> injector) throws IllegalStateException;
 
     /**
      * Add an injected dependency to the service being built with specified flags.
@@ -95,8 +95,9 @@ public interface ServiceBuilder<T extends Service> {
      * @return a reference to this object
      * @throws IllegalStateException if {@link #build()} have been called.
      */
-    ServiceBuilder<T> addDependency(String serviceName, Injector<?> injector, DependencyFlag... flags) throws IllegalStateException;
+    ServiceBuilder<T> addDependency(ServiceName serviceName, Injector<?> injector, DependencyFlag... flags) throws IllegalStateException;
 
+    // TODO: is this build() throws A,B,C exceptions correct? Shouldn't we use either transaction.addProblem() or Future's ExecuteException to propagate A,B,C exceptions?
     /**
      * Initiate installation of this configured service to the container.
      *
