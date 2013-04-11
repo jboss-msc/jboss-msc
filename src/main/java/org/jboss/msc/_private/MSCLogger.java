@@ -144,4 +144,17 @@ public interface MSCLogger {
 
     @Message(id = 103, value = "Too many active transactions")
     IllegalStateException tooManyActiveTransactions();
+
+    /*
+     * Location nesting types.
+     */
+
+    @Message(value = "at")
+    String nestingUnknown();
+
+    @Message(value = "contained in")
+    String nestingContained();
+
+    @Message(value = "included from")
+    String nestingIncluded();
 }
