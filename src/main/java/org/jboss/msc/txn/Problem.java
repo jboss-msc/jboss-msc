@@ -46,6 +46,15 @@ public final class Problem implements Serializable {
      * @param location the location description of the problem
      */
     public Problem(final TaskController taskController, final String message, final Throwable cause, final Severity severity, final Location location) {
+        if (taskController == null) {
+            throw new IllegalArgumentException("task is null");
+        }
+        if (message == null) {
+            throw new IllegalArgumentException("message is null");
+        }
+        if (severity == null) {
+            throw new IllegalArgumentException("severity is null");
+        }
         this.taskController = taskController;
         this.message = message;
         this.cause = cause;
