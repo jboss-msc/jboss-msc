@@ -34,6 +34,33 @@ public final class Problem implements Serializable {
     private final String message;
     private final Throwable cause;
     private final Severity severity;
+    private final Location location;
+
+    /**
+     * Construct a new instance.
+     *
+     * @param taskController the task that failed
+     * @param message the error description
+     * @param cause the optional exception cause
+     * @param severity the severity of the problem
+     * @param location the location description of the problem
+     */
+    public Problem(final TaskController taskController, final String message, final Throwable cause, final Severity severity, final Location location) {
+        if (taskController == null) {
+            throw new IllegalArgumentException("task is null");
+        }
+        if (message == null) {
+            throw new IllegalArgumentException("message is null");
+        }
+        if (severity == null) {
+            throw new IllegalArgumentException("severity is null");
+        }
+        this.taskController = taskController;
+        this.message = message;
+        this.cause = cause;
+        this.severity = severity;
+        this.location = location;
+    }
 
     /**
      * Construct a new instance.
@@ -57,6 +84,7 @@ public final class Problem implements Serializable {
         this.cause = cause;
         this.message = message;
         this.taskController = taskController;
+        location = null;
     }
 
     /**
@@ -75,10 +103,34 @@ public final class Problem implements Serializable {
      *
      * @param task the task that failed
      * @param message the error description
+     * @param cause the optional exception cause
+     * @param location the location description of the problem
+     */
+    public Problem(final TaskController task, final String message, final Throwable cause, final Location location) {
+        this(task, message, cause, Severity.ERROR, location);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param task the task that failed
+     * @param message the error description
      * @param severity the severity of the problem
      */
     public Problem(final TaskController task, final String message, final Severity severity) {
         this(task, message, null, severity);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param task the task that failed
+     * @param message the error description
+     * @param severity the severity of the problem
+     * @param location the location description of the problem
+     */
+    public Problem(final TaskController task, final String message, final Severity severity, final Location location) {
+        this(task, message, null, severity, location);
     }
 
     /**
@@ -92,6 +144,17 @@ public final class Problem implements Serializable {
     }
 
     /**
+     * Construct a new instance.
+     *
+     * @param task the task that failed
+     * @param message the error description
+     * @param location the location description of the problem
+     */
+    public Problem(final TaskController task, final String message, final Location location) {
+        this(task, message, null, Severity.ERROR, location);
+    }
+
+    /**
      * Construct a new instance.  The exception must not be {@code null}.
      *
      * @param task the task that failed
@@ -99,6 +162,20 @@ public final class Problem implements Serializable {
      */
     public Problem(final TaskController task, final Throwable cause) {
         this(task, "Task failed due to exception", cause);
+        if (cause == null) {
+            throw new IllegalArgumentException("cause is null");
+        }
+    }
+
+    /**
+     * Construct a new instance.  The exception must not be {@code null}.
+     *
+     * @param task the task that failed
+     * @param cause the exception cause
+     * @param location the location description of the problem
+     */
+    public Problem(final TaskController task, final Throwable cause, final Location location) {
+        this(task, "Task failed due to exception", cause, location);
         if (cause == null) {
             throw new IllegalArgumentException("cause is null");
         }
@@ -139,6 +216,15 @@ public final class Problem implements Serializable {
      */
     public Severity getSeverity() {
         return severity;
+    }
+
+    /**
+     * Get the source location of the problem, if any.
+     *
+     * @return the source location, or {@code null} if there is none
+     */
+    public Location getLocation() {
+        return location;
     }
 
     /**
