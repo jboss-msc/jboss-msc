@@ -16,7 +16,21 @@
  * limitations under the License.
  */
 
+package org.jboss.msc.txn;
+
+import java.util.EventListener;
+
 /**
- * Classes which implement various indirect value types.  See {@link ReadableValue}.
+ * A listener for a value.  Listeners are fired in response to an event for which they were registered.
+ *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-package org.jboss.msc.value;
+public interface Listener<T> extends EventListener {
+
+    /**
+     * Handle the event.
+     *
+     * @param subject the subject of the event
+     */
+    void handleEvent(T subject);
+}

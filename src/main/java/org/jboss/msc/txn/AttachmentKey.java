@@ -18,8 +18,6 @@
 
 package org.jboss.msc.txn;
 
-import org.jboss.msc.value.Factory;
-
 /**
  * A key for a transaction attachment.
  *

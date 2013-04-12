@@ -22,29 +22,18 @@ import java.util.Collection;
 import java.util.Set;
 
 import org.jboss.msc.txn.TaskTarget;
-import org.jboss.msc.value.ReadableValue;
-import org.jboss.msc.value.WritableValue;
 
 
 /**
  * The target of ServiceBuilder installations.
  * ServicesBuilders to be installed on a target should be retrieved by calling one of the {@code addService} methods
- * ({@link #addService(ServiceName, Service)}, {@link #addServiceValue(ServiceName, Value)}.
+ * ({@link #addService(ServiceName, Service)}.
  * Notice that installation will only take place after {@link ServiceBuilder#install(org.jboss.msc.txn.Transaction)} is
  * invoked. ServiceBuilders that are not installed are ignored.
  * 
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
 public interface ServiceTarget extends TaskTarget {
-
-    /**
-     * Gets a builder which can be used to add a service to this target.
-     *
-     * @param name the service name
-     * @param value the service value
-     * @return the builder for the service
-     */
-    <T> ServiceBuilder<T> addServiceValue(ServiceName name, ReadableValue<? extends Service<T>> value);
 
     /**
      * Gets a builder which can be used to add a service to this target.
@@ -94,7 +83,7 @@ public interface ServiceTarget extends TaskTarget {
      * @param name the service name
      * @param injector the injector for the dependency value
      */
-    public void addDependency(ServiceContainer container, ServiceName name, WritableValue<?> injector);
+    public void addDependency(ServiceContainer container, ServiceName name, Injector<?> injector);
 
     /**
      * Adds an injected dependency to the service being built.  The dependency will be injected just before
@@ -103,7 +92,7 @@ public interface ServiceTarget extends TaskTarget {
      * @param name the service name
      * @param injector the injector for the dependency value
      */
-    public void addDependency(ServiceName name, WritableValue<?> injector);
+    public void addDependency(ServiceName name, Injector<?> injector);
 
     /**
      * Adds an injected dependency to the service being built.  The dependency will be injected just before starting this
@@ -113,7 +102,7 @@ public interface ServiceTarget extends TaskTarget {
      * @param injector the injector for the dependency value
      * @param flags the flags for the service
      */
-    public <T> void addDependency(ServiceContainer container, ServiceName name, WritableValue<T> injector, DependencyFlag... flags);
+    public <T> void addDependency(ServiceContainer container, ServiceName name, Injector<T> injector, DependencyFlag... flags);
 
     /**
      * Adds an injected dependency to the service being built.  The dependency will be injected just before starting this
@@ -123,7 +112,7 @@ public interface ServiceTarget extends TaskTarget {
      * @param injector the injector for the dependency value
      * @param flags the flags for the service
      */
-    public <T> void addDependency(ServiceName name, WritableValue<T> injector, DependencyFlag... flags);
+    public <T> void addDependency(ServiceName name, Injector<T> injector, DependencyFlag... flags);
 
     /**
      * Removes a dependency from this target.  Subsequently defined services will not have this dependency.

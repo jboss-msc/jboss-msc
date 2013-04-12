@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 import org.jboss.msc.test.utils.AbstractTransactionTest;
 import org.jboss.msc.txn.DeadlockException;
 import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.value.Listener;
+import org.jboss.msc.txn.Listener;
 import org.junit.Test;
 
 /**

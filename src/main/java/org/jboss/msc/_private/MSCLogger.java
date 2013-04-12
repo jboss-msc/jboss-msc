@@ -27,10 +27,9 @@ import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.txn.Committable;
 import org.jboss.msc.txn.Executable;
+import org.jboss.msc.txn.Listener;
 import org.jboss.msc.txn.Revertible;
 import org.jboss.msc.txn.Validatable;
-import org.jboss.msc.value.Listener;
-import org.jboss.msc.value.WritableValue;
 
 import static org.jboss.logging.Logger.Level.ERROR;
 import static org.jboss.logging.Logger.Level.FATAL;
@@ -86,13 +85,6 @@ public interface MSCLogger {
     @LogMessage(level = WARN)
     @Message(id = 5, value = "Unexpected disappearance of %s during stop")
     void stopServiceMissing(ServiceName serviceName);
-
-    /*
-     * This method is for uninjection failures on behalf of a service.  See also id = 100
-     */
-    @LogMessage(level = WARN)
-    @Message(id = 6, value = "Uninjection \"%2$s\" of %1$s failed unexpectedly")
-    void uninjectFailed(@Cause Throwable cause, ServiceName serviceName, WritableValue<?> valueInjection);
 
     @LogMessage(level = WARN)
     @Message(id = 7, value = "An internal service error has occurred while processing an operation on %s")

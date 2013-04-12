@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.value.WritableValue;
 
 /**
  * Spec for creating a dependency during service installation.
@@ -52,7 +51,7 @@ final class DependencySpec<T> {
 
     public Dependency<T> createDependency(Transaction transaction, ServiceBuilderImpl<?> serviceBuilder) {
         @SuppressWarnings("unchecked")
-        final WritableValue<? super T>[] injectionArray = (WritableValue<? super T>[]) injections.toArray(new WritableValue<?>[injections.size()]);
+        final Injector<? super T>[] injectionArray = (Injector<? super T>[]) injections.toArray(new Injector<?>[injections.size()]);
         final boolean dependencyUp = DependencyFlag.isDependencyUpRequired(flags);
         final boolean propagateDemand = DependencyFlag.propagateDemand(flags);
         final Registration dependencyRegistration = registry.getOrCreateRegistration(transaction, name);

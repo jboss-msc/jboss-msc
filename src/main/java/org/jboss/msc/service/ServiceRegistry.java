@@ -48,7 +48,7 @@ public final class ServiceRegistry extends TransactionalObject {
         if (controller == null) {
             throw new ServiceNotFoundException("Service " + serviceName + " not found");
         }
-        return controller.getValue().getValue();
+        return controller.getValue().get();
     }
 
     /**
@@ -62,7 +62,7 @@ public final class ServiceRegistry extends TransactionalObject {
         if (registration == null) {
             return null;
         }
-        return registration.getController() == null? null: registration.getController().getValue().getValue();
+        return registration.getController() == null? null: registration.getController().getValue().get();
     }
 
     Registration getOrCreateRegistration(Transaction transaction, ServiceName name) {

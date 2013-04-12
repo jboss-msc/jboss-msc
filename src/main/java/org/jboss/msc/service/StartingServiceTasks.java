@@ -42,7 +42,7 @@ final class StartingServiceTasks {
      *                           conclusion of starting transition.
      */
     public static <T> TaskController<Void> createTasks(Transaction transaction, ServiceController<T> serviceController) {
-        final Service<T> serviceValue = serviceController.getValue().getValue();
+        final Service<T> serviceValue = serviceController.getValue().get();
 
         // start service task builder
         final TaskBuilder<T> startBuilder = transaction.newTask(new SimpleServiceStartTask<T>(serviceValue)).setTraits(serviceValue);

@@ -19,7 +19,6 @@ package org.jboss.msc.service;
 
 import org.jboss.msc.service.ServiceController.State;
 import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.value.WritableValue;
 
 /**
  * Dependency implementation. 
@@ -50,12 +49,9 @@ final class  SimpleDependency<T> implements Dependency<T> {
     /**
      * List of injections.
      */
-    private final WritableValue<? super T>[] injections;
+    private final Injector<? super T>[] injections;
 
-    @SuppressWarnings("unchecked")
-    static final WritableValue<Object>[] NO_INJECTIONS = new WritableValue[0];
-
-    SimpleDependency(final WritableValue<? super T>[] injections, final Registration dependencyRegistration, final boolean dependencyUp, final boolean propagateDemand) {
+    SimpleDependency(final Injector<? super T>[] injections, final Registration dependencyRegistration, final boolean dependencyUp, final boolean propagateDemand) {
         this.injections = injections;
         this.dependencyRegistration = dependencyRegistration;
         this.dependencyUp = dependencyUp;
@@ -83,7 +79,7 @@ final class  SimpleDependency<T> implements Dependency<T> {
     public void performInjections() {
         assert dependencyRegistration.getController() != null;
         assert dependencyRegistration.getController().getValue() != null;
-        for (WritableValue <? super T> injection: injections) {
+        for (Injector <? super T> injection: injections) {
             // TODO injection.setValue();
         }
     }

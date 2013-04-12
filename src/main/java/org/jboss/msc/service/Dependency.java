@@ -19,7 +19,6 @@
 package org.jboss.msc.service;
 
 import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.value.WritableValue;
 
 /**
  * A dependency. This interface represents the dependency relationship from both the dependent
@@ -31,9 +30,6 @@ import org.jboss.msc.value.WritableValue;
  * @param <T>
  */
 interface  Dependency<T> {
-
-    @SuppressWarnings("unchecked")
-    static final WritableValue<Object>[] NO_INJECTIONS = new WritableValue[0];
 
     /**
      * Sets the dependency dependent, invoked during {@link dependentController} installation.

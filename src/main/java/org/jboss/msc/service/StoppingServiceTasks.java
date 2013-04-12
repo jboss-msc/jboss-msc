@@ -42,7 +42,7 @@ final class StoppingServiceTasks {
      *                        conclusion of stopping transition.
      */
     public static <T> TaskController<Void> createTasks(Transaction transaction, ServiceController<T> service, TaskController<?> taskDependency) {
-        final Service<T> serviceValue = service.getValue().getValue();
+        final Service<T> serviceValue = service.getValue().get();
 
         // stop service
         final TaskBuilder<Void> stopTaskBuilder = transaction.newTask(new SimpleServiceStopTask(serviceValue));

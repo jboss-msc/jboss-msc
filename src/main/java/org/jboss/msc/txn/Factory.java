@@ -16,29 +16,19 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.value;
+package org.jboss.msc.txn;
 
 /**
- * A simple immediately-available value.
- *
- * @param <T> the value type
+ * A factory for new instances.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class ImmediateValue<T> implements ReadableValue<T> {
-    private final T value;
+public interface Factory<T> {
 
     /**
-     * Construct a new instance.
+     * Create an instance.
      *
-     * @param value the value to return
+     * @return the instance
      */
-    public ImmediateValue(final T value) {
-        this.value = value;
-    }
-
-    /** {@inheritDoc} */
-    public T getValue() {
-        return value;
-    }
+    T create();
 }

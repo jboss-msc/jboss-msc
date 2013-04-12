@@ -22,7 +22,6 @@ import static org.jboss.msc._private.MSCLogger.TXN;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import org.jboss.msc.value.Listener;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -97,7 +96,7 @@ public abstract class Transaction extends SimpleAttachable implements TaskTarget
 
     /**
      * Prepare this transaction.  It is an error to prepare a transaction with unreleased tasks.
-     * Once this method returns, either {@link #commit(org.jboss.msc.value.Listener)} or {@link #rollback(org.jboss.msc.value.Listener)} must be called.
+     * Once this method returns, either {@link #commit(Listener)} or {@link #rollback(Listener)} must be called.
      * After calling this method (regardless of its outcome), the transaction can not be directly modified before termination.
      *
      * @param completionListener the listener to call when the prepare is complete or has failed

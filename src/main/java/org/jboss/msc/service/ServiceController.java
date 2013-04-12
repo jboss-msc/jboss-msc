@@ -21,9 +21,6 @@ package org.jboss.msc.service;
 import org.jboss.msc.service.ServiceMode.Demand;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.value.AtomicValue;
-import org.jboss.msc.value.ReadableValue;
-import org.jboss.msc.value.WritableValue;
 
 /**
  * A controller for a single service instance.
@@ -38,7 +35,7 @@ final class ServiceController<T> extends TransactionalObject {
     /**
      * The service itself.
      */
-    private final AtomicValue<Service<T>> value = new AtomicValue<Service<T>>();
+    private final Injector<Service<T>> value = new Injector<Service<T>>();
     /**
      * The primary registration of this service.
      */
@@ -134,11 +131,7 @@ final class ServiceController<T> extends TransactionalObject {
      *
      * @return the service value
      */
-    public ReadableValue<Service<T>> getValue() {
-        return value;
-    }
-
-    WritableValue<Service<T>> getWriteValue() {
+    public Injector<Service<T>> getValue() {
         return value;
     }
 
