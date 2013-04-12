@@ -78,7 +78,7 @@ public final class ServiceRegistry extends TransactionalObject {
         return registration;
     }
 
-    void clear(Transaction transaction) {
+    public void clear(Transaction transaction) {
         final HashSet<ServiceController<?>> done = new HashSet<ServiceController<?>>();
         for (Registration registration : registry.values()) {
             ServiceController<?> serviceInstance = registration.getController();
@@ -90,13 +90,13 @@ public final class ServiceRegistry extends TransactionalObject {
 
     @SuppressWarnings("unchecked")
     @Override
-    protected synchronized void revert(Object snapshot) {
+    synchronized void revert(Object snapshot) {
         registry.clear();
         registry.putAll((Map<ServiceName, Registration>)snapshot);
     }
 
     @Override
-    protected synchronized Object takeSnapshot() {
+    synchronized Object takeSnapshot() {
         final Map<ServiceName, Registration> snapshot = new HashMap<ServiceName, Registration>(registry.size());
         snapshot.putAll(registry);
         return snapshot;

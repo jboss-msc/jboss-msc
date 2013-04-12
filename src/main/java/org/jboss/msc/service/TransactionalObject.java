@@ -49,7 +49,7 @@ abstract class TransactionalObject {
      *  
      * @param transaction the transaction that is attempting to modify current's object state
      */
-    protected final void lockWrite(Transaction transaction) {
+    final void lockWrite(Transaction transaction) {
         assert !Thread.holdsLock(this);
         while (true) {
             Transaction currentLock;
@@ -85,7 +85,7 @@ abstract class TransactionalObject {
      * 
      * @return the transaction that holds the lock, or {@code null} if this object is {@link #isWriteLocked() unlocked}.
      */
-    protected synchronized final Transaction getCurrentTransaction() {
+    synchronized final Transaction getCurrentTransaction() {
         return lock;
     }
 
@@ -94,7 +94,7 @@ abstract class TransactionalObject {
      * 
      * @return {@code true} only if this object is locked under an active transaction
      */
-    protected synchronized final boolean isWriteLocked() {
+    synchronized final boolean isWriteLocked() {
         return lock != null;
     }
 
@@ -104,7 +104,7 @@ abstract class TransactionalObject {
      * @param transaction an active transaction
      * @return {@code true} only if this object is locked by {@code transaction}.
      */
-    protected synchronized final boolean isWriteLocked(Transaction transaction) {
+    synchronized final boolean isWriteLocked(Transaction transaction) {
         return lock == transaction;
     }
 
@@ -119,7 +119,7 @@ abstract class TransactionalObject {
      * 
      * @return the snapshot
      */
-    protected abstract Object takeSnapshot();
+    abstract Object takeSnapshot();
 
     /**
      * Revert this object's inner state to what its original state when it was locked. Invoked during transaction
@@ -127,19 +127,19 @@ abstract class TransactionalObject {
      * 
      * @param snapshot the snapshot
      */
-    protected abstract void revert(Object snapshot);
+    abstract void revert(Object snapshot);
 
     /**
      * Notifies that this object is now write locked. Invoked only once per transaction lock.
      * 
      * @param transaction the transaction under which this object is locked
      */
-    protected void writeLocked(Transaction transaction) {}
+    void writeLocked(Transaction transaction) {}
 
     /**
      * Notifies that this object is now write unlocked.
      */
-    protected void writeUnlocked() {}
+    void writeUnlocked() {}
 
     class UnlockWriteTask implements Committable, Revertible {
 

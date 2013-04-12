@@ -25,8 +25,6 @@ import org.jboss.msc.txn.TaskTarget;
 import org.jboss.msc.value.ReadableValue;
 import org.jboss.msc.value.WritableValue;
 
-import sun.awt.SunHints.Value;
-
 
 /**
  * The target of ServiceBuilder installations.
