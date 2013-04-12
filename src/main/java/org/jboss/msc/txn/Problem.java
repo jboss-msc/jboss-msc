@@ -91,6 +91,32 @@ public final class Problem implements Serializable {
      * Construct a new instance.
      *
      * @param task the task that failed
+     * @param cause the optional exception cause
+     * @param severity the severity of the problem
+     * @param location the location description of the problem
+     */
+    public Problem(final TaskController task, final Throwable cause, final Severity severity, final Location location) {
+        this(task, "Task failed due to exception", cause, severity, location);
+        if (cause == null) {
+            throw new IllegalArgumentException("cause is null");
+        }
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param task the task that failed
+     * @param cause the optional exception cause
+     * @param severity the severity of the problem
+     */
+    public Problem(final TaskController task, final Throwable cause, final Severity severity) {
+        this(task, cause, severity, null);
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param task the task that failed
      * @param message the error description
      * @param cause the optional exception cause
      */
@@ -161,10 +187,7 @@ public final class Problem implements Serializable {
      * @param cause the exception cause
      */
     public Problem(final TaskController task, final Throwable cause) {
-        this(task, "Task failed due to exception", cause);
-        if (cause == null) {
-            throw new IllegalArgumentException("cause is null");
-        }
+        this(task, cause, Severity.ERROR);
     }
 
     /**
@@ -175,10 +198,7 @@ public final class Problem implements Serializable {
      * @param location the location description of the problem
      */
     public Problem(final TaskController task, final Throwable cause, final Location location) {
-        this(task, "Task failed due to exception", cause, location);
-        if (cause == null) {
-            throw new IllegalArgumentException("cause is null");
-        }
+        this(task, cause, Severity.ERROR, location);
     }
 
     /**
