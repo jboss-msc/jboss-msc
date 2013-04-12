@@ -895,6 +895,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
             });
         } catch (Throwable t) {
             MSCLogger.TASK.taskExecutionFailed(t, exec);
+            problemReport.addProblem(new Problem(this, t, Problem.Severity.CRITICAL));
         } finally {
             doEnd();
         }
