@@ -115,6 +115,13 @@ public interface ServiceTarget extends TaskTarget {
     public <T> void addDependency(ServiceName name, Injector<T> injector, DependencyFlag... flags);
 
     /**
+     * Remove all dependencies from this target.
+     *
+     * @return this target
+     */
+    ServiceTarget clearDependencies();
+
+    /**
      * Removes a dependency from this target.  Subsequently defined services will not have this dependency.
      *
      * @param dependency the dependency
@@ -135,11 +142,4 @@ public interface ServiceTarget extends TaskTarget {
      * @return the new service target
      */
     ServiceTarget subTarget();
-
-    /**
-     * Creates a new batch service target, which is used to install described services in this target.
-     *
-     * @return the new batch service target
-     */
-    BatchServiceTarget batchTarget();
 }
