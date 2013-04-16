@@ -41,81 +41,12 @@ final class ServiceContainerImpl implements ServiceContainer {
     private boolean shutdownCompleted;
     private boolean shutdownInitiated = false;
 
-    @Override
-    public void awaitTermination() throws InterruptedException {
-        final CountDownLatch shutdownLatch = createShutdownLatch();
-        try {
-            shutdownLatch.await();
-        } finally {
-            releaseShutdownLatch(shutdownLatch);
-        }
+    public void start(final Transaction txn) {
+        throw new UnsupportedOperationException();
     }
 
-    @Override
-    public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-        final CountDownLatch shutdownLatch = createShutdownLatch();
-        try {
-            shutdownLatch.await(timeout, unit);
-        } finally {
-            releaseShutdownLatch(shutdownLatch);
-        }
-        synchronized (this) {
-            return shutdownCompleted;
-        }
-    }
-
-    private CountDownLatch createShutdownLatch() {
-        final CountDownLatch shutdownLatch;
-        synchronized (this) {
-            if (shutdownInitiated) {
-                return new CountDownLatch(0);
-            }
-            shutdownLatch = new CountDownLatch(1);
-            synchronized (shutDownLatches) {
-                shutDownLatches.add(shutdownLatch);
-            }
-        }
-        return shutdownLatch;
-    }
-
-    private void releaseShutdownLatch(CountDownLatch shutdownWaiter) {
-        synchronized (shutDownLatches) {
-            shutDownLatches.remove(shutdownWaiter);
-        }
-    }
-
-    @Override
-    public void shutdown(Transaction transaction) {
-        synchronized(this) {
-            if (shutdownInitiated){
-                return;
-            }
-            shutdownInitiated = true;
-        }
-        for (ServiceRegistry registry: registries) {
-            registry.clear(transaction);
-        }
-        transaction.newTask().setTraits(new ShutdownTask()).release();
-    }
-
-    @Override
-    public boolean isShutdown() {
-        synchronized (this) {
-            return shutdownInitiated;
-        }
-    }
-
-    @Override
-    public boolean isTerminated() {
-        synchronized (this) {
-            return shutdownCompleted;
-        }
-    }
-
-    protected void finalize() throws Throwable {
-        // TODO
-        // Transaction transaction = Transaction.create(executor)
-        //shutdown(transaction);
+    public void stop(final Transaction txn) {
+        throw new UnsupportedOperationException();
     }
 
     private class ShutdownTask implements Committable, Revertible {

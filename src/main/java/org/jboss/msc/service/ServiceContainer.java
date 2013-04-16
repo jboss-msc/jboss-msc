@@ -18,57 +18,29 @@
 
 package org.jboss.msc.service;
 
-import java.util.concurrent.TimeUnit;
-
 import org.jboss.msc.txn.Transaction;
 
 /**
  * A service container. This class is thread safe.
  *
- * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public interface ServiceContainer {
 
     /**
-     * Shuts down this container.
+     * Starts this container.
      *
      * @param txn transaction
      */
-    void shutdown(Transaction txn);
+    void start(Transaction txn);
 
     /**
-     * Returns {@code true} if this container has been shut down.
+     * Stops this container.
      *
-     * @return {@code true} if {@link #shutdown(Transaction)} have been called, {@code false} otherwise
+     * @param txn transaction
      */
-    boolean isShutdown();
-
-    /**
-     * Returns {@code true} if all container tasks have completed following shut down.
-     * Note that {@link #isTerminated()} is never true unless shutdown was called first.
-     *
-     * @return {@code true} if container have been terminated, {@code false} otherwise
-     */
-    boolean isTerminated();
-
-    /**
-     * Blocks until all container tasks have completed execution after a shutdown request,
-     * or the current thread is interrupted, whichever happens first.
-     *
-     * @throws InterruptedException if interrupted while waiting
-     */
-    void awaitTermination() throws InterruptedException;
-
-    /**
-     * Blocks until all container tasks have completed execution after a shutdown request, or the timeout occurs,
-     * or the current thread is interrupted, whichever happens first.
-     *
-     * @param timeout the maximum time to wait
-     * @param unit the time unit of the timeout argument
-     * return {@code true} if this container terminated and {@code false} if the timeout elapsed before termination
-     * @throws InterruptedException if interrupted while waiting
-     */
-    boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException;
+    void stop(Transaction txn);
 
 }
