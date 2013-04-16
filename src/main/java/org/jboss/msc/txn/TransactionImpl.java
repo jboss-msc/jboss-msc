@@ -24,6 +24,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import org.jboss.msc.Version;
 import org.jboss.msc._private.MSCLogger;
+import org.jboss.msc.service.ServiceTarget;
 
 import static java.lang.Thread.holdsLock;
 import static org.jboss.msc.txn.Bits.allAreSet;
@@ -127,6 +128,10 @@ final class TransactionImpl extends Transaction implements TaskTarget {
     private TransactionImpl(final Executor taskExecutor, final Problem.Severity maxSeverity) {
         this.taskExecutor = taskExecutor;
         this.maxSeverity = maxSeverity;
+    }
+
+    public ServiceTarget getServiceTarget() throws IllegalStateException {
+        throw new UnsupportedOperationException();
     }
 
     public Executor getExecutor() {

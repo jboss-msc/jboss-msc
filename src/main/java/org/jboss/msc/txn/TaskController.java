@@ -21,7 +21,7 @@ package org.jboss.msc.txn;
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public abstract class TaskController<T> implements TaskTarget {
+public abstract class TaskController<T> {
 
     TaskController() {}
 
@@ -33,8 +33,4 @@ public abstract class TaskController<T> implements TaskTarget {
     public abstract Transaction getTransaction();
 
     public abstract T getResult() throws IllegalStateException;
-
-    public abstract <N> TaskBuilder<N> newTask(Executable<N> task) throws IllegalStateException;
-
-    public abstract TaskBuilder<Void> newTask() throws IllegalStateException;
 }

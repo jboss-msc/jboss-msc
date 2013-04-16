@@ -18,6 +18,8 @@
 
 package org.jboss.msc.txn;
 
+import org.jboss.msc.service.ServiceTarget;
+
 /**
  * Context for a task that may succeed or fail which may also produce a consumable result.
  *
@@ -25,6 +27,14 @@ package org.jboss.msc.txn;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public interface ExecuteContext<T> extends TransactionalContext, ReportableContext, CancellableContext, SimpleWorkContext, TaskTarget {
+
+    /**
+     * Gets service target to allow installing services inside this transaction.
+     *
+     * @return service target
+     * @throws IllegalStateException if this context is not accepting new tasks
+     */
+    public abstract ServiceTarget getServiceTarget() throws IllegalStateException;
 
     /**
      * Register the completion of this task with a value.  This method returns without blocking.

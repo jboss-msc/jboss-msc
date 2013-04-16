@@ -18,6 +18,8 @@
 
 package org.jboss.msc.txn;
 
+import org.jboss.msc.service.ServiceTarget;
+
 import static org.jboss.msc._private.MSCLogger.TXN;
 
 import java.util.concurrent.Executor;
@@ -58,6 +60,14 @@ public abstract class Transaction extends SimpleAttachable implements TaskTarget
         }
         return TransactionImpl.createTransactionImpl(executor, maxSeverity);
     }
+
+    /**
+     * Gets service target to allow installing services inside this transaction.
+     *
+     * @return service target
+     * @throws IllegalStateException if the transaction is not open
+     */
+    public abstract ServiceTarget getServiceTarget() throws IllegalStateException;
 
     public abstract Executor getExecutor();
     

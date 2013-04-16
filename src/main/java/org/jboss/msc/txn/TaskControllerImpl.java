@@ -20,6 +20,7 @@ package org.jboss.msc.txn;
 
 import java.util.ArrayList;
 import org.jboss.msc._private.MSCLogger;
+import org.jboss.msc.service.ServiceTarget;
 
 import static java.lang.Thread.holdsLock;
 import static org.jboss.msc.txn.Bits.*;
@@ -253,14 +254,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         this.committable = committable;
         this.classLoader = classLoader;
         state = STATE_NEW;
-    }
-
-    public <N> TaskBuilder<N> newTask(final Executable<N> task) throws IllegalStateException {
-        return new TaskBuilder<N>(getTransaction(), this, task);
-    }
-
-    public TaskBuilder<Void> newTask() throws IllegalStateException {
-        return new TaskBuilder<Void>(getTransaction(), this);
     }
 
     public TransactionImpl getTransaction() {
@@ -883,6 +876,10 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
 
                 public TaskBuilder<Void> newTask() throws IllegalStateException {
                     return new TaskBuilder<Void>(getTransaction(), TaskControllerImpl.this);
+                }
+
+                public ServiceTarget getServiceTarget() throws IllegalStateException {
+                    throw new UnsupportedOperationException();
                 }
 
                 public void begin() {

@@ -38,11 +38,12 @@ public interface ServiceTarget extends TaskTarget {
     /**
      * Gets a builder which can be used to add a service to this target.
      *
+     * @param container the service container
      * @param name the service name
      * @param service the service
      * @return the builder for the service
      */
-    <T> ServiceBuilder<T> addService(ServiceName name, Service<T> service);
+    <T> ServiceBuilder<T> addService(ServiceContainer container, ServiceName name, Service<T> service);
 
     /**
      * Adds a dependency that will be added to all ServiceBuilders installed in this target.
