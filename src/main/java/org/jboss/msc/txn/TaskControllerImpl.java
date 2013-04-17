@@ -132,7 +132,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     private final Validatable validatable;
     private final Committable committable;
     private final ClassLoader classLoader;
-    private final LittleIdentitySet<Thread> threads = new LittleIdentitySet<Thread>();
     private final ArrayList<TaskControllerImpl<?>> dependents = new ArrayList<TaskControllerImpl<?>>();
     private final ArrayList<TaskChild> children = new ArrayList<TaskChild>();
 
@@ -744,14 +743,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 public void complete() {
                     validateComplete();
                 }
-
-                public void begin() {
-                    doBegin();
-                }
-
-                public void end() {
-                    doEnd();
-                }
             });
         } catch (Throwable t) {
             MSCLogger.TASK.taskValidationFailed(t, validatable);
@@ -775,25 +766,16 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     }
 
     void doBegin() {
-        final Thread thread = Thread.currentThread();
-        synchronized (this) {
-            if (! threads.add(thread)) {
-                throw new IllegalStateException("Thread is already doing work on behalf of this task");
-            }
-        }
-        final ClassLoader classLoader = this.classLoader;
         if (classLoader != null) {
+            final Thread thread = Thread.currentThread();
             CL_HOLDER.set(thread.getContextClassLoader());
             thread.setContextClassLoader(classLoader);
         }
     }
 
     void doEnd() {
-        final Thread thread = Thread.currentThread();
-        synchronized (this) {
-            threads.remove(thread);
-        }
         if (classLoader != null) {
+            final Thread thread = Thread.currentThread();
             final ClassLoader classLoader = CL_HOLDER.get();
             thread.setContextClassLoader(classLoader);
             CL_HOLDER.remove();
@@ -807,14 +789,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
             rev.rollback(new RollbackContext() {
                 public void complete() {
                     rollbackComplete();
-                }
-
-                public void begin() {
-                    doBegin();
-                }
-
-                public void end() {
-                    doEnd();
                 }
             });
         } catch (Throwable t) {
@@ -881,14 +855,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 public ServiceTarget getServiceTarget() throws IllegalStateException {
                     throw new UnsupportedOperationException();
                 }
-
-                public void begin() {
-                    doBegin();
-                }
-
-                public void end() {
-                    doEnd();
-                }
             });
         } catch (Throwable t) {
             MSCLogger.TASK.taskExecutionFailed(t, exec);
@@ -905,14 +871,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
             committable.commit(new CommitContext() {
                 public void complete() {
                     commitComplete();
-                }
-
-                public void begin() {
-                    doBegin();
-                }
-
-                public void end() {
-                    doEnd();
                 }
             });
         } catch (Throwable t) {
