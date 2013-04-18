@@ -18,6 +18,7 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -72,7 +73,7 @@ interface  Dependency<T> {
      * @param dependencyUp  {@code true} if dependency is now {@link ServiceController.State#UP}; {@code false} if it is
      *                      now {@link ServiceController.State#DOWN}.
      */
-    public void newDependencyState(Transaction transaction, boolean dependencyUp);
+    public TaskController<?> newDependencyState(Transaction transaction, boolean dependencyUp);
 
     /**
      * Notifies that dependency current service is about to be replaced by a different service.

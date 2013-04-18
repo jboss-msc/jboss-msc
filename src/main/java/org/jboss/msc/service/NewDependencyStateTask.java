@@ -19,6 +19,8 @@ package org.jboss.msc.service;
 
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
+import org.jboss.msc.txn.TaskBuilder;
+import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -40,15 +42,43 @@ class NewDependencyStateTask implements Executable<Void> {
 
     @Override
     public void execute(ExecuteContext<Void> context) {
-        updateDependencyStatus(serviceController.getPrimaryRegistration());
-        for (Registration registration: serviceController.getAliasRegistrations()) {
-            updateDependencyStatus(registration);
+        context.begin();
+        final TaskBuilder<Void> taskBuilder = context.newTask(new CompleteTask(context));
+        try {
+            updateDependencyStatus(serviceController.getPrimaryRegistration(), taskBuilder);
+            for (Registration registration: serviceController.getAliasRegistrations()) {
+                updateDependencyStatus(registration, taskBuilder);
+            }
+            taskBuilder.release();
+        } finally {
+            context.complete();
         }
     }
 
-    protected void updateDependencyStatus (Registration serviceRegistration) {
+    protected void updateDependencyStatus (Registration serviceRegistration, TaskBuilder<Void> taskBuilder) {
         for (Dependency<?> incomingDependency : serviceRegistration.getIncomingDependencies()) {
-            incomingDependency.newDependencyState(transaction, dependencyUp);
+            TaskController<?> task = incomingDependency.newDependencyState(transaction, dependencyUp);
+            if (task != null) {
+                taskBuilder.addDependency(task);
+            }
+        }
+    }
+
+    private static class CompleteTask implements Executable<Void> {
+        private final ExecuteContext<Void> newDependencyStateTaskContext;
+
+        public CompleteTask(ExecuteContext<Void> newDependencyStateTaskContext) {
+            this.newDependencyStateTaskContext = newDependencyStateTaskContext;
+        }
+
+        @Override
+        public void execute(ExecuteContext<Void> context) {
+            context.begin();
+            try {
+                newDependencyStateTaskContext.complete();
+            } finally {
+                context.complete();
+            }
         }
     }
 

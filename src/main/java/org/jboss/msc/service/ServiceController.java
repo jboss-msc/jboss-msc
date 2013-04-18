@@ -135,16 +135,6 @@ final class ServiceController<T> extends TransactionalObject {
         return value;
     }
 
-    // TODO this is just to be able to run tests
-    public StartException getStartException() {
-        return null;
-    }
-
- // TODO this is just to be able to run tests
-    public int getUnsatisfiedDependencies() {
-        return unsatisfiedDependencies;
-    }
-
     /**
      * Remove this service.<p>
      * All dependent services will be automatically stopped as the result of this operation.
@@ -345,32 +335,34 @@ final class ServiceController<T> extends TransactionalObject {
         }
     }
 
-    void dependencySatisfied(Transaction transaction) {
+    TaskController<?> dependencySatisfied(Transaction transaction) {
         lockWrite(transaction);
         synchronized (this) {
             if (-- unsatisfiedDependencies == 0) {
-                transition();
+                return transition();
             }
         }
+        return null;
     }
 
-    void dependencyUnsatisfied(Transaction transaction) {
+    TaskController<?> dependencyUnsatisfied(Transaction transaction) {
         lockWrite(transaction);
         synchronized (this) {
            if (++ unsatisfiedDependencies == 1) {
-                transition();
+                return transition();
             }
         }
+        return null;
     }
 
     void setTransition(TransactionalState transactionalState) {
         assert isWriteLocked();
         transactionalInfo.setTransition(transactionalState);
     }
-    
-    private void transition() {
+
+    private TaskController<?> transition() {
         assert isWriteLocked();
-        transactionalInfo.transition();
+        return transactionalInfo.transition();
     }
 
     @Override
@@ -426,8 +418,6 @@ final class ServiceController<T> extends TransactionalObject {
     final class TransactionalInfo {
         // current transactional state
         private TransactionalState transactionalState = TransactionalState.getTransactionalState(ServiceController.this.state);
-        // has this service notified dependents that service is down?
-        private boolean dependencyDownNotified = false;
         // if this service is under transition (STARTING or STOPPING), this field points to the task that completes the transition
         private TaskController<Void> completeTransitionTask = null;
         // perform another transition after current transition completes
@@ -446,13 +436,13 @@ final class ServiceController<T> extends TransactionalObject {
             }
         }
 
-        private synchronized void transition() {
+        private synchronized TaskController<?> transition() {
             // TODO keep track of multiple toggle transitions from UP to DOWN and vice-versa... if 
             // too  many transitions of this type are performed, a check for cycle involving this service
-            // must be performed. Cycle detected will will result in service removal, besides adding a problem to the
+            // must be performed. Cycle detected will result in service removal, besides adding a problem to the
             // transaction
             if (removeRequested) {
-                return;
+                return null;
             }
             final Transaction transaction = getCurrentTransaction();
             switch (transactionalState) {
@@ -466,6 +456,7 @@ final class ServiceController<T> extends TransactionalObject {
                     }
                     break;
                 case STOPPING:
+                    // discuss this on IRC channel before proceeding
                     if (unsatisfiedDependencies == 0 && !mode.shouldStop(ServiceController.this)) {
                         // ongoing transition from UP to DOWN, schedule a transition once service is DOWN
                         scheduleTransition();
@@ -478,24 +469,22 @@ final class ServiceController<T> extends TransactionalObject {
                     }
                     break;
                 case UP:
+                    final TaskController<?> newDependencyStateTask;
                     if (unsatisfiedDependencies > 0 || mode.shouldStop(ServiceController.this)) {
                         if (runningDependents > 0) {
-                            if (!dependencyDownNotified) {
-                                transaction.newTask(new NewDependencyStateTask(transaction, ServiceController.this, false)).release();
-                                dependencyDownNotified = true;
-                            }
-                            return;
+                            newDependencyStateTask = transaction.newTask(new NewDependencyStateTask(transaction, ServiceController.this, false)).release();
+                        } else {
+                            newDependencyStateTask = null;
                         }
                         transactionalState = TransactionalState.STOPPING;
-                        final TaskController<?> undemandDependencies = mode.shouldDemandDependencies() == Demand.SERVICE_UP?
-                                UndemandDependenciesTask.create(transaction, ServiceController.this): null;
-                        completeTransitionTask = StoppingServiceTasks.createTasks(transaction, ServiceController.this,  undemandDependencies);
-                    } else if (dependencyDownNotified) {
-                        transaction.newTask(new NewDependencyStateTask(transaction, ServiceController.this, true)).release();
-                        dependencyDownNotified = false;
+                        final TaskController<?> stopDependency = mode.shouldDemandDependencies() == Demand.SERVICE_UP?
+                                UndemandDependenciesTask.create(transaction, ServiceController.this, newDependencyStateTask):
+                                    newDependencyStateTask;
+                        completeTransitionTask = StoppingServiceTasks.createTasks(transaction, ServiceController.this, stopDependency);
                     }
                     break;
                 case STARTING:
+                    // discuss this on IRC channel before proceeding
                     if (unsatisfiedDependencies > 0 || !mode.shouldStart(ServiceController.this)) {
                         // ongoing transition from DOWN to UP, schedule a transition once service is UP
                         scheduleTransition();
@@ -505,6 +494,7 @@ final class ServiceController<T> extends TransactionalObject {
                     break;
 
             }
+            return completeTransitionTask;
         }
 
         private void scheduleTransition() {
@@ -525,7 +515,6 @@ final class ServiceController<T> extends TransactionalObject {
                 case FAILED:
                     // fall thru!
                 case UP:
-                    // TODO fix the part related to dependency down notification
                     transactionalState = TransactionalState.STOPPING;
                     TaskController<?> downServiceTask = StoppingServiceTasks.createTasks(transaction, ServiceController.this);
                     return transaction.newTask(new ServiceRemoveTask(transaction, ServiceController.this)).addDependency(downServiceTask).release();

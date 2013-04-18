@@ -17,6 +17,7 @@
  */
 package org.jboss.msc.service;
 
+import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -58,8 +59,8 @@ abstract class DependencyDecorator<T> implements Dependency<T> {
     }
 
     @Override
-    public void newDependencyState(Transaction transaction, boolean dependencyUp) {
-        dependency.newDependencyState(transaction, dependencyUp);
+    public TaskController<?> newDependencyState(Transaction transaction, boolean dependencyUp) {
+        return dependency.newDependencyState(transaction, dependencyUp);
     }
 
     @Override

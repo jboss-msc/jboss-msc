@@ -18,6 +18,7 @@
 package org.jboss.msc.service;
 
 import org.jboss.msc.service.ServiceController.State;
+import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -58,6 +59,7 @@ final class  SimpleDependency<T> implements Dependency<T> {
         this.propagateDemand = propagateDemand;
     }
 
+    @Override
     public synchronized void setDependent(Transaction transaction, ServiceController<?> dependentController) {
         this.dependentController = dependentController;
         if (!isDependencySatisfied()) {
@@ -72,10 +74,12 @@ final class  SimpleDependency<T> implements Dependency<T> {
                 (!dependencyUp && (dependencyController == null || dependencyController.getState() != State.UP));
     }
 
+    @Override
     public Registration getDependencyRegistration() {
         return dependencyRegistration;
     }
 
+    @Override
     public void performInjections() {
         assert dependencyRegistration.getController() != null;
         assert dependencyRegistration.getController().getValue() != null;
@@ -89,6 +93,7 @@ final class  SimpleDependency<T> implements Dependency<T> {
      * 
      * @param transaction the active transaction
      */
+    @Override
     public void demand(Transaction transaction) {
         if (propagateDemand) {
             dependencyRegistration.addDemand(transaction, dependencyUp);
@@ -100,6 +105,7 @@ final class  SimpleDependency<T> implements Dependency<T> {
      * 
      * @param transaction the active transaction
      */
+    @Override
     public void undemand(Transaction transaction) {
         if (propagateDemand) {
             dependencyRegistration.removeDemand(transaction, dependencyUp);
@@ -113,11 +119,12 @@ final class  SimpleDependency<T> implements Dependency<T> {
      * @param dependencyUp  {@code true} if dependency is now {@link ServiceController.State#UP}; {@code false} if it is
      *                      now {@link ServiceController.State#DOWN}.
      */
-    public synchronized void newDependencyState(Transaction transaction, boolean dependencyUp) {
+    @Override
+    public synchronized TaskController<?> newDependencyState(Transaction transaction, boolean dependencyUp) {
         if (this.dependencyUp == dependencyUp) {
-            dependentController.dependencySatisfied(transaction);
+            return dependentController.dependencySatisfied(transaction);
         } else {
-            dependentController.dependencyUnsatisfied(transaction);
+            return dependentController.dependencyUnsatisfied(transaction);
         }
     }
 
