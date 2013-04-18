@@ -30,11 +30,11 @@ import org.jboss.msc.txn.Transaction;
 public interface ServiceContainer {
 
     /**
-     * Gets registry associated with this container.
+     * Creates new registry associated with this container.
      *
      * @return container registry
      */
-    ServiceRegistry getRegistry();
+    ServiceRegistry createRegistry();
 
     /**
      * Starts this container.

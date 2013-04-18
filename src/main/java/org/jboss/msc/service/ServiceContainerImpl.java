@@ -41,7 +41,7 @@ final class ServiceContainerImpl implements ServiceContainer {
     private boolean shutdownCompleted;
     private boolean shutdownInitiated = false;
 
-    public ServiceRegistry getRegistry() {
+    public ServiceRegistry createRegistry() {
         throw new UnsupportedOperationException();
     }
 

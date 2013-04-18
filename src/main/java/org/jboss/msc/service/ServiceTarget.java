@@ -34,45 +34,49 @@ public interface ServiceTarget extends TaskTarget {
     /**
      * Gets a builder which can be used to add a service to this target.
      *
-     * @param container the target service container where new service will be installed
+     * @param registry the target service registry where new service will be installed
      * @param name the service name
      * @param service the service
      * @return the builder for the service
      */
-    <T> ServiceBuilder<T> addService(ServiceContainer container, ServiceName name, Service<T> service);
+    <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name, Service<T> service);
 
     /**
      * Disables a service, causing this service to stop if it is {@code UP}.
      *
-     * @param container the service container
+     * @param registry the service registry
      * @param name the service name
+     * @return this target
      */
-    void disableService(ServiceContainer container, ServiceName name);
+    ServiceTarget disableService(ServiceRegistry registry, ServiceName name);
 
     /**
      * Enables the service, which may start as a result, according to its {@link ServiceMode mode} rules.
      * <p> Services are enabled by default.
      *
-     * @param container the service container
+     * @param registry the service registry
      * @param name the service name
+     * @return this target
      */
-    void enableService(ServiceContainer container, ServiceName name);
+    ServiceTarget enableService(ServiceRegistry registry, ServiceName name);
 
     /**
      * Disables all services in the {@code container}, causing {@code UP} services to stop.
      *
-     * @param container the service container
+     * @param registry the service registry
+     * @return this target
      */
-    void disableContainer(ServiceContainer container);
+    ServiceTarget disableRegistry(ServiceRegistry registry);
 
     /**
      * Enables all services in the {@code container}. As a result, thos services may start, according to it their
      * {@link ServiceMode mode} rules.
      * <p> Services are enabled by default.
      *
-     * @param container the service container
+     * @param registry the service registry
+     * @return this target
      */
-    void enableContainer(ServiceContainer container);
+    ServiceTarget enableRegistry(ServiceRegistry registry);
 
     /**
      * Adds a dependency that will be added to all ServiceBuilders installed in this target.
@@ -94,21 +98,21 @@ public interface ServiceTarget extends TaskTarget {
     /**
      * Adds a dependency that will be added to all ServiceBuilders installed in this target.
      *
-     * @param container the service container containing dependency
+     * @param registry the service registry containing dependency
      * @param dependency the dependency to add to the target
      * @return this target
      */
-    ServiceTarget addDependency(ServiceContainer container, ServiceName dependency);
+    ServiceTarget addDependency(ServiceRegistry registry, ServiceName dependency);
 
     /**
      * Adds a dependency that will be added to all ServiceBuilders installed in this target.
      *
-     * @param container the service container containing dependency
+     * @param registry the service registry containing dependency
      * @param dependency the dependency to add to the target
      * @param flags the flags for the dependency
      * @return this target
      */
-    ServiceTarget addDependency(ServiceContainer container, ServiceName dependency, DependencyFlag... flags);
+    ServiceTarget addDependency(ServiceRegistry registry, ServiceName dependency, DependencyFlag... flags);
 
     /**
      * Adds a dependency on a task.  If the task fails, the service install will also fail.  The task must be
@@ -130,11 +134,11 @@ public interface ServiceTarget extends TaskTarget {
     /**
      * Removes a dependency from this target. Subsequently defined services will not have this dependency.
      *
-     * @param container the service container containing dependency
+     * @param registry the service registry containing dependency
      * @param dependency the dependency
      * @return this target
      */
-    ServiceTarget removeDependency(ServiceContainer container, ServiceName dependency);
+    ServiceTarget removeDependency(ServiceRegistry registry, ServiceName dependency);
 
     /**
      * Removes a dependency from this target. Subsequently defined services will not have this dependency.
