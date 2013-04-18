@@ -42,7 +42,6 @@ class NewDependencyStateTask implements Executable<Void> {
 
     @Override
     public void execute(ExecuteContext<Void> context) {
-        context.begin();
         final TaskBuilder<Void> taskBuilder = context.newTask(new CompleteTask(context));
         try {
             updateDependencyStatus(serviceController.getPrimaryRegistration(), taskBuilder);
@@ -73,7 +72,6 @@ class NewDependencyStateTask implements Executable<Void> {
 
         @Override
         public void execute(ExecuteContext<Void> context) {
-            context.begin();
             try {
                 newDependencyStateTaskContext.complete();
             } finally {
