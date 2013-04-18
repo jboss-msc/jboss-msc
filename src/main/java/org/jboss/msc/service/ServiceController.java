@@ -51,11 +51,15 @@ final class ServiceController<T> extends TransactionalObject {
     /**
      * The controller mode.
      */
-    private volatile ServiceMode mode = ServiceMode.NEVER;
+    private final ServiceMode mode = ServiceMode.NEVER;
     /**
      * The controller state.
      */
     private volatile State state = null;
+    /**
+     * Indicates if service is enabled.
+     */
+    private volatile boolean enabled = true;
     /**
      * The number of dependencies that are not satisfied.
      */
@@ -88,11 +92,12 @@ final class ServiceController<T> extends TransactionalObject {
      * @param aliasRegistrations  the alias registrations
      * @param primaryRegistration the primary registration
      */
-    ServiceController(final Transaction transaction, final Dependency<?>[] dependencies, final Registration[] aliasRegistrations, final Registration primaryRegistration) {
+    ServiceController(final Transaction transaction, final Dependency<?>[] dependencies, final Registration[] aliasRegistrations, final Registration primaryRegistration, final ServiceMode mode) {
         this.dependencies = dependencies;
         this.aliasRegistrations = aliasRegistrations;
         this.primaryRegistration = primaryRegistration;
         state = State.DOWN;
+        enabled = false;
         lockWrite(transaction);
         for (Dependency<?> dependency: dependencies) {
             dependency.setDependent(transaction, this);
@@ -159,83 +164,44 @@ final class ServiceController<T> extends TransactionalObject {
     }
 
     /**
-     * Change the service controller's current mode.  Might result in the service starting or stopping.  The mode
-     * may only be changed if has not been {@link #remove(Transaction) removed}.  Calling this method with the
-     * controller's current mode has no effect and is always allowed.
-     *
-     * @param transaction the active transaction
-     * @param mode        the new controller mode
-     * @throws IllegalStateException if the mode given is {@code null}, or the caller attempted to change the mode
-     *         after the service is removed 
+     * Management operation for disabling a service. As a result, this service will stop if it is {@code UP}.
      */
-    public ServiceMode setMode(Transaction transaction, ServiceMode mode) {
-        if (mode == null) {
-            throw new IllegalArgumentException("mode is null");
-        }
-        // TODO check if container is shutting down
-        if (!isWriteLocked() && mode == this.mode) {
-            return mode; // do nothing
-        }
-        if (state == State.REMOVED) {
-            throw new IllegalStateException ("Service is removed");
-        }
+    void disable(Transaction transaction) {
         lockWrite(transaction);
-        final ServiceMode oldMode = mode;
-        this.mode = mode;
-        if (oldMode.shouldDemandDependencies() == Demand.ALWAYS && mode.shouldDemandDependencies() != Demand.ALWAYS) {
-            UndemandDependenciesTask.create(transaction, this);
-        } else if (mode.shouldDemandDependencies() == Demand.ALWAYS) {
-            DemandDependenciesTask.create(transaction, this);
+        synchronized(this) {
+            enabled = false;
         }
         transactionalInfo.transition();
-        return oldMode;
     }
 
     /**
-     * Compare the current mode against {@code expected}; if it matches, change it to {@code newMode}.  The
-     * return value is {@code true} when the mode was matched and changed.
-     *
-     * @param transaction the active transaction
-     * @param expected    the expected mode
-     * @param newMode     the new mode
-     * @return {@code true} if the mode was changed
+     * Management operation for enabling a service. The service may start as a result, according to its {@link
+     * ServiceMode mode} rules.
+     * <p> Services are enabled by default.
      */
-    public boolean compareAndSetMode(final Transaction transaction, final ServiceMode expectedMode, final ServiceMode newMode) {
-        if (expectedMode == null) {
-            throw new IllegalArgumentException("expectedMode is null");
-        }
-        return internalSetMode(transaction, expectedMode, newMode) == expectedMode;
-    }
-
-    private ServiceMode internalSetMode(final Transaction transaction, final ServiceMode expectedMode, final ServiceMode newMode) {
-        if (newMode == null) {
-            throw new IllegalArgumentException("mode is null");
-        }
-        // TODO check if container is shutting down
-        synchronized (this) {
-            if (!isWriteLocked() && (newMode == this.mode || expectedMode != this.mode)) {
-                return this.mode; // do nothing
-            }
-            if (state == State.REMOVED) {
-                throw new IllegalStateException ("Service is removed");
-            }
-        }
+    void enable(Transaction transaction) {
         lockWrite(transaction);
-        final ServiceMode oldMode;
-        synchronized (this) {
-            oldMode = mode;
-            if (expectedMode != oldMode) {
-                return this.mode;
-            }
-            this.mode = mode;
-            if (oldMode.shouldDemandDependencies() == Demand.ALWAYS && mode.shouldDemandDependencies() != Demand.ALWAYS) {
-                UndemandDependenciesTask.create(transaction, this);
-            } else if (mode.shouldDemandDependencies() == Demand.ALWAYS) {
-                DemandDependenciesTask.create(transaction, this);
-            }
+        synchronized(this) {
+            enabled = false;
         }
         transactionalInfo.transition();
-        return oldMode;
+    }
+
+    /**
+     * Completes service installation.
+     *
+     * @param transaction the active transaction
+     */
+    void install(Transaction transaction) {
+        // TODO check if container is shutting down
+        lockWrite(transaction);
+        synchronized (this) {
+            enabled = true;
+        }
+        if (mode.shouldDemandDependencies() == Demand.ALWAYS) {
+            DemandDependenciesTask.create(transaction, this);
+        }
+        transactionalInfo.transition();
     }
 
     public synchronized ServiceMode getMode() {
@@ -387,7 +353,6 @@ final class ServiceController<T> extends TransactionalObject {
     }
 
     private final class Snapshot {
-        private final ServiceMode mode;
         private final State state;
         private final int upDemandedByCount;
         private final int downDemandedByCount;
@@ -396,7 +361,6 @@ final class ServiceController<T> extends TransactionalObject {
 
         // take snapshot
         public Snapshot() {
-            mode = ServiceController.this.mode;
             state = ServiceController.this.state;
             upDemandedByCount = ServiceController.this.upDemandedByCount;
             downDemandedByCount = ServiceController.this.downDemandedByCount;
@@ -406,7 +370,6 @@ final class ServiceController<T> extends TransactionalObject {
 
         // revert ServiceController state to what it was when snapshot was taken; invoked on rollback
         public void apply() {
-            ServiceController.this.mode = mode;
             ServiceController.this.state = state;
             ServiceController.this.upDemandedByCount = upDemandedByCount;
             ServiceController.this.downDemandedByCount = downDemandedByCount;
@@ -444,10 +407,14 @@ final class ServiceController<T> extends TransactionalObject {
             if (removeRequested) {
                 return null;
             }
+            final boolean enabled;
+            synchronized (ServiceController.this) {
+                enabled = ServiceController.this.enabled;
+            }
             final Transaction transaction = getCurrentTransaction();
             switch (transactionalState) {
                 case DOWN:
-                    if (unsatisfiedDependencies == 0 && mode.shouldStart(ServiceController.this)) {
+                    if (unsatisfiedDependencies == 0 && mode.shouldStart(ServiceController.this) && enabled) {
                         transactionalState = TransactionalState.STARTING;
                         completeTransitionTask = StartingServiceTasks.createTasks(transaction, ServiceController.this);
                         if (mode.shouldDemandDependencies() == Demand.SERVICE_UP) {
@@ -457,20 +424,20 @@ final class ServiceController<T> extends TransactionalObject {
                     break;
                 case STOPPING:
                     // discuss this on IRC channel before proceeding
-                    if (unsatisfiedDependencies == 0 && !mode.shouldStop(ServiceController.this)) {
+                    if (unsatisfiedDependencies == 0 && !mode.shouldStop(ServiceController.this) && enabled) {
                         // ongoing transition from UP to DOWN, schedule a transition once service is DOWN
                         scheduleTransition();
                     }
                     break;
                 case FAILED:
-                    if (unsatisfiedDependencies > 0 || mode.shouldStop(ServiceController.this)) {
+                    if (unsatisfiedDependencies > 0 || mode.shouldStop(ServiceController.this) || !enabled) {
                         transactionalState = TransactionalState.STOPPING;
                         completeTransitionTask = StoppingServiceTasks.createTasks(transaction, ServiceController.this);
                     }
                     break;
                 case UP:
                     final TaskController<?> newDependencyStateTask;
-                    if (unsatisfiedDependencies > 0 || mode.shouldStop(ServiceController.this)) {
+                    if (unsatisfiedDependencies > 0 || mode.shouldStop(ServiceController.this) || !enabled) {
                         if (runningDependents > 0) {
                             newDependencyStateTask = transaction.newTask(new NewDependencyStateTask(transaction, ServiceController.this, false)).release();
                         } else {
@@ -485,7 +452,7 @@ final class ServiceController<T> extends TransactionalObject {
                     break;
                 case STARTING:
                     // discuss this on IRC channel before proceeding
-                    if (unsatisfiedDependencies > 0 || !mode.shouldStart(ServiceController.this)) {
+                    if (unsatisfiedDependencies > 0 || !mode.shouldStart(ServiceController.this) || !enabled) {
                         // ongoing transition from DOWN to UP, schedule a transition once service is UP
                         scheduleTransition();
                     }

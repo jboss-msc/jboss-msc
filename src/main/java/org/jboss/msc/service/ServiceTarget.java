@@ -46,6 +46,39 @@ public interface ServiceTarget extends TaskTarget {
     <T> ServiceBuilder<T> addService(ServiceContainer container, ServiceName name, Service<T> service);
 
     /**
+     * Disables a service, causing this service to stop if it is {@code UP}.
+     *
+     * @param container the service container
+     * @param name the service name
+     */
+    void disableService(ServiceContainer container, ServiceName name);
+
+    /**
+     * Enables the service, which may start as a result, according to its {@link ServiceMode mode} rules.
+     * <p> Services are enabled by default.
+     *
+     * @param container the service container
+     * @param name the service name
+     */
+    void enableService(ServiceContainer container, ServiceName name);
+
+    /**
+     * Disables all services in the {@code container}, causing {@code UP} services to stop.
+     *
+     * @param container the service container
+     */
+    void disableContainer(ServiceContainer container);
+
+    /**
+     * Enables all services in the {@code container}. As a result, thos services may start, according to it their
+     * {@link ServiceMode mode} rules.
+     * <p> Services are enabled by default.
+     *
+     * @param container the service container
+     */
+    void enableContainer(ServiceContainer container);
+
+    /**
      * Adds a dependency that will be added to all ServiceBuilders installed in this target.
      *
      * @param dependency the dependency to add to the target
