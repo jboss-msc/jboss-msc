@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public abstract class Transaction extends SimpleAttachable implements TaskTarget {
+public abstract class Transaction extends SimpleAttachable implements ServiceContext {
 
     /**
      * Create a new task transaction.
@@ -60,14 +60,6 @@ public abstract class Transaction extends SimpleAttachable implements TaskTarget
         }
         return TransactionImpl.createTransactionImpl(executor, maxSeverity);
     }
-
-    /**
-     * Gets service target to allow installing services inside this transaction.
-     *
-     * @return service target
-     * @throws IllegalStateException if the transaction is not open
-     */
-    public abstract ServiceTarget getServiceTarget() throws IllegalStateException;
 
     public abstract Executor getExecutor();
     

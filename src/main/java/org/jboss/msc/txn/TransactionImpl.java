@@ -24,6 +24,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import org.jboss.msc.Version;
 import org.jboss.msc._private.MSCLogger;
+import org.jboss.msc.service.ServiceContainer;
+import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.service.ServiceTarget;
 
 import static java.lang.Thread.holdsLock;
@@ -34,7 +37,7 @@ import static org.jboss.msc.txn.Bits.anyAreSet;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-final class TransactionImpl extends Transaction implements TaskTarget {
+final class TransactionImpl extends Transaction implements ServiceContext {
 
     static {
         MSCLogger.ROOT.greeting(Version.getVersionString());
@@ -130,7 +133,43 @@ final class TransactionImpl extends Transaction implements TaskTarget {
         this.maxSeverity = maxSeverity;
     }
 
-    public ServiceTarget getServiceTarget() throws IllegalStateException {
+    public ServiceTarget newServiceTarget() throws IllegalStateException {
+        throw new UnsupportedOperationException();
+    }
+
+    public void disableService(ServiceRegistry registry, ServiceName name) {
+        throw new UnsupportedOperationException();
+    }
+
+    public void enableService(ServiceRegistry registry, ServiceName name) {
+        throw new UnsupportedOperationException();
+    }
+
+    public void removeService(ServiceRegistry registry, ServiceName name) {
+        throw new UnsupportedOperationException();
+    }
+
+    public void disableRegistry(ServiceRegistry registry) {
+        throw new UnsupportedOperationException();
+    }
+
+    public void enableRegistry(ServiceRegistry registry) {
+        throw new UnsupportedOperationException();
+    }
+
+    public void removeRegistry(ServiceRegistry registry) {
+        throw new UnsupportedOperationException();
+    }
+
+    public void disableContainer(ServiceContainer container) {
+        throw new UnsupportedOperationException();
+    }
+
+    public void enableContainer(ServiceContainer container) {
+        throw new UnsupportedOperationException();
+    }
+
+    public void removeContainer(ServiceContainer container) {
         throw new UnsupportedOperationException();
     }
 

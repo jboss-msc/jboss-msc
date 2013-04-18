@@ -19,8 +19,6 @@
 package org.jboss.msc.service;
 
 import org.jboss.msc.txn.TaskController;
-import org.jboss.msc.txn.TaskTarget;
-
 
 /**
  * A service builder.
@@ -29,7 +27,7 @@ import org.jboss.msc.txn.TaskTarget;
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public interface ServiceTarget extends TaskTarget {
+public interface ServiceTarget {
 
     /**
      * Gets a builder which can be used to add a service to this target.
@@ -40,43 +38,6 @@ public interface ServiceTarget extends TaskTarget {
      * @return the builder for the service
      */
     <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name, Service<T> service);
-
-    /**
-     * Disables a service, causing this service to stop if it is {@code UP}.
-     *
-     * @param registry the service registry
-     * @param name the service name
-     * @return this target
-     */
-    ServiceTarget disableService(ServiceRegistry registry, ServiceName name);
-
-    /**
-     * Enables the service, which may start as a result, according to its {@link ServiceMode mode} rules.
-     * <p> Services are enabled by default.
-     *
-     * @param registry the service registry
-     * @param name the service name
-     * @return this target
-     */
-    ServiceTarget enableService(ServiceRegistry registry, ServiceName name);
-
-    /**
-     * Disables all services in the {@code container}, causing {@code UP} services to stop.
-     *
-     * @param registry the service registry
-     * @return this target
-     */
-    ServiceTarget disableRegistry(ServiceRegistry registry);
-
-    /**
-     * Enables all services in the {@code container}. As a result, thos services may start, according to it their
-     * {@link ServiceMode mode} rules.
-     * <p> Services are enabled by default.
-     *
-     * @param registry the service registry
-     * @return this target
-     */
-    ServiceTarget enableRegistry(ServiceRegistry registry);
 
     /**
      * Adds a dependency that will be added to all ServiceBuilders installed in this target.

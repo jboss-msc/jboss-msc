@@ -30,12 +30,12 @@ import org.jboss.msc.txn.Transaction;
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
 final class DependencySpec<T> {
-    private final ServiceRegistry registry;
+    private final ServiceRegistryImpl registry;
     private final ServiceName name;
     private final DependencyFlag[] flags;
     private final List<Injector<? super T>> injections = new ArrayList<Injector<? super T>>();
 
-    DependencySpec(final ServiceRegistry registry, final ServiceName name, final DependencyFlag[] flags) {
+    DependencySpec(final ServiceRegistryImpl registry, final ServiceName name, final DependencyFlag[] flags) {
         this.registry = registry;
         this.name = name;
         this.flags = flags;

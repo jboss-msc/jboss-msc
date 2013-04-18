@@ -20,6 +20,9 @@ package org.jboss.msc.txn;
 
 import java.util.ArrayList;
 import org.jboss.msc._private.MSCLogger;
+import org.jboss.msc.service.ServiceContainer;
+import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.service.ServiceTarget;
 
 import static java.lang.Thread.holdsLock;
@@ -804,6 +807,46 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         if (exec != null) try {
             doBegin();
             exec.execute(new ExecuteContext<T>() {
+                public ServiceTarget newServiceTarget() throws IllegalStateException {
+                    throw new UnsupportedOperationException();
+                }
+
+                public void disableService(ServiceRegistry registry, ServiceName name) {
+                    throw new UnsupportedOperationException();
+                }
+
+                public void enableService(ServiceRegistry registry, ServiceName name) {
+                    throw new UnsupportedOperationException();
+                }
+
+                public void removeService(ServiceRegistry registry, ServiceName name) {
+                    throw new UnsupportedOperationException();
+                }
+
+                public void disableRegistry(ServiceRegistry registry) {
+                    throw new UnsupportedOperationException();
+                }
+
+                public void enableRegistry(ServiceRegistry registry) {
+                    throw new UnsupportedOperationException();
+                }
+
+                public void removeRegistry(ServiceRegistry registry) {
+                    throw new UnsupportedOperationException();
+                }
+
+                public void disableContainer(ServiceContainer container) {
+                    throw new UnsupportedOperationException();
+                }
+
+                public void enableContainer(ServiceContainer container) {
+                    throw new UnsupportedOperationException();
+                }
+
+                public void removeContainer(ServiceContainer container) {
+                    throw new UnsupportedOperationException();
+                }
+
                 public void complete(final T result) {
                     execComplete(result);
                 }
@@ -850,10 +893,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
 
                 public TaskBuilder<Void> newTask() throws IllegalStateException {
                     return new TaskBuilder<Void>(getTransaction(), TaskControllerImpl.this);
-                }
-
-                public ServiceTarget getServiceTarget() throws IllegalStateException {
-                    throw new UnsupportedOperationException();
                 }
             });
         } catch (Throwable t) {

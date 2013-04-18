@@ -34,7 +34,7 @@ import org.jboss.msc.txn.Transaction;
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
 final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
-    private final ServiceRegistry registry;
+    private final ServiceRegistryImpl registry;
     private final ServiceName name;
     private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
     private final Service<T> service;
@@ -52,7 +52,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     public ServiceBuilderImpl(final ServiceRegistry registry, final Transaction transaction, final ServiceName name, final Service<T> service, final boolean replaceService) {
         this.transaction = transaction;
-        this.registry = registry;
+        this.registry = (ServiceRegistryImpl)registry;
         this.name = name;
         this.service = service;
         this.replacement = true;
@@ -137,7 +137,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      */
     public ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, DependencyFlag... flags) {
         checkAlreadyInstalled();
-        addDependencySpec(new DependencySpec(registry, name, flags), name, flags);
+        addDependencySpec(new DependencySpec((ServiceRegistryImpl)registry, name, flags), name, flags);
         return this;
     }
 
@@ -155,7 +155,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      */
     public ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, Injector<?> injector, DependencyFlag... flags) {
         checkAlreadyInstalled();
-        final DependencySpec<?> spec = new DependencySpec<Object>(registry, name, flags);
+        final DependencySpec<?> spec = new DependencySpec<Object>((ServiceRegistryImpl)registry, name, flags);
         //spec.addInjection(injector);
         addDependencySpec(spec, name, flags);
         return this;

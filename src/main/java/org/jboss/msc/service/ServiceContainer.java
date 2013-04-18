@@ -18,8 +18,6 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.txn.Transaction;
-
 /**
  * A service container. This class is thread safe.
  *
@@ -34,20 +32,6 @@ public interface ServiceContainer {
      *
      * @return container registry
      */
-    ServiceRegistry createRegistry();
-
-    /**
-     * Starts this container.
-     *
-     * @param txn transaction
-     */
-    void start(Transaction txn);
-
-    /**
-     * Stops this container.
-     *
-     * @param txn transaction
-     */
-    void stop(Transaction txn);
+    ServiceRegistry newRegistry();
 
 }
