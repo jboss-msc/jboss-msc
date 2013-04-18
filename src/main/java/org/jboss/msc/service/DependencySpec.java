@@ -35,8 +35,8 @@ final class DependencySpec<T> {
     private final DependencyFlag[] flags;
     private final List<Injector<? super T>> injections = new ArrayList<Injector<? super T>>();
 
-    DependencySpec(final ServiceRegistry registry, final ServiceName name, final DependencyFlag[] flags) {
-        this.registry = registry;
+    DependencySpec(final ServiceContainer container, final ServiceName name, final DependencyFlag[] flags) {
+        this.registry = container.getRegistry();
         this.name = name;
         this.flags = flags;
     }
