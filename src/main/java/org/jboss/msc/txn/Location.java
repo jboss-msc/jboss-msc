@@ -251,6 +251,10 @@ public final class Location implements Serializable {
          * This location was included within a parent location. For example, an XML file included from another XML file.
          */
         INCLUDED,
+        /**
+         * This location was defined by a parent location.  For example, a resource defined by an XML location.
+         */
+        DEFINED,
         ;
 
         /**
@@ -263,6 +267,7 @@ public final class Location implements Serializable {
                 case 0: return MSCLogger.ROOT.nestingUnknown();
                 case 1: return MSCLogger.ROOT.nestingContained();
                 case 2: return MSCLogger.ROOT.nestingIncluded();
+                case 3: return MSCLogger.ROOT.nestingDefined();
                 default: throw new IllegalStateException();
             }
         }

@@ -157,4 +157,7 @@ public interface MSCLogger {
 
     @Message(value = "included from")
     String nestingIncluded();
+
+    @Message(value = "defined in")
+    String nestingDefined();
 }
