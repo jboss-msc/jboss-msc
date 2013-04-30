@@ -33,6 +33,6 @@ final class SimpleServiceStopTask implements Executable<Void> {
     }
 
     public void execute(final ExecuteContext<Void> context) {
-        service.stop(context);
+        throw new UnsupportedOperationException(); // TODO: implement
     }
 }

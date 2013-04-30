@@ -38,6 +38,6 @@ final class SimpleServiceStartTask<T> implements Executable<T> {
      * @param context
      */
     public void execute(final ExecuteContext<T> context) {
-        service.start(context);
+        throw new UnsupportedOperationException(); // TODO: implement
     }
 }

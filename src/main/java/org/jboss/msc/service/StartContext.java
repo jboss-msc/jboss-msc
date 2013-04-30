@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2012 Red Hat, Inc., and individual contributors
+ * Copyright 2013 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,26 +18,17 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.txn.ExecuteContext;
+
 /**
- * A service which starts and stops. Services may be stopped and started multiple times.
+ * Service start lifecycle context.
  *
- * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public interface Service<T> {
-
+public interface StartContext<T> extends ExecuteContext<T> {
+    
     /**
-     * Service start lifecycle method.
-     * 
-     * @param startContext start context
+     * Marking completion of this service start failed.
      */
-    void start(StartContext<T> startContext);
-
-    /**
-     * Service stop lifecycle method.
-     * 
-     * @param stopContext stop context
-     */
-    void stop(StopContext stopContext);
-
+    void fail();
 }
