@@ -18,7 +18,8 @@
 package org.jboss.msc.test.services;
 
 import org.jboss.msc.service.Service;
-import org.jboss.msc.txn.ExecuteContext;
+import org.jboss.msc.service.StartContext;
+import org.jboss.msc.service.StopContext;
 
 /**
  * Basic service for tests.
@@ -36,13 +37,13 @@ public class TestService implements Service<Void> {
     }
 
     @Override
-    public synchronized void start(ExecuteContext<Void> context) {
+    public synchronized void start(StartContext<Void> context) {
         up = true;
         context.complete();
     }
 
     @Override
-    public void stop(ExecuteContext<Void> context) {
+    public void stop(StopContext context) {
         up = false;
         context.complete();
     }
