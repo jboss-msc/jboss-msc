@@ -18,20 +18,22 @@
 
 package org.jboss.msc.txn;
 
+import static java.lang.Thread.holdsLock;
+import static org.jboss.msc.txn.Bits.allAreSet;
+import static org.jboss.msc.txn.Bits.anyAreSet;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+
 import org.jboss.msc.Version;
 import org.jboss.msc._private.MSCLogger;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.service.ServiceTarget;
-
-import static java.lang.Thread.holdsLock;
-import static org.jboss.msc.txn.Bits.allAreSet;
-import static org.jboss.msc.txn.Bits.anyAreSet;
+import org.jboss.msc.service.ServiceTargetImpl;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -134,7 +136,7 @@ final class TransactionImpl extends Transaction implements ServiceContext {
     }
 
     public ServiceTarget newServiceTarget() throws IllegalStateException {
-        throw new UnsupportedOperationException();
+        return new ServiceTargetImpl(this);
     }
 
     public void disableService(ServiceRegistry registry, ServiceName name) {

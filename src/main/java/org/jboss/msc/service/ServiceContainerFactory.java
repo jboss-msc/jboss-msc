@@ -25,14 +25,18 @@ package org.jboss.msc.service;
  */
 public final class ServiceContainerFactory {
 
+    private static final ServiceContainerFactory instance = new ServiceContainerFactory();
+
     /**
      * Gets container factory instance.
      *
      * @return container factory instance
      */
     public static ServiceContainerFactory getInstance() {
-        throw new UnsupportedOperationException();
+        return instance;
     }
+
+    private ServiceContainerFactory() {}
 
     /**
      * Creates new service container.
@@ -40,7 +44,7 @@ public final class ServiceContainerFactory {
      * @return a reference to this object
      */
     public ServiceContainer newServiceContainer() {
-        throw new UnsupportedOperationException();
+        return new ServiceContainerImpl();
     }
 
 }

@@ -55,7 +55,8 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         this.registry = (ServiceRegistryImpl)registry;
         this.name = name;
         this.service = service;
-        this.replacement = true;
+        this.replacement = replaceService;
+        this.mode = ServiceMode.ACTIVE;
     }
 
     /**
@@ -89,7 +90,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     }
 
     public void install() throws IllegalStateException {
-        throw new UnsupportedOperationException();
+        performInstallation(transaction);
     }
 
     /**
@@ -174,7 +175,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
                 }
             }
         }
-        if (name == parentDependencySpec.getName()) {
+        if (parentDependencySpec != null && name == parentDependencySpec.getName()) {
             parentDependencySpec = null;
         }
         specs.put(name, dependencySpec);

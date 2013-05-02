@@ -42,7 +42,7 @@ class DemandDependenciesTask implements Executable<Void> {
             return null;
         }
         TaskBuilder<Void> taskBuilder = transaction.newTask(new DemandDependenciesTask(transaction, service));
-        if(taskDependency == null) {
+        if(taskDependency != null) {
             taskBuilder.addDependency(taskDependency);
         }
         return taskBuilder.release();

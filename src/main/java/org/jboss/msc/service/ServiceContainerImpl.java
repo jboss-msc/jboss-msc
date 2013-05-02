@@ -42,7 +42,7 @@ final class ServiceContainerImpl implements ServiceContainer {
     private boolean shutdownInitiated = false;
 
     public ServiceRegistry newRegistry() {
-        throw new UnsupportedOperationException();
+        return new ServiceRegistryImpl();
     }
 
     private class ShutdownTask implements Committable, Revertible {

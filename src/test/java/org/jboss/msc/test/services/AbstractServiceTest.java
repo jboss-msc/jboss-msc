@@ -59,6 +59,7 @@ public class AbstractServiceTest extends AbstractTransactionTest {
         super.setUp();
         Logger.getLogger("").fine("Setting up test " + getClass());
         serviceContainer = ServiceContainerFactory.getInstance().newServiceContainer();
+        serviceRegistry = serviceContainer.newRegistry();
         shutdownOnTearDown = true;
         //transaction = newTransaction();
     }

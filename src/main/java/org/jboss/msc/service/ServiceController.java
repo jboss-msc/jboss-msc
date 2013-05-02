@@ -51,7 +51,7 @@ final class ServiceController<T> extends TransactionalObject {
     /**
      * The controller mode.
      */
-    private final ServiceMode mode = ServiceMode.NEVER;
+    private final ServiceMode mode;
     /**
      * The controller state.
      */
@@ -98,6 +98,7 @@ final class ServiceController<T> extends TransactionalObject {
         this.primaryRegistration = primaryRegistration;
         state = State.DOWN;
         enabled = false;
+        this.mode = mode;
         lockWrite(transaction);
         for (Dependency<?> dependency: dependencies) {
             dependency.setDependent(transaction, this);
@@ -200,6 +201,10 @@ final class ServiceController<T> extends TransactionalObject {
         }
         if (mode.shouldDemandDependencies() == Demand.ALWAYS) {
             DemandDependenciesTask.create(transaction, this);
+        }
+        primaryRegistration.setController(transaction,  this);
+        for (Registration alias: aliasRegistrations) {
+            alias.setController(transaction, this);
         }
         transactionalInfo.transition();
     }
