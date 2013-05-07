@@ -714,7 +714,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         final ProblemReport problemReport = getTransaction().getProblemReport();
         final Validatable validatable = this.validatable;
         if (validatable != null) try {
-            doBegin();
+            setClassLoader();
             validatable.validate(new ValidateContext() {
                 public void addProblem(final Problem reason) {
                     problemReport.addProblem(reason);
@@ -747,7 +747,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         } catch (Throwable t) {
             MSCLogger.TASK.taskValidationFailed(t, validatable);
         } finally {
-            doEnd();
+            unsetClassLoader();
         }
     }
 
@@ -765,7 +765,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         executeTasks(state);
     }
 
-    void doBegin() {
+    void setClassLoader() {
         if (classLoader != null) {
             final Thread thread = Thread.currentThread();
             CL_HOLDER.set(thread.getContextClassLoader());
@@ -773,7 +773,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         }
     }
 
-    void doEnd() {
+    void unsetClassLoader() {
         if (classLoader != null) {
             final Thread thread = Thread.currentThread();
             final ClassLoader classLoader = CL_HOLDER.get();
@@ -785,7 +785,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     void rollback() {
         final Revertible rev = revertible;
         if (rev != null) try {
-            doBegin();
+            setClassLoader();
             rev.rollback(new RollbackContext() {
                 public void complete() {
                     rollbackComplete();
@@ -794,7 +794,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         } catch (Throwable t) {
             MSCLogger.TASK.taskRollbackFailed(t, rev);
         } finally {
-            doEnd();
+            unsetClassLoader();
         }
     }
 
@@ -802,7 +802,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         final ProblemReport problemReport = getTransaction().getProblemReport();
         final Executable<T> exec = executable;
         if (exec != null) try {
-            doBegin();
+            setClassLoader();
             exec.execute(new ExecuteContext<T>() {
                 public ServiceTarget newServiceTarget() throws IllegalStateException {
                     throw new UnsupportedOperationException();
@@ -896,14 +896,14 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
             MSCLogger.TASK.taskExecutionFailed(t, exec);
             problemReport.addProblem(new Problem(this, t, Problem.Severity.CRITICAL));
         } finally {
-            doEnd();
+            unsetClassLoader();
         }
     }
 
     void commit() {
         final Committable committable = this.committable;
         if (committable != null) try {
-            doBegin();
+            setClassLoader();
             committable.commit(new CommitContext() {
                 public void complete() {
                     commitComplete();
@@ -912,7 +912,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         } catch (Throwable t) {
             MSCLogger.TASK.taskCommitFailed(t, committable);
         } finally {
-            doEnd();
+            unsetClassLoader();
         }
     }
 
