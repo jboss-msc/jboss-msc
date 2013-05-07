@@ -128,6 +128,8 @@ final class TransactionImpl extends Transaction implements ServiceContext {
     private Listener<? super Transaction> commitListener;
     private Listener<? super Transaction> rollbackListener;
 
+    private volatile boolean isRollbackRequested;
+
     private TransactionImpl(final Executor taskExecutor, final Problem.Severity maxSeverity) {
         this.taskExecutor = taskExecutor;
         this.maxSeverity = maxSeverity;
@@ -419,6 +421,7 @@ final class TransactionImpl extends Transaction implements ServiceContext {
                     throw new InvalidTransactionStateException("Rollback already called");
                 }
                 state |= FLAG_ROLLBACK_REQ;
+                isRollbackRequested = true;
             } else if (stateIsIn(state, STATE_ROLLBACK, STATE_ROLLED_BACK)) {
                 throw new TransactionRolledBackException("Transaction was rolled back");
             } else if (stateIsIn(state, STATE_COMMITTING, STATE_COMMITTED)) {
@@ -433,6 +436,10 @@ final class TransactionImpl extends Transaction implements ServiceContext {
             this.state = state & PERSISTENT_STATE;
         }
         executeTasks(state);
+    }
+
+    boolean isRollbackRequested() {
+        return isRollbackRequested;
     }
 
     public boolean canCommit() throws InvalidTransactionStateException {
