@@ -647,10 +647,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
         return sid & STATE_MASK | state & ~STATE_MASK;
     }
 
-    private boolean checkCancel() {
-        return allAreSet(state, FLAG_CANCEL_REQ);
-    }
-
     private static int stateOf(int oldVal) {
         return oldVal & STATE_MASK;
     }
@@ -688,9 +684,10 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
     private void execCancelled() {
         assert ! holdsLock(this);
         int state;
+        final boolean canCancel = getTransaction().isRollbackRequested();
         synchronized (this) {
             state = this.state | FLAG_USER_THREAD | FLAG_CANCEL_REQ;
-            if (stateOf(state) != STATE_EXECUTE) {
+            if (!canCancel || stateOf(state) != STATE_EXECUTE) {
                 throw new IllegalStateException("Task may not be cancelled now");
             }
             state = transition(state);
@@ -856,7 +853,7 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 }
 
                 public boolean isCancelRequested() {
-                    return checkCancel();
+                    return getTransaction().isRollbackRequested();
                 }
 
                 public void cancelled() {
