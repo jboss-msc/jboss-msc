@@ -17,9 +17,13 @@
  */
 package org.jboss.msc.service;
 
+import java.util.Collection;
+
 import org.jboss.msc.service.ServiceController.TransactionalState;
+import org.jboss.msc.service.ServiceMode.Demand;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
+import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
@@ -41,25 +45,34 @@ final class StoppingServiceTasks {
      * @return                the final task to be executed. Can be used for creating tasks that depend on the
      *                        conclusion of stopping transition.
      */
-    public static <T> TaskController<Void> createTasks(Transaction transaction, ServiceController<T> service, TaskController<?> taskDependency) {
+    public static <T> TaskController<Void> createTasks(Transaction transaction, ServiceContext context, ServiceController<T> service, TaskController<?> taskDependency) {
         final Service<T> serviceValue = service.getValue().get();
 
         // stop service
-        final TaskBuilder<Void> stopTaskBuilder = transaction.newTask(new SimpleServiceStopTask(serviceValue));
-        if (taskDependency != null) {
-            stopTaskBuilder.addDependency(taskDependency);
+        final TaskBuilder<Void> stopTaskBuilder = context.newTask(new SimpleServiceStopTask(serviceValue));
+
+        // stop dependents first
+        final Collection<TaskController<?>> stopDependentTasks = NewDependencyStateTask.run(transaction, context, service, false);
+
+        // undemand dependencies if needed
+        if (service.getMode().shouldDemandDependencies() == Demand.SERVICE_UP && service.getDependencies().length > 0) {
+            TaskController<Void> undemandDependenciesTask = UndemandDependenciesTask.create(transaction, transaction, service, stopDependentTasks);
+            stopTaskBuilder.addDependency(undemandDependenciesTask);
+        } else if (!stopDependentTasks.isEmpty()) {
+            stopTaskBuilder.addDependencies(stopDependentTasks);
         }
+
         final TaskController<Void> stop = stopTaskBuilder.release();
 
         // revert injections
-        final TaskController<Void> revertInjections = transaction.newTask(new RevertInjectionsTask()).addDependency(stop).release();
+        final TaskController<Void> revertInjections = context.newTask(new RevertInjectionsTask()).addDependency(stop).release();
 
         // set DOWN state
-        final TaskBuilder<Void> setDownStateBuilder = transaction.newTask(new SetTransactionalStateTask(service, TransactionalState.DOWN)).addDependency(revertInjections);
+        final TaskBuilder<Void> setDownStateBuilder = context.newTask(new SetTransactionalStateTask(service, TransactionalState.DOWN)).addDependency(revertInjections);
 
         // notify dependencies that service is stopped 
         if (service.getDependencies().length != 0) {
-            final TaskController<Void> notifyDependentStop = transaction.newTask(new NotifyDependentStopTask(transaction, service)).addDependency(stop).release();
+            final TaskController<Void> notifyDependentStop = context.newTask(new NotifyDependentStopTask(transaction, service)).addDependency(stop).release();
             setDownStateBuilder.addDependency(notifyDependentStop);
         }
         return setDownStateBuilder.release();
@@ -73,8 +86,8 @@ final class StoppingServiceTasks {
      * @return                the final task to be executed. Can be used for creating tasks that depend on the
      *                        conclusion of stopping transition.
      */
-    public static <T> TaskController<Void> createTasks(Transaction transaction, ServiceController<T> serviceController) {
-        return createTasks(transaction, serviceController, null);
+    public static <T> TaskController<Void> createTasks(Transaction transaction, ServiceContext context, ServiceController<T> serviceController) {
+        return createTasks(transaction, context, serviceController, null);
     }
 
     private static class NotifyDependentStopTask implements Executable<Void> {
@@ -89,9 +102,15 @@ final class StoppingServiceTasks {
 
         @Override
         public void execute(ExecuteContext<Void> context) {
-            for (Dependency<?> dependency: serviceController.getDependencies()) {
-                ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
-                dependencyController.dependentStopped(transaction);
+            try {
+                for (Dependency<?> dependency: serviceController.getDependencies()) {
+                    ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
+                    if (dependencyController != null) {
+                        dependencyController.dependentStopped(transaction, context);
+                    }
+                }
+            } finally {
+                context.complete();
             }
         }
 
@@ -102,6 +121,7 @@ final class StoppingServiceTasks {
         @Override
         public void execute(ExecuteContext<Void> context) {
             // TODO
+            context.complete();
         }
     }
 }

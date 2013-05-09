@@ -23,6 +23,7 @@ import org.jboss.msc.txn.DeadlockException;
 import org.jboss.msc.txn.Problem;
 import org.jboss.msc.txn.Revertible;
 import org.jboss.msc.txn.RollbackContext;
+import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -50,6 +51,10 @@ abstract class TransactionalObject {
      * @param transaction the transaction that is attempting to modify current's object state
      */
     final void lockWrite(Transaction transaction) {
+        lockWrite(transaction, transaction);
+    }
+
+    final void lockWrite(Transaction transaction, ServiceContext context) {
         assert !Thread.holdsLock(this);
         while (true) {
             Transaction currentLock;
@@ -79,7 +84,7 @@ abstract class TransactionalObject {
             }
         } 
         final Object snapshot = takeSnapshot();
-        transaction.newTask().setTraits(new UnlockWriteTask(snapshot)).release();
+        context.newTask().setTraits(new UnlockWriteTask(snapshot)).release();
         writeLocked(transaction);
     }
 

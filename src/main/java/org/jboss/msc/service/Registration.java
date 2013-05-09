@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.Transaction;
 
 
@@ -78,15 +79,15 @@ final class Registration extends TransactionalObject {
             downDemanded = downDemandedByCount > 0;
         }
         if (upDemanded) {
-            serviceController.upDemanded(transaction);
+            serviceController.upDemanded(transaction, transaction);
         }
         if (downDemanded) {
-            serviceController.downDemanded(transaction);
+            serviceController.downDemanded(transaction, transaction);
         }
     }
 
-    void clearController(final Transaction transaction) {
-        lockWrite(transaction);
+    void clearController(final Transaction transaction, final ServiceContext context) {
+        lockWrite(transaction, context);
         final boolean upDemanded;
         final boolean downDemanded;
         final ServiceController<?> serviceController;
@@ -97,10 +98,10 @@ final class Registration extends TransactionalObject {
             downDemanded = downDemandedByCount > 0;
         }
         if (upDemanded) {
-            serviceController.upUndemanded(transaction);
+            serviceController.upUndemanded(transaction, context);
         }
         if (downDemanded) {
-            serviceController.downUndemanded(transaction);
+            serviceController.downUndemanded(transaction, transaction);
         }
     }
 
@@ -121,7 +122,7 @@ final class Registration extends TransactionalObject {
         return Collections.unmodifiableSet(incomingDependencies);
     }
 
-    void addDemand(Transaction transaction, boolean up) {
+    void addDemand(Transaction transaction, ServiceContext context, boolean up) {
         assert ! Thread.holdsLock(this);
         lockWrite(transaction);
         final ServiceController<?> controller;
@@ -137,14 +138,14 @@ final class Registration extends TransactionalObject {
         }
         if (controller != null) {
             if (up) {
-                controller.upDemanded(transaction);
+                controller.upDemanded(transaction, context);
             } else {
-                controller.downDemanded(transaction);
+                controller.downDemanded(transaction, context);
             }
         }
     }
 
-    void removeDemand(Transaction transaction, boolean up) {
+    void removeDemand(Transaction transaction, ServiceContext context, boolean up) {
         assert ! Thread.holdsLock(this);
         lockWrite(transaction);
         synchronized (this) {
@@ -159,9 +160,9 @@ final class Registration extends TransactionalObject {
         }
         if (controller != null) {
             if (up) {
-                controller.upUndemanded(transaction);
+                controller.upUndemanded(transaction, context);
             } else {
-                controller.downUndemanded(transaction);
+                controller.downUndemanded(transaction, context);
             }
         }
     }

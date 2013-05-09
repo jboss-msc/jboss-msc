@@ -18,6 +18,7 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 
@@ -38,7 +39,7 @@ interface  Dependency<T> {
      * @param transaction          the active transaction
      * @param dependentController  dependent associated with this dependency
      */
-    public void setDependent(Transaction transaction, ServiceController<?> dependentController);
+    public void setDependent(Transaction transaction, ServiceContext context, ServiceController<?> dependentController);
 
     /**
      * Return the dependency registration.
@@ -57,14 +58,14 @@ interface  Dependency<T> {
      * 
      * @param transaction the active transaction
      */
-    public void demand(Transaction transaction);
+    public void demand(Transaction transaction, ServiceContext context);
 
     /**
      * Remove demand for this dependency to be satisfied.
      * 
      * @param transaction the active transaction
      */
-    public void undemand(Transaction transaction);
+    public void undemand(Transaction transaction, ServiceContext context);
 
     /**
      * Notifies that dependency state is changed.
@@ -73,7 +74,7 @@ interface  Dependency<T> {
      * @param dependencyUp  {@code true} if dependency is now {@link ServiceController.State#UP}; {@code false} if it is
      *                      now {@link ServiceController.State#DOWN}.
      */
-    public TaskController<?> newDependencyState(Transaction transaction, boolean dependencyUp);
+    public TaskController<?> newDependencyState(Transaction transaction, ServiceContext context, boolean dependencyUp);
 
     /**
      * Notifies that dependency current service is about to be replaced by a different service.

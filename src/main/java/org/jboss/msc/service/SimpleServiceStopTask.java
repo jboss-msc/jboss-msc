@@ -20,6 +20,9 @@ package org.jboss.msc.service;
 
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
+import org.jboss.msc.txn.Problem;
+import org.jboss.msc.txn.Problem.Severity;
+import org.jboss.msc.txn.TaskBuilder;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -33,6 +36,112 @@ final class SimpleServiceStopTask implements Executable<Void> {
     }
 
     public void execute(final ExecuteContext<Void> context) {
-        throw new UnsupportedOperationException(); // TODO: implement
+        service.stop(new StopContext(){
+
+            @Override
+            public void complete(Void result) {
+                context.complete(result);
+            }
+
+            @Override
+            public void complete() {
+                context.complete();
+            }
+
+            @Override
+            public void addProblem(Problem reason) {
+                context.addProblem(reason);
+            }
+
+            @Override
+            public void addProblem(Severity severity, String message) {
+                context.addProblem(severity, message);
+            }
+
+            @Override
+            public void addProblem(Severity severity, String message, Throwable cause) {
+                context.addProblem(severity, message, cause);
+            }
+
+            @Override
+            public void addProblem(String message, Throwable cause) {
+                context.addProblem(message, cause);
+            }
+
+            @Override
+            public void addProblem(String message) {
+                context.addProblem(message);
+            }
+
+            @Override
+            public void addProblem(Throwable cause) {
+                context.addProblem(cause);
+            }
+
+            @Override
+            public boolean isCancelRequested() {
+                return context.isCancelRequested();
+            }
+
+            @Override
+            public void cancelled() {
+                context.cancelled();
+            }
+
+            @Override
+            public <T> TaskBuilder<T> newTask(Executable<T> task) throws IllegalStateException {
+                return context.newTask(task);
+            }
+
+            @Override
+            public TaskBuilder<Void> newTask() throws IllegalStateException {
+                return context.newTask();
+            }
+
+            @Override
+            public ServiceTarget newServiceTarget() throws IllegalStateException {
+                return context.newServiceTarget();
+            }
+
+            @Override
+            public void disableService(ServiceRegistry registry, ServiceName name) {
+                context.disableService(registry, name);
+            }
+
+            @Override
+            public void enableService(ServiceRegistry registry, ServiceName name) {
+                context.enableService(registry, name);
+            }
+
+            @Override
+            public void removeService(ServiceRegistry registry, ServiceName name) {
+                context.removeService(registry, name);
+            }
+
+            @Override
+            public void enableRegistry(ServiceRegistry registry) {
+                context.enableRegistry(registry);
+            }
+
+            @Override
+            public void disableRegistry(ServiceRegistry registry) {
+                context.disableRegistry(registry);
+            }
+
+            @Override
+            public void enableContainer(ServiceContainer container) {
+                context.enableContainer(container);
+            }
+
+            @Override
+            public void disableContainer(ServiceContainer container) {
+                context.disableContainer(container);
+            }
+
+            @Override
+            public void removeContainer(ServiceContainer container) {
+                context.removeContainer(container);
+            }
+        });
     }
 }

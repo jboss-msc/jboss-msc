@@ -23,12 +23,11 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 /**
- * Test service removal
+ * Test service removal.
  * 
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  *
  */
-@Ignore
 public class RemoveServiceTestCase extends ServiceModeTestCase {
 
     @Override @Test
@@ -57,7 +56,7 @@ public class RemoveServiceTestCase extends ServiceModeTestCase {
         remove(firstServiceName);
     }
 
-    @Override @Test
+    @Override @Test @Ignore
     public void failedToStartOnDemandSecondService() throws Exception {
         super.failedToStartOnDemandSecondService();
         remove(secondServiceName);
@@ -71,7 +70,7 @@ public class RemoveServiceTestCase extends ServiceModeTestCase {
         assertFalse(((TestService) serviceRegistry.getRequiredService(firstServiceName)).isUp());;
     }
 
-    @Override @Test
+    @Override @Ignore @Test
     public void upLazySecondServiceWithNoActiveDependents() throws Exception {
         super.upLazySecondServiceWithNoActiveDependents();
         remove(secondServiceName);
@@ -84,7 +83,7 @@ public class RemoveServiceTestCase extends ServiceModeTestCase {
         remove(firstServiceName);
     }
 
-    @Override @Test
+    @Ignore @Override @Test
     public void failedToStartLazySecondService() throws Exception {
         super.failedToStartLazySecondService();
         remove(secondServiceName);
@@ -103,7 +102,7 @@ public class RemoveServiceTestCase extends ServiceModeTestCase {
         remove(firstServiceName);
     }
 
-    @Override @Test
+    @Override @Ignore @Test
     public void failedToStartPassiveSecondService() throws Exception {
         super.failedToStartPassiveSecondService();
         remove(secondServiceName);
@@ -116,13 +115,13 @@ public class RemoveServiceTestCase extends ServiceModeTestCase {
         remove(firstServiceName);
     }
 
-    @Override  @Test
+    @Ignore @Override  @Test
     public void downActiveFirstService() throws Exception {
         super.downActiveFirstService();
         remove(firstServiceName);
     }
 
-    @Override @Test
+    @Ignore @Override @Test
     public void failedToStartActiveSecondService() throws Exception {
         super.failedToStartActiveSecondService();
         remove(secondServiceName);

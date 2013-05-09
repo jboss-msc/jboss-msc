@@ -17,9 +17,13 @@
  */
 package org.jboss.msc.service;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
-import org.jboss.msc.txn.TaskBuilder;
+import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 
@@ -42,42 +46,35 @@ class NewDependencyStateTask implements Executable<Void> {
 
     @Override
     public void execute(ExecuteContext<Void> context) {
-        final TaskBuilder<Void> taskBuilder = context.newTask(new CompleteTask(context));
         try {
-            updateDependencyStatus(serviceController.getPrimaryRegistration(), taskBuilder);
+            updateDependencyStatus(serviceController.getPrimaryRegistration(), context);
             for (Registration registration: serviceController.getAliasRegistrations()) {
-                updateDependencyStatus(registration, taskBuilder);
+                updateDependencyStatus(registration, context);
             }
-            taskBuilder.release();
         } finally {
             context.complete();
         }
     }
 
-    protected void updateDependencyStatus (Registration serviceRegistration, TaskBuilder<Void> taskBuilder) {
+    protected void updateDependencyStatus (Registration serviceRegistration, ServiceContext context) {
         for (Dependency<?> incomingDependency : serviceRegistration.getIncomingDependencies()) {
-            TaskController<?> task = incomingDependency.newDependencyState(transaction, dependencyUp);
-            if (task != null) {
-                taskBuilder.addDependency(task);
-            }
+            incomingDependency.newDependencyState(transaction, context, dependencyUp);
         }
     }
 
-    private static class CompleteTask implements Executable<Void> {
-        private final ExecuteContext<Void> newDependencyStateTaskContext;
-
-        public CompleteTask(ExecuteContext<Void> newDependencyStateTaskContext) {
-            this.newDependencyStateTaskContext = newDependencyStateTaskContext;
+    public static Collection<TaskController<?>> run(Transaction transaction, ServiceContext context, ServiceController<?> controller, boolean dependencyUp) {
+        final List<TaskController<?>> tasks = new ArrayList<TaskController<?>>();
+        updateDependencyStatus(tasks, transaction, controller.getPrimaryRegistration(), context, dependencyUp);
+        for (Registration registration: controller.getAliasRegistrations()) {
+            updateDependencyStatus(tasks, transaction, registration, context, dependencyUp);
         }
-
-        @Override
-        public void execute(ExecuteContext<Void> context) {
-            try {
-                newDependencyStateTaskContext.complete();
-            } finally {
-                context.complete();
-            }
-        }
+        return tasks;
     }
 
+    private static void updateDependencyStatus (List<TaskController<?>> tasks, Transaction transaction, Registration serviceRegistration, ServiceContext context, boolean dependencyUp) {
+        for (Dependency<?> incomingDependency : serviceRegistration.getIncomingDependencies()) {
+            TaskController<?> task = incomingDependency.newDependencyState(transaction, context, dependencyUp);
+            tasks.add(task);
+        }
+    }
 }

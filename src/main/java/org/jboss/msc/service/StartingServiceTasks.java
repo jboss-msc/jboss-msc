@@ -20,6 +20,7 @@ package org.jboss.msc.service;
 import org.jboss.msc.service.ServiceController.TransactionalState;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
+import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
@@ -41,22 +42,21 @@ final class StartingServiceTasks {
      * @return                   the final task to be executed. Can be used for creating tasks that depend on the
      *                           conclusion of starting transition.
      */
-    public static <T> TaskController<Void> createTasks(Transaction transaction, ServiceController<T> serviceController) {
+    public static <T> TaskController<Void> createTasks(Transaction transaction, ServiceContext context, ServiceController<T> serviceController) {
         final Service<T> serviceValue = serviceController.getValue().get();
 
         // start service task builder
-        final TaskBuilder<T> startBuilder = transaction.newTask(new SimpleServiceStartTask<T>(serviceValue)).setTraits(serviceValue);
+        final TaskBuilder<T> startBuilder = context.newTask(new SimpleServiceStartTask<T>(serviceValue)).setTraits(serviceValue);
 
         final boolean hasDependents = hasDependents(serviceController);
-        // notify dependent is starting to dependencies
-        if (hasDependents) {
-            final TaskController<Void> notifyDependentStart = transaction.newTask(new NotifyDependentStartTask(transaction, serviceController)).release();
-            startBuilder.addDependency(notifyDependentStart);
-        }
 
-        // perform injections
         if (hasDependencies(serviceController)) {
-            final TaskController<Void> performInjections = transaction.newTask(new PerformInjectionsTask(serviceController.getDependencies())).release();
+            // notify dependent is starting to dependencies
+            final TaskController<Void> notifyDependentStart = context.newTask(new NotifyDependentStartTask(transaction, serviceController)).release();
+            startBuilder.addDependency(notifyDependentStart);
+
+            // perform injections
+            final TaskController<Void> performInjections = context.newTask(new PerformInjectionsTask(serviceController.getDependencies())).release();
             startBuilder.addDependency(performInjections);
         }
 
@@ -64,14 +64,14 @@ final class StartingServiceTasks {
         final TaskController<T> start = startBuilder.release();
 
         // perform out injections
-        final TaskController<Void> performOutInjections = transaction.newTask(new PerformOutInjectionsTask()).addDependency(start).release();
+        final TaskController<Void> performOutInjections = context.newTask(new PerformOutInjectionsTask()).addDependency(start).release();
 
         // complete transition task builder
-        final TaskBuilder<Void> completeTransitionBuilder = transaction.newTask(new SetTransactionalStateTask(serviceController, TransactionalState.UP));
+        final TaskBuilder<Void> completeTransitionBuilder = context.newTask(new SetTransactionalStateTask(serviceController, TransactionalState.UP));
 
         // notify dependents that this dependency is up
         if (hasDependents) {
-            final TaskController<Void>  updateDepStatus = transaction.newTask(new NewDependencyStateTask(transaction, serviceController, true)).addDependency(performOutInjections).release();
+            final TaskController<Void>  updateDepStatus = context.newTask(new NewDependencyStateTask(transaction, serviceController, true)).addDependency(performOutInjections).release();
             completeTransitionBuilder.addDependency(updateDepStatus);
         } else {
             completeTransitionBuilder.addDependency(performOutInjections);
@@ -111,7 +111,9 @@ final class StartingServiceTasks {
         public void execute(ExecuteContext<Void> context) {
             for (Dependency<?> dependency: serviceController.getDependencies()) {
                 ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
-                dependencyController.dependentStarted(transaction);
+                if (dependencyController != null) {
+                    dependencyController.dependentStarted(transaction);
+                }
             }
             context.complete();
         }

@@ -144,7 +144,8 @@ public class AbstractServiceTest extends AbstractTransactionTest {
         final CompletionListener listener = new CompletionListener();
         final ServiceTarget serviceTarget = transaction.newServiceTarget();
         assertNotNull(serviceTarget);
-        // FIXME serviceTarget.remove(transaction);
+        serviceTarget.removeService(serviceRegistry, serviceName);
+        transaction.commit(listener);
         listener.awaitCompletion();
         assertTrue(transaction.getProblemReport().getProblems().isEmpty());
         assertNull(serviceRegistry.getService(serviceName));

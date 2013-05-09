@@ -17,6 +17,7 @@
  */
 package org.jboss.msc.service;
 
+import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 
@@ -34,8 +35,8 @@ abstract class DependencyDecorator<T> implements Dependency<T> {
     }
 
     @Override
-    public void setDependent(Transaction transaction, ServiceController<?> dependentController) {
-        dependency.setDependent(transaction, dependentController);
+    public void setDependent(Transaction transaction, ServiceContext context, ServiceController<?> dependentController) {
+        dependency.setDependent(transaction, context, dependentController);
     }
 
     @Override
@@ -49,18 +50,18 @@ abstract class DependencyDecorator<T> implements Dependency<T> {
     }
 
     @Override
-    public void demand(Transaction transaction) {
-        dependency.demand(transaction);
+    public void demand(Transaction transaction, ServiceContext context) {
+        dependency.demand(transaction, context);
     }
 
     @Override
-    public void undemand(Transaction transaction) {
-        dependency.undemand(transaction);
+    public void undemand(Transaction transaction, ServiceContext context) {
+        dependency.undemand(transaction, context);
     }
 
     @Override
-    public TaskController<?> newDependencyState(Transaction transaction, boolean dependencyUp) {
-        return dependency.newDependencyState(transaction, dependencyUp);
+    public TaskController<?> newDependencyState(Transaction transaction, ServiceContext context, boolean dependencyUp) {
+        return dependency.newDependencyState(transaction, context, dependencyUp);
     }
 
     @Override

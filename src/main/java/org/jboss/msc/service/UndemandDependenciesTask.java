@@ -17,8 +17,12 @@
  */
 package org.jboss.msc.service;
 
+import java.util.Collection;
+import java.util.Collections;
+
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
+import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
@@ -33,17 +37,17 @@ class UndemandDependenciesTask implements Executable<Void> {
     private Transaction transaction;
     private ServiceController<?> service;
 
-    public static TaskController<Void> create(Transaction transaction, ServiceController<?> service) {
-        return create(transaction, service, null);
+    public static TaskController<Void> create(Transaction transaction, ServiceContext context, ServiceController<?> service) {
+        return create(transaction, context, service, Collections.EMPTY_LIST);
     }
 
-    public static TaskController<Void> create(Transaction transaction, ServiceController<?> service, TaskController<?> taskDependency) {
+    public static TaskController<Void> create(Transaction transaction, ServiceContext context, ServiceController<?> service, Collection<TaskController<?>> taskDependencies) {
         if (service.getDependencies().length == 0) {
             return null;
         }
-        TaskBuilder<Void> taskBuilder = transaction.newTask(new UndemandDependenciesTask(transaction, service));
-        if (taskDependency != null) {
-            taskBuilder.addDependency(taskDependency);
+        TaskBuilder<Void> taskBuilder = context.newTask(new UndemandDependenciesTask(transaction, service));
+        if (!taskDependencies.isEmpty()) {
+            taskBuilder.addDependencies(taskDependencies);
         }
         return taskBuilder.release();
     }
@@ -56,7 +60,7 @@ class UndemandDependenciesTask implements Executable<Void> {
     @Override
     public void execute(ExecuteContext<Void> context) {
         for (Dependency<?> dependency: service.getDependencies()) {
-            dependency.undemand(transaction);
+            dependency.undemand(transaction, context);
         }
         context.complete();
     }

@@ -15,31 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jboss.msc.service;
-
-import org.jboss.msc.service.ServiceController.TransactionalState;
-import org.jboss.msc.txn.Executable;
-import org.jboss.msc.txn.ExecuteContext;
+package org.jboss.msc.test.services;
 
 /**
- * Task that sets the transactional state of a service.
- * 
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  *
  */
-class SetTransactionalStateTask implements Executable<Void> {
+public class DisableServiceTestCase {
 
-    private final ServiceController<?> service;
-    private final TransactionalState state;
-    
-    public SetTransactionalStateTask(ServiceController<?> service, TransactionalState state) {
-        this.service = service;
-        this.state = state;
-    }
-
-    @Override
-    public void execute(ExecuteContext<Void> context) {
-        service.setTransition(state, context);
-        context.complete();
-    }
 }

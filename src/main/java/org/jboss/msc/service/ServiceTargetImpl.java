@@ -46,6 +46,25 @@ public class ServiceTargetImpl implements ServiceTarget {
     }
 
     @Override
+    public void removeService(ServiceRegistry registry, ServiceName name) {
+        if (registry == null) {
+            throw new IllegalArgumentException("registry is null");
+        }
+        if (name == null) {
+            throw new IllegalArgumentException("name is null");
+        }
+        final Registration registration = ((ServiceRegistryImpl) registry).getRegistration(transaction, name);
+        if (registration == null) {
+            return;
+        }
+        final ServiceController<?> controller = registration.getController();
+        if (controller == null) {
+            return;
+        }
+        controller.remove(transaction);
+    }
+
+    @Override
     public ServiceTarget addDependency(ServiceName dependency) {
         // TODO Auto-generated method stub
         return null;

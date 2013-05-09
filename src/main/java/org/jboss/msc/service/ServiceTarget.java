@@ -40,6 +40,14 @@ public interface ServiceTarget {
     <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name, Service<T> service);
 
     /**
+     * Removes a service from this target.
+     *
+     * @param registry the target service registry from where new service will be removed
+     * @param name the service name
+     */
+    void removeService(ServiceRegistry registry, ServiceName name);
+
+    /**
      * Adds a dependency that will be added to all ServiceBuilders installed in this target.
      *
      * @param dependency the dependency to add to the target
