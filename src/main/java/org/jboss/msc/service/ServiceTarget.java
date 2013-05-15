@@ -55,6 +55,22 @@ public interface ServiceTarget {
      * @return the builder for the service
      */
     <T> ServiceBuilder<T> addService(ServiceName name, Service<T> service);
+    
+    /**
+     * Add a stability monitor that will be added to all the ServiceBuilders installed in this target.
+     *
+     * @param monitor the monitor to add to the target
+     * @return this target
+     */
+    ServiceTarget addMonitor(StabilityMonitor monitor);
+
+    /**
+     * Add a stability monitors that will be added to all the ServiceBuilders installed in this target.
+     *
+     * @param monitors the monitors to add to the target
+     * @return this target
+     */
+    ServiceTarget addMonitors(StabilityMonitor... monitors);
 
     /**
      * Add a service listener that will be added to all the ServiceBuilders installed in this target.
@@ -108,12 +124,27 @@ public interface ServiceTarget {
     ServiceTarget addListener(ServiceListener.Inheritance inheritance, Collection<ServiceListener<Object>> listeners);
 
     /**
+     * Remove a monitor from this target, if it exists.
+     *
+     * @param monitor the monitor to remove
+     * @return this target
+     */
+    ServiceTarget removeMonitor(StabilityMonitor monitor);
+
+    /**
      * Remove a listener from this target, if it exists.
      *
      * @param listener the listener to remove
      * @return this target
      */
     ServiceTarget removeListener(ServiceListener<Object> listener);
+    
+    /**
+     * Returns a set of the monitors added to this target.
+     * 
+     * @return the monitors added to this target
+     */
+    Set<StabilityMonitor> getMonitors();
 
     /**
      * Returns a set of the listeners added to this target.

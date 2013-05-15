@@ -44,6 +44,7 @@ class ServiceTargetImpl implements ServiceTarget {
     private final ServiceTargetImpl parent;
     private final Map<ServiceListener<Object>, ServiceListener.Inheritance> listeners = Collections.synchronizedMap(new IdentityHashMap<ServiceListener<Object>, ServiceListener.Inheritance>());
     private final Set<ServiceName> dependencies = Collections.synchronizedSet(new HashSet<ServiceName>());
+    private final Set<StabilityMonitor> monitors = Collections.synchronizedSet(new IdentityHashSet<StabilityMonitor>());
 
     ServiceTargetImpl(final ServiceTargetImpl parent) {
         if (parent == null) {
@@ -111,6 +112,26 @@ class ServiceTargetImpl implements ServiceTarget {
         return this;
     }
 
+    @Override
+    public ServiceTarget addMonitor(final StabilityMonitor monitor) {
+        if (monitor != null) {
+            monitors.add(monitor);
+        }
+        return this;
+    }
+
+    @Override
+    public ServiceTarget addMonitors(final StabilityMonitor... monitors) {
+        if (monitors != null) {
+            for (final StabilityMonitor monitor : monitors) {
+                if (monitor != null) {
+                    this.monitors.add(monitor);
+                }
+            }
+        }
+        return this;
+    }
+
     public ServiceTarget addListener(final ServiceListener.Inheritance inheritance, final Collection<ServiceListener<Object>> listeners) {
         if (listeners == null) {
             return this;
@@ -122,6 +143,14 @@ class ServiceTargetImpl implements ServiceTarget {
         }
         return this;
     }
+    
+    @Override
+    public ServiceTarget removeMonitor(final StabilityMonitor monitor) {
+        if (monitor != null) {
+            monitors.remove(monitor);
+        }
+        return this;
+    }
 
     @Override
     public ServiceTarget removeListener(final ServiceListener<Object> listener) {
@@ -130,6 +159,11 @@ class ServiceTargetImpl implements ServiceTarget {
         }
         listeners.remove(listener);
         return this;
+    }
+
+    @Override
+    public Set<StabilityMonitor> getMonitors() {
+        return Collections.unmodifiableSet(monitors);
     }
 
     @Override
@@ -190,6 +224,7 @@ class ServiceTargetImpl implements ServiceTarget {
      * @param serviceBuilder serviceBuilder which listeners and dependencies will be added to.
      */
     void apply(ServiceBuilderImpl<?> serviceBuilder) {
+        serviceBuilder.addMonitorsNoCheck(monitors);
         serviceBuilder.addListenerNoCheck(listeners);
         serviceBuilder.addDependenciesNoCheck(dependencies);
     }

@@ -241,15 +241,21 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     @Override
     public ServiceBuilder<T> addMonitor(final StabilityMonitor monitor) {
         checkAlreadyInstalled();
-        monitors.add(monitor);
+        if (monitor != null) {
+            monitors.add(monitor);
+        }
         return this;
     }
 
     @Override
     public ServiceBuilder<T> addMonitors(final StabilityMonitor... monitors) {
         checkAlreadyInstalled();
-        for (StabilityMonitor monitor : monitors) {
-            this.monitors.add(monitor);
+        if (monitors != null) {
+            for (final StabilityMonitor monitor : monitors) {
+                if (monitor != null) {
+                    this.monitors.add(monitor);
+                }
+            }
         }
         return this;
     }
@@ -312,6 +318,13 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     ServiceBuilderImpl<T> addListenerNoCheck(final Map<? extends ServiceListener<? super T>, ServiceListener.Inheritance> serviceListeners) {
         listeners.putAll(serviceListeners);
+        return this;
+    }
+
+    ServiceBuilderImpl<T> addMonitorsNoCheck(final Collection<? extends StabilityMonitor> monitors) {
+        for (final StabilityMonitor monitor : monitors) {
+            this.monitors.add(monitor);
+        }
         return this;
     }
 
