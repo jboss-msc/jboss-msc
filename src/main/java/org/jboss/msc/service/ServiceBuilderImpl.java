@@ -42,7 +42,8 @@ import org.jboss.msc.value.Value;
  * @param <T> the type of service being built
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
-*/
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ */
 class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     private final ServiceControllerImpl<?> parent;
@@ -241,15 +242,21 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     @Override
     public ServiceBuilder<T> addMonitor(final StabilityMonitor monitor) {
         checkAlreadyInstalled();
-        monitors.add(monitor);
+        if (monitor != null) {
+            monitors.add(monitor);
+        }
         return this;
     }
 
     @Override
     public ServiceBuilder<T> addMonitors(final StabilityMonitor... monitors) {
         checkAlreadyInstalled();
-        for (StabilityMonitor monitor : monitors) {
-            this.monitors.add(monitor);
+        if (monitors != null) {
+            for (final StabilityMonitor monitor : monitors) {
+                if (monitor != null) {
+                    this.monitors.add(monitor);
+                }
+            }
         }
         return this;
     }
@@ -300,6 +307,13 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     ServiceBuilderImpl<T> addMonitorNoCheck(final StabilityMonitor monitor) {
         monitors.add(monitor);
+        return this;
+    }
+
+    ServiceBuilderImpl<T> addMonitorsNoCheck(final Collection<? extends StabilityMonitor> monitors) {
+        for (final StabilityMonitor monitor : monitors) {
+            this.monitors.add(monitor);
+        }
         return this;
     }
 

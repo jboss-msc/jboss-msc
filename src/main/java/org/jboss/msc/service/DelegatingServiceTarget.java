@@ -31,6 +31,7 @@ import org.jboss.msc.value.Value;
  * An "insulated" view of a service target which prevents access to other public methods on the delegate target object.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class DelegatingServiceTarget implements ServiceTarget {
     private final ServiceTarget delegate;
@@ -135,5 +136,25 @@ public final class DelegatingServiceTarget implements ServiceTarget {
     /** {@inheritDoc} */
     public BatchServiceTarget batchTarget() {
         return delegate.batchTarget();
+    }
+
+    /** {@inheritDoc} */
+    public ServiceTarget addMonitor(StabilityMonitor monitor) {
+        return delegate.addMonitor(monitor);
+    }
+
+    /** {@inheritDoc} */
+    public ServiceTarget addMonitors(StabilityMonitor... monitors) {
+        return delegate.addMonitors(monitors);
+    }
+
+    /** {@inheritDoc} */
+    public ServiceTarget removeMonitor(StabilityMonitor monitor) {
+        return delegate.removeMonitor(monitor);
+    }
+
+    /** {@inheritDoc} */
+    public Set<StabilityMonitor> getMonitors() {
+        return delegate.getMonitors();
     }
 }
