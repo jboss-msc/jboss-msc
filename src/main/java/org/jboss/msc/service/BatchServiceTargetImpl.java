@@ -72,6 +72,21 @@ class BatchServiceTargetImpl extends ServiceTargetImpl implements BatchServiceTa
 
     // these are overridden for covariant return type only
 
+    public BatchServiceTarget addMonitor(final StabilityMonitor monitor) {
+        super.addMonitor(monitor);
+        return this;
+    }
+
+    public BatchServiceTarget addMonitors(final StabilityMonitor... monitors) {
+        super.addMonitors(monitors);
+        return this;
+    }
+
+    public BatchServiceTarget removeMonitor(final StabilityMonitor monitor) {
+        super.removeMonitor(monitor);
+        return this;
+    }
+
     public BatchServiceTarget addListener(final ServiceListener<Object> listener) {
         super.addListener(listener);
         return this;

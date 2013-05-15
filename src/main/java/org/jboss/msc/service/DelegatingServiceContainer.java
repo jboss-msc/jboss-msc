@@ -93,6 +93,29 @@ public final class DelegatingServiceContainer implements ServiceContainer {
     }
 
     /** {@inheritDoc} */
+    public ServiceTarget addMonitor(StabilityMonitor monitor) {
+        delegateTarget.addMonitor(monitor);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    public ServiceTarget addMonitors(StabilityMonitor... monitors) {
+        delegateTarget.addMonitors(monitors);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    public ServiceTarget removeMonitor(StabilityMonitor monitor) {
+        delegateTarget.removeMonitor(monitor);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    public Set<StabilityMonitor> getMonitors() {
+        return delegateTarget.getMonitors();
+    }
+
+    /** {@inheritDoc} */
     public ServiceContainer addDependency(final ServiceName dependency) {
         delegateTarget.addDependency(dependency);
         return this;
