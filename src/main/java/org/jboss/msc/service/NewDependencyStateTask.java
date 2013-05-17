@@ -74,7 +74,9 @@ class NewDependencyStateTask implements Executable<Void> {
     private static void updateDependencyStatus (List<TaskController<?>> tasks, Transaction transaction, Registration serviceRegistration, ServiceContext context, boolean dependencyUp) {
         for (Dependency<?> incomingDependency : serviceRegistration.getIncomingDependencies()) {
             TaskController<?> task = incomingDependency.newDependencyState(transaction, context, dependencyUp);
-            tasks.add(task);
+            if (task != null) {
+                tasks.add(task);
+            }
         }
     }
 }

@@ -27,7 +27,6 @@ import static org.junit.Assert.assertTrue;
 
 import org.jboss.msc.service.ServiceMode;
 import org.jboss.msc.service.ServiceName;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -35,7 +34,6 @@ import org.junit.Test;
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
-//@Ignore
 public class ServiceModeTestCase extends AbstractServiceTest {
 
     protected static final ServiceName firstServiceName = ServiceName.of("firstService");
@@ -91,12 +89,20 @@ public class ServiceModeTestCase extends AbstractServiceTest {
      * {@code firstServiceName}, failed to occur.
      * 
      */
-    @Ignore @Test
+    @Test
     public void failedToStartOnDemandSecondService() throws Exception {
         final TestService secondService = installService(secondServiceName, true, ServiceMode.ON_DEMAND);
         final TestService firstService = installService(firstServiceName,true, secondServiceName);
         assertTrue(secondService.isFailed());
         assertFalse(firstService.isUp());
+    }
+
+    private void createUpLazySecondService() throws Exception {
+        final TestService secondService = installService(secondServiceName, ServiceMode.LAZY);
+        assertFalse(secondService.isUp());
+        final TestService firstService = installService(firstServiceName, secondServiceName);
+        assertTrue(firstService.isUp());
+        assertTrue(secondService.isUp());
     }
 
     /**
@@ -106,11 +112,7 @@ public class ServiceModeTestCase extends AbstractServiceTest {
      */
     @Test
     public void upLazySecondService() throws Exception {
-        final TestService secondService = installService(secondServiceName, ServiceMode.LAZY);
-        assertFalse(secondService.isUp());
-        final TestService firstService = installService(firstServiceName, secondServiceName);
-        assertTrue(firstService.isUp());
-        assertTrue(secondService.isUp());
+        createUpLazySecondService();
     }
 
     /**
@@ -118,9 +120,9 @@ public class ServiceModeTestCase extends AbstractServiceTest {
      * is in the {@code UP} state, as there has been an active service named {@code firstServiceName} with a dependency
      * on second service . First service is currently down in {@link ServiceMode#NEVER NEVER} mode.
      */
-    @Test @Ignore
+    @Test
     public void upLazySecondServiceWithNoActiveDependents() throws Exception {
-        upLazySecondService();
+        createUpLazySecondService();
         remove(firstServiceName);
         final TestService secondService = (TestService) serviceRegistry.getRequiredService(secondServiceName);
         assertTrue(secondService.isUp());
@@ -145,7 +147,7 @@ public class ServiceModeTestCase extends AbstractServiceTest {
      * is in the {@code START_FAILED} state, and it has a dependent named {@code firstServiceName}, waiting for the
      * failure to be cleared so it can start.
      */
-    @Ignore @Test
+    @Test
     public void failedToStartLazySecondService() throws Exception {
         final TestService secondService = installService(secondServiceName, true, ServiceMode.LAZY);
         final TestService firstService = installService(firstServiceName, true, secondServiceName);
@@ -178,7 +180,7 @@ public class ServiceModeTestCase extends AbstractServiceTest {
      * service is in the {@code START_FAILED} state, and it has a dependent named {@code firstServiceName}, waiting for
      * the failure to be cleared so it can start.
      */
-    @Ignore @Test
+    @Test
     public void failedToStartPassiveSecondService() throws Exception {
         final TestService secondService = installService(secondServiceName, true, ServiceMode.PASSIVE);
         final TestService firstService = installService(firstServiceName, true, secondServiceName);
@@ -201,7 +203,7 @@ public class ServiceModeTestCase extends AbstractServiceTest {
      * service is in the {@code DOWN} state, as it has a dependency on a service named {@code secondServiceName} in the
      * {@code START_FAILED} state.
      */
-    @Ignore @Test
+    @Test
     public void downActiveFirstService() throws Exception {
         final TestService secondService = installService(secondServiceName, true);
         assertTrue(secondService.isFailed());
@@ -214,7 +216,7 @@ public class ServiceModeTestCase extends AbstractServiceTest {
      * service is in the {@code START_FAILED} state, and has a dependent named {@code firstServiceName} waiting for the
      * failure to be cleared so it can start.
      */
-    @Ignore @Test
+    @Test
     public void failedToStartActiveSecondService() throws Exception {
         final TestService secondService = installService(secondServiceName, true, ServiceMode.ACTIVE);
         final TestService firstService = installService(firstServiceName, true, secondServiceName);

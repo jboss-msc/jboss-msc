@@ -17,9 +17,14 @@
  */
 package org.jboss.msc.service;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.jboss.msc.service.ServiceController.TransactionalState;
+import org.jboss.msc.txn.AttachmentKey;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
+import org.jboss.msc.txn.Factory;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
@@ -32,6 +37,13 @@ import org.jboss.msc.txn.Transaction;
  *
  */
 final class StartingServiceTasks {
+
+    public static final AttachmentKey<Set<Service<?>>> FAILED_SERVICES = AttachmentKey.<Set<Service<?>>>create(new Factory<Set<Service<?>>>() {
+        @Override
+        public Set<Service<?>> create() {
+            return new HashSet<Service<?>>();
+        }
+    });
 
     /**
      * Create starting service tasks. When all created tasks finish execution, {@code service} will enter {@code UP}
@@ -46,9 +58,7 @@ final class StartingServiceTasks {
         final Service<T> serviceValue = serviceController.getValue().get();
 
         // start service task builder
-        final TaskBuilder<T> startBuilder = context.newTask(new SimpleServiceStartTask<T>(serviceValue)).setTraits(serviceValue);
-
-        final boolean hasDependents = hasDependents(serviceController);
+        final TaskBuilder<T> startBuilder = context.newTask(new SimpleServiceStartTask<T>(serviceValue, transaction)).setTraits(serviceValue);
 
         if (hasDependencies(serviceController)) {
             // notify dependent is starting to dependencies
@@ -63,34 +73,7 @@ final class StartingServiceTasks {
         // start service
         final TaskController<T> start = startBuilder.release();
 
-        // perform out injections
-        final TaskController<Void> performOutInjections = context.newTask(new PerformOutInjectionsTask()).addDependency(start).release();
-
-        // complete transition task builder
-        final TaskBuilder<Void> completeTransitionBuilder = context.newTask(new SetTransactionalStateTask(serviceController, TransactionalState.UP));
-
-        // notify dependents that this dependency is up
-        if (hasDependents) {
-            final TaskController<Void>  updateDepStatus = context.newTask(new NewDependencyStateTask(transaction, serviceController, true)).addDependency(performOutInjections).release();
-            completeTransitionBuilder.addDependency(updateDepStatus);
-        } else {
-            completeTransitionBuilder.addDependency(performOutInjections);
-        }
-
-        // complete transition to UP by setting transactional state
-        return completeTransitionBuilder.release();
-    }
-
-    private static boolean hasDependents(ServiceController<?> service) {
-        if (!service.getPrimaryRegistration().getIncomingDependencies().isEmpty()) {
-            return true;
-        }
-        for (Registration aliasRegistration: service.getAliasRegistrations()) {
-            if (!aliasRegistration.getIncomingDependencies().isEmpty()) {
-                return true;
-            }
-        }
-        return false;
+        return context.newTask(new PostStartServiceTask<T>(serviceController, start, transaction)).addDependency(start).release();
     }
 
     private static boolean hasDependencies(ServiceController<?> service) {
@@ -119,6 +102,53 @@ final class StartingServiceTasks {
         }
     }
 
+    private static class PostStartServiceTask<T> implements Executable<Void> {
+
+        private final ServiceController<T> service;
+        private final TaskController<T> serviceStartTask;
+        private final Transaction transaction;
+
+        public PostStartServiceTask (ServiceController<T> service, TaskController<T> serviceStartTask, Transaction transaction) {
+            this.service = service;
+            this.serviceStartTask = serviceStartTask;
+            this.transaction = transaction;
+        }
+
+        @Override
+        public void execute(ExecuteContext<Void> context) {
+            T result = serviceStartTask.getResult();
+            // service failed
+            if (result == null && transaction.getAttachment(FAILED_SERVICES).contains(service.getValue().get())) {
+                service.setTransition(TransactionalState.FAILED, context);
+                // notify dependency failed
+            } else {
+                performOutInjections();
+                notifyDependencyUp(context);
+                // TODO store the actual value of result somewhere
+                service.setTransition(TransactionalState.UP, context);
+            }
+            context.complete();
+        }
+
+        private void performOutInjections() {
+            // TODO
+        }
+
+        private void notifyDependencyUp(ServiceContext context) {
+            notifyDependencyUp(service.getPrimaryRegistration(), context);
+            for (Registration registration: service.getAliasRegistrations()) {
+                notifyDependencyUp(registration, context);
+            }
+        }
+
+        protected void notifyDependencyUp (Registration serviceRegistration, ServiceContext context) {
+            for (Dependency<?> incomingDependency : serviceRegistration.getIncomingDependencies()) {
+                incomingDependency.newDependencyState(transaction, context, true);
+            }
+        }
+
+    }
+
     private static class PerformInjectionsTask implements Executable<Void> {
 
         private final Dependency<?>[] dependencies;
@@ -136,15 +166,4 @@ final class StartingServiceTasks {
         }
 
     }
-
-    private static class PerformOutInjectionsTask implements Executable<Void> {
-
-        @Override
-        public void execute(ExecuteContext<Void> context) {
-            // TODO
-            context.complete();
-        }
-
-    }
-
 }

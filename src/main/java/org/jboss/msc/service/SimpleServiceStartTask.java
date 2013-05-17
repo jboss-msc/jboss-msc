@@ -23,6 +23,7 @@ import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.Problem;
 import org.jboss.msc.txn.Problem.Severity;
 import org.jboss.msc.txn.TaskBuilder;
+import org.jboss.msc.txn.Transaction;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -31,9 +32,12 @@ import org.jboss.msc.txn.TaskBuilder;
 final class SimpleServiceStartTask<T> implements Executable<T> {
 
     private final Service<T> service;
+    private final Transaction transaction;
+    
 
-    public SimpleServiceStartTask(final Service<T> service) {
+    public SimpleServiceStartTask(final Service<T> service, final Transaction transaction) {
         this.service = service;
+        this.transaction = transaction;
     }
 
     /**
@@ -43,7 +47,6 @@ final class SimpleServiceStartTask<T> implements Executable<T> {
      */
     public void execute(final ExecuteContext<T> context) {
         service.start(new StartContext<T>() {
-            // TODO replace this by a proper class with a proper fail
             @Override
             public void complete(T result) {
                 context.complete(result);
@@ -152,7 +155,8 @@ final class SimpleServiceStartTask<T> implements Executable<T> {
 
             @Override
             public void fail() {
-                // TODO
+                transaction.getAttachment(StartingServiceTasks.FAILED_SERVICES).add(service);
+                complete();
             }
 
         });

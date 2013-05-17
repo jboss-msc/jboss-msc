@@ -19,7 +19,6 @@ package org.jboss.msc.test.services;
 
 import static org.junit.Assert.assertFalse;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -56,7 +55,7 @@ public class RemoveServiceTestCase extends ServiceModeTestCase {
         remove(firstServiceName);
     }
 
-    @Override @Test @Ignore
+    @Override @Test
     public void failedToStartOnDemandSecondService() throws Exception {
         super.failedToStartOnDemandSecondService();
         remove(secondServiceName);
@@ -70,7 +69,7 @@ public class RemoveServiceTestCase extends ServiceModeTestCase {
         assertFalse(((TestService) serviceRegistry.getRequiredService(firstServiceName)).isUp());;
     }
 
-    @Override @Ignore @Test
+    @Override @Test
     public void upLazySecondServiceWithNoActiveDependents() throws Exception {
         super.upLazySecondServiceWithNoActiveDependents();
         remove(secondServiceName);
@@ -83,7 +82,7 @@ public class RemoveServiceTestCase extends ServiceModeTestCase {
         remove(firstServiceName);
     }
 
-    @Ignore @Override @Test
+    @Override @Test
     public void failedToStartLazySecondService() throws Exception {
         super.failedToStartLazySecondService();
         remove(secondServiceName);
@@ -102,7 +101,7 @@ public class RemoveServiceTestCase extends ServiceModeTestCase {
         remove(firstServiceName);
     }
 
-    @Override @Ignore @Test
+    @Override @Test
     public void failedToStartPassiveSecondService() throws Exception {
         super.failedToStartPassiveSecondService();
         remove(secondServiceName);
@@ -115,13 +114,13 @@ public class RemoveServiceTestCase extends ServiceModeTestCase {
         remove(firstServiceName);
     }
 
-    @Ignore @Override  @Test
+    @Override  @Test
     public void downActiveFirstService() throws Exception {
         super.downActiveFirstService();
         remove(firstServiceName);
     }
 
-    @Ignore @Override @Test
+    @Override @Test
     public void failedToStartActiveSecondService() throws Exception {
         super.failedToStartActiveSecondService();
         remove(secondServiceName);

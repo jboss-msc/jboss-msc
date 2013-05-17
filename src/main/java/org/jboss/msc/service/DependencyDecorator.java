@@ -65,6 +65,17 @@ abstract class DependencyDecorator<T> implements Dependency<T> {
     }
 
     @Override
+    public TaskController<?> dependencyFailed(Transaction transaction, ServiceContext context) {
+        return dependency.dependencyFailed(transaction, context);
+    }
+
+    @Override
+    public TaskController<?> dependencyFailureCleared(Transaction transaction, ServiceContext context) {
+        return dependency.dependencyFailureCleared(transaction, context);
+    }
+
+
+    @Override
     public void dependencyReplacementStarted(Transaction transaction) {
         dependency.dependencyReplacementStarted(transaction);
     }

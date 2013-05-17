@@ -77,6 +77,24 @@ interface  Dependency<T> {
     public TaskController<?> newDependencyState(Transaction transaction, ServiceContext context, boolean dependencyUp);
 
     /**
+     * Notifies that dependency failed to start.
+     *  
+     * @param transaction    the active transaction
+     * @param serviceContext the service context
+     * @param dependencyUp  {@code true} if dependency is now {@link ServiceController.State#UP}; {@code false} if it is
+     *                      now {@link ServiceController.State#DOWN}.
+     */
+    public TaskController<?> dependencyFailed(Transaction transaction, ServiceContext context);
+
+    /**
+     * Notifies that dependency failure has been cleared.
+     *  
+     * @param transaction   the active transaction
+     * @param serviceContext the serviceContext;
+     */
+    public TaskController<?> dependencyFailureCleared(Transaction transaction, ServiceContext context);
+
+    /**
      * Notifies that dependency current service is about to be replaced by a different service.
      */
     public void dependencyReplacementStarted(Transaction transaction);

@@ -39,21 +39,25 @@ public class TestService implements Service<Void> {
     @Override
     public synchronized void start(StartContext<Void> context) {
         up = true;
-        context.complete();
+        if (failToStart) {
+            context.fail();
+        } else {
+            context.complete();
+        }
     }
 
     @Override
-    public void stop(StopContext context) {
+    public synchronized void stop(StopContext context) {
         up = false;
         context.complete();
     }
 
     public synchronized boolean isFailed() {
-        return false; // TODO
+        return up && failToStart;
     }
 
     public synchronized boolean isUp() {
-        return up;
+        return up && !failToStart;
     }
 
 }

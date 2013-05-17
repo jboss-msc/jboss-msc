@@ -130,6 +130,22 @@ final class  SimpleDependency<T> implements Dependency<T> {
     }
 
     @Override
+    public TaskController<?> dependencyFailed(Transaction transaction, ServiceContext context) {
+        if (!this.dependencyUp) {
+            return dependentController.dependencyUnsatisfied(transaction, context);
+        }
+        return null;
+    }
+
+    @Override
+    public TaskController<?> dependencyFailureCleared(Transaction transaction, ServiceContext context) {
+        if (!this.dependencyUp) {
+            return dependentController.dependencySatisfied(transaction, context);
+        }
+        return null;
+    }
+
+    @Override
     public void dependencyReplacementStarted(Transaction transaction) {
         // do nothing
     }

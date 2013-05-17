@@ -432,6 +432,7 @@ final class ServiceController<T> extends TransactionalObject {
                     }
                     break;
                 case FAILED:
+                    // TODO review this, there are notifications missing
                     if (unsatisfiedDependencies > 0 || mode.shouldStop(ServiceController.this) || !enabled) {
                         transactionalState = TransactionalState.STOPPING;
                         completeTransitionTask = StoppingServiceTasks.createTasks(transaction, context, ServiceController.this);
@@ -493,6 +494,7 @@ final class ServiceController<T> extends TransactionalObject {
             enabled = false;
             return completeTransitionTask;
         }
+
     }
 
     /**
