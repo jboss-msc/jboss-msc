@@ -225,9 +225,15 @@ class ServiceTargetImpl implements ServiceTarget {
      * @param serviceBuilder serviceBuilder which listeners and dependencies will be added to.
      */
     void apply(ServiceBuilderImpl<?> serviceBuilder) {
-        serviceBuilder.addMonitorsNoCheck(monitors);
-        serviceBuilder.addListenerNoCheck(listeners);
-        serviceBuilder.addDependenciesNoCheck(dependencies);
+        synchronized (monitors) {
+            serviceBuilder.addMonitorsNoCheck(monitors);
+        }
+        synchronized (listeners) {
+            serviceBuilder.addListenerNoCheck(listeners);
+        }
+        synchronized (dependencies) {
+            serviceBuilder.addDependenciesNoCheck(dependencies);
+        }
     }
 
     /**
