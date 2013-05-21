@@ -122,4 +122,24 @@ public final class DelegatingServiceTarget implements ServiceTarget {
     public BatchServiceTarget batchTarget() {
         return delegate.batchTarget();
     }
+
+    /** {@inheritDoc} */
+    public ServiceTarget addMonitor(StabilityMonitor monitor) {
+        return delegate.addMonitor(monitor);
+    }
+
+    /** {@inheritDoc} */
+    public ServiceTarget addMonitors(StabilityMonitor... monitors) {
+        return delegate.addMonitors(monitors);
+    }
+
+    /** {@inheritDoc} */
+    public ServiceTarget removeMonitor(StabilityMonitor monitor) {
+        return delegate.removeMonitor(monitor);
+    }
+
+    /** {@inheritDoc} */
+    public Set<StabilityMonitor> getMonitors() {
+        return delegate.getMonitors();
+    }
 }

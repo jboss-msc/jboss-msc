@@ -37,6 +37,18 @@ public interface BatchServiceTarget extends ServiceTarget {
 
     /** {@inheritDoc} */
     @Override
+    BatchServiceTarget addMonitor(StabilityMonitor monitor);
+
+    /** {@inheritDoc} */
+    @Override
+    BatchServiceTarget addMonitors(StabilityMonitor... monitors);
+
+    /** {@inheritDoc} */
+    @Override
+    BatchServiceTarget removeMonitor(StabilityMonitor monitor);
+
+    /** {@inheritDoc} */
+    @Override
     BatchServiceTarget addListener(ServiceListener<Object> listener);
 
     /** {@inheritDoc} */
