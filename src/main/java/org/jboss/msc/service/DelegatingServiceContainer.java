@@ -35,6 +35,7 @@ import org.jboss.msc.value.Value;
  * target or registry instance.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class DelegatingServiceContainer implements ServiceContainer {
     private final ServiceTarget delegateTarget;
@@ -107,6 +108,29 @@ public final class DelegatingServiceContainer implements ServiceContainer {
     /** {@inheritDoc} */
     public Set<ServiceListener<Object>> getListeners() {
         return delegateTarget.getListeners();
+    }
+
+    /** {@inheritDoc} */
+    public ServiceTarget addMonitor(StabilityMonitor monitor) {
+        delegateTarget.addMonitor(monitor);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    public ServiceTarget addMonitors(StabilityMonitor... monitors) {
+        delegateTarget.addMonitors(monitors);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    public ServiceTarget removeMonitor(StabilityMonitor monitor) {
+        delegateTarget.removeMonitor(monitor);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    public Set<StabilityMonitor> getMonitors() {
+        return delegateTarget.getMonitors();
     }
 
     /** {@inheritDoc} */
