@@ -99,6 +99,13 @@ public interface ServiceContext {
     void disableRegistry(ServiceRegistry registry);
 
     /**
+     * Removes registry and its services from the {@code container}, causing {@code UP} services to stop.
+     *
+     * @param registry the service registry
+     */
+    void removeRegistry(ServiceRegistry registry);
+
+    /**
      * Enables all registries and their services in the {@code container}. As a result, some services may start, according to their
      * {@link org.jboss.msc.service.ServiceMode mode} rules.
      * <p> Services are enabled by default.

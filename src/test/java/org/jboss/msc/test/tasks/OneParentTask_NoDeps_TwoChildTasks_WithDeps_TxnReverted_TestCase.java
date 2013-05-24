@@ -21,7 +21,10 @@ package org.jboss.msc.test.tasks;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.concurrent.CountDownLatch;
+
 import org.jboss.msc.test.utils.AbstractTransactionTest;
+import org.jboss.msc.test.utils.CompletionListener;
 import org.jboss.msc.test.utils.TestCommittable;
 import org.jboss.msc.test.utils.TestExecutable;
 import org.jboss.msc.test.utils.TestRevertible;
@@ -29,6 +32,7 @@ import org.jboss.msc.test.utils.TestValidatable;
 import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -120,18 +124,19 @@ public final class OneParentTask_NoDeps_TwoChildTasks_WithDeps_TxnReverted_TestC
     @Test
     public void usecase2() throws Exception {
         final Transaction transaction = newTransaction();
+        final CountDownLatch signal = new CountDownLatch(1);
         // preparing child0 task
-        final TestExecutable<Void> child0e = new TestExecutable<Void>(true);
+        final TestExecutable<Void> child0e = new TestExecutable<Void>(true, signal);
         final TestValidatable child0v = new TestValidatable();
         final TestRevertible child0r = new TestRevertible();
         final TestCommittable child0c = new TestCommittable();
         // preparing child1 task
-        final TestExecutable<Void> child1e = new TestExecutable<Void>(true);
+        final TestExecutable<Void> child1e = new TestExecutable<Void>(true, signal);
         final TestValidatable child1v = new TestValidatable();
         final TestRevertible child1r = new TestRevertible();
         final TestCommittable child1c = new TestCommittable();
         // installing parent task
-        final TestExecutable<Void> parent0e = new TestExecutable<Void>() {
+        final TestExecutable<Void> parent0e = new TestExecutable<Void>(signal) {
             @Override
             public void executeInternal(final ExecuteContext<Void> ctx) {
                 // installing child0 task
@@ -147,42 +152,29 @@ public final class OneParentTask_NoDeps_TwoChildTasks_WithDeps_TxnReverted_TestC
         final TestCommittable parent0c = new TestCommittable();
         final TaskController<Void> parentController = newTask(transaction, parent0e, parent0v, parent0r, parent0c);
         assertNotNull(parentController);
-        // preparing transaction
-        prepare(transaction);
-        assertCalled(parent0e);
-        assertCalled(child0e);
-        // child1e.wasCalled() can return either true or false, depends on threads scheduling
-        assertCalled(parent0v);
-        assertNotCalled(child0v);
-        assertNotCalled(child1v);
-        assertNotCalled(parent0r);
-        assertNotCalled(child0r);
-        assertNotCalled(child1r);
-        assertNotCalled(parent0c);
-        assertNotCalled(child0c);
-        assertNotCalled(child1c);
-        assertCallOrder(parent0e, child0e, parent0v);
-        if (child1e.wasCalled()) {
-            assertCallOrder(parent0e, child0e, child1e, parent0v);
-        }
         // reverting transaction
-        assertTrue(transaction.canCommit());
-        rollback(transaction);
+        final CompletionListener rollbackListener = new CompletionListener();
+        transaction.rollback(rollbackListener);
+        signal.countDown();
+        rollbackListener.awaitCompletion();
+        // assert parent0 calls
         assertCalled(parent0e);
-        assertCalled(child0e);
-        // child1e.wasCalled() can return either true or false, depends on threads scheduling
-        assertCalled(parent0v);
-        assertNotCalled(child0v);
-        assertNotCalled(child1v);
+        assertNotCalled(parent0v);
         assertCalled(parent0r);
-        assertNotCalled(child0r);
-        assertNotCalled(child1r);
         assertNotCalled(parent0c);
+        // assert child0 calls
+        assertCalled(child0e);
+        assertNotCalled(child0v);
+        assertNotCalled(child0r);
         assertNotCalled(child0c);
+        // assert child1 calls
+        // child1e.wasCalled() can return either true or false, depends on threads scheduling
+        assertNotCalled(child1v);
+        assertNotCalled(child1r);
         assertNotCalled(child1c);
-        assertCallOrder(parent0e, child0e, parent0v, parent0r);
+        assertCallOrder(parent0e, child0e, parent0r);
         if (child1e.wasCalled()) {
-            assertCallOrder(parent0e, child0e, child1e, parent0v, parent0r);
+            assertCallOrder(parent0e, child0e, child1e, parent0r);
         }
     }
 
@@ -198,18 +190,19 @@ public final class OneParentTask_NoDeps_TwoChildTasks_WithDeps_TxnReverted_TestC
     @Test
     public void usecase3() throws Exception {
         final Transaction transaction = newTransaction();
+        final CountDownLatch signal = new CountDownLatch(1);
         // preparing child0 task
-        final TestExecutable<Void> child0e = new TestExecutable<Void>();
+        final TestExecutable<Void> child0e = new TestExecutable<Void>(signal);
         final TestValidatable child0v = new TestValidatable();
         final TestRevertible child0r = new TestRevertible();
         final TestCommittable child0c = new TestCommittable();
         // preparing child1 task
-        final TestExecutable<Void> child1e = new TestExecutable<Void>(true);
+        final TestExecutable<Void> child1e = new TestExecutable<Void>(true, signal);
         final TestValidatable child1v = new TestValidatable();
         final TestRevertible child1r = new TestRevertible();
         final TestCommittable child1c = new TestCommittable();
         // installing parent task
-        final TestExecutable<Void> parent0e = new TestExecutable<Void>() {
+        final TestExecutable<Void> parent0e = new TestExecutable<Void>(signal) {
             @Override
             public void executeInternal(final ExecuteContext<Void> ctx) {
                 // installing child0 task
@@ -225,37 +218,27 @@ public final class OneParentTask_NoDeps_TwoChildTasks_WithDeps_TxnReverted_TestC
         final TestCommittable parent0c = new TestCommittable();
         final TaskController<Void> parentController = newTask(transaction, parent0e, parent0v, parent0r, parent0c);
         assertNotNull(parentController);
-        // preparing transaction
-        prepare(transaction);
-        assertCalled(parent0e);
-        assertCalled(child0e);
-        assertCalled(child1e);
-        assertCalled(parent0v);
-        assertCalled(child0v);
-        assertNotCalled(child1v);
-        assertNotCalled(parent0r);
-        assertNotCalled(child0r);
-        assertNotCalled(child1r);
-        assertNotCalled(parent0c);
-        assertNotCalled(child0c);
-        assertNotCalled(child1c);
-        assertCallOrder(parent0e, child0e, child1e, parent0v, child0v);
         // reverting transaction
-        assertTrue(transaction.canCommit());
-        rollback(transaction);
+        final CompletionListener rollbackListener = new CompletionListener();
+        transaction.rollback(rollbackListener);
+        signal.countDown();
+        rollbackListener.awaitCompletion();
+        // assert parent0 calls
         assertCalled(parent0e);
-        assertCalled(child0e);
-        assertCalled(child1e);
-        assertCalled(parent0v);
-        assertCalled(child0v);
-        assertNotCalled(child1v);
+        assertNotCalled(parent0v);
         assertCalled(parent0r);
-        assertCalled(child0r);
-        assertNotCalled(child1r);
         assertNotCalled(parent0c);
+        // assert child0 calls
+        assertCalled(child0e);
+        assertNotCalled(child0v);
+        assertCalled(child0r);
         assertNotCalled(child0c);
+        // assert child1 calls
+        assertCalled(child1e);
+        assertNotCalled(child1v);
+        assertNotCalled(child1r);
         assertNotCalled(child1c);
-        assertCallOrder(parent0e, child0e, child1e, parent0v, child0v, child0r, parent0r);
+        assertCallOrder(parent0e, child0e, child1e, child0r, parent0r);
     }
 
     /**
@@ -270,18 +253,19 @@ public final class OneParentTask_NoDeps_TwoChildTasks_WithDeps_TxnReverted_TestC
     @Test
     public void usecase4() throws Exception {
         final Transaction transaction = newTransaction();
+        final CountDownLatch signal = new CountDownLatch(1);
         // preparing child0 task
-        final TestExecutable<Void> child0e = new TestExecutable<Void>(true);
+        final TestExecutable<Void> child0e = new TestExecutable<Void>(true, signal);
         final TestValidatable child0v = new TestValidatable();
         final TestRevertible child0r = new TestRevertible();
         final TestCommittable child0c = new TestCommittable();
         // preparing child1 task
-        final TestExecutable<Void> child1e = new TestExecutable<Void>();
+        final TestExecutable<Void> child1e = new TestExecutable<Void>(signal);
         final TestValidatable child1v = new TestValidatable();
         final TestRevertible child1r = new TestRevertible();
         final TestCommittable child1c = new TestCommittable();
         // installing parent task
-        final TestExecutable<Void> parent0e = new TestExecutable<Void>() {
+        final TestExecutable<Void> parent0e = new TestExecutable<Void>(signal) {
             @Override
             public void executeInternal(final ExecuteContext<Void> ctx) {
                 // installing child0 task
@@ -297,50 +281,32 @@ public final class OneParentTask_NoDeps_TwoChildTasks_WithDeps_TxnReverted_TestC
         final TestCommittable parent0c = new TestCommittable();
         final TaskController<Void> parentController = newTask(transaction, parent0e, parent0v, parent0r, parent0c);
         assertNotNull(parentController);
-        // preparing transaction
-        prepare(transaction);
-        assertCalled(parent0e);
-        assertCalled(child0e);
-        // child1e.wasCalled() can return either true or false, depends on threads scheduling
-        assertCalled(parent0v);
-        assertNotCalled(child0v);
-        // child1v.wasCalled() can return either true or false, depends on threads scheduling
-        assertNotCalled(parent0r);
-        assertNotCalled(child0r);
-        assertNotCalled(child1r);
-        assertNotCalled(parent0c);
-        assertNotCalled(child0c);
-        assertNotCalled(child1c);
-        assertCallOrder(parent0e, child0e, parent0v);
-        if (child1e.wasCalled()) {
-            assertCalled(child1r);
-            assertCallOrder(parent0e, child0e, child1e, parent0v, child1r);
-            if (child1v.wasCalled()) {
-                assertCallOrder(parent0e, child0e, child1e, parent0v, child1v, child1r);
-            }
-        }
         // reverting transaction
-        assertTrue(transaction.canCommit());
-        rollback(transaction);
+        final CompletionListener rollbackListener = new CompletionListener();
+        transaction.rollback(rollbackListener);
+        signal.countDown();
+        rollbackListener.awaitCompletion();
+        // assert parent0 calls
         assertCalled(parent0e);
-        assertCalled(child0e);
-        // child1e.wasCalled() can return either true or false, depends on threads scheduling
-        assertCalled(parent0v);
-        assertNotCalled(child0v);
-        // child1v.wasCalled() can return either true or false, depends on threads scheduling
+        assertNotCalled(parent0v);
         assertCalled(parent0r);
-        assertNotCalled(child0r);
-        // child1r.wasCalled() can return either true or false, depends on threads scheduling
         assertNotCalled(parent0c);
+        // assert child0 calls
+        assertCalled(child0e);
+        assertNotCalled(child0v);
+        assertNotCalled(child0r);
         assertNotCalled(child0c);
+        // assert child1 calls
+        // child1e.wasCalled() can return either true or false, depends on threads scheduling
+        assertNotCalled(child1v);
+        // child1r.wasCalled() can return either true or false, depends on threads scheduling
         assertNotCalled(child1c);
-        assertCallOrder(parent0e, child0e, parent0v, parent0r);
+        assertCallOrder(parent0e, child0e, parent0r);
         if (child1e.wasCalled()) {
             assertCalled(child1r);
-            assertCallOrder(parent0e, child0e, child1e, parent0v, child1r, parent0r);
-            if (child1v.wasCalled()) {
-                assertCallOrder(parent0e, child0e, child1e, parent0v, child1v, child1r, parent0r);
-            }
+            assertCallOrder(parent0e, child0e, child1e, child1r, parent0r);
+        } else {
+            assertNotCalled(child1r);
         }
     }
 
@@ -356,18 +322,19 @@ public final class OneParentTask_NoDeps_TwoChildTasks_WithDeps_TxnReverted_TestC
     @Test
     public void usecase5() throws Exception {
         final Transaction transaction = newTransaction();
+        final CountDownLatch signal = new CountDownLatch(1);
         // preparing child0 task
-        final TestExecutable<Void> child0e = new TestExecutable<Void>();
+        final TestExecutable<Void> child0e = new TestExecutable<Void>(signal);
         final TestValidatable child0v = new TestValidatable();
         final TestRevertible child0r = new TestRevertible();
         final TestCommittable child0c = new TestCommittable();
         // preparing child1 task
-        final TestExecutable<Void> child1e = new TestExecutable<Void>(true);
+        final TestExecutable<Void> child1e = new TestExecutable<Void>(true, signal);
         final TestValidatable child1v = new TestValidatable();
         final TestRevertible child1r = new TestRevertible();
         final TestCommittable child1c = new TestCommittable();
         // installing parent task
-        final TestExecutable<Void> parent0e = new TestExecutable<Void>(true) {
+        final TestExecutable<Void> parent0e = new TestExecutable<Void>(true, signal) {
             @Override
             public void executeInternal(final ExecuteContext<Void> ctx) {
                 // installing child0 task
@@ -383,55 +350,36 @@ public final class OneParentTask_NoDeps_TwoChildTasks_WithDeps_TxnReverted_TestC
         final TestCommittable parent0c = new TestCommittable();
         final TaskController<Void> parentController = newTask(transaction, parent0e, parent0v, parent0r, parent0c);
         assertNotNull(parentController);
-        // preparing transaction
-        prepare(transaction);
-        assertCalled(parent0e);
-        // child0e.wasCalled() can return either true or false, depends on threads scheduling
-        // child1e.wasCalled() can return either true or false, depends on threads scheduling
-        assertNotCalled(parent0v);
-        assertNotCalled(child0v);
-        assertNotCalled(child1v);
-        assertNotCalled(parent0r);
-        // child0r.wasCalled() can return either true of false, depends on threads scheduling
-        assertNotCalled(child1r);
-        assertNotCalled(parent0c);
-        assertNotCalled(child0c);
-        assertNotCalled(child1c);
-        if (child0e.wasCalled()) {
-            assertCalled(child0r);
-            assertCallOrder(parent0e, child0e, child0r);
-        }
-        if (child1e.wasCalled()) {
-            assertCallOrder(parent0e, child1e);
-        }
-        if (child0e.wasCalled() && child1e.wasCalled()) {
-            assertCalled(child0r);
-            assertCallOrder(parent0e, child0e, child1e, child0r);
-        }
         // reverting transaction
-        assertTrue(transaction.canCommit());
-        rollback(transaction);
+        final CompletionListener rollbackListener = new CompletionListener();
+        transaction.rollback(rollbackListener);
+        signal.countDown();
+        rollbackListener.awaitCompletion();
+        // assert parent0 calls
         assertCalled(parent0e);
-        // child0e.wasCalled() can return either true or false, depends on threads scheduling
-        // child1e.wasCalled() can return either true or false, depends on threads scheduling
         assertNotCalled(parent0v);
-        assertNotCalled(child0v);
-        assertNotCalled(child1v);
         assertNotCalled(parent0r);
-        // child0r.wasCalled() can return either true of false, depends on threads scheduling
-        assertNotCalled(child1r);
         assertNotCalled(parent0c);
+        // assert child0 calls
+        // child0e.wasCalled() can return either true or false, depends on threads scheduling
+        assertNotCalled(child0v);
+        // child0r.wasCalled() can return either true of false, depends on threads scheduling
         assertNotCalled(child0c);
+        // assert child1 calls
+        // child1e.wasCalled() can return either true or false, depends on threads scheduling
+        assertNotCalled(child1v);
+        assertNotCalled(child1r);
         assertNotCalled(child1c);
         if (child0e.wasCalled()) {
             assertCalled(child0r);
             assertCallOrder(parent0e, child0e, child0r);
+        } else {
+            assertNotCalled(child0r);
         }
         if (child1e.wasCalled()) {
             assertCallOrder(parent0e, child1e);
         }
         if (child0e.wasCalled() && child1e.wasCalled()) {
-            assertCalled(child0r);
             assertCallOrder(parent0e, child0e, child1e, child0r);
         }
     }
@@ -448,18 +396,19 @@ public final class OneParentTask_NoDeps_TwoChildTasks_WithDeps_TxnReverted_TestC
     @Test
     public void usecase6() throws Exception {
         final Transaction transaction = newTransaction();
+        final CountDownLatch signal = new CountDownLatch(1);
         // preparing child0 task
-        final TestExecutable<Void> child0e = new TestExecutable<Void>(true);
+        final TestExecutable<Void> child0e = new TestExecutable<Void>(true, signal);
         final TestValidatable child0v = new TestValidatable();
         final TestRevertible child0r = new TestRevertible();
         final TestCommittable child0c = new TestCommittable();
         // preparing child1 task
-        final TestExecutable<Void> child1e = new TestExecutable<Void>();
+        final TestExecutable<Void> child1e = new TestExecutable<Void>(signal);
         final TestValidatable child1v = new TestValidatable();
         final TestRevertible child1r = new TestRevertible();
         final TestCommittable child1c = new TestCommittable();
         // installing parent task
-        final TestExecutable<Void> parent0e = new TestExecutable<Void>(true) {
+        final TestExecutable<Void> parent0e = new TestExecutable<Void>(true, signal) {
             @Override
             public void executeInternal(final ExecuteContext<Void> ctx) {
                 // installing child0 task
@@ -475,45 +424,25 @@ public final class OneParentTask_NoDeps_TwoChildTasks_WithDeps_TxnReverted_TestC
         final TestCommittable parent0c = new TestCommittable();
         final TaskController<Void> parentController = newTask(transaction, parent0e, parent0v, parent0r, parent0c);
         assertNotNull(parentController);
-        // preparing transaction
-        prepare(transaction);
-        assertCalled(parent0e);
-        // child0e.wasCalled() can return either true or false, depends on threads scheduling
-        // child1e.wasCalled() can return either true or false, depends on threads scheduling
-        assertNotCalled(parent0v);
-        assertNotCalled(child0v);
-        assertNotCalled(child1v);
-        assertNotCalled(parent0r);
-        assertNotCalled(child0r);
-        // child1r.wasCalled() can return either true of false, depends on threads scheduling
-        assertNotCalled(parent0c);
-        assertNotCalled(child0c);
-        assertNotCalled(child1c);
-        if (child0e.wasCalled()) {
-            assertCallOrder(parent0e, child0e);
-        }
-        if (child1e.wasCalled()) {
-            assertCalled(child1r);
-            assertCallOrder(parent0e, child1e, child1r);
-        }
-        if (child0e.wasCalled() && child1e.wasCalled()) {
-            assertCalled(child1r);
-            assertCallOrder(parent0e, child0e, child1e, child1r);
-        }
         // reverting transaction
-        assertTrue(transaction.canCommit());
-        rollback(transaction);
+        final CompletionListener rollbackListener = new CompletionListener();
+        transaction.rollback(rollbackListener);
+        signal.countDown();
+        rollbackListener.awaitCompletion();
+        // assert parent0 calls
         assertCalled(parent0e);
-        // child0e.wasCalled() can return either true or false, depends on threads scheduling
-        // child1e.wasCalled() can return either true or false, depends on threads scheduling
         assertNotCalled(parent0v);
-        assertNotCalled(child0v);
-        assertNotCalled(child1v);
         assertNotCalled(parent0r);
-        // child0r.wasCalled() can return either true of false, depends on threads scheduling
-        assertNotCalled(child1r);
         assertNotCalled(parent0c);
+        // assert child0 calls
+        // child0e.wasCalled() can return either true or false, depends on threads scheduling
+        assertNotCalled(child0v);
+        assertNotCalled(child0r);
         assertNotCalled(child0c);
+        // assert child1 calls
+        // child1e.wasCalled() can return either true or false, depends on threads scheduling
+        assertNotCalled(child1v);
+        // child1r.wasCalled() can return either true or false, depends on threads scheduling
         assertNotCalled(child1c);
         if (child0e.wasCalled()) {
             assertCallOrder(parent0e, child0e);
@@ -521,9 +450,10 @@ public final class OneParentTask_NoDeps_TwoChildTasks_WithDeps_TxnReverted_TestC
         if (child1e.wasCalled()) {
             assertCalled(child1r);
             assertCallOrder(parent0e, child1e, child1r);
+        } else {
+            assertNotCalled(child1r);
         }
         if (child0e.wasCalled() && child1e.wasCalled()) {
-            assertCalled(child1r);
             assertCallOrder(parent0e, child0e, child1e, child1r);
         }
     }
@@ -540,18 +470,19 @@ public final class OneParentTask_NoDeps_TwoChildTasks_WithDeps_TxnReverted_TestC
     @Test
     public void usecase7() throws Exception {
         final Transaction transaction = newTransaction();
+        final CountDownLatch signal = new CountDownLatch(1);
         // preparing child0 task
-        final TestExecutable<Void> child0e = new TestExecutable<Void>(true);
+        final TestExecutable<Void> child0e = new TestExecutable<Void>(true, signal);
         final TestValidatable child0v = new TestValidatable();
         final TestRevertible child0r = new TestRevertible();
         final TestCommittable child0c = new TestCommittable();
         // preparing child1 task
-        final TestExecutable<Void> child1e = new TestExecutable<Void>(true);
+        final TestExecutable<Void> child1e = new TestExecutable<Void>(true, signal);
         final TestValidatable child1v = new TestValidatable();
         final TestRevertible child1r = new TestRevertible();
         final TestCommittable child1c = new TestCommittable();
         // installing parent task
-        final TestExecutable<Void> parent0e = new TestExecutable<Void>(true) {
+        final TestExecutable<Void> parent0e = new TestExecutable<Void>(true, signal) {
             @Override
             public void executeInternal(final ExecuteContext<Void> ctx) {
                 // installing child0 task
@@ -567,43 +498,25 @@ public final class OneParentTask_NoDeps_TwoChildTasks_WithDeps_TxnReverted_TestC
         final TestCommittable parent0c = new TestCommittable();
         final TaskController<Void> parentController = newTask(transaction, parent0e, parent0v, parent0r, parent0c);
         assertNotNull(parentController);
-        // preparing transaction
-        prepare(transaction);
-        assertCalled(parent0e);
-        // child0e.wasCalled() can return either true or false, depends on threads scheduling
-        // child1e.wasCalled() can return either true or false, depends on threads scheduling
-        assertNotCalled(parent0v);
-        assertNotCalled(child0v);
-        assertNotCalled(child1v);
-        assertNotCalled(parent0r);
-        assertNotCalled(child0r);
-        assertNotCalled(child1r);
-        assertNotCalled(parent0c);
-        assertNotCalled(child0c);
-        assertNotCalled(child1c);
-        if (child0e.wasCalled()) {
-            assertCallOrder(parent0e, child0e);
-        }
-        if (child1e.wasCalled()) {
-            assertCallOrder(parent0e, child1e);
-        }
-        if (child0e.wasCalled() && child1e.wasCalled()) {
-            assertCallOrder(parent0e, child0e, child1e);
-        }
         // reverting transaction
-        assertTrue(transaction.canCommit());
-        rollback(transaction);
+        final CompletionListener rollbackListener = new CompletionListener();
+        transaction.rollback(rollbackListener);
+        signal.countDown();
+        rollbackListener.awaitCompletion();
+        // assert parent0 calls
         assertCalled(parent0e);
-        // child0e.wasCalled() can return either true or false, depends on threads scheduling
-        // child1e.wasCalled() can return either true or false, depends on threads scheduling
         assertNotCalled(parent0v);
-        assertNotCalled(child0v);
-        assertNotCalled(child1v);
         assertNotCalled(parent0r);
-        assertNotCalled(child0r);
-        assertNotCalled(child1r);
         assertNotCalled(parent0c);
+        // assert child0 calls
+        // child0e.wasCalled() can return either true or false, depends on threads scheduling
+        assertNotCalled(child0v);
+        assertNotCalled(child0r);
         assertNotCalled(child0c);
+        // assert child1 calls
+        // child1e.wasCalled() can return either true or false, depends on threads scheduling
+        assertNotCalled(child1v);
+        assertNotCalled(child1r);
         assertNotCalled(child1c);
         if (child0e.wasCalled()) {
             assertCallOrder(parent0e, child0e);
@@ -628,18 +541,19 @@ public final class OneParentTask_NoDeps_TwoChildTasks_WithDeps_TxnReverted_TestC
     @Test
     public void usecase8() throws Exception {
         final Transaction transaction = newTransaction();
+        final CountDownLatch signal = new CountDownLatch(1);
         // preparing child0 task
-        final TestExecutable<Void> child0e = new TestExecutable<Void>();
+        final TestExecutable<Void> child0e = new TestExecutable<Void>(signal);
         final TestValidatable child0v = new TestValidatable();
         final TestRevertible child0r = new TestRevertible();
         final TestCommittable child0c = new TestCommittable();
         // preparing child1 task
-        final TestExecutable<Void> child1e = new TestExecutable<Void>();
+        final TestExecutable<Void> child1e = new TestExecutable<Void>(signal);
         final TestValidatable child1v = new TestValidatable();
         final TestRevertible child1r = new TestRevertible();
         final TestCommittable child1c = new TestCommittable();
         // installing parent task
-        final TestExecutable<Void> parent0e = new TestExecutable<Void>(true) {
+        final TestExecutable<Void> parent0e = new TestExecutable<Void>(true, signal) {
             @Override
             public void executeInternal(final ExecuteContext<Void> ctx) {
                 // installing child0 task
@@ -655,59 +569,39 @@ public final class OneParentTask_NoDeps_TwoChildTasks_WithDeps_TxnReverted_TestC
         final TestCommittable parent0c = new TestCommittable();
         final TaskController<Void> parentController = newTask(transaction, parent0e, parent0v, parent0r, parent0c);
         assertNotNull(parentController);
-        // preparing transaction
-        prepare(transaction);
-        assertCalled(parent0e);
-        // child0e.wasCalled() can return either true or false, depends on threads scheduling
-        // child1e.wasCalled() can return either true or false, depends on threads scheduling
-        assertNotCalled(parent0v);
-        assertNotCalled(child0v);
-        assertNotCalled(child1v);
-        assertNotCalled(parent0r);
-        // child0r.wasCalled() can return either true of false, depends on threads scheduling
-        // child1r.wasCalled() can return either true of false, depends on threads scheduling
-        assertNotCalled(parent0c);
-        assertNotCalled(child0c);
-        assertNotCalled(child1c);
-        if (child0e.wasCalled()) {
-            assertCalled(child0r);
-            assertCallOrder(parent0e, child0e, child0r);
-        }
-        if (child1e.wasCalled()) {
-            assertCalled(child1r);
-            assertCallOrder(parent0e, child1e, child1r);
-        }
-        if (child0e.wasCalled() && child1e.wasCalled()) {
-            assertCalled(child0r);
-            assertCalled(child1r);
-            assertCallOrder(parent0e, child0e, child1e, child1r, child0r);
-        }
         // reverting transaction
-        assertTrue(transaction.canCommit());
-        rollback(transaction);
+        final CompletionListener rollbackListener = new CompletionListener();
+        transaction.rollback(rollbackListener);
+        signal.countDown();
+        rollbackListener.awaitCompletion();
+        // assert parent0 calls
         assertCalled(parent0e);
-        // child0e.wasCalled() can return either true or false, depends on threads scheduling
-        // child1e.wasCalled() can return either true or false, depends on threads scheduling
         assertNotCalled(parent0v);
-        assertNotCalled(child0v);
-        assertNotCalled(child1v);
         assertNotCalled(parent0r);
-        // child0r.wasCalled() can return either true of false, depends on threads scheduling
-        // child1r.wasCalled() can return either true of false, depends on threads scheduling
         assertNotCalled(parent0c);
+        // assert child0 calls
+        // child0e.wasCalled() can return either true or false, depends on threads scheduling
+        assertNotCalled(child0v);
+        // child0r.wasCalled() can return either true of false, depends on threads scheduling
         assertNotCalled(child0c);
+        // assert child1 calls
+        // child1e.wasCalled() can return either true or false, depends on threads scheduling
+        assertNotCalled(child1v);
+        // child1r.wasCalled() can return either true of false, depends on threads scheduling
         assertNotCalled(child1c);
         if (child0e.wasCalled()) {
             assertCalled(child0r);
             assertCallOrder(parent0e, child0e, child0r);
+        } else {
+            assertNotCalled(child0r);
         }
         if (child1e.wasCalled()) {
             assertCalled(child1r);
             assertCallOrder(parent0e, child1e, child1r);
+        } else {
+            assertNotCalled(child1r);
         }
         if (child0e.wasCalled() && child1e.wasCalled()) {
-            assertCalled(child0r);
-            assertCalled(child1r);
             assertCallOrder(parent0e, child0e, child1e, child1r, child0r);
         }
     }
