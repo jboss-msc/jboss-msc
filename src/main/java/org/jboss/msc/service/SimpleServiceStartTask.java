@@ -139,6 +139,11 @@ final class SimpleServiceStartTask<T> implements Executable<T> {
             }
 
             @Override
+            public void removeRegistry(ServiceRegistry registry) {
+                context.removeRegistry(registry);
+            }
+
+            @Override
             public void enableContainer(ServiceContainer container) {
                 context.enableContainer(container);
             }

@@ -129,6 +129,11 @@ final class SimpleServiceStopTask implements Executable<Void> {
             }
 
             @Override
+            public void removeRegistry(ServiceRegistry registry) {
+                context.removeRegistry(registry);
+            }
+
+            @Override
             public void enableContainer(ServiceContainer container) {
                 context.enableContainer(container);
             }
