@@ -21,6 +21,7 @@ package org.jboss.msc.service;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -49,12 +50,20 @@ final class DependencySpec<T> {
         injections.add(injector);
     }
 
-    public Dependency<T> createDependency(Transaction transaction, ServiceBuilderImpl<?> serviceBuilder) {
+    /**
+     * Creates a dependency based on this spec. Invoked during service installation.
+     * 
+     * @param serviceBuilder the builder of the service
+     * @param transaction    the active transaction
+     * @param context        the service context
+     * @return the created dependency
+     */
+    public Dependency<T> createDependency(ServiceBuilderImpl<?> serviceBuilder, Transaction transaction, ServiceContext context) {
         @SuppressWarnings("unchecked")
         final Injector<? super T>[] injectionArray = (Injector<? super T>[]) injections.toArray(new Injector<?>[injections.size()]);
         final boolean dependencyUp = DependencyFlag.isDependencyUpRequired(flags);
         final boolean propagateDemand = DependencyFlag.propagateDemand(flags);
-        final Registration dependencyRegistration = registry.getOrCreateRegistration(transaction, name);
+        final Registration dependencyRegistration = registry.getOrCreateRegistration(context, transaction, name);
         Dependency<T> dependency = new SimpleDependency<T>(injectionArray, dependencyRegistration, dependencyUp, propagateDemand);
         return DependencyFlag.decorate(dependency, serviceBuilder, flags);
     }

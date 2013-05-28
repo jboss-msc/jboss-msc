@@ -44,6 +44,7 @@ final class  SimpleDependency<T> implements Dependency<T> {
      * down in order for the dependency to be satisfied.
      */
     private final boolean dependencyUp;
+    private boolean dependencySatisfied;
     /**
      * Indicates if the dependency should be demanded to be satisfied when service is attempting to start.
      */
@@ -61,12 +62,18 @@ final class  SimpleDependency<T> implements Dependency<T> {
     }
 
     @Override
-    public synchronized void setDependent(Transaction transaction, ServiceContext context, ServiceController<?> dependentController) {
+    public synchronized void setDependent(ServiceController<?> dependentController, Transaction transaction, ServiceContext context) {
         this.dependentController = dependentController;
-        if (!isDependencySatisfied()) {
-            dependentController.dependencyUnsatisfied(transaction, context);
+        if (isDependencySatisfied()) {
+            dependencySatisfied = true;
+            dependentController.dependencySatisfied(transaction, context);
         }
-        dependencyRegistration.addIncomingDependency(transaction,  this);
+        dependencyRegistration.addIncomingDependency(transaction, context, this);
+    }
+
+    @Override
+    public synchronized void clearDependent(Transaction transaction, ServiceContext context) {
+        dependencyRegistration.removeIncomingDependency(transaction, context, this);
     }
 
     private final boolean isDependencySatisfied() {
@@ -113,34 +120,20 @@ final class  SimpleDependency<T> implements Dependency<T> {
         }
     }
 
-    /**
-     * Notifies that dependency state is changed.
-     *  
-     * @param transaction   the active transaction
-     * @param dependencyUp  {@code true} if dependency is now {@link ServiceController.State#UP}; {@code false} if it is
-     *                      now {@link ServiceController.State#DOWN}.
-     */
     @Override
-    public synchronized TaskController<?> newDependencyState(Transaction transaction, ServiceContext context, boolean dependencyUp) {
+    public synchronized TaskController<?> dependencyAvailable(boolean dependencyUp, Transaction transaction, ServiceContext context) {
         if (this.dependencyUp == dependencyUp) {
+            dependencySatisfied = true;
             return dependentController.dependencySatisfied(transaction, context);
-        } else {
-            return dependentController.dependencyUnsatisfied(transaction, context);
-        }
-    }
-
-    @Override
-    public TaskController<?> dependencyFailed(Transaction transaction, ServiceContext context) {
-        if (!this.dependencyUp) {
-            return dependentController.dependencyUnsatisfied(transaction, context);
         }
         return null;
     }
 
     @Override
-    public TaskController<?> dependencyFailureCleared(Transaction transaction, ServiceContext context) {
-        if (!this.dependencyUp) {
-            return dependentController.dependencySatisfied(transaction, context);
+    public synchronized TaskController<?> dependencyUnavailable(Transaction transaction, ServiceContext context) {
+        if (dependencySatisfied) {
+            dependencySatisfied = false;
+            return dependentController.dependencyUnsatisfied(transaction, context);
         }
         return null;
     }

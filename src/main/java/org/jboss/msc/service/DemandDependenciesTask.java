@@ -34,11 +34,30 @@ class DemandDependenciesTask implements Executable<Void> {
     private Transaction transaction;
     private ServiceController<?> service;
 
-    public static TaskController<Void> create(Transaction transaction, ServiceContext context, ServiceController<?> service) {
-        return create(transaction, context, service, null);
+    /**
+     * Creates and releases the demand dependencies task.
+     * 
+     * @param service      the service whose dependencies will be demanded by the task
+     * @param transaction  the active transaction
+     * @param context      the service context
+     * @return the task controller
+     */
+    static TaskController<Void> create(ServiceController<?> service, Transaction transaction, ServiceContext context) {
+        return create(service, null, transaction, context);
     }
 
-    public static TaskController<Void> create(Transaction transaction, ServiceContext context, ServiceController<?> service, TaskController<?> taskDependency) {
+    /**
+     * Creates and releases the demand dependencies task.
+     * <p>
+     * Invoke this method when the demand dependencies task must be executed only after another task finishes execution.
+     * 
+     * @param service        the service whose dependencies will be demanded by the task
+     * @param taskDependency the dependency of the demand dependencies task
+     * @param transaction    the active transaction
+     * @param context        the service context
+     * @return the task controller
+     */
+    static TaskController<Void> create(ServiceController<?> service, TaskController<?> taskDependency, Transaction transaction, ServiceContext context) {
         if (service.getDependencies().length == 0) {
             return null;
         }

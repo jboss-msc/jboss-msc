@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -44,11 +45,7 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
      * @throws ServiceNotFoundException if the service is not present in the registry
      */
     public Service<?> getRequiredService(ServiceName serviceName) throws ServiceNotFoundException {
-        final ServiceController<?> controller = registry.containsKey(serviceName)? registry.get(serviceName).getController(): null;
-        if (controller == null) {
-            throw new ServiceNotFoundException("Service " + serviceName + " not found");
-        }
-        return controller.getValue().get();
+        return getRequiredServiceController(serviceName).getValue().get();
     }
 
     /**
@@ -65,10 +62,10 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
         return registration.getController() == null? null: registration.getController().getValue().get();
     }
 
-    Registration getOrCreateRegistration(Transaction transaction, ServiceName name) {
+    Registration getOrCreateRegistration(ServiceContext context, Transaction transaction, ServiceName name) {
         Registration registration = registry.get(name);
         if (registration == null) {
-            lockWrite(transaction);
+            lockWrite(transaction, context);
             registration = new Registration(name);
             Registration appearing = registry.putIfAbsent(name, registration);
             if (appearing != null) {
@@ -80,6 +77,14 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
 
     Registration getRegistration(Transaction transaction, ServiceName name) {
         return registry.get(name);
+    }
+
+    public ServiceController<?> getRequiredServiceController(ServiceName serviceName) throws ServiceNotFoundException {
+        final ServiceController<?> controller = registry.containsKey(serviceName)? registry.get(serviceName).getController(): null;
+        if (controller == null) {
+            throw new ServiceNotFoundException("Service " + serviceName + " not found");
+        }
+        return controller;
     }
 
     void clear(Transaction transaction) {

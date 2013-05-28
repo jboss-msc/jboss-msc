@@ -49,11 +49,8 @@ abstract class TransactionalObject {
      * <p> This operation is idempotent. Unlocking occurs automatically when the transaction is finished.
      *  
      * @param transaction the transaction that is attempting to modify current's object state
+     * @param context     the service context, used for creating new tasks
      */
-    final void lockWrite(Transaction transaction) {
-        lockWrite(transaction, transaction);
-    }
-
     final void lockWrite(Transaction transaction, ServiceContext context) {
         assert !Thread.holdsLock(this);
         while (true) {
@@ -68,11 +65,9 @@ abstract class TransactionalObject {
                 try {
                     transaction.waitFor(lock);
                 } catch (DeadlockException e) {
-                    // TODO do I need a task controller? what is the correct approach?
                     final Problem problem = new Problem(null, e);
                     transaction.getProblemReport().addProblem(problem);
                 } catch (InterruptedException e) {
-                    // TODO just log in this case?
                 }
             } else {
                 synchronized (this) {
@@ -86,15 +81,6 @@ abstract class TransactionalObject {
         final Object snapshot = takeSnapshot();
         context.newTask().setTraits(new UnlockWriteTask(snapshot)).release();
         writeLocked(transaction);
-    }
-
-    /**
-     * Returns the transaction that holds the lock.
-     * 
-     * @return the transaction that holds the lock, or {@code null} if this object is {@link #isWriteLocked() unlocked}.
-     */
-    synchronized final Transaction getCurrentTransaction() {
-        return lock;
     }
 
     /**

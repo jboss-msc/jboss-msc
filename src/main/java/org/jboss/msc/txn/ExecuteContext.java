@@ -18,7 +18,6 @@
 
 package org.jboss.msc.txn;
 
-import org.jboss.msc.service.ServiceTarget;
 
 /**
  * Context for a task that may succeed or fail which may also produce a consumable result.

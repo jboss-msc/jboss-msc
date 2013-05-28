@@ -22,7 +22,7 @@ import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 
 /**
- * Dependency decorator. Adds extra functionality to {@link SimpleDependency}.
+ * Dependency decorator. Builds extra functionality on top of {@link SimpleDependency}.
  * 
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  *
@@ -35,8 +35,13 @@ abstract class DependencyDecorator<T> implements Dependency<T> {
     }
 
     @Override
-    public void setDependent(Transaction transaction, ServiceContext context, ServiceController<?> dependentController) {
-        dependency.setDependent(transaction, context, dependentController);
+    public void setDependent(ServiceController<?> dependentController, Transaction transaction, ServiceContext context) {
+        dependency.setDependent(dependentController, transaction, context);
+    }
+
+    @Override
+    public void clearDependent(Transaction transaction, ServiceContext context) {
+        dependency.clearDependent(transaction, context);
     }
 
     @Override
@@ -60,20 +65,14 @@ abstract class DependencyDecorator<T> implements Dependency<T> {
     }
 
     @Override
-    public TaskController<?> newDependencyState(Transaction transaction, ServiceContext context, boolean dependencyUp) {
-        return dependency.newDependencyState(transaction, context, dependencyUp);
+    public TaskController<?> dependencyAvailable(boolean dependencyUp, Transaction transaction, ServiceContext context) {
+        return dependency.dependencyAvailable(dependencyUp, transaction, context);
     }
 
     @Override
-    public TaskController<?> dependencyFailed(Transaction transaction, ServiceContext context) {
-        return dependency.dependencyFailed(transaction, context);
+    public TaskController<?> dependencyUnavailable(Transaction transaction, ServiceContext context) {
+        return dependency.dependencyUnavailable(transaction, context);
     }
-
-    @Override
-    public TaskController<?> dependencyFailureCleared(Transaction transaction, ServiceContext context) {
-        return dependency.dependencyFailureCleared(transaction, context);
-    }
-
 
     @Override
     public void dependencyReplacementStarted(Transaction transaction) {

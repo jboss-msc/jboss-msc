@@ -35,9 +35,9 @@ import org.jboss.msc.txn.Transaction;
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
 final class Registration extends TransactionalObject {
-    
-    private final ServiceName serviceName;
 
+    /** The registration name */
+    private final ServiceName serviceName;
     /**
      * The service controller.
      */
@@ -69,8 +69,8 @@ final class Registration extends TransactionalObject {
         return controller;
     }
 
-    void setController(final Transaction transaction, final ServiceController<?> serviceController) {
-        lockWrite(transaction);
+    void setController(final ServiceContext context, final Transaction transaction, final ServiceController<?> serviceController) {
+        lockWrite(transaction, context);
         final boolean upDemanded;
         final boolean downDemanded;
         synchronized (this) {
@@ -88,32 +88,20 @@ final class Registration extends TransactionalObject {
 
     void clearController(final Transaction transaction, final ServiceContext context) {
         lockWrite(transaction, context);
-        final boolean upDemanded;
-        final boolean downDemanded;
-        final ServiceController<?> serviceController;
         synchronized (this) {
-            serviceController = this.controller;
             this.controller = null;
-            upDemanded = upDemandedByCount > 0;
-            downDemanded = downDemandedByCount > 0;
-        }
-        if (upDemanded) {
-            serviceController.upUndemanded(transaction, context);
-        }
-        if (downDemanded) {
-            serviceController.downUndemanded(transaction, transaction);
         }
     }
 
-    void addIncomingDependency(final Transaction transaction, final Dependency<?> dependency) {
-        lockWrite(transaction);
+    void addIncomingDependency(final Transaction transaction, final ServiceContext context, final Dependency<?> dependency) {
+        lockWrite(transaction, context);
         synchronized (this) {
             incomingDependencies.add(dependency);
         }
     }
 
-    void removeIncomingDependency(final Transaction transaction, final Dependency<?> dependency) {
-        lockWrite(transaction);
+    void removeIncomingDependency(final Transaction transaction, final ServiceContext context, final Dependency<?> dependency) {
+        lockWrite(transaction, context);
         assert incomingDependencies.contains(dependency);
         incomingDependencies.remove(dependency);
     }
@@ -124,7 +112,7 @@ final class Registration extends TransactionalObject {
 
     void addDemand(Transaction transaction, ServiceContext context, boolean up) {
         assert ! Thread.holdsLock(this);
-        lockWrite(transaction);
+        lockWrite(transaction, context);
         final ServiceController<?> controller;
         synchronized (this) {
             controller = this.controller;
@@ -147,7 +135,7 @@ final class Registration extends TransactionalObject {
 
     void removeDemand(Transaction transaction, ServiceContext context, boolean up) {
         assert ! Thread.holdsLock(this);
-        lockWrite(transaction);
+        lockWrite(transaction, context);
         synchronized (this) {
             controller = this.controller;
             if (up) {

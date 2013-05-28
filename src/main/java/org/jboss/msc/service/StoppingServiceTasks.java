@@ -18,6 +18,7 @@
 package org.jboss.msc.service;
 
 import java.util.Collection;
+import java.util.Collections;
 
 import org.jboss.msc.service.ServiceController.TransactionalState;
 import org.jboss.msc.service.ServiceMode.Demand;
@@ -39,27 +40,27 @@ final class StoppingServiceTasks {
     /**
      * Create stopping service tasks. When all created tasks finish execution, {@code service} will enter {@code DOWN} state.
      * 
-     * @param transaction     the active transaction
-     * @param service         stopping service
-     * @param taskDependency  task on which all created tasks should depend. Can be {@code null}.
+     * @param service          stopping service
+     * @param taskDependencies the task that must be first concluded before service can stop
+     * @param transaction      the active transaction
+     * @param context          the service context
      * @return                the final task to be executed. Can be used for creating tasks that depend on the
      *                        conclusion of stopping transition.
      */
-    public static <T> TaskController<Void> createTasks(Transaction transaction, ServiceContext context, ServiceController<T> service, TaskController<?> taskDependency) {
+    public static <T> TaskController<Void> createTasks(ServiceController<T> service, Collection<TaskController<?>> taskDependencies,
+            Transaction transaction, ServiceContext context) {
+
         final Service<T> serviceValue = service.getValue().get();
 
         // stop service
         final TaskBuilder<Void> stopTaskBuilder = context.newTask(new SimpleServiceStopTask(serviceValue));
 
-        // stop dependents first
-        final Collection<TaskController<?>> stopDependentTasks = NewDependencyStateTask.run(transaction, context, service, false);
-
         // undemand dependencies if needed
         if (service.getMode().shouldDemandDependencies() == Demand.SERVICE_UP && service.getDependencies().length > 0) {
-            TaskController<Void> undemandDependenciesTask = UndemandDependenciesTask.create(transaction, transaction, service, stopDependentTasks);
+            TaskController<Void> undemandDependenciesTask = UndemandDependenciesTask.create(service, taskDependencies, transaction, transaction);
             stopTaskBuilder.addDependency(undemandDependenciesTask);
-        } else if (!stopDependentTasks.isEmpty()) {
-            stopTaskBuilder.addDependencies(stopDependentTasks);
+        } else if (!taskDependencies.isEmpty()) {
+            stopTaskBuilder.addDependencies(taskDependencies);
         }
 
         final TaskController<Void> stop = stopTaskBuilder.release();
@@ -68,7 +69,7 @@ final class StoppingServiceTasks {
         final TaskController<Void> revertInjections = context.newTask(new RevertInjectionsTask()).addDependency(stop).release();
 
         // set DOWN state
-        final TaskBuilder<Void> setDownStateBuilder = context.newTask(new SetTransactionalStateTask(service, TransactionalState.DOWN)).addDependency(revertInjections);
+        final TaskBuilder<Void> setDownStateBuilder = context.newTask(new SetTransactionalStateTask(service, TransactionalState.DOWN, transaction)).addDependency(revertInjections);
 
         // notify dependencies that service is stopped 
         if (service.getDependencies().length != 0) {
@@ -80,14 +81,15 @@ final class StoppingServiceTasks {
 
     /**
      * Create stopping service tasks. When all created tasks finish execution, {@code service} will enter {@code DOWN} state.
-     * 
      * @param transaction     the active transaction
      * @param service         stopping service
+     * 
      * @return                the final task to be executed. Can be used for creating tasks that depend on the
      *                        conclusion of stopping transition.
      */
-    public static <T> TaskController<Void> createTasks(Transaction transaction, ServiceContext context, ServiceController<T> serviceController) {
-        return createTasks(transaction, context, serviceController, null);
+    @SuppressWarnings("unchecked")
+    public static <T> TaskController<Void> createTasks(ServiceController<T> serviceController, Transaction transaction, ServiceContext context) {
+        return createTasks(serviceController, Collections.EMPTY_LIST, transaction, context);
     }
 
     private static class NotifyDependentStopTask implements Executable<Void> {

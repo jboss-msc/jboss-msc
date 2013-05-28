@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2012 Red Hat, Inc., and individual contributors
+ * Copyright 2013 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,63 +36,67 @@ interface  Dependency<T> {
     /**
      * Sets the dependency dependent, invoked during {@link dependentController} installation.
      * 
-     * @param transaction          the active transaction
-     * @param dependentController  dependent associated with this dependency
+     * @param dependent    dependent associated with this dependency
+     * @param transaction  the active transaction
+     * @param context      the service context
      */
-    public void setDependent(Transaction transaction, ServiceContext context, ServiceController<?> dependentController);
+    public void setDependent(ServiceController<?> dependent, Transaction transaction, ServiceContext context);
 
     /**
-     * Return the dependency registration.
+     * Clears the dependency dependent, invoked during {@link dependentController} removal.
+     * 
+     * @param transaction   the active transaction
+     * @param context       the service context
+     */
+    public void clearDependent(Transaction transaction, ServiceContext context);
+
+    /**
+     * Returns the dependency registration.
      * 
      * @return the dependency registration
      */
     public Registration getDependencyRegistration();
 
     /**
-     * Perform injections.
+     * Performs injections.
      */
     public void performInjections();
 
     /**
-     * Demand this dependency to be satisfied.
+     * Demands this dependency to be satisfied.
      * 
      * @param transaction the active transaction
+     * @param context     the service context
      */
     public void demand(Transaction transaction, ServiceContext context);
 
     /**
-     * Remove demand for this dependency to be satisfied.
+     * Removes demand for this dependency to be satisfied.
      * 
      * @param transaction the active transaction
+     * @param context     the service context
      */
     public void undemand(Transaction transaction, ServiceContext context);
 
     /**
-     * Notifies that dependency state is changed.
-     *  
-     * @param transaction   the active transaction
+     * Notifies that dependency is now available, either {@code UP}, or {@code DOWN}. A dependency in any other state is
+     * considered unavailable.
+     * 
      * @param dependencyUp  {@code true} if dependency is now {@link ServiceController.State#UP}; {@code false} if it is
      *                      now {@link ServiceController.State#DOWN}.
+     * @param transaction   the active transaction
+     * @param context       the service context
      */
-    public TaskController<?> newDependencyState(Transaction transaction, ServiceContext context, boolean dependencyUp);
+    public TaskController<?> dependencyAvailable(boolean dependencyUp, Transaction transaction, ServiceContext context);
 
     /**
-     * Notifies that dependency failed to start.
+     * Notifies that dependency is now unavailable (it is not {@code UP}, nor {@code DOWN}). Every unavailable
+     * dependency is considered unsatisfied.
      *  
      * @param transaction    the active transaction
      * @param serviceContext the service context
-     * @param dependencyUp  {@code true} if dependency is now {@link ServiceController.State#UP}; {@code false} if it is
-     *                      now {@link ServiceController.State#DOWN}.
      */
-    public TaskController<?> dependencyFailed(Transaction transaction, ServiceContext context);
-
-    /**
-     * Notifies that dependency failure has been cleared.
-     *  
-     * @param transaction   the active transaction
-     * @param serviceContext the serviceContext;
-     */
-    public TaskController<?> dependencyFailureCleared(Transaction transaction, ServiceContext context);
+    public TaskController<?> dependencyUnavailable(Transaction transaction, ServiceContext context);
 
     /**
      * Notifies that dependency current service is about to be replaced by a different service.

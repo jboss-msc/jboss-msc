@@ -124,6 +124,11 @@ final class SimpleServiceStartTask<T> implements Executable<T> {
             }
 
             @Override
+            public void retryService(ServiceRegistry registry, ServiceName name) {
+                context.retryService(registry, name);
+            }
+
+            @Override
             public void removeService(ServiceRegistry registry, ServiceName name) {
                 context.removeService(registry,  name);
             }

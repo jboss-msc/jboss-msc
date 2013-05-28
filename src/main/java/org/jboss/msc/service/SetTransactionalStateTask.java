@@ -20,6 +20,7 @@ package org.jboss.msc.service;
 import org.jboss.msc.service.ServiceController.TransactionalState;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
+import org.jboss.msc.txn.Transaction;
 
 /**
  * Task that sets the transactional state of a service.
@@ -31,15 +32,17 @@ class SetTransactionalStateTask implements Executable<Void> {
 
     private final ServiceController<?> service;
     private final TransactionalState state;
-    
-    public SetTransactionalStateTask(ServiceController<?> service, TransactionalState state) {
+    private final Transaction transaction;
+
+    public SetTransactionalStateTask(ServiceController<?> service, TransactionalState state, Transaction transaction) {
         this.service = service;
         this.state = state;
+        this.transaction = transaction;
     }
 
     @Override
     public void execute(ExecuteContext<Void> context) {
-        service.setTransition(state, context);
+        service.setTransition(state, transaction, context);
         context.complete();
     }
 }

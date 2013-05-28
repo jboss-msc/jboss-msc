@@ -114,6 +114,11 @@ final class SimpleServiceStopTask implements Executable<Void> {
             }
 
             @Override
+            public void retryService(ServiceRegistry registry, ServiceName name) {
+                context.retryService(registry, name);
+            }
+
+            @Override
             public void removeService(ServiceRegistry registry, ServiceName name) {
                 context.removeService(registry, name);
             }

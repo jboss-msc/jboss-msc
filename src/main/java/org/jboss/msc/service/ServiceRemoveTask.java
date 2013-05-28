@@ -29,21 +29,21 @@ import org.jboss.msc.txn.Transaction;
  *
  */
 final class ServiceRemoveTask implements Executable<Void> {
-        private final Transaction transaction;
-        private final ServiceController<?> serviceController;
+    private final Transaction transaction;
+    private final ServiceController<?> serviceController;
 
-        public ServiceRemoveTask(Transaction transaction, ServiceController<?> serviceController) {
-            this.transaction = transaction;
-            this.serviceController = serviceController;
-        }
+    public ServiceRemoveTask(ServiceController<?> serviceController, Transaction transaction) {
+        this.transaction = transaction;
+        this.serviceController = serviceController;
+    }
 
-        @Override
-        public void execute(ExecuteContext<Void> context) {
-            serviceController.getPrimaryRegistration().clearController(transaction, context);
-            for (Registration registration: serviceController.getAliasRegistrations()) {
-                registration.clearController(transaction, context);
-            }
-            serviceController.setTransition(TransactionalState.REMOVED, context);
-            context.complete();
+    @Override
+    public void execute(ExecuteContext<Void> context) {
+        serviceController.getPrimaryRegistration().clearController(transaction, context);
+        for (Registration registration: serviceController.getAliasRegistrations()) {
+            registration.clearController(transaction, context);
         }
+        serviceController.setTransition(TransactionalState.REMOVED, transaction, context);
+        context.complete();
+    }
 }

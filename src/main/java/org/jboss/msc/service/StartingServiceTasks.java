@@ -17,6 +17,7 @@
  */
 package org.jboss.msc.service;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -49,12 +50,15 @@ final class StartingServiceTasks {
      * Create starting service tasks. When all created tasks finish execution, {@code service} will enter {@code UP}
      * state.
      * 
-     * @param transaction        the active transaction
      * @param serviceController  starting service
+     * @param taskDependencies   the tasks that must be first concluded before service can start
+     * @param transaction        the active transaction
      * @return                   the final task to be executed. Can be used for creating tasks that depend on the
      *                           conclusion of starting transition.
      */
-    public static <T> TaskController<Void> createTasks(Transaction transaction, ServiceContext context, ServiceController<T> serviceController) {
+    public static <T> TaskController<Void> createTasks(ServiceController<T> serviceController,
+            Collection<TaskController<?>> taskDependencies, Transaction transaction, ServiceContext context) {
+
         final Service<T> serviceValue = serviceController.getValue().get();
 
         // start service task builder
@@ -66,8 +70,11 @@ final class StartingServiceTasks {
             startBuilder.addDependency(notifyDependentStart);
 
             // perform injections
-            final TaskController<Void> performInjections = context.newTask(new PerformInjectionsTask(serviceController.getDependencies())).release();
+            final TaskController<Void> performInjections = context.newTask(new PerformInjectionsTask(serviceController.getDependencies())).
+                    addDependencies(taskDependencies).release();
             startBuilder.addDependency(performInjections);
+        } else {
+            startBuilder.addDependencies(taskDependencies);
         }
 
         // start service
@@ -95,7 +102,7 @@ final class StartingServiceTasks {
             for (Dependency<?> dependency: serviceController.getDependencies()) {
                 ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
                 if (dependencyController != null) {
-                    dependencyController.dependentStarted(transaction);
+                    dependencyController.dependentStarted(transaction, context);
                 }
             }
             context.complete();
@@ -119,32 +126,17 @@ final class StartingServiceTasks {
             T result = serviceStartTask.getResult();
             // service failed
             if (result == null && transaction.getAttachment(FAILED_SERVICES).contains(service.getValue().get())) {
-                service.setTransition(TransactionalState.FAILED, context);
-                // notify dependency failed
+                service.setTransition(TransactionalState.FAILED, transaction, context);
             } else {
                 performOutInjections();
-                notifyDependencyUp(context);
                 // TODO store the actual value of result somewhere
-                service.setTransition(TransactionalState.UP, context);
+                service.setTransition(TransactionalState.UP, transaction, context);
             }
             context.complete();
         }
 
         private void performOutInjections() {
             // TODO
-        }
-
-        private void notifyDependencyUp(ServiceContext context) {
-            notifyDependencyUp(service.getPrimaryRegistration(), context);
-            for (Registration registration: service.getAliasRegistrations()) {
-                notifyDependencyUp(registration, context);
-            }
-        }
-
-        protected void notifyDependencyUp (Registration serviceRegistration, ServiceContext context) {
-            for (Dependency<?> incomingDependency : serviceRegistration.getIncomingDependencies()) {
-                incomingDependency.newDependencyState(transaction, context, true);
-            }
         }
 
     }

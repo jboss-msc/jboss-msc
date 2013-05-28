@@ -23,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
@@ -87,10 +88,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
             }
         }
         return this;
-    }
-
-    public void install() throws IllegalStateException {
-        performInstallation(transaction);
     }
 
     /**
@@ -194,21 +191,22 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * Initiate installation of this service as configured.  If the service was already installed, this method has no
      * effect.
      */
-    public synchronized void build() {
+    public synchronized void install() {
         checkAlreadyInstalled();
         final TaskBuilder<ServiceController<T>> taskBuilder = transaction.newTask(new ServiceInstallTask<T>(transaction, this));
         taskBuilder.addDependencies(taskDependencies);
         if (replacement) {
-            startReplacement(transaction, taskBuilder);
+            startReplacement(taskBuilder, transaction);
         }
         installTask = taskBuilder.release();
     }
 
     /**
-     * Manually rollback this service installation.  If the service was already installed, it will be removed.
+     * Manually rolls back this service installation.  If the service was already installed, it will be removed.
+     * 
+     * @param transaction active transaction
      */
     public void remove(Transaction transaction) {
-        // TODO review this method
         final ServiceController<?> serviceController;
         synchronized (this) {
             serviceController = installTask.getResult();
@@ -225,34 +223,37 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     }
 
     /**
-     * Perform installation of this service builder into registry.
+     * Performs installation of this service builder into registry.
      * 
      * @param transaction active transaction
+     * @param context     the service context
      * @return            the installed service controller. May be {@code null} if the service is being created with a
      *                    parent dependency.
      */
-    ServiceController<T> performInstallation(Transaction transaction) {
+    ServiceController<T> performInstallation(Transaction transaction, ServiceContext context) {
         if (parentDependencySpec != null) {
-            parentDependencySpec.createDependency(transaction, this);
+            parentDependencySpec.createDependency(this, transaction, context);
             return null;
         }
-        return installController(transaction, null);
+        return installController(null, transaction, context);
     }
 
     /**
      * Concludes service installation by creating and installing the service controller into the registry.
      * 
-     * @param transaction      active transaction
      * @param parentDependency parent dependency, if any
+     * @param transaction      active transaction
+     * @param context          the service context
+     * 
      * @return the installed service controller
      */
-    ServiceController<T> installController(Transaction transaction, Dependency<?> parentDependency) {
-        final Registration registration = registry.getOrCreateRegistration(transaction, name);
+    ServiceController<T> installController(Dependency<?> parentDependency, Transaction transaction, ServiceContext context) {
+        final Registration registration = registry.getOrCreateRegistration(context, transaction, name);
         final ServiceName[] aliasArray = aliases.toArray(new ServiceName[aliases.size()]);
         final Registration[] aliasRegistrations = new Registration[aliasArray.length];
         int i = 0; 
         for (ServiceName alias: aliases) {
-            aliasRegistrations[i++] = registry.getOrCreateRegistration(transaction, alias);
+            aliasRegistrations[i++] = registry.getOrCreateRegistration(context, transaction, alias);
         }
         i = 0;
         final Dependency<?>[] dependencies;
@@ -263,25 +264,25 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
             dependencies[i++] = parentDependency;
         }
         for (DependencySpec<?> spec : specs.values()) {
-            dependencies[i++] = spec.createDependency(transaction, this);
+            dependencies[i++] = spec.createDependency(this, transaction, context);
         }
-        final ServiceController<T> serviceController =  new ServiceController<T>(transaction, dependencies, aliasRegistrations, registration, mode);
+        final ServiceController<T> serviceController =  new ServiceController<T>(registration, aliasRegistrations, mode, dependencies, transaction, context);
         serviceController.getValue().set(service);
-        serviceController.install(transaction);
+        serviceController.install(transaction, context);
         if (replacement) {
-            concludeReplacement(transaction, serviceController);
+            concludeReplacement(serviceController, transaction);
         }
         return serviceController;
     }
 
-    private void startReplacement(Transaction transaction, TaskBuilder<ServiceController<T>> serviceInstallTaskBuilder) {
-        startReplacement(transaction, registry.getOrCreateRegistration(transaction, name), serviceInstallTaskBuilder);
+    private void startReplacement(TaskBuilder<ServiceController<T>> serviceInstallTaskBuilder, Transaction transaction) {
+        startReplacement(registry.getOrCreateRegistration(transaction,transaction, name), serviceInstallTaskBuilder, transaction);
         for (ServiceName alias: aliases) {
-            startReplacement(transaction, registry.getOrCreateRegistration(transaction, alias), serviceInstallTaskBuilder);
+            startReplacement(registry.getOrCreateRegistration(transaction, transaction, alias), serviceInstallTaskBuilder, transaction);
         }
     }
 
-    private void startReplacement(Transaction transaction, Registration registration, TaskBuilder<ServiceController<T>> serviceInstallTaskBuilder) {
+    private void startReplacement(Registration registration, TaskBuilder<ServiceController<T>> serviceInstallTaskBuilder, Transaction transaction) {
         for (Dependency<?> dependency: registration.getIncomingDependencies()) {
             dependency.dependencyReplacementStarted(transaction);
         }
@@ -291,14 +292,14 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         }
     }
 
-    private void concludeReplacement(Transaction transaction, ServiceController<?> serviceController) {
-        concludeReplacement(transaction, serviceController.getPrimaryRegistration());
+    private void concludeReplacement(ServiceController<?> serviceController, Transaction transaction) {
+        concludeReplacement(serviceController.getPrimaryRegistration(), transaction);
         for (Registration registration: serviceController.getAliasRegistrations()) {
-            concludeReplacement(transaction,  registration);
+            concludeReplacement(registration,  transaction);
         }
     }
 
-    private void concludeReplacement(Transaction transaction, Registration registration) {
+    private void concludeReplacement(Registration registration, Transaction transaction) {
         for (Dependency<?> dependency: registration.getIncomingDependencies()) {
             dependency.dependencyReplacementConcluded(transaction);
         }

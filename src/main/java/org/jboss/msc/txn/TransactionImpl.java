@@ -142,15 +142,19 @@ final class TransactionImpl extends Transaction implements ServiceContext {
     }
 
     public void disableService(ServiceRegistry registry, ServiceName name) {
-        throw new UnsupportedOperationException();
+        // TODO I cant access the registry methods (ServiceRegistryImpl) registry).getRequiredService(name).disable(this);
     }
 
     public void enableService(ServiceRegistry registry, ServiceName name) {
-        throw new UnsupportedOperationException();
+        // TODO I cant access the registry methods (ServiceRegistryImpl) registry).getRequiredService(name).disable(this);
+    }
+
+    public void retryService(ServiceRegistry registry, ServiceName name) {
+        // TODO I cant access the registry methods (ServiceRegistryImpl) registry).getRequiredService(name).retry(this);
     }
 
     public void removeService(ServiceRegistry registry, ServiceName name) {
-        throw new UnsupportedOperationException();
+        // TODO I cant access the registry methods (ServiceRegistryImpl) registry).getRequiredService(name).remove(this);
     }
 
     public void disableRegistry(ServiceRegistry registry) {

@@ -41,8 +41,8 @@ final class ServiceInstallTask<T> implements Executable<ServiceController<T>>, R
 
     @Override
     public void execute(final ExecuteContext<ServiceController<T>> context) {
-        final ServiceController<T> serviceController = serviceBuilder.performInstallation(transaction);
-        CheckDependencyCycleTask.checkDependencyCycle(transaction, serviceController);
+        final ServiceController<T> serviceController = serviceBuilder.performInstallation(transaction, context);
+        CheckDependencyCycleTask.checkDependencyCycle(serviceController, transaction, context);
         context.complete(serviceController);
     }
 

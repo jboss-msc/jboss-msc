@@ -805,43 +805,47 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
             setClassLoader();
             exec.execute(new ExecuteContext<T>() {
                 public ServiceTarget newServiceTarget() throws IllegalStateException {
-                    throw new UnsupportedOperationException();
+                    return getTransaction().newServiceTarget();
                 }
 
                 public void disableService(ServiceRegistry registry, ServiceName name) {
-                    throw new UnsupportedOperationException();
+                    getTransaction().disableService(registry, name);
                 }
 
                 public void enableService(ServiceRegistry registry, ServiceName name) {
-                    throw new UnsupportedOperationException();
+                    getTransaction().enableService(registry, name);
+                }
+
+                public void retryService(ServiceRegistry registry, ServiceName name) {
+                    getTransaction().retryService(registry, name);
                 }
 
                 public void removeService(ServiceRegistry registry, ServiceName name) {
-                    throw new UnsupportedOperationException();
+                    getTransaction().removeService(registry, name);
                 }
 
                 public void disableRegistry(ServiceRegistry registry) {
-                    throw new UnsupportedOperationException();
+                    getTransaction().disableRegistry(registry);
                 }
 
                 public void enableRegistry(ServiceRegistry registry) {
-                    throw new UnsupportedOperationException();
+                    getTransaction().enableRegistry(registry);
                 }
 
                 public void removeRegistry(ServiceRegistry registry) {
-                    throw new UnsupportedOperationException();
+                    getTransaction().removeRegistry(registry);
                 }
 
                 public void disableContainer(ServiceContainer container) {
-                    throw new UnsupportedOperationException();
+                    getTransaction().disableContainer(container);
                 }
 
                 public void enableContainer(ServiceContainer container) {
-                    throw new UnsupportedOperationException();
+                    getTransaction().enableContainer(container);
                 }
 
                 public void removeContainer(ServiceContainer container) {
-                    throw new UnsupportedOperationException();
+                    getTransaction().removeContainer(container);
                 }
 
                 public void complete(final T result) {

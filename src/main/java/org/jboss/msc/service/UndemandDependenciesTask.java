@@ -37,11 +37,31 @@ class UndemandDependenciesTask implements Executable<Void> {
     private Transaction transaction;
     private ServiceController<?> service;
 
-    public static TaskController<Void> create(Transaction transaction, ServiceContext context, ServiceController<?> service) {
-        return create(transaction, context, service, Collections.EMPTY_LIST);
+    /**
+     * Creates and releases the undemand dependencies task.
+     * 
+     * @param service      the service whose dependencies will be undemanded by the task
+     * @param transaction  the active transaction
+     * @param context      the service context
+     * @return the task controller
+     */
+    @SuppressWarnings("unchecked")
+    public static TaskController<Void> create(ServiceController<?> service, Transaction transaction, ServiceContext context) {
+        return create(service, Collections.EMPTY_LIST, transaction, context);
     }
 
-    public static TaskController<Void> create(Transaction transaction, ServiceContext context, ServiceController<?> service, Collection<TaskController<?>> taskDependencies) {
+    /**
+     * Creates and releases the undemand dependencies task.
+     * <p>
+     * Invoke this method when the undemand dependencies task must be executed only after other tasks finish execution.
+     * 
+     * @param service          the service whose dependencies will be undemanded by the task
+     * @param taskDependencies the dependencies of the undemand dependencies task
+     * @param transaction      the active transaction
+     * @param context          the service context
+     * @return the task controller
+     */
+    public static TaskController<Void> create(ServiceController<?> service, Collection<TaskController<?>> taskDependencies, Transaction transaction, ServiceContext context) {
         if (service.getDependencies().length == 0) {
             return null;
         }
