@@ -97,6 +97,24 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
         }
     }
 
+    synchronized void disable(Transaction transaction) {
+        for (Registration registration: registry.values()) {
+            final ServiceController<?> controller = registration.getController();
+            if (controller != null) {
+                controller.disable(transaction);
+            }
+        }
+    }
+
+    synchronized void enable(Transaction transaction) {
+        for (Registration registration: registry.values()) {
+            final ServiceController<?> controller = registration.getController();
+            if (controller != null) {
+                controller.enable(transaction);
+            }
+        }
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     synchronized void revert(Object snapshot) {

@@ -808,22 +808,6 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                     return getTransaction().newServiceTarget();
                 }
 
-                public void disableService(ServiceRegistry registry, ServiceName name) {
-                    getTransaction().disableService(registry, name);
-                }
-
-                public void enableService(ServiceRegistry registry, ServiceName name) {
-                    getTransaction().enableService(registry, name);
-                }
-
-                public void retryService(ServiceRegistry registry, ServiceName name) {
-                    getTransaction().retryService(registry, name);
-                }
-
-                public void removeService(ServiceRegistry registry, ServiceName name) {
-                    getTransaction().removeService(registry, name);
-                }
-
                 public void disableRegistry(ServiceRegistry registry) {
                     getTransaction().disableRegistry(registry);
                 }

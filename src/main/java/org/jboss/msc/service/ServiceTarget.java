@@ -18,6 +18,7 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.service.ServiceController.State;
 import org.jboss.msc.txn.TaskController;
 
 /**
@@ -30,7 +31,7 @@ import org.jboss.msc.txn.TaskController;
 public interface ServiceTarget {
 
     /**
-     * Gets a builder which can be used to add a service to this target.
+     * Gets a builder which can be used to add a service to {@code registry}.
      *
      * @param registry the target service registry where new service will be installed
      * @param name the service name
@@ -40,9 +41,34 @@ public interface ServiceTarget {
     <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name, Service<T> service);
 
     /**
-     * Removes a service from this target.
+     * Disables a service, causing this service to stop if it is {@code UP}.
      *
-     * @param registry the target service registry from where new service will be removed
+     * @param registry the service registry
+     * @param name the service name
+     */
+    void disableService(ServiceRegistry registry, ServiceName name);
+
+    /**
+     * Retries a failed service.  Does nothing if the state is not {@link State#START_FAILED}.
+     * 
+     * @param registry the service registry
+     * @param name     the service name
+     */
+    void retryService(ServiceRegistry registry, ServiceName name);
+
+    /**
+     * Enables the service, which may start as a result, according to its {@link org.jboss.msc.service.ServiceMode mode} rules.
+     * <p> Services are enabled by default.
+     *
+     * @param registry the service registry
+     * @param name the service name
+     */
+    void enableService(ServiceRegistry registry, ServiceName name);
+
+    /**
+     * Removes a service, causing this service to stop if it is {@code UP}.
+     *
+     * @param registry the service registry
      * @param name the service name
      */
     void removeService(ServiceRegistry registry, ServiceName name);

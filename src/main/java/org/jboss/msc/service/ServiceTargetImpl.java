@@ -45,6 +45,18 @@ public class ServiceTargetImpl implements ServiceTarget {
         return new ServiceBuilderImpl<T>(registry, transaction, name, service);
     }
 
+    public void disableService(ServiceRegistry registry, ServiceName name) {
+        ((ServiceRegistryImpl) registry).getRequiredServiceController(name).disable(transaction);
+    }
+
+    public void enableService(ServiceRegistry registry, ServiceName name) {
+        ((ServiceRegistryImpl) registry).getRequiredServiceController(name).enable(transaction);
+    }
+
+    public void retryService(ServiceRegistry registry, ServiceName name) {
+        ((ServiceRegistryImpl) registry).getRequiredServiceController(name).retry(transaction);
+    }
+
     @Override
     public void removeService(ServiceRegistry registry, ServiceName name) {
         if (registry == null) {

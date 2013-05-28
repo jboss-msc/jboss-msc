@@ -58,39 +58,6 @@ public interface ServiceContext {
     ServiceTarget newServiceTarget() throws IllegalStateException;
 
     /**
-     * Disables a service, causing this service to stop if it is {@code UP}.
-     *
-     * @param registry the service registry
-     * @param name the service name
-     */
-    void disableService(ServiceRegistry registry, ServiceName name);
-
-    /**
-     * Retries a failed service.  Does nothing if the state is not {@link State#START_FAILED}.
-     * 
-     * @param registry the service registry
-     * @param name     the service name
-     */
-    void retryService(ServiceRegistry registry, ServiceName name);
-
-    /**
-     * Enables the service, which may start as a result, according to its {@link org.jboss.msc.service.ServiceMode mode} rules.
-     * <p> Services are enabled by default.
-     *
-     * @param registry the service registry
-     * @param name the service name
-     */
-    void enableService(ServiceRegistry registry, ServiceName name);
-
-    /**
-     * Removes a service, causing this service to stop if it is {@code UP}.
-     *
-     * @param registry the service registry
-     * @param name the service name
-     */
-    void removeService(ServiceRegistry registry, ServiceName name);
-
-    /**
      * Enables registry. As a result, its services may start, depending on their
      * {@link org.jboss.msc.service.ServiceMode mode} rules.
      * <p> Services are enabled by default.
