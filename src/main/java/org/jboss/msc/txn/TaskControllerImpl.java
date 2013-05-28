@@ -820,16 +820,8 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                     getTransaction().removeRegistry(registry);
                 }
 
-                public void disableContainer(ServiceContainer container) {
-                    getTransaction().disableContainer(container);
-                }
-
-                public void enableContainer(ServiceContainer container) {
-                    getTransaction().enableContainer(container);
-                }
-
-                public void removeContainer(ServiceContainer container) {
-                    getTransaction().removeContainer(container);
+                public void shutdownContainer(ServiceContainer container) {
+                    getTransaction().shutdownContainer(container);
                 }
 
                 public void complete(final T result) {

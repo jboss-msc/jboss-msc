@@ -129,18 +129,8 @@ final class SimpleServiceStartTask<T> implements Executable<T> {
             }
 
             @Override
-            public void enableContainer(ServiceContainer container) {
-                context.enableContainer(container);
-            }
-
-            @Override
-            public void disableContainer(ServiceContainer container) {
-                context.disableContainer(container);
-            }
-
-            @Override
-            public void removeContainer(ServiceContainer container) {
-                context.removeContainer(container);
+            public void shutdownContainer(ServiceContainer container) {
+                context.shutdownContainer(container);
             }
 
             @Override

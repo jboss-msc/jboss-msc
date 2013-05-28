@@ -81,26 +81,10 @@ public interface ServiceContext {
     void removeRegistry(ServiceRegistry registry);
 
     /**
-     * Enables all registries and their services in the {@code container}. As a result, some services may start, according to their
-     * {@link org.jboss.msc.service.ServiceMode mode} rules.
-     * <p> Services are enabled by default.
+     * Shutdown the container, removing all registries and their services.
      *
      * @param container the service container
      */
-    void enableContainer(ServiceContainer container);
-
-    /**
-     * Disables all registries and their services in the {@code container}, causing {@code UP} services to stop.
-     *
-     * @param container the service container
-     */
-    void disableContainer(ServiceContainer container);
-
-    /**
-     * Removes all registries and their services in the {@code container}, causing {@code UP} services to stop.
-     *
-     * @param container the service container
-     */
-    void removeContainer(ServiceContainer container);
+    void shutdownContainer(ServiceContainer container);
 
 }

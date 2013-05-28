@@ -30,7 +30,6 @@ import java.util.concurrent.TimeUnit;
 import org.jboss.msc.Version;
 import org.jboss.msc._private.MSCLogger;
 import org.jboss.msc.service.ServiceContainer;
-import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.service.ServiceTarget;
 import org.jboss.msc.service.ServiceTargetImpl;
@@ -153,15 +152,7 @@ final class TransactionImpl extends Transaction implements ServiceContext {
         throw new UnsupportedOperationException();
     }
 
-    public void disableContainer(ServiceContainer container) {
-        throw new UnsupportedOperationException();
-    }
-
-    public void enableContainer(ServiceContainer container) {
-        throw new UnsupportedOperationException();
-    }
-
-    public void removeContainer(ServiceContainer container) {
+    public void shutdownContainer(ServiceContainer container) {
         throw new UnsupportedOperationException();
     }
 
