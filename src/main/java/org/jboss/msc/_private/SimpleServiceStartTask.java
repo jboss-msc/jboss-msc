@@ -19,9 +19,10 @@
 package org.jboss.msc._private;
 
 import org.jboss.msc.service.Service;
+import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceContainer;
+import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceRegistry;
-import org.jboss.msc.service.ServiceTarget;
 import org.jboss.msc.service.StartContext;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
@@ -112,10 +113,24 @@ final class SimpleServiceStartTask<T> implements Executable<T> {
             public TaskBuilder<Void> newTask() throws IllegalStateException {
                 return context.newTask();
             }
+            
+            public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name, Service<T> service) {
+                return context.addService(registry, name, service);
+            }
 
             @Override
-            public ServiceTarget newServiceTarget() throws IllegalStateException {
-                return context.newServiceTarget();
+            public void enableService(ServiceRegistry registry, ServiceName name) throws IllegalStateException {
+                context.enableService(registry, name);
+            }
+
+            @Override
+            public void disableService(ServiceRegistry registry, ServiceName name) throws IllegalStateException {
+                context.disableService(registry, name);
+            }
+
+            @Override
+            public void removeService(ServiceRegistry registry, ServiceName name) throws IllegalStateException {
+                context.removeService(registry, name);
             }
 
             @Override

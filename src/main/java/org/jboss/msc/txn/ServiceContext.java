@@ -50,12 +50,39 @@ public interface ServiceContext {
     TaskBuilder<Void> newTask() throws IllegalStateException;
 
     /**
-     * Create new service target builder.
+     * Gets a builder which can be used to add a service to {@code registry}.
      *
-     * @return the service target builder
-     * @throws IllegalStateException if this context is not accepting new service targets
+     * @param registry the target service registry where new service will be installed
+     * @param name the service name
+     * @param service the service
+     * @return the builder for the service
      */
-    ServiceTarget newServiceTarget() throws IllegalStateException;
+    <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name, Service<T> service);
+
+    /**
+     * Disables a service, causing this service to stop if it is {@code UP}.
+     *
+     * @param registry the service registry
+     * @param name the service name
+     */
+    void disableService(ServiceRegistry registry, ServiceName name);
+
+    /**
+     * Enables the service, which may start as a result, according to its {@link org.jboss.msc.service.ServiceMode mode} rules.
+     * <p> Services are enabled by default.
+     *
+     * @param registry the service registry
+     * @param name the service name
+     */
+    void enableService(ServiceRegistry registry, ServiceName name);
+
+    /**
+     * Removes a service, causing this service to stop if it is {@code UP}.
+     *
+     * @param registry the service registry
+     * @param name the service name
+     */
+    void removeService(ServiceRegistry registry, ServiceName name);
 
     /**
      * Enables registry. As a result, its services may start, depending on their

@@ -28,9 +28,11 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.msc.Version;
+import org.jboss.msc.service.Service;
+import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceContainer;
+import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceRegistry;
-import org.jboss.msc.service.ServiceTarget;
 import org.jboss.msc.txn.DeadlockException;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.InvalidTransactionStateException;
@@ -144,8 +146,44 @@ public final class TransactionImpl extends Transaction implements ServiceContext
         this.maxSeverity = maxSeverity;
     }
 
-    public ServiceTarget newServiceTarget() throws IllegalStateException {
-        return new ServiceTargetImpl(this);
+    @Override
+    public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name, Service<T> service) {
+        if (registry == null) {
+            throw new IllegalArgumentException("registry is null");
+        }
+        if (name == null) {
+            throw new IllegalArgumentException("name is null");
+        }
+        return new ServiceBuilderImpl<T>(registry, this, name, service);
+    }
+
+    @Override
+    public void disableService(ServiceRegistry registry, ServiceName name) {
+        ((ServiceRegistryImpl) registry).getRequiredServiceController(name).disable(this);
+    }
+
+    @Override
+    public void enableService(ServiceRegistry registry, ServiceName name) {
+        ((ServiceRegistryImpl) registry).getRequiredServiceController(name).enable(this);
+    }
+
+    @Override
+    public void removeService(ServiceRegistry registry, ServiceName name) {
+        if (registry == null) {
+            throw new IllegalArgumentException("registry is null");
+        }
+        if (name == null) {
+            throw new IllegalArgumentException("name is null");
+        }
+        final Registration registration = ((ServiceRegistryImpl) registry).getRegistration(this, name);
+        if (registration == null) {
+            return;
+        }
+        final ServiceController<?> controller = registration.getController();
+        if (controller == null) {
+            return;
+        }
+        controller.remove(this);
     }
 
     public void disableRegistry(ServiceRegistry registry) {

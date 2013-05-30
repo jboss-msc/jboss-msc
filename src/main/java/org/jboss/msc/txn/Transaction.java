@@ -19,7 +19,6 @@
 package org.jboss.msc.txn;
 
 import org.jboss.msc._private.TransactionImpl;
-import org.jboss.msc.service.ServiceTarget;
 
 import static org.jboss.msc._private.MSCLogger.TXN;
 

@@ -27,9 +27,11 @@ import static org.jboss.msc._private.Bits.oneIsSet;
 
 import java.util.ArrayList;
 
+import org.jboss.msc.service.Service;
+import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceContainer;
+import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceRegistry;
-import org.jboss.msc.service.ServiceTarget;
 import org.jboss.msc.txn.CommitContext;
 import org.jboss.msc.txn.Committable;
 import org.jboss.msc.txn.Executable;
@@ -820,8 +822,21 @@ final class TaskControllerImpl<T> implements TaskController<T>, TaskParent, Task
         if (exec != null) try {
             setClassLoader();
             exec.execute(new ExecuteContext<T>() {
-                public ServiceTarget newServiceTarget() throws IllegalStateException {
-                    return getTransaction().newServiceTarget();
+                @Override
+                public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name, Service<T> service) {
+                    return getTransaction().addService(registry, name, service);
+                }
+
+                public void disableService(ServiceRegistry registry, ServiceName name) {
+                    getTransaction().disableService(registry, name);
+                }
+
+                public void enableService(ServiceRegistry registry, ServiceName name) {
+                    getTransaction().enableService(registry, name);
+                }
+
+                public void removeService(ServiceRegistry registry, ServiceName name) {
+                    getTransaction().removeService(registry, name);
                 }
 
                 public void disableRegistry(ServiceRegistry registry) {

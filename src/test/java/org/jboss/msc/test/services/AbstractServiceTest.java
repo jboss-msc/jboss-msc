@@ -37,7 +37,6 @@ import org.jboss.msc.service.ServiceContainerFactory;
 import org.jboss.msc.service.ServiceMode;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceRegistry;
-import org.jboss.msc.service.ServiceTarget;
 import org.jboss.msc.test.utils.AbstractTransactionTest;
 import org.jboss.msc.test.utils.CompletionListener;
 import org.jboss.msc.txn.Problem;
@@ -105,7 +104,7 @@ public class AbstractServiceTest extends AbstractTransactionTest {
     protected TestService installService(ServiceName serviceName, boolean failToStart, ServiceMode serviceMode, ServiceName... dependencies) throws InterruptedException {
         final Transaction transaction = newTransaction();
         final TestService service = new TestService(failToStart);
-        final ServiceBuilder<Void> serviceBuilder = transaction.newServiceTarget().addService(serviceRegistry, serviceName, service);
+        final ServiceBuilder<Void> serviceBuilder = transaction.addService(serviceRegistry, serviceName, service);
         serviceBuilder.setMode(serviceMode);
         for (ServiceName dependency: dependencies) {
             serviceBuilder.addDependency(dependency, DependencyFlag.UNREQUIRED);
@@ -126,7 +125,7 @@ public class AbstractServiceTest extends AbstractTransactionTest {
     protected TestService installService(ServiceName serviceName, boolean failToStart, ServiceName... dependencies) throws InterruptedException {
         final Transaction transaction = newTransaction();
         final TestService service = new TestService(failToStart);
-        final ServiceBuilder<Void> serviceBuilder = transaction.newServiceTarget().addService(serviceRegistry, serviceName, service);
+        final ServiceBuilder<Void> serviceBuilder = transaction.addService(serviceRegistry, serviceName, service);
         for (ServiceName dependency: dependencies) {
             serviceBuilder.addDependency(dependency, DependencyFlag.UNREQUIRED);
         }
@@ -147,9 +146,7 @@ public class AbstractServiceTest extends AbstractTransactionTest {
         assertNotNull(serviceRegistry.getService(serviceName));
         final Transaction transaction = newTransaction();
         final CompletionListener listener = new CompletionListener();
-        final ServiceTarget serviceTarget = transaction.newServiceTarget();
-        assertNotNull(serviceTarget);
-        serviceTarget.removeService(serviceRegistry, serviceName);
+        transaction.removeService(serviceRegistry, serviceName);
         transaction.commit(listener);
         listener.awaitCompletion();
         assertNoProblem(transaction);
