@@ -128,6 +128,7 @@ final class ServiceController<T> extends TransactionalObject {
         assert isWriteLocked(transaction);
         synchronized (this) {
             enabled = true;
+            state = State.DOWN;
         }
         if (mode.shouldDemandDependencies() == Demand.ALWAYS) {
             DemandDependenciesTask.create(this, transaction, context);

@@ -61,10 +61,8 @@ final class DependencySpec<T> {
     public Dependency<T> createDependency(ServiceBuilderImpl<?> serviceBuilder, Transaction transaction, ServiceContext context) {
         @SuppressWarnings("unchecked")
         final Injector<? super T>[] injectionArray = (Injector<? super T>[]) injections.toArray(new Injector<?>[injections.size()]);
-        final boolean dependencyUp = DependencyFlag.isDependencyUpRequired(flags);
-        final boolean propagateDemand = DependencyFlag.propagateDemand(flags);
         final Registration dependencyRegistration = registry.getOrCreateRegistration(context, transaction, name);
-        Dependency<T> dependency = new SimpleDependency<T>(injectionArray, dependencyRegistration, dependencyUp, propagateDemand);
+        final Dependency<T> dependency = new SimpleDependency<T>(injectionArray, dependencyRegistration, flags);
         return DependencyFlag.decorate(dependency, serviceBuilder, flags);
     }
 }

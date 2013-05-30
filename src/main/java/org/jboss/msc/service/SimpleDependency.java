@@ -17,7 +17,10 @@
  */
 package org.jboss.msc.service;
 
+import org.jboss.msc._private.MSCLogger;
 import org.jboss.msc.service.ServiceController.State;
+import org.jboss.msc.txn.Problem.Severity;
+import org.jboss.msc.txn.ReportableContext;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
@@ -30,7 +33,7 @@ import org.jboss.msc.txn.Transaction;
  *
  * @param <T>
  */
-final class  SimpleDependency<T> implements Dependency<T> {
+final class  SimpleDependency<T> extends TransactionalObject implements Dependency<T> {
     /**
      * The dependency registration.
      */
@@ -44,42 +47,51 @@ final class  SimpleDependency<T> implements Dependency<T> {
      * down in order for the dependency to be satisfied.
      */
     private final boolean dependencyUp;
-    private boolean dependencySatisfied;
     /**
      * Indicates if the dependency should be demanded to be satisfied when service is attempting to start.
      */
     private final boolean propagateDemand;
     /**
+     * Indicates if the dependency is required to be satisfied. If it is, the transaction will be invalidated if the
+     * dependency is not satisfied.
+     */
+    private final boolean required;
+    /**
      * List of injections.
      */
     private final Injector<? super T>[] injections;
+    /**
+     * Indicates if this dependency is satisfied.
+     */
+    private boolean dependencySatisfied;
 
-    SimpleDependency(final Injector<? super T>[] injections, final Registration dependencyRegistration, final boolean dependencyUp, final boolean propagateDemand) {
+    SimpleDependency(final Injector<? super T>[] injections, final Registration dependencyRegistration, final DependencyFlag[] flags) {
         this.injections = injections;
         this.dependencyRegistration = dependencyRegistration;
-        this.dependencyUp = dependencyUp;
-        this.propagateDemand = propagateDemand;
+        this.dependencyUp = DependencyFlag.isDependencyUpExpected(flags);
+        this.propagateDemand = DependencyFlag.propagateDemand(flags);
+        this.required = DependencyFlag.isDependencyRequired(flags);
     }
 
     @Override
-    public synchronized void setDependent(ServiceController<?> dependentController, Transaction transaction, ServiceContext context) {
-        this.dependentController = dependentController;
-        if (isDependencySatisfied()) {
-            dependencySatisfied = true;
-            dependentController.dependencySatisfied(transaction, context);
+    public void setDependent(ServiceController<?> dependentController, Transaction transaction, ServiceContext context) {
+        lockWrite(transaction, context);
+        synchronized (this) {
+            this.dependentController = dependentController;
+            final ServiceController<?> dependencyController = dependencyRegistration.getController();
+            // check if dependency is satisfied
+            if ((dependencyUp && dependencyController != null && dependencyController.getState() == State.UP) ||
+                    (!dependencyUp && (dependencyController == null || dependencyController.getState() != State.UP))) {
+                dependencySatisfied = true;
+                dependentController.dependencySatisfied(transaction, context);
+            }
+            dependencyRegistration.addIncomingDependency(transaction, context, this);
         }
-        dependencyRegistration.addIncomingDependency(transaction, context, this);
     }
 
     @Override
     public synchronized void clearDependent(Transaction transaction, ServiceContext context) {
         dependencyRegistration.removeIncomingDependency(transaction, context, this);
-    }
-
-    private final boolean isDependencySatisfied() {
-        final ServiceController<?> dependencyController = dependencyRegistration.getController();
-        return (dependencyUp && dependencyController != null && dependencyController.getState() == State.UP) ||
-                (!dependencyUp && (dependencyController == null || dependencyController.getState() != State.UP));
     }
 
     @Override
@@ -121,19 +133,25 @@ final class  SimpleDependency<T> implements Dependency<T> {
     }
 
     @Override
-    public synchronized TaskController<?> dependencyAvailable(boolean dependencyUp, Transaction transaction, ServiceContext context) {
-        if (this.dependencyUp == dependencyUp) {
-            dependencySatisfied = true;
-            return dependentController.dependencySatisfied(transaction, context);
+    public TaskController<?> dependencyAvailable(boolean dependencyUp, Transaction transaction, ServiceContext context) {
+        lockWrite(transaction, context);
+        synchronized (this) {
+            if (this.dependencyUp == dependencyUp) {
+                dependencySatisfied = true;
+                return dependentController.dependencySatisfied(transaction, context);
+            }
         }
         return null;
     }
 
     @Override
-    public synchronized TaskController<?> dependencyUnavailable(Transaction transaction, ServiceContext context) {
-        if (dependencySatisfied) {
-            dependencySatisfied = false;
-            return dependentController.dependencyUnsatisfied(transaction, context);
+    public TaskController<?> dependencyUnavailable(Transaction transaction, ServiceContext context) {
+        lockWrite(transaction, context);
+        synchronized (this) {
+            if (dependencySatisfied) {
+                dependencySatisfied = false;
+                return dependentController.dependencyUnsatisfied(transaction, context);
+            }
         }
         return null;
     }
@@ -147,4 +165,48 @@ final class  SimpleDependency<T> implements Dependency<T> {
     public void dependencyReplacementConcluded(Transaction transaction) {
         // do nothing
     }
+
+    @Override
+    synchronized Boolean takeSnapshot() {
+        return dependencySatisfied;
+    }
+
+    @Override
+    void validate(ReportableContext context) {
+        if (required && !dependencySatisfied) {
+            context.addProblem(Severity.ERROR, getRequirementProblem());
+        }
+    }
+
+    @Override
+    synchronized void revert(Object snapshot) {
+        dependencySatisfied = (Boolean) snapshot;
+    }
+
+    private String getRequirementProblem() {
+        assert required;
+        final String dependencyState;
+        final String anti = dependencyUp? "": "anti ";
+        final ServiceController<?> dependencyController = dependencyRegistration.getController();
+        if (dependencyController == null) {
+            dependencyState = "is missing";
+        } else {
+            switch (dependencyController.getState()) {
+                case DOWN:
+                    dependencyState = "is not started";
+                    break;
+                case UP:
+                    dependencyState = "is started";
+                    break;
+                case FAILED:
+                    dependencyState = "has failed";
+                    break;
+                default:
+                    throw new RuntimeException("Unexpected dependency state: " + dependencyController.getState());
+            }
+        }
+        return MSCLogger.SERVICE.requiredDependency(dependentController.getPrimaryRegistration().getServiceName(), anti,
+                dependencyRegistration.getServiceName(), dependencyState);
+    }
+
 }

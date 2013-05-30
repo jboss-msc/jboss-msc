@@ -33,20 +33,20 @@ public enum DependencyFlag {
      * The dependency is met when the target is down, rather than up.  Implies {@link #UNREQUIRED}.  Injection is
      * not allowed for {@code ANTI} dependencies.
      */
-    ANTI(true, false),
+    ANTI(false, false, false),
     /**
      * A missing dependency will cause a transaction error.  This is implied by default.
      */
-    REQUIRED (false, true),
+    REQUIRED (true, true, true),
     /**
      * A missing dependency will not cause an error, though unmet dependencies will still prevent start.
      */
-    UNREQUIRED (false, true),
+    UNREQUIRED (true, true, false),
     /**
      * Start without the dependency when the dependency is not met at the time the service is otherwise ready.
      * Cannot coexist with {@link #ANTI}.
      */
-    OPTIONAL (false, false) {
+    OPTIONAL (true, false, false) {
         <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilderImpl<?> serviceBuilder) {
             return new OptionalDependency<T>(dependency);
         }
@@ -54,17 +54,17 @@ public enum DependencyFlag {
     /**
      * Do not place a demand on this dependency even if the mode otherwise would.
      */
-    UNDEMANDED (false, false),
+    UNDEMANDED (true, false, false),
     /**
      * Always place a demand on this dependency even if the mode otherwise wouldn't.
      */
-    DEMANDED (false, true),
+    DEMANDED (true, true, false),
     /**
      * Treat the dependency as a parent; that is, when the dependency is stopped, this service should be removed.  Be
      * sure to consider what happens if the parent re-starts however - this flag should only be used when the parent
      * adds the service as part of its start process.  Implies {@link #REQUIRED}.
      */
-    PARENT (false, true) {
+    PARENT (true, true, false) {
         @Override
         <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilderImpl<?> serviceBuilder) {
             return new ParentDependency<T>(dependency, serviceBuilder);
@@ -73,7 +73,7 @@ public enum DependencyFlag {
     /**
      * Indicate that the dependency can be replaced without stopping this service.
      */
-    REPLACEABLE (false, false) {
+    REPLACEABLE (true, false, false) {
         @Override
         <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilderImpl<?> serviceBuilder) {
             return new ReplaceableDependency<T>(dependency);
@@ -90,10 +90,16 @@ public enum DependencyFlag {
      * Indicates if the dependency should be demanded to be satisfied when service is attempting to start.
      */
     private final boolean demand;
+    /**
+     * Indicates if the dependency should be satisfied by the end of the transaction, under the penalty of invalidating
+     * the transaction if not satisfied.
+     */
+    private final boolean enforce;
 
-    private DependencyFlag(boolean dependencyUp, boolean demand) {
+    private DependencyFlag(boolean dependencyUp, boolean demand, boolean enforce) {
         this.dependencyUp = dependencyUp;
         this.demand = demand;
+        this.enforce = enforce;
     }
 
     <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilderImpl<?> serviceBuilder) {
@@ -161,7 +167,14 @@ public enum DependencyFlag {
         }
     }
 
-    static boolean isDependencyUpRequired(DependencyFlag... flags) {
+    /**
+     * Indicates if the dependency is required to be {@code UP} or {@code DOWN}.
+     * 
+     * @param flags flags that specify the dependency
+     * @return {@code true} if the dependency is expected to be {@code UP}; {@code false} if the dependency is expected
+     *         to be {@code DOWN}
+     */
+    static boolean isDependencyUpExpected(DependencyFlag... flags) {
         for (DependencyFlag flag: flags) {
             if (!flag.dependencyUp) {
                 return false;
@@ -171,6 +184,12 @@ public enum DependencyFlag {
         return true;
     }
 
+    /**
+     * Indicates if demand should be propagated to dependencies.
+     * 
+     * @param flags that specify the dependency
+     * @return  {@code} if dependency should be demanded
+     */
     static boolean propagateDemand(DependencyFlag... flags) {
         for (DependencyFlag flag: flags) {
             if (!flag.demand) {
@@ -181,11 +200,35 @@ public enum DependencyFlag {
         return true;
     }
 
+    /**
+     * Indicates if dependency must be enforced to be satisfied by the end of the transaction. Required dependencies
+     * that are not satisfied by the end of the transaction will invalidate it.
+     * 
+     * @param flags flags that specify the dependency
+     * @return {@code true} if dependency is required to be satisfied
+     */
+    static boolean isDependencyRequired(DependencyFlag... flags) {
+        for (DependencyFlag flag: flags) {
+            if (flag.enforce) {
+                return true;
+            }
+        }
+        // notice that, when there are no flags, the dependency is required by default
+        return flags.length == 0? true: false;
+    }
+
+    /**
+     * Decorates {@code dependency} with the special requirements posed by {@code flags}.
+     * 
+     * @param dependency     the dependency
+     * @param serviceBuilder dependency builder
+     * @param flags          the flags that could contain special requirements
+     * @return the decorated dependency
+     */
     static <T> Dependency<T> decorate(Dependency<T> dependency, ServiceBuilderImpl<?> serviceBuilder, DependencyFlag... flags) {
         for (DependencyFlag flag: flags) {
             dependency = flag.decorate(dependency, serviceBuilder);
         }
         return dependency;
     }
-
 }

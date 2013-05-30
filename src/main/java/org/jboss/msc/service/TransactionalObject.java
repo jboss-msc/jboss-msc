@@ -17,14 +17,22 @@
  */
 package org.jboss.msc.service;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.jboss.msc.txn.AttachmentKey;
 import org.jboss.msc.txn.CommitContext;
 import org.jboss.msc.txn.Committable;
 import org.jboss.msc.txn.DeadlockException;
 import org.jboss.msc.txn.Problem;
+import org.jboss.msc.txn.ReportableContext;
 import org.jboss.msc.txn.Revertible;
 import org.jboss.msc.txn.RollbackContext;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.Transaction;
+import org.jboss.msc.txn.Validatable;
+import org.jboss.msc.txn.ValidateContext;
 
 /**
  * Object with write lock support per transaction.
@@ -38,6 +46,8 @@ import org.jboss.msc.txn.Transaction;
  *
  */
 abstract class TransactionalObject {
+
+    private static AttachmentKey<Map<TransactionalObject, Object>> TRANSACTIONAL_OBJECTS = AttachmentKey.create();
 
     // inner lock
     private Transaction lock;
@@ -79,7 +89,17 @@ abstract class TransactionalObject {
             }
         } 
         final Object snapshot = takeSnapshot();
-        context.newTask().setTraits(new UnlockWriteTask(snapshot)).release();
+        final Map<TransactionalObject, Object> transactionalObjects;
+        synchronized (TRANSACTIONAL_OBJECTS) {
+            if (transaction.hasAttachment(TRANSACTIONAL_OBJECTS)) {
+                transactionalObjects = transaction.getAttachment(TRANSACTIONAL_OBJECTS);
+            } else {
+                transactionalObjects = new HashMap<TransactionalObject, Object>();
+                transaction.putAttachment(TRANSACTIONAL_OBJECTS, transactionalObjects);
+                context.newTask().setTraits(new UnlockWriteTask(transactionalObjects)).release();
+            }
+        }
+        transactionalObjects.put(this, snapshot);
         writeLocked(transaction);
     }
 
@@ -109,14 +129,14 @@ abstract class TransactionalObject {
     }
 
     /**
-     * Take a snapshot of this transactional object's inner state. Invoked when this object is write locked.
+     * Takes a snapshot of this transactional object's inner state. Invoked when this object is write locked.
      * 
      * @return the snapshot
      */
     abstract Object takeSnapshot();
 
     /**
-     * Revert this object's inner state to what its original state when it was locked. Invoked during transaction
+     * Reverts this object's inner state to what its original state when it was locked. Invoked during transaction
      * rollback.
      * 
      * @param snapshot the snapshot
@@ -124,9 +144,17 @@ abstract class TransactionalObject {
     abstract void revert(Object snapshot);
 
     /**
+     * Performs validation of new objects state for active transaction.
+     * 
+     * @param context every validation problem found should be added to this context
+     */
+    void validate(ReportableContext context) {}
+
+    /**
      * Notifies that this object is now write locked. Invoked only once per transaction lock.
      * 
      * @param transaction the transaction under which this object is locked
+     * @param context     the service context
      */
     void writeLocked(Transaction transaction) {}
 
@@ -135,27 +163,43 @@ abstract class TransactionalObject {
      */
     void writeUnlocked() {}
 
-    class UnlockWriteTask implements Committable, Revertible {
+    static class UnlockWriteTask implements Validatable, Committable, Revertible {
 
-        private Object snapshot;
+        private Map<TransactionalObject, Object> transactionalObjects;
 
-        public UnlockWriteTask(Object snapshot) {
-            this.snapshot = snapshot;
+        public UnlockWriteTask(Map<TransactionalObject, Object> transactionalObjects) {
+            this.transactionalObjects = transactionalObjects;
+        }
+
+        @Override
+        public void validate(ValidateContext context) {
+            for (TransactionalObject transactionalObject: transactionalObjects.keySet()) {
+                synchronized (transactionalObject) {
+                    transactionalObject.validate(context);
+                }
+            }
+            context.complete();
         }
 
         @Override
         public void rollback(RollbackContext context) {
-            synchronized (TransactionalObject.this) {
-                unlockWrite();
-                revert(snapshot);
+            for (Entry<TransactionalObject, Object> entry: transactionalObjects.entrySet()) {
+                final TransactionalObject transactionalObject = entry.getKey();
+                final Object snapshot = entry.getValue();
+                synchronized (transactionalObject) {
+                    transactionalObject.unlockWrite();
+                    transactionalObject.revert(snapshot);
+                }
             }
             context.complete();
         }
 
         @Override
         public void commit(CommitContext context) {
-            synchronized (TransactionalObject.this) {
-                unlockWrite();
+            for (TransactionalObject transactionalObject: transactionalObjects.keySet()) {
+                synchronized (transactionalObject) {
+                    transactionalObject.unlockWrite();
+                }
             }
             context.complete();
         }

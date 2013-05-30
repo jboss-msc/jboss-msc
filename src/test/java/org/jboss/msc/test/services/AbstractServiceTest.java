@@ -26,9 +26,11 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.logging.Logger;
 
+import org.jboss.msc.service.DependencyFlag;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceContainerFactory;
@@ -38,6 +40,7 @@ import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.service.ServiceTarget;
 import org.jboss.msc.test.utils.AbstractTransactionTest;
 import org.jboss.msc.test.utils.CompletionListener;
+import org.jboss.msc.txn.Problem;
 import org.jboss.msc.txn.Transaction;
 import org.junit.After;
 import org.junit.Before;
@@ -105,12 +108,13 @@ public class AbstractServiceTest extends AbstractTransactionTest {
         final ServiceBuilder<Void> serviceBuilder = transaction.newServiceTarget().addService(serviceRegistry, serviceName, service);
         serviceBuilder.setMode(serviceMode);
         for (ServiceName dependency: dependencies) {
-            serviceBuilder.addDependency(dependency);
+            serviceBuilder.addDependency(dependency, DependencyFlag.UNREQUIRED);
         }
         serviceBuilder.install();
         final CompletionListener completionListener = new CompletionListener();
         transaction.commit(completionListener);
         completionListener.awaitCompletion();
+        assertNoProblem(transaction);
         assertSame(service, serviceRegistry.getRequiredService(serviceName));
         return service;
     }
@@ -124,12 +128,13 @@ public class AbstractServiceTest extends AbstractTransactionTest {
         final TestService service = new TestService(failToStart);
         final ServiceBuilder<Void> serviceBuilder = transaction.newServiceTarget().addService(serviceRegistry, serviceName, service);
         for (ServiceName dependency: dependencies) {
-            serviceBuilder.addDependency(dependency);
+            serviceBuilder.addDependency(dependency, DependencyFlag.UNREQUIRED);
         }
         serviceBuilder.install();
         final CompletionListener completionListener = new CompletionListener();
         transaction.commit(completionListener);
         completionListener.awaitCompletion();
+        assertNoProblem(transaction);
         assertSame(service, serviceRegistry.getRequiredService(serviceName));
         return service;
     }
@@ -147,7 +152,22 @@ public class AbstractServiceTest extends AbstractTransactionTest {
         serviceTarget.removeService(serviceRegistry, serviceName);
         transaction.commit(listener);
         listener.awaitCompletion();
-        assertTrue(transaction.getProblemReport().getProblems().isEmpty());
+        assertNoProblem(transaction);
         assertNull(serviceRegistry.getService(serviceName));
+    }
+
+    protected void assertNoProblem(Transaction transaction) {
+        assertTrue(transaction.isTerminated());
+        if (!transaction.getProblemReport().getProblems().isEmpty()) {
+            StringBuilder problems = new StringBuilder();
+            for (Problem problem: transaction.getProblemReport().getProblems()) {
+                problems.append(problem.getMessage());
+                if (problem.getCause() != null) {
+                    problem.getCause().printStackTrace();
+                }
+                problems.append("\n");
+            }
+            fail(problems.toString());
+        }
     }
 }

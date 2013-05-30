@@ -40,6 +40,7 @@ import static org.jboss.logging.Logger.Level.WARN;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
 @MessageLogger(projectCode = "MSC")
 public interface MSCLogger {
@@ -117,6 +118,9 @@ public interface MSCLogger {
     @LogMessage(level = FATAL)
     @Message(id = 16, value = "Internal task \"%s\" execution failed (transaction is likely permanently jammed)")
     void runnableExecuteFailed(@Cause Throwable cause, Runnable command);
+
+    @Message(id = 17, value ="Service %s has a required %sdependency on service %s that %s")
+    String requiredDependency(ServiceName dependentName, String anti, ServiceName dependencyName, String dependencyStateDescription);
 
     // jump to 100...
 
