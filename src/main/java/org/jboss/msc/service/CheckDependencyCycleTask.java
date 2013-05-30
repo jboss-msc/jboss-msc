@@ -17,6 +17,7 @@
  */
 package org.jboss.msc.service;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -90,13 +91,13 @@ final class CheckDependencyCycleTask implements Validatable {
     }
 
     private void verifyCycle(ServiceController<?> service, LinkedHashMap<ServiceName, ServiceController<?>> pathTrace, Set<ServiceController<?>> checkedServices) throws CircularDependencyException {
-        if (pathTrace.containsValue(service)) {
-            final ServiceName[] cycle = pathTrace.keySet().toArray(new ServiceName[pathTrace.size()]);
-            throw new CircularDependencyException("DependencyCycle found", cycle);
-        }
         for (Dependency<?> dependency: service.getDependencies()) {
             final ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
             if (dependencyController != null && !checkedServices.contains(dependencyController)) {
+                if (pathTrace.containsValue(dependencyController)) {
+                    final ServiceName[] cycle = pathTrace.keySet().toArray(new ServiceName[pathTrace.size()]);
+                    throw new CircularDependencyException("Dependency cycle found: " + Arrays.toString(cycle), cycle);
+                } // TODO add a problem and log
                 final ServiceName dependencyName = dependency.getDependencyRegistration().getServiceName();
                 pathTrace.put(dependencyName, dependencyController);
                 verifyCycle(dependencyController, pathTrace, checkedServices);
