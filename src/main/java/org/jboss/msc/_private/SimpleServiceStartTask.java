@@ -16,8 +16,13 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.service;
+package org.jboss.msc._private;
 
+import org.jboss.msc.service.Service;
+import org.jboss.msc.service.ServiceContainer;
+import org.jboss.msc.service.ServiceRegistry;
+import org.jboss.msc.service.ServiceTarget;
+import org.jboss.msc.service.StartContext;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.Problem;

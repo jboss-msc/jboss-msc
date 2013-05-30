@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.service;
+package org.jboss.msc._private;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jboss.msc.service.Injector;
+import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.Transaction;
 
@@ -33,10 +35,10 @@ import org.jboss.msc.txn.Transaction;
 final class DependencySpec<T> {
     private final ServiceRegistryImpl registry;
     private final ServiceName name;
-    private final DependencyFlag[] flags;
+    private final DependencyFlagImpl[] flags;
     private final List<Injector<? super T>> injections = new ArrayList<Injector<? super T>>();
 
-    DependencySpec(final ServiceRegistryImpl registry, final ServiceName name, final DependencyFlag[] flags) {
+    DependencySpec(final ServiceRegistryImpl registry, final ServiceName name, final DependencyFlagImpl[] flags) {
         this.registry = registry;
         this.name = name;
         this.flags = flags;
@@ -63,6 +65,6 @@ final class DependencySpec<T> {
         final Injector<? super T>[] injectionArray = (Injector<? super T>[]) injections.toArray(new Injector<?>[injections.size()]);
         final Registration dependencyRegistration = registry.getOrCreateRegistration(context, transaction, name);
         final Dependency<T> dependency = new SimpleDependency<T>(injectionArray, dependencyRegistration, flags);
-        return DependencyFlag.decorate(dependency, serviceBuilder, flags);
+        return DependencyFlagImpl.decorate(dependency, serviceBuilder, flags);
     }
 }

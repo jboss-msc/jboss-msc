@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.service;
+package org.jboss.msc._private;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -24,6 +24,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.jboss.msc.service.Service;
+import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.service.ServiceNotFoundException;
+import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.Transaction;
 

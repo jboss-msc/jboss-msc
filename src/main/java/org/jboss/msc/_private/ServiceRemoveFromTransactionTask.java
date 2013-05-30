@@ -16,23 +16,18 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.service;
+package org.jboss.msc._private;
 
-import org.jboss.msc.txn.CommitContext;
-import org.jboss.msc.txn.Committable;
+import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-final class ServiceRemoveFromContainerTask implements Committable, Executable<Void> {
+final class ServiceRemoveFromTransactionTask implements Executable<Void> {
 
-    ServiceRemoveFromContainerTask(final ServiceName name) {
-    }
-
-    public void commit(final CommitContext context) {
-        // remove service registration in container
+    ServiceRemoveFromTransactionTask(final ServiceName name) {
     }
 
     public void execute(final ExecuteContext<Void> context) {

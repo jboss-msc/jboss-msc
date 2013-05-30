@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.service;
+package org.jboss.msc._private;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.Transaction;
 

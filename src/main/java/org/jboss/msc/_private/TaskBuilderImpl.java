@@ -18,6 +18,8 @@
 
 package org.jboss.msc._private;
 
+import static org.jboss.msc._private.MSCLogger.TXN;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -30,8 +32,6 @@ import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.txn.Validatable;
-
-import static org.jboss.msc._private.MSCLogger.TXN;
 
 /**
  * A builder for subtasks.  Subtasks may be configured with dependencies and injections before being installed.

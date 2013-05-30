@@ -28,11 +28,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.msc.Version;
-import org.jboss.msc._private.MSCLogger;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.service.ServiceTarget;
-import org.jboss.msc.service.ServiceTargetImpl;
 import org.jboss.msc.txn.DeadlockException;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.InvalidTransactionStateException;

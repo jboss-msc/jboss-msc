@@ -15,13 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jboss.msc.service;
+package org.jboss.msc._private;
 
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.jboss.msc.service.ServiceController.TransactionalState;
+import org.jboss.msc._private.ServiceController.TransactionalState;
+import org.jboss.msc.service.Service;
 import org.jboss.msc.txn.AttachmentKey;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;

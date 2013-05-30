@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jboss.msc.service;
+package org.jboss.msc._private;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.jboss.msc.service.CircularDependencyException;
+import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.txn.AttachmentKey;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.Transaction;

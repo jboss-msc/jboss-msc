@@ -29,118 +29,22 @@ public enum ServiceMode {
      * Start as soon as all dependencies are met, unless this service is demanded to start by an ANTI dependency. 
      * Demands dependencies.
      */
-    ACTIVE {
-        boolean shouldStart(ServiceController<?> service) {
-            return !service.isDownDemanded();
-        }
-
-        boolean shouldStop(ServiceController<?> service) {
-            return service.isDownDemanded();
-        }
-
-        Demand shouldDemandDependencies() {
-            return Demand.ALWAYS;
-        }
-    },
+    ACTIVE,
     /**
      * Start as soon as all dependencies are met.  Does not demand dependencies.
      */
-    PASSIVE {
-        boolean shouldStart(ServiceController<?> service) {
-            return true;
-        }
-
-        boolean shouldStop(ServiceController<?> service) {
-            return false;
-        }
-
-        Demand shouldDemandDependencies() {
-            return Demand.PROPAGATE;
-        }
-    },
+    PASSIVE,
     /**
      * Start only when demanded to, but stay running until required or demanded to stop.
      */
-    LAZY {
-        boolean shouldStart(ServiceController<?> service) {
-            return service.isUpDemanded();
-        }
-
-        boolean shouldStop(ServiceController<?> service) {
-            return service.isDownDemanded();
-        }
-
-        Demand shouldDemandDependencies() {
-            return Demand.SERVICE_UP;
-        }
-    },
+    LAZY,
     /**
      * Start only when demanded to, and stop when demands disappear, or when demanded to stop.
      */
-    ON_DEMAND {
-        boolean shouldStart(ServiceController<?> service) {
-            return service.isUpDemanded();
-        }
-
-        boolean shouldStop(ServiceController<?> service) {
-            return !service.isUpDemanded();
-        }
-
-        Demand shouldDemandDependencies() {
-            return Demand.PROPAGATE;
-        }
-    },
+    ON_DEMAND,
     /**
      * Do not start; stay in a stopped state.
      */
-    NEVER {
-        boolean shouldStart(ServiceController<?> service) {
-            return false;
-        }
-
-        boolean shouldStop(ServiceController<?> service) {
-            return true;
-        }
-
-        Demand shouldDemandDependencies() {
-            return Demand.NEVER;
-        }
-    },
+    NEVER,
     ;
-
-    /**
-     * Indicates if this mode requires
-     * {@code service} to start.
-     *  
-     * @param service a service at the {@link ServiceController.State$DOWN} state, with no unsatisfied or failed
-     *                dependencies
-     * @return {@code true} if {@code service} should start
-     */
-    abstract boolean shouldStart(ServiceController<?> service);
-
-    /**
-     * Given {@code service} has no unsatisfied dependencies, this method indicates if {@code service} should stop.
-     *  
-     * @param service a service at the {@link ServiceController.State$UP} state, with no unsatisfied or failed
-     *                dependencies
-     * @return {@code true} if {@code service} should stop
-     */
-    abstract boolean shouldStop(ServiceController<?> service);
-
-    /**
-     * Indicates if this mode requires the service to demand its dependencies.
-     * 
-     * @return {@code true} if this mode requires the service to demand dependencies
-     */
-    abstract Demand shouldDemandDependencies();
-
-    enum Demand {
-        // always demand dependencies
-        ALWAYS,
-        // never demand dependencies
-        NEVER,
-        // demand dependencies only when demanded
-        PROPAGATE,
-        // demand dependencies only when service enters up state
-        SERVICE_UP};
 }

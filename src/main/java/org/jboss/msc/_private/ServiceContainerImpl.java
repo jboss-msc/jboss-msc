@@ -16,18 +16,18 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.service;
+package org.jboss.msc._private;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
+import org.jboss.msc.service.ServiceContainer;
+import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.txn.CommitContext;
 import org.jboss.msc.txn.Committable;
 import org.jboss.msc.txn.Revertible;
 import org.jboss.msc.txn.RollbackContext;
-import org.jboss.msc.txn.Transaction;
 
 /**
  * A transactional service container.
@@ -35,7 +35,7 @@ import org.jboss.msc.txn.Transaction;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
-final class ServiceContainerImpl implements ServiceContainer {
+public final class ServiceContainerImpl implements ServiceContainer {
     private final Set<ServiceRegistry> registries = new HashSet<ServiceRegistry>();
     private final Set<CountDownLatch> shutDownLatches = new HashSet<CountDownLatch>();
     private boolean shutdownCompleted;

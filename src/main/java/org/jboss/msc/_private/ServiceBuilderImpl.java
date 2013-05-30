@@ -16,13 +16,20 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.service;
+package org.jboss.msc._private;
 
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.jboss.msc.service.DependencyFlag;
+import org.jboss.msc.service.Injector;
+import org.jboss.msc.service.Service;
+import org.jboss.msc.service.ServiceBuilder;
+import org.jboss.msc.service.ServiceMode;
+import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
@@ -94,7 +101,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * {@inheritDoc}
      */
     public ServiceBuilder<T> addDependency(ServiceName name) {
-        addDependency(registry, name, DependencyFlag.NONE);
+        addDependency(registry, name, (DependencyFlag)null);
         return this;
     }
 
@@ -109,7 +116,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * {@inheritDoc}
      */
     public ServiceBuilder<T> addDependency(ServiceName name, Injector<?> injector) throws IllegalStateException {
-        return addDependency(name, injector, DependencyFlag.NONE);
+        return addDependency(name, injector, (DependencyFlag)null);
     }
 
     /**
@@ -117,7 +124,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      */
     public ServiceBuilder<T> addDependency(ServiceName name, Injector<?> injector, DependencyFlag... flags) {
         checkAlreadyInstalled();
-        DependencySpec<Object> spec = new DependencySpec<Object>(registry, name, flags);
+        DependencySpec<Object> spec = new DependencySpec<Object>(registry, name, translate(flags));
         //spec.addInjection(injector);
         addDependencySpec(spec, name, flags);
         return this;
@@ -127,7 +134,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * {@inheritDoc}
      */
     public ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name) {
-        return addDependency(registry, name, DependencyFlag.NONE);
+        return addDependency(registry, name, (DependencyFlag)null);
     }
 
     /**
@@ -135,7 +142,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      */
     public ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, DependencyFlag... flags) {
         checkAlreadyInstalled();
-        addDependencySpec(new DependencySpec((ServiceRegistryImpl)registry, name, flags), name, flags);
+        addDependencySpec(new DependencySpec((ServiceRegistryImpl)registry, name, translate(flags)), name, flags);
         return this;
     }
 
@@ -144,7 +151,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      */
     public ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, Injector<?> injector) {
         checkAlreadyInstalled();
-        addDependency(registry, name, injector, DependencyFlag.NONE);
+        addDependency(registry, name, injector, (DependencyFlag)null);
         return this;
     }
 
@@ -153,10 +160,31 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      */
     public ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, Injector<?> injector, DependencyFlag... flags) {
         checkAlreadyInstalled();
-        final DependencySpec<?> spec = new DependencySpec<Object>((ServiceRegistryImpl)registry, name, flags);
+        final DependencySpec<?> spec = new DependencySpec<Object>((ServiceRegistryImpl)registry, name, translate(flags));
         //spec.addInjection(injector);
         addDependencySpec(spec, name, flags);
         return this;
+    }
+
+    private DependencyFlagImpl[] translate(final DependencyFlag... flags) {
+        if (flags == null) return DependencyFlagImpl.NONE;
+        final DependencyFlagImpl[] retVal = new DependencyFlagImpl[flags.length];
+        for (int i = 0; i < flags.length; i++) {
+            retVal[i] = translate(flags[i]);
+        }
+        return retVal;
+    }
+    
+    private DependencyFlagImpl translate(final DependencyFlag flag) {
+        if (DependencyFlag.ANTI.equals(flag)) return DependencyFlagImpl.ANTI;
+        if (DependencyFlag.REQUIRED.equals(flag)) return DependencyFlagImpl.REQUIRED;
+        if (DependencyFlag.UNREQUIRED.equals(flag)) return DependencyFlagImpl.UNREQUIRED;
+        if (DependencyFlag.OPTIONAL.equals(flag)) return DependencyFlagImpl.OPTIONAL;
+        if (DependencyFlag.UNDEMANDED.equals(flag)) return DependencyFlagImpl.UNDEMANDED;
+        if (DependencyFlag.DEMANDED.equals(flag)) return DependencyFlagImpl.DEMANDED;
+        if (DependencyFlag.PARENT.equals(flag)) return DependencyFlagImpl.PARENT;
+        if (DependencyFlag.REPLACEABLE.equals(flag)) return DependencyFlagImpl.REPLACEABLE;
+        throw new IllegalStateException();
     }
 
     private void addDependencySpec(DependencySpec<?> dependencySpec, ServiceName name, DependencyFlag... flags) {

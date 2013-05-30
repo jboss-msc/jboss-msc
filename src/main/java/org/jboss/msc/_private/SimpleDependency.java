@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jboss.msc.service;
+package org.jboss.msc._private;
 
-import org.jboss.msc._private.MSCLogger;
-import org.jboss.msc.service.ServiceController.State;
+import org.jboss.msc._private.ServiceController.State;
+import org.jboss.msc.service.Injector;
 import org.jboss.msc.txn.Problem.Severity;
 import org.jboss.msc.txn.ReportableContext;
 import org.jboss.msc.txn.ServiceContext;
@@ -65,12 +65,12 @@ final class  SimpleDependency<T> extends TransactionalObject implements Dependen
      */
     private boolean dependencySatisfied;
 
-    SimpleDependency(final Injector<? super T>[] injections, final Registration dependencyRegistration, final DependencyFlag[] flags) {
+    SimpleDependency(final Injector<? super T>[] injections, final Registration dependencyRegistration, final DependencyFlagImpl[] flags) {
         this.injections = injections;
         this.dependencyRegistration = dependencyRegistration;
-        this.dependencyUp = DependencyFlag.isDependencyUpExpected(flags);
-        this.propagateDemand = DependencyFlag.propagateDemand(flags);
-        this.required = DependencyFlag.isDependencyRequired(flags);
+        this.dependencyUp = DependencyFlagImpl.isDependencyUpExpected(flags);
+        this.propagateDemand = DependencyFlagImpl.propagateDemand(flags);
+        this.required = DependencyFlagImpl.isDependencyRequired(flags);
     }
 
     @Override

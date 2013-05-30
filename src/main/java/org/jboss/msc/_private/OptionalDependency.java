@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jboss.msc.service;
+package org.jboss.msc._private;
 
 /**
  * OptionalDependencyDecorator.<br>This class establishes a transitive dependency relationship between the

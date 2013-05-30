@@ -15,10 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jboss.msc.service;
-
-import java.util.Collection;
-import java.util.Collections;
+package org.jboss.msc._private;
 
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
@@ -28,51 +25,50 @@ import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 
 /**
- * Task for undemanding dependencies.
+ * Task for demanding dependencies.
  * 
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
-class UndemandDependenciesTask implements Executable<Void> {
+class DemandDependenciesTask implements Executable<Void> {
 
     private Transaction transaction;
     private ServiceController<?> service;
 
     /**
-     * Creates and releases the undemand dependencies task.
+     * Creates and releases the demand dependencies task.
      * 
-     * @param service      the service whose dependencies will be undemanded by the task
+     * @param service      the service whose dependencies will be demanded by the task
      * @param transaction  the active transaction
      * @param context      the service context
      * @return the task controller
      */
-    @SuppressWarnings("unchecked")
-    public static TaskController<Void> create(ServiceController<?> service, Transaction transaction, ServiceContext context) {
-        return create(service, Collections.EMPTY_LIST, transaction, context);
+    static TaskController<Void> create(ServiceController<?> service, Transaction transaction, ServiceContext context) {
+        return create(service, null, transaction, context);
     }
 
     /**
-     * Creates and releases the undemand dependencies task.
+     * Creates and releases the demand dependencies task.
      * <p>
-     * Invoke this method when the undemand dependencies task must be executed only after other tasks finish execution.
+     * Invoke this method when the demand dependencies task must be executed only after another task finishes execution.
      * 
-     * @param service          the service whose dependencies will be undemanded by the task
-     * @param taskDependencies the dependencies of the undemand dependencies task
-     * @param transaction      the active transaction
-     * @param context          the service context
+     * @param service        the service whose dependencies will be demanded by the task
+     * @param taskDependency the dependency of the demand dependencies task
+     * @param transaction    the active transaction
+     * @param context        the service context
      * @return the task controller
      */
-    public static TaskController<Void> create(ServiceController<?> service, Collection<TaskController<?>> taskDependencies, Transaction transaction, ServiceContext context) {
+    static TaskController<Void> create(ServiceController<?> service, TaskController<?> taskDependency, Transaction transaction, ServiceContext context) {
         if (service.getDependencies().length == 0) {
             return null;
         }
-        TaskBuilder<Void> taskBuilder = context.newTask(new UndemandDependenciesTask(transaction, service));
-        if (!taskDependencies.isEmpty()) {
-            taskBuilder.addDependencies(taskDependencies);
+        TaskBuilder<Void> taskBuilder = context.newTask(new DemandDependenciesTask(transaction, service));
+        if(taskDependency != null) {
+            taskBuilder.addDependency(taskDependency);
         }
         return taskBuilder.release();
     }
 
-    private UndemandDependenciesTask(Transaction transaction, ServiceController<?> service) {
+    private DemandDependenciesTask(Transaction transaction, ServiceController<?> service) {
         this.transaction = transaction;
         this.service = service;
     }
@@ -80,7 +76,7 @@ class UndemandDependenciesTask implements Executable<Void> {
     @Override
     public void execute(ExecuteContext<Void> context) {
         for (Dependency<?> dependency: service.getDependencies()) {
-            dependency.undemand(transaction, context);
+            dependency.demand(transaction, context);
         }
         context.complete();
     }

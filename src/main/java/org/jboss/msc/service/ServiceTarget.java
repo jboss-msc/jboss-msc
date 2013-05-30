@@ -18,7 +18,6 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.service.ServiceController.State;
 import org.jboss.msc.txn.TaskController;
 
 /**

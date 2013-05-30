@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.service;
+package org.jboss.msc._private;
 
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskController;
@@ -31,7 +31,7 @@ import org.jboss.msc.txn.Transaction;
  *
  * @param <T>
  */
-interface  Dependency<T> {
+interface Dependency<T> {
 
     /**
      * Sets the dependency dependent, invoked during {@link dependentController} installation.

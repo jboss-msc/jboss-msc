@@ -18,8 +18,15 @@
 
 package org.jboss.msc._private;
 
+import static java.lang.Thread.holdsLock;
+import static org.jboss.msc._private.Bits.allAreClear;
+import static org.jboss.msc._private.Bits.allAreSet;
+import static org.jboss.msc._private.Bits.anyAreSet;
+import static org.jboss.msc._private.Bits.intBitMask;
+import static org.jboss.msc._private.Bits.oneIsSet;
+
 import java.util.ArrayList;
-import org.jboss.msc._private.MSCLogger;
+
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.service.ServiceTarget;
@@ -36,9 +43,6 @@ import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Validatable;
 import org.jboss.msc.txn.ValidateContext;
-
-import static java.lang.Thread.holdsLock;
-import static org.jboss.msc._private.Bits.*;
 
 /**
  * A controller for an installed subtask.

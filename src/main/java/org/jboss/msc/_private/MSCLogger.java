@@ -18,6 +18,11 @@
 
 package org.jboss.msc._private;
 
+import static org.jboss.logging.Logger.Level.ERROR;
+import static org.jboss.logging.Logger.Level.FATAL;
+import static org.jboss.logging.Logger.Level.INFO;
+import static org.jboss.logging.Logger.Level.WARN;
+
 import org.jboss.logging.Logger;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.LogMessage;
@@ -29,11 +34,6 @@ import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.Listener;
 import org.jboss.msc.txn.Revertible;
 import org.jboss.msc.txn.Validatable;
-
-import static org.jboss.logging.Logger.Level.ERROR;
-import static org.jboss.logging.Logger.Level.FATAL;
-import static org.jboss.logging.Logger.Level.INFO;
-import static org.jboss.logging.Logger.Level.WARN;
 
 /**
  * MSC2 logging utilities.
