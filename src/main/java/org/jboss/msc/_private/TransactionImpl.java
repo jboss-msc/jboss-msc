@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.txn;
+package org.jboss.msc._private;
 
 import static java.lang.Thread.holdsLock;
-import static org.jboss.msc.txn.Bits.allAreSet;
-import static org.jboss.msc.txn.Bits.anyAreSet;
+import static org.jboss.msc._private.Bits.allAreSet;
+import static org.jboss.msc._private.Bits.anyAreSet;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,12 +33,22 @@ import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.service.ServiceTarget;
 import org.jboss.msc.service.ServiceTargetImpl;
+import org.jboss.msc.txn.DeadlockException;
+import org.jboss.msc.txn.Executable;
+import org.jboss.msc.txn.InvalidTransactionStateException;
+import org.jboss.msc.txn.Listener;
+import org.jboss.msc.txn.Problem;
+import org.jboss.msc.txn.ProblemReport;
+import org.jboss.msc.txn.ServiceContext;
+import org.jboss.msc.txn.TaskBuilder;
+import org.jboss.msc.txn.Transaction;
+import org.jboss.msc.txn.TransactionRolledBackException;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-final class TransactionImpl extends Transaction implements ServiceContext {
+public final class TransactionImpl extends Transaction implements ServiceContext {
 
     static {
         MSCLogger.ROOT.greeting(Version.getVersionString());
@@ -438,11 +448,11 @@ final class TransactionImpl extends Transaction implements ServiceContext {
     }
 
     public final <T> TaskBuilder<T> newTask(Executable<T> task) throws IllegalStateException {
-        return new TaskBuilder<T>(this, topParent, task);
+        return new TaskBuilderImpl<T>(this, topParent, task);
     }
 
     public TaskBuilder<Void> newTask() throws IllegalStateException {
-        return new TaskBuilder<Void>(this, topParent);
+        return new TaskBuilderImpl<Void>(this, topParent);
     }
 
     public void waitFor(final Transaction other) throws InterruptedException, DeadlockException {
@@ -474,7 +484,7 @@ final class TransactionImpl extends Transaction implements ServiceContext {
         }
     }
 
-    static TransactionImpl createTransactionImpl(final Executor taskExecutor, final Problem.Severity maxSeverity) {
+    public static TransactionImpl createTransactionImpl(final Executor taskExecutor, final Problem.Severity maxSeverity) {
         final TransactionImpl txn = new TransactionImpl(taskExecutor, maxSeverity);
         try {
             Transactions.register(txn);

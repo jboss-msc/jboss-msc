@@ -25,7 +25,7 @@ import java.util.concurrent.ConcurrentMap;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 @SuppressWarnings("unchecked")
-public class SimpleAttachable implements Attachable {
+class SimpleAttachable implements Attachable {
     private final ConcurrentMap<AttachmentKey<?>, Object> attachments = new ConcurrentHashMap<AttachmentKey<?>, Object>();
 
     public <T> T getAttachment(final AttachmentKey<T> key) {

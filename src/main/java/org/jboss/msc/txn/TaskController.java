@@ -21,16 +21,14 @@ package org.jboss.msc.txn;
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public abstract class TaskController<T> {
-
-    TaskController() {}
+public interface TaskController<T> {
 
     /**
      * Get the transaction associated with this controller.
      *
      * @return the transaction associated with this controller
      */
-    public abstract Transaction getTransaction();
+    Transaction getTransaction();
 
-    public abstract T getResult() throws IllegalStateException;
+    T getResult() throws IllegalStateException;
 }

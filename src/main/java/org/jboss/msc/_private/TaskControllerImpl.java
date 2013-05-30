@@ -16,17 +16,29 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.txn;
+package org.jboss.msc._private;
 
 import java.util.ArrayList;
 import org.jboss.msc._private.MSCLogger;
 import org.jboss.msc.service.ServiceContainer;
-import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.service.ServiceTarget;
+import org.jboss.msc.txn.CommitContext;
+import org.jboss.msc.txn.Committable;
+import org.jboss.msc.txn.Executable;
+import org.jboss.msc.txn.ExecuteContext;
+import org.jboss.msc.txn.InvalidTransactionStateException;
+import org.jboss.msc.txn.Problem;
+import org.jboss.msc.txn.ProblemReport;
+import org.jboss.msc.txn.Revertible;
+import org.jboss.msc.txn.RollbackContext;
+import org.jboss.msc.txn.TaskBuilder;
+import org.jboss.msc.txn.TaskController;
+import org.jboss.msc.txn.Validatable;
+import org.jboss.msc.txn.ValidateContext;
 
 import static java.lang.Thread.holdsLock;
-import static org.jboss.msc.txn.Bits.*;
+import static org.jboss.msc._private.Bits.*;
 
 /**
  * A controller for an installed subtask.
@@ -122,7 +134,7 @@ import static org.jboss.msc.txn.Bits.*;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-final class TaskControllerImpl<T> extends TaskController<T> implements TaskParent, TaskChild {
+final class TaskControllerImpl<T> implements TaskController<T>, TaskParent, TaskChild {
 
     private static final Object NO_RESULT = new Object();
 
@@ -865,11 +877,11 @@ final class TaskControllerImpl<T> extends TaskController<T> implements TaskParen
                 }
 
                 public <N> TaskBuilder<N> newTask(final Executable<N> task) throws IllegalStateException {
-                    return new TaskBuilder<N>(getTransaction(), TaskControllerImpl.this, task);
+                    return new TaskBuilderImpl<N>(getTransaction(), TaskControllerImpl.this, task);
                 }
 
                 public TaskBuilder<Void> newTask() throws IllegalStateException {
-                    return new TaskBuilder<Void>(getTransaction(), TaskControllerImpl.this);
+                    return new TaskBuilderImpl<Void>(getTransaction(), TaskControllerImpl.this);
                 }
             });
         } catch (Throwable t) {

@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.txn;
+package org.jboss.msc._private;
 
-import static org.jboss.msc.txn.Bits.allAreSet;
+import static org.jboss.msc._private.Bits.allAreSet;
 import static org.jboss.msc._private.MSCLogger.TXN;
 
 import java.util.IdentityHashMap;
@@ -28,6 +28,9 @@ import java.util.Map;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+
+import org.jboss.msc.txn.DeadlockException;
+import org.jboss.msc.txn.Transaction;
 
 /**
  * Shared thread-safe utility class that keeps track of active transactions and their dependencies.

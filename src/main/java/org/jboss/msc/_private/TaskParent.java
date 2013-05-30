@@ -16,7 +16,9 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.txn;
+package org.jboss.msc._private;
+
+import org.jboss.msc.txn.InvalidTransactionStateException;
 
 /**
  * Internal interface for task parent operations.

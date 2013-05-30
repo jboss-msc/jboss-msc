@@ -18,6 +18,7 @@
 
 package org.jboss.msc.txn;
 
+import org.jboss.msc._private.TransactionImpl;
 import org.jboss.msc.service.ServiceTarget;
 
 import static org.jboss.msc._private.MSCLogger.TXN;
@@ -29,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public abstract class Transaction extends SimpleAttachable implements ServiceContext {
+public abstract class Transaction extends SimpleAttachable implements Attachable, ServiceContext {
 
     /**
      * Create a new task transaction.

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.jboss.msc.txn;
+package org.jboss.msc._private;
 
 /**
  * General bit-affecting utility methods.
