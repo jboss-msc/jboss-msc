@@ -21,6 +21,7 @@ package org.jboss.msc._private;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jboss.msc.service.DependencyFlag;
 import org.jboss.msc.service.Injector;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.txn.ServiceContext;
@@ -35,10 +36,10 @@ import org.jboss.msc.txn.Transaction;
 final class DependencySpec<T> {
     private final ServiceRegistryImpl registry;
     private final ServiceName name;
-    private final DependencyFlagImpl[] flags;
+    private final DependencyFlag[] flags;
     private final List<Injector<? super T>> injections = new ArrayList<Injector<? super T>>();
 
-    DependencySpec(final ServiceRegistryImpl registry, final ServiceName name, final DependencyFlagImpl[] flags) {
+    DependencySpec(final ServiceRegistryImpl registry, final ServiceName name, final DependencyFlag[] flags) {
         this.registry = registry;
         this.name = name;
         this.flags = flags;
@@ -64,7 +65,56 @@ final class DependencySpec<T> {
         @SuppressWarnings("unchecked")
         final Injector<? super T>[] injectionArray = (Injector<? super T>[]) injections.toArray(new Injector<?>[injections.size()]);
         final Registration dependencyRegistration = registry.getOrCreateRegistration(context, transaction, name);
-        final Dependency<T> dependency = new SimpleDependency<T>(injectionArray, dependencyRegistration, flags);
-        return DependencyFlagImpl.decorate(dependency, serviceBuilder, flags);
+        final boolean dependencyUp = isDependencyUp();
+        final boolean propagateDemand = shouldPropagateDemand();
+        final boolean required = isRequired();
+        final Dependency<T> dependency = new SimpleDependency<T>(injectionArray, dependencyRegistration, dependencyUp, propagateDemand, required);
+        return decorate(dependency, serviceBuilder);
+    }
+
+    private boolean isDependencyUp() {
+        for (DependencyFlag flag: flags) {
+            if (flag == DependencyFlag.ANTI) {
+                return false;
+            }
+        }
+        // notice that, when there are no flags, the service is required to be UP
+        return true;
+    }
+
+    private boolean shouldPropagateDemand() {
+        for (DependencyFlag flag: flags) {
+            if (flag == DependencyFlag.REQUIRED || flag == DependencyFlag.DEMANDED || flag == DependencyFlag.UNREQUIRED) {
+                return true;
+            }
+            // TODO the logic for dependncy flags is wrong, fix it
+        }
+        return false; 
+    }
+
+    private boolean isRequired() {
+        for (DependencyFlag flag: flags) {
+            if (flag == DependencyFlag.UNREQUIRED) {
+                return false;
+            }
+        }
+        // notice that, when there are no flags, the dependency is required by default
+        return true;
+    }
+
+    private final Dependency<T> decorate(Dependency<T> dependency, ServiceBuilderImpl<?> serviceBuilder) {
+        for (DependencyFlag flag: flags) {
+            switch(flag) {
+                case OPTIONAL:
+                    dependency = new OptionalDependency<T>(dependency);
+                case PARENT:
+                    dependency = new ParentDependency<T>(dependency, serviceBuilder);
+                case REPLACEABLE:
+                    dependency = new ReplaceableDependency<T>(dependency);
+                default:
+                    // do nothing
+            }
+        }
+        return dependency;
     }
 }

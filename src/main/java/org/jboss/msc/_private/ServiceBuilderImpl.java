@@ -124,7 +124,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      */
     public ServiceBuilder<T> addDependency(ServiceName name, Injector<?> injector, DependencyFlag... flags) {
         checkAlreadyInstalled();
-        DependencySpec<Object> spec = new DependencySpec<Object>(registry, name, translate(flags));
+        DependencySpec<Object> spec = new DependencySpec<Object>(registry, name, flags);
         //spec.addInjection(injector);
         addDependencySpec(spec, name, flags);
         return this;
@@ -142,7 +142,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      */
     public ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, DependencyFlag... flags) {
         checkAlreadyInstalled();
-        addDependencySpec(new DependencySpec((ServiceRegistryImpl)registry, name, translate(flags)), name, flags);
+        addDependencySpec(new DependencySpec((ServiceRegistryImpl)registry, name, flags), name, flags);
         return this;
     }
 
@@ -160,31 +160,10 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      */
     public ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, Injector<?> injector, DependencyFlag... flags) {
         checkAlreadyInstalled();
-        final DependencySpec<?> spec = new DependencySpec<Object>((ServiceRegistryImpl)registry, name, translate(flags));
+        final DependencySpec<?> spec = new DependencySpec<Object>((ServiceRegistryImpl)registry, name, flags);
         //spec.addInjection(injector);
         addDependencySpec(spec, name, flags);
         return this;
-    }
-
-    private DependencyFlagImpl[] translate(final DependencyFlag... flags) {
-        if (flags == null) return DependencyFlagImpl.NONE;
-        final DependencyFlagImpl[] retVal = new DependencyFlagImpl[flags.length];
-        for (int i = 0; i < flags.length; i++) {
-            retVal[i] = translate(flags[i]);
-        }
-        return retVal;
-    }
-    
-    private DependencyFlagImpl translate(final DependencyFlag flag) {
-        if (DependencyFlag.ANTI.equals(flag)) return DependencyFlagImpl.ANTI;
-        if (DependencyFlag.REQUIRED.equals(flag)) return DependencyFlagImpl.REQUIRED;
-        if (DependencyFlag.UNREQUIRED.equals(flag)) return DependencyFlagImpl.UNREQUIRED;
-        if (DependencyFlag.OPTIONAL.equals(flag)) return DependencyFlagImpl.OPTIONAL;
-        if (DependencyFlag.UNDEMANDED.equals(flag)) return DependencyFlagImpl.UNDEMANDED;
-        if (DependencyFlag.DEMANDED.equals(flag)) return DependencyFlagImpl.DEMANDED;
-        if (DependencyFlag.PARENT.equals(flag)) return DependencyFlagImpl.PARENT;
-        if (DependencyFlag.REPLACEABLE.equals(flag)) return DependencyFlagImpl.REPLACEABLE;
-        throw new IllegalStateException();
     }
 
     private void addDependencySpec(DependencySpec<?> dependencySpec, ServiceName name, DependencyFlag... flags) {

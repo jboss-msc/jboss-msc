@@ -65,12 +65,24 @@ final class  SimpleDependency<T> extends TransactionalObject implements Dependen
      */
     private boolean dependencySatisfied;
 
-    SimpleDependency(final Injector<? super T>[] injections, final Registration dependencyRegistration, final DependencyFlagImpl[] flags) {
+    /**
+     * Creates a simple dependency to {@code dependencyRegistration}.
+     * 
+     * @param injections             the dependency injections
+     * @param dependencyRegistration the dependency registration
+     * @param dependencyUp           {@code true} if the dependency is expected to be {@code UP}, {@code} false if the
+     *                               dependency is expected to be {@code DOWN}.
+     * @param propagateDemand        {@code true} if dependency should be demanded
+     * @param required               {@code true} if dependency is required, i.e., every transaction that finishes
+     *                               with the dependency not satisfied should be invalidated
+     */
+    SimpleDependency(final Injector<? super T>[] injections, final Registration dependencyRegistration, final boolean dependencyUp,
+            final boolean propagateDemand, final boolean required) {
         this.injections = injections;
         this.dependencyRegistration = dependencyRegistration;
-        this.dependencyUp = DependencyFlagImpl.isDependencyUpExpected(flags);
-        this.propagateDemand = DependencyFlagImpl.propagateDemand(flags);
-        this.required = DependencyFlagImpl.isDependencyRequired(flags);
+        this.dependencyUp = dependencyUp;
+        this.propagateDemand = propagateDemand;
+        this.required = required;
     }
 
     @Override

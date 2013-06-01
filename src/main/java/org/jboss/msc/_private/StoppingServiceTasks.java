@@ -21,7 +21,7 @@ import java.util.Collection;
 import java.util.Collections;
 
 import org.jboss.msc._private.ServiceController.TransactionalState;
-import org.jboss.msc._private.ServiceModeImpl.Demand;
+import org.jboss.msc._private.ServiceModeBehavior.Demand;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;

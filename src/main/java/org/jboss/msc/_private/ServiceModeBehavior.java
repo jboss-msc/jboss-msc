@@ -18,18 +18,20 @@
 
 package org.jboss.msc._private;
 
+import org.jboss.msc.service.ServiceMode;
+
 /**
- * A service mode.
+ * Behaviors of service modes.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
-enum ServiceModeImpl {
+abstract class ServiceModeBehavior {
+
     /**
-     * Start as soon as all dependencies are met, unless this service is demanded to start by an ANTI dependency. 
-     * Demands dependencies.
+     * Behavior for {@link ServiceMode#ACTIVE}.
      */
-    ACTIVE {
+    private static final ServiceModeBehavior ACTIVE = new ServiceModeBehavior() {
         boolean shouldStart(ServiceController<?> service) {
             return !service.isDownDemanded();
         }
@@ -41,11 +43,12 @@ enum ServiceModeImpl {
         Demand shouldDemandDependencies() {
             return Demand.ALWAYS;
         }
-    },
+    };
+
     /**
-     * Start as soon as all dependencies are met.  Does not demand dependencies.
+     * Behavior for {@link ServiceMode#PASSIVE}.
      */
-    PASSIVE {
+    private static final ServiceModeBehavior PASSIVE = new ServiceModeBehavior() {
         boolean shouldStart(ServiceController<?> service) {
             return true;
         }
@@ -57,11 +60,12 @@ enum ServiceModeImpl {
         Demand shouldDemandDependencies() {
             return Demand.PROPAGATE;
         }
-    },
+    };
+
     /**
-     * Start only when demanded to, but stay running until required or demanded to stop.
+     * Behavior for {@link ServiceMode#LAZY}.
      */
-    LAZY {
+    private static final ServiceModeBehavior LAZY = new ServiceModeBehavior() {
         boolean shouldStart(ServiceController<?> service) {
             return service.isUpDemanded();
         }
@@ -73,11 +77,12 @@ enum ServiceModeImpl {
         Demand shouldDemandDependencies() {
             return Demand.SERVICE_UP;
         }
-    },
+    };
+
     /**
-     * Start only when demanded to, and stop when demands disappear, or when demanded to stop.
+     * Behavior for {@link ServiceMode#ON_DEMAND}.
      */
-    ON_DEMAND {
+    private static final ServiceModeBehavior ON_DEMAND = new ServiceModeBehavior() {
         boolean shouldStart(ServiceController<?> service) {
             return service.isUpDemanded();
         }
@@ -89,11 +94,12 @@ enum ServiceModeImpl {
         Demand shouldDemandDependencies() {
             return Demand.PROPAGATE;
         }
-    },
+    };
+
     /**
-     * Do not start; stay in a stopped state.
+     * Behavior for {@link ServiceMode#NEVER}.
      */
-    NEVER {
+    private static final ServiceModeBehavior NEVER = new ServiceModeBehavior() {
         boolean shouldStart(ServiceController<?> service) {
             return false;
         }
@@ -105,8 +111,7 @@ enum ServiceModeImpl {
         Demand shouldDemandDependencies() {
             return Demand.NEVER;
         }
-    },
-    ;
+    };
 
     /**
      * Indicates if this mode requires
@@ -143,4 +148,21 @@ enum ServiceModeImpl {
         PROPAGATE,
         // demand dependencies only when service enters up state
         SERVICE_UP};
+
+    public static ServiceModeBehavior getInstance(ServiceMode serviceMode) {
+        switch (serviceMode) {
+            case ACTIVE:
+                return ACTIVE;
+            case LAZY:
+                return LAZY;
+            case NEVER:
+                return NEVER;
+            case ON_DEMAND:
+                return ON_DEMAND;
+            case PASSIVE:
+                return PASSIVE;
+            default:
+                throw new IllegalArgumentException("Unexpected service mode");
+        }
+    }
 }

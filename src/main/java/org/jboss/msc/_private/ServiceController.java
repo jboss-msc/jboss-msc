@@ -23,7 +23,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import org.jboss.msc._private.ServiceModeImpl.Demand;
+import org.jboss.msc._private.ServiceModeBehavior.Demand;
 import org.jboss.msc.service.Injector;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceMode;
@@ -60,7 +60,7 @@ final class ServiceController<T> extends TransactionalObject {
     /**
      * The controller mode.
      */
-    private final ServiceModeImpl mode;
+    private final ServiceModeBehavior mode;
     /**
      * The controller state.
      */
@@ -108,7 +108,7 @@ final class ServiceController<T> extends TransactionalObject {
             final ServiceContext context) {
 
         state = State.NEW;
-        this.mode = translate(mode);
+        this.mode = ServiceModeBehavior.getInstance(mode);
         this.dependencies = dependencies;
         this.aliasRegistrations = aliasRegistrations;
         this.primaryRegistration = primaryRegistration;
@@ -118,15 +118,6 @@ final class ServiceController<T> extends TransactionalObject {
         for (Dependency<?> dependency: dependencies) {
             dependency.setDependent(this, transaction, context);
         }
-    }
-
-    private ServiceModeImpl translate(final ServiceMode mode) {
-        if (ServiceMode.ACTIVE.equals(mode)) return ServiceModeImpl.ACTIVE;
-        if (ServiceMode.PASSIVE.equals(mode)) return ServiceModeImpl.PASSIVE;
-        if (ServiceMode.LAZY.equals(mode)) return ServiceModeImpl.LAZY;
-        if (ServiceMode.ON_DEMAND.equals(mode)) return ServiceModeImpl.ON_DEMAND;
-        if (ServiceMode.NEVER.equals(mode)) return ServiceModeImpl.NEVER;
-        throw new IllegalStateException();
     }
 
     /**
@@ -169,7 +160,7 @@ final class ServiceController<T> extends TransactionalObject {
     /**
      * Gets the service mode.
      */
-    ServiceModeImpl getMode() {
+    ServiceModeBehavior getMode() {
         return this.mode;
     }
 
