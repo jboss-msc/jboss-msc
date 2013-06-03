@@ -32,7 +32,6 @@ import org.jboss.msc.test.utils.TestValidatable;
 import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**

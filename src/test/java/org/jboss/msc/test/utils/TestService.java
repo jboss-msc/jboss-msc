@@ -15,7 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jboss.msc.test.services;
+package org.jboss.msc.test.utils;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.StartContext;
@@ -25,39 +27,41 @@ import org.jboss.msc.service.StopContext;
  * Basic service for tests.
  * 
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
- *
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public class TestService implements Service<Void> {
+public final class TestService implements Service<Void> {
 
-    private boolean failToStart; 
-    private boolean up = false;
+    private final boolean failToStart; 
+    private AtomicBoolean up = new AtomicBoolean();
+    private AtomicBoolean failed = new AtomicBoolean();
 
-    public TestService(boolean failToStart) {
+    public TestService(final boolean failToStart) {
         this.failToStart = failToStart;
     }
 
     @Override
-    public synchronized void start(StartContext<Void> context) {
-        up = true;
+    public void start(final StartContext<Void> context) {
         if (failToStart) {
+            failed.set(true);
+            context.addProblem(new UnsupportedOperationException());
             context.fail();
         } else {
+            up.set(true);
             context.complete();
         }
     }
 
     @Override
-    public synchronized void stop(StopContext context) {
-        up = false;
+    public void stop(final StopContext context) {
+        up.set(false);
         context.complete();
     }
 
-    public synchronized boolean isFailed() {
-        return up && failToStart;
+    public boolean isFailed() {
+        return failed.get();
     }
 
-    public synchronized boolean isUp() {
-        return up && !failToStart;
+    public boolean isUp() {
+        return up.get();
     }
-
 }

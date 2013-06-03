@@ -50,12 +50,12 @@ public abstract class AbstractTransactionTest {
     protected ThreadPoolExecutor defaultExecutor;
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
         defaultExecutor = newExecutor(8, true);
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws Exception {
         defaultExecutor.shutdown();
         try {
             defaultExecutor.awaitTermination(60, TimeUnit.SECONDS);
