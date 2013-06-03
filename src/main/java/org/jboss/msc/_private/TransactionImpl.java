@@ -186,20 +186,20 @@ public final class TransactionImpl extends Transaction implements ServiceContext
         controller.remove(this);
     }
 
-    public void disableRegistry(ServiceRegistry registry) {
-        // TODO I cant access the registry methods ((ServiceRegistryImpl) registry).disable(this);
+    public void disableRegistry(final ServiceRegistry registry) {
+        ((ServiceRegistryImpl)registry).disable(this);
     }
 
-    public void enableRegistry(ServiceRegistry registry) {
-        // TODO I cant access the registry methods ((ServiceRegistryImpl) registry).disable(this);
+    public void enableRegistry(final ServiceRegistry registry) {
+        ((ServiceRegistryImpl)registry).enable(this);
     }
 
-    public void removeRegistry(ServiceRegistry registry) {
-        throw new UnsupportedOperationException();
+    public void removeRegistry(final ServiceRegistry registry) {
+        ((ServiceRegistryImpl)registry).clear(this);
     }
 
-    public void shutdownContainer(ServiceContainer container) {
-        throw new UnsupportedOperationException();
+    public void shutdownContainer(final ServiceContainer container) {
+        ((ServiceContainerImpl)container).shutdown(this);
     }
 
     public Executor getExecutor() {

@@ -18,53 +18,36 @@
 
 package org.jboss.msc._private;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceRegistry;
-import org.jboss.msc.txn.CommitContext;
-import org.jboss.msc.txn.Committable;
-import org.jboss.msc.txn.Revertible;
-import org.jboss.msc.txn.RollbackContext;
+import org.jboss.msc.txn.Transaction;
 
 /**
  * A transactional service container.
- *
+ * 
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class ServiceContainerImpl implements ServiceContainer {
-    private final Set<ServiceRegistry> registries = new HashSet<ServiceRegistry>();
-    private final Set<CountDownLatch> shutDownLatches = new HashSet<CountDownLatch>();
-    private boolean shutdownCompleted;
-    private boolean shutdownInitiated = false;
+
+    private final Set<ServiceRegistryImpl> registries = Collections.synchronizedSet(new HashSet<ServiceRegistryImpl>());
 
     public ServiceRegistry newRegistry() {
-        return new ServiceRegistryImpl();
+        final ServiceRegistryImpl returnValue = new ServiceRegistryImpl();
+        registries.add(returnValue);
+        return returnValue;
     }
 
-    private class ShutdownTask implements Committable, Revertible {
-
-        public void commit(CommitContext context) {
-            try {
-                shutdownCompleted = true;
-                synchronized (shutDownLatches) {
-                    for (CountDownLatch shutdownLatch: shutDownLatches) {
-                        shutdownLatch.countDown();
-                    }
-                }
-            } finally {
-                context.complete();
+    void shutdown(final Transaction txn) {
+        synchronized(registries) {
+            for (final ServiceRegistryImpl registry : registries) {
+                registry.clear(txn);
             }
-        }
-
-        public void rollback(RollbackContext context) {
-            synchronized (ServiceContainerImpl.this) {
-                shutdownInitiated = false;
-            }
-            context.complete();
         }
     }
 }
