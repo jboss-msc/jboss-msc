@@ -18,6 +18,7 @@
 package org.jboss.msc._private;
 
 import org.jboss.msc._private.ServiceController.State;
+import org.jboss.msc.service.DependencyFlag;
 import org.jboss.msc.service.Injector;
 import org.jboss.msc.txn.Problem.Severity;
 import org.jboss.msc.txn.ReportableContext;
@@ -72,17 +73,35 @@ final class  SimpleDependency<T> extends TransactionalObject implements Dependen
      * @param dependencyRegistration the dependency registration
      * @param dependencyUp           {@code true} if the dependency is expected to be {@code UP}, {@code} false if the
      *                               dependency is expected to be {@code DOWN}.
-     * @param propagateDemand        {@code true} if dependency should be demanded
      * @param required               {@code true} if dependency is required, i.e., every transaction that finishes
      *                               with the dependency not satisfied should be invalidated
+     * @param demandFlag             if equal to {@link DependencyFlag#DEMANDED}, it indicates dependency should be
+     *                               demanded right away; if equal to {@link DependencyFlag#UNDEMANDED}, it indicates
+     *                               dependency should never be demanded; if {@code null}, it indicates dependency
+     *                               should be demanded when {@link #demand(Transaction, ServiceContext) requested}.
+     * @param transaction            active transaction
+     * @param context                service context
      */
     SimpleDependency(final Injector<? super T>[] injections, final Registration dependencyRegistration, final boolean dependencyUp,
-            final boolean propagateDemand, final boolean required) {
+            final boolean required, final DependencyFlag demandFlag, Transaction transaction, ServiceContext context) {
         this.injections = injections;
         this.dependencyRegistration = dependencyRegistration;
         this.dependencyUp = dependencyUp;
-        this.propagateDemand = propagateDemand;
         this.required = required;
+        if (demandFlag == null) {
+            this.propagateDemand = true;
+        } else {
+            this.propagateDemand = false;
+            switch (demandFlag) {
+                case DEMANDED:
+                    dependencyRegistration.addDemand(transaction, context, dependencyUp);
+                    break;
+                case UNDEMANDED:
+                    break;
+                default: 
+                    throw new IllegalArgumentException("Unexpected demand flag: " + demandFlag);
+            }
+        }
     }
 
     @Override

@@ -66,9 +66,9 @@ final class DependencySpec<T> {
         final Injector<? super T>[] injectionArray = (Injector<? super T>[]) injections.toArray(new Injector<?>[injections.size()]);
         final Registration dependencyRegistration = registry.getOrCreateRegistration(context, transaction, name);
         final boolean dependencyUp = isDependencyUp();
-        final boolean propagateDemand = shouldPropagateDemand();
+        final DependencyFlag demandFlag = getDemandFlag();
         final boolean required = isRequired();
-        final Dependency<T> dependency = new SimpleDependency<T>(injectionArray, dependencyRegistration, dependencyUp, propagateDemand, required);
+        final Dependency<T> dependency = new SimpleDependency<T>(injectionArray, dependencyRegistration, dependencyUp, required, demandFlag, transaction, context);
         return decorate(dependency, serviceBuilder);
     }
 
@@ -82,14 +82,13 @@ final class DependencySpec<T> {
         return true;
     }
 
-    private boolean shouldPropagateDemand() {
+    private DependencyFlag getDemandFlag() {
         for (DependencyFlag flag: flags) {
-            if (flag == DependencyFlag.REQUIRED || flag == DependencyFlag.DEMANDED || flag == DependencyFlag.UNREQUIRED) {
-                return true;
+            if (flag == DependencyFlag.DEMANDED || flag == DependencyFlag.UNDEMANDED) {
+                return flag;
             }
-            // TODO the logic for dependncy flags is wrong, fix it
         }
-        return false; 
+        return null; 
     }
 
     private boolean isRequired() {
