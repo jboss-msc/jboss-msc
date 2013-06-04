@@ -603,12 +603,12 @@ public final class TransactionImpl extends Transaction implements ServiceContext
         safeCall(listener);
     }
 
-    private void doChildAdded(TaskChild child, final boolean userThread) throws InvalidTransactionStateException {
+    private void doChildAdded(final TaskChild child, final boolean userThread) throws InvalidTransactionStateException {
         assert ! holdsLock(this);
         int state;
         synchronized (this) {
             state = this.state;
-            if (stateOf(state) != STATE_ACTIVE || anyAreSet(state, FLAG_COMMIT_REQ | FLAG_PREPARE_REQ | FLAG_ROLLBACK_REQ)) {
+            if (stateOf(state) != STATE_ACTIVE) {
                 throw new InvalidTransactionStateException("Transaction is not active");
             }
             if (userThread) state |= FLAG_USER_THREAD;
