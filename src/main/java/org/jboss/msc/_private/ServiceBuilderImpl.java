@@ -40,8 +40,10 @@ import org.jboss.msc.txn.Transaction;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
+    private static final DependencyFlag[] noFlags = new DependencyFlag[0];
     private final ServiceRegistryImpl registry;
     private final ServiceName name;
     private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
@@ -75,7 +77,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     public ServiceBuilder<T> setMode(final ServiceMode mode) {
         checkAlreadyInstalled();
         if (mode == null) {
-            throw new IllegalArgumentException("mode is null");
+            MSCLogger.SERVICE.methodParameterIsNull("mode");
         }
         this.mode = mode;
         return this;
@@ -87,10 +89,10 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * @param aliases the service names to use as aliases
      * @return the builder
      */
-    public ServiceBuilderImpl<T> addAliases(ServiceName... aliases) {
+    public ServiceBuilderImpl<T> addAliases(final ServiceName... aliases) {
         checkAlreadyInstalled();
-        if (aliases != null) for(ServiceName alias : aliases) {
-            if(alias != null && !alias.equals(name)) {
+        if (aliases != null) for (final ServiceName alias : aliases) {
+            if (alias != null && !alias.equals(name)) {
                 this.aliases.add(alias);
             }
         }
@@ -100,69 +102,70 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     /**
      * {@inheritDoc}
      */
-    public ServiceBuilder<T> addDependency(ServiceName name) {
-        addDependency(registry, name, (DependencyFlag)null);
-        return this;
+    public ServiceBuilder<T> addDependency(final ServiceName name) {
+        return addDependencyInternal(registry, name, null, (DependencyFlag[])null);
     }
 
     /**
      * {@inheritDoc}
      */
-    public ServiceBuilder<T> addDependency(ServiceName name, DependencyFlag... flags) {
-        return addDependency(registry, name, flags);
+    public ServiceBuilder<T> addDependency(final ServiceName name, final DependencyFlag... flags) {
+        return addDependencyInternal(registry, name, null, flags);
     }
 
     /**
      * {@inheritDoc}
      */
-    public ServiceBuilder<T> addDependency(ServiceName name, Injector<?> injector) throws IllegalStateException {
-        return addDependency(name, injector, (DependencyFlag)null);
+    public ServiceBuilder<T> addDependency(final ServiceName name, final Injector<?> injector) {
+        return addDependencyInternal(registry, name, injector, (DependencyFlag[])null);
     }
 
     /**
      * {@inheritDoc}
      */
-    public ServiceBuilder<T> addDependency(ServiceName name, Injector<?> injector, DependencyFlag... flags) {
+    public ServiceBuilder<T> addDependency(final ServiceName name, final Injector<?> injector, final DependencyFlag... flags) {
+        return addDependencyInternal(registry, name, injector, flags);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public ServiceBuilder<T> addDependency(final ServiceRegistry registry, final ServiceName name) {
+        return addDependencyInternal(registry, name, null, (DependencyFlag[])null);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public ServiceBuilder<T> addDependency(final ServiceRegistry registry, final ServiceName name, final DependencyFlag... flags) {
+        return addDependencyInternal(registry, name, null, flags);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public ServiceBuilder<T> addDependency(final ServiceRegistry registry, final ServiceName name, final Injector<?> injector) {
+        return addDependencyInternal(registry, name, injector, (DependencyFlag[])null);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public ServiceBuilder<T> addDependency(final ServiceRegistry registry, final ServiceName name, final Injector<?> injector, final DependencyFlag... flags) {
+        return addDependencyInternal(registry, name, injector, flags);
+    }
+
+    private ServiceBuilder<T> addDependencyInternal(final ServiceRegistry registry, final ServiceName name, final Injector<?> injector, final DependencyFlag... flags) {
         checkAlreadyInstalled();
-        DependencySpec<Object> spec = new DependencySpec<Object>(registry, name, flags);
+        if (registry == null) {
+            MSCLogger.SERVICE.methodParameterIsNull("registry");
+        }
+        if (name == null) {
+            MSCLogger.SERVICE.methodParameterIsNull("name");
+        }
+        final DependencySpec<?> spec = new DependencySpec<Object>((ServiceRegistryImpl)registry, name, flags != null ? flags : noFlags);
         //spec.addInjection(injector);
-        addDependencySpec(spec, name, flags);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name) {
-        return addDependency(registry, name, (DependencyFlag)null);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, DependencyFlag... flags) {
-        checkAlreadyInstalled();
-        addDependencySpec(new DependencySpec((ServiceRegistryImpl)registry, name, flags), name, flags);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, Injector<?> injector) {
-        checkAlreadyInstalled();
-        addDependency(registry, name, injector, (DependencyFlag)null);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, Injector<?> injector, DependencyFlag... flags) {
-        checkAlreadyInstalled();
-        final DependencySpec<?> spec = new DependencySpec<Object>((ServiceRegistryImpl)registry, name, flags);
-        //spec.addInjection(injector);
-        addDependencySpec(spec, name, flags);
+        addDependencySpec(spec, name, flags != null ? flags : noFlags);
         return this;
     }
 
