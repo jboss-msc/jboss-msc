@@ -121,7 +121,7 @@ final class  SimpleDependency<T> extends TransactionalObject implements Dependen
     }
 
     @Override
-    public synchronized void clearDependent(Transaction transaction, ServiceContext context) {
+    public void clearDependent(Transaction transaction, ServiceContext context) {
         dependencyRegistration.removeIncomingDependency(transaction, context, this);
     }
 
@@ -166,11 +166,15 @@ final class  SimpleDependency<T> extends TransactionalObject implements Dependen
     @Override
     public TaskController<?> dependencyAvailable(boolean dependencyUp, Transaction transaction, ServiceContext context) {
         lockWrite(transaction, context);
+        final boolean satisfied;
         synchronized (this) {
             if (this.dependencyUp == dependencyUp) {
                 dependencySatisfied = true;
-                return dependentController.dependencySatisfied(transaction, context);
             }
+            satisfied = dependencySatisfied;
+        }
+        if (satisfied) {
+            return dependentController.dependencySatisfied(transaction, context);
         }
         return null;
     }
@@ -178,11 +182,17 @@ final class  SimpleDependency<T> extends TransactionalObject implements Dependen
     @Override
     public TaskController<?> dependencyUnavailable(Transaction transaction, ServiceContext context) {
         lockWrite(transaction, context);
+        final boolean unsatisfied;
         synchronized (this) {
             if (dependencySatisfied) {
                 dependencySatisfied = false;
-                return dependentController.dependencyUnsatisfied(transaction, context);
+                unsatisfied = true;
+            } else {
+                unsatisfied = false;
             }
+        }
+        if (unsatisfied) {
+            return dependentController.dependencyUnsatisfied(transaction, context);
         }
         return null;
     }

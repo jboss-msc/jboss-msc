@@ -17,8 +17,10 @@
  */
 package org.jboss.msc._private;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.jboss.msc._private.ServiceController.TransactionalState;
@@ -82,6 +84,25 @@ final class StartingServiceTasks {
         final TaskController<T> start = startBuilder.release();
 
         return context.newTask(new PostStartServiceTask<T>(serviceController, start, transaction)).addDependency(start).release();
+    }
+
+    /**
+     * Create starting service tasks. When all created tasks finish execution, {@code service} will enter {@code UP}
+     * state.
+     * 
+     * @param serviceController  starting service
+     * @param taskDependency     the task that must be first concluded before service can start
+     * @param transaction        the active transaction
+     * @return                   the final task to be executed. Can be used for creating tasks that depend on the
+     *                           conclusion of starting transition.
+     */
+    public static <T> TaskController<Void> createTasks(ServiceController<T> serviceController,
+            TaskController<?> taskDependency, Transaction transaction, ServiceContext context) {
+
+        assert taskDependency != null;
+        final List<TaskController<?>> taskDependencies = new ArrayList<TaskController<?>>(1);
+        taskDependencies.add(taskDependency);
+        return createTasks(serviceController, taskDependencies, transaction, context);
     }
 
     private static boolean hasDependencies(ServiceController<?> service) {

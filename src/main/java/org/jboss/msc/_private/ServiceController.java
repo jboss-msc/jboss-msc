@@ -453,27 +453,34 @@ final class ServiceController<T> extends TransactionalObject {
         private TransactionalState transactionalState = TransactionalState.getTransactionalState(ServiceController.this.state);
         // if this service is under transition (STARTING or STOPPING), this field points to the task that completes the transition
         private TaskController<Void> completeTransitionTask = null;
-        // perform another transition after current transition completes
-        private boolean performTransition = false;
+        // the total number of setTransition calls expected until completeTransitionTask is finished
+        private int transitionCount;
 
         synchronized void setTransition(TransactionalState transactionalState, Transaction transaction, ServiceContext context) {
-            completeTransitionTask = null;
             this.transactionalState = transactionalState;
             state = transactionalState.getState();
-            switch(transactionalState) {
-                case UP:
-                    notifyDependencyAvailable(true, transaction, context);
-                    break;
-                case DOWN:
-                    notifyDependencyAvailable(false, transaction, context);
-                    break;
-                case REMOVED:
-                    for (Dependency<?> dependency: dependencies) {
-                        dependency.clearDependent(transaction, context);
-                    }
-            }
-            if (performTransition) {
-                transition(transaction, context);
+            assert transitionCount > 0;
+            // transition has finally come to an end, and calling task equals completeTransitionTask
+            if (-- transitionCount ==  0) {
+                switch(transactionalState) {
+                    case UP:
+                        notifyDependencyAvailable(true, transaction, context);
+                        break;
+                    case DOWN:
+                        notifyDependencyAvailable(false, transaction, context);
+                        break;
+                    case REMOVED:
+                        for (Dependency<?> dependency: dependencies) {
+                            dependency.clearDependent(transaction, context);
+                        }
+                        break;
+                    case FAILED:
+                        // ok
+                        break;
+                    default:
+                        throw new IllegalStateException("Illegal state for finishing transition: " + transactionalState);
+                }
+                completeTransitionTask = null;
             }
         }
 
@@ -502,22 +509,29 @@ final class ServiceController<T> extends TransactionalObject {
                         final Collection<TaskController<?>> dependentTasks = notifyDependencyUnavailable(transaction, context);
                         transactionalState = TransactionalState.STARTING;
                         completeTransitionTask = StartingServiceTasks.createTasks(ServiceController.this, dependentTasks, transaction, context);
+                        transitionCount ++;
                         if (mode.shouldDemandDependencies() == Demand.SERVICE_UP) {
                             DemandDependenciesTask.create(ServiceController.this, completeTransitionTask, transaction, context);
                         }
                     }
                     break;
                 case STOPPING:
-                    // discuss this on IRC channel before proceeding
                     if (unsatisfiedDependencies == 0 && !mode.shouldStop(ServiceController.this) && enabled) {
-                        // ongoing transition from UP to DOWN, schedule a transition once service is DOWN
-                        scheduleTransition(context);
+                        // ongoing transition from UP to DOWN, transition to UP just once service is DOWN
+                        TaskController<?> setStartingState = transaction.newTask(new SetTransactionalStateTask(ServiceController.this, TransactionalState.STARTING, transaction))
+                            .addDependency(completeTransitionTask).release();
+                        completeTransitionTask = StartingServiceTasks.createTasks(ServiceController.this, setStartingState, transaction, context);
+                        if (mode.shouldDemandDependencies() == Demand.SERVICE_UP) {
+                            DemandDependenciesTask.create(ServiceController.this, completeTransitionTask, transaction, context);
+                        }
+                        transitionCount += 2;
                     }
                     break;
                 case FAILED:
                     if (unsatisfiedDependencies > 0 || mode.shouldStop(ServiceController.this) || !enabled) {
                         transactionalState = TransactionalState.STOPPING;
                         completeTransitionTask = StoppingServiceTasks.createTasks(ServiceController.this, transaction, context);
+                        transitionCount ++;
                     }
                     break;
                 case UP:
@@ -525,13 +539,17 @@ final class ServiceController<T> extends TransactionalObject {
                         final Collection<TaskController<?>> dependentTasks = notifyDependencyUnavailable(transaction, context);
                         transactionalState = TransactionalState.STOPPING;
                         completeTransitionTask = StoppingServiceTasks.createTasks(ServiceController.this, dependentTasks, transaction, context);
+                        transitionCount ++;
                     }
                     break;
                 case STARTING:
-                    // discuss this on IRC channel before proceeding
                     if (unsatisfiedDependencies > 0 || !mode.shouldStart(ServiceController.this) || !enabled) {
-                        // ongoing transition from DOWN to UP, schedule a transition once service is UP
-                        scheduleTransition(context);
+                        // ongoing transition from DOWN to UP, transition to DOWN just once service is UP
+                        TaskController<?> setStoppingState = transaction.newTask(new SetTransactionalStateTask(
+                                ServiceController.this, TransactionalState.STOPPING, transaction))
+                                .addDependency(completeTransitionTask).release();
+                        completeTransitionTask = StoppingServiceTasks.createTasks(ServiceController.this, setStoppingState, transaction, context);
+                        transitionCount +=2;
                     }
                     break;
                 default:
@@ -572,43 +590,11 @@ final class ServiceController<T> extends TransactionalObject {
             }
         }
 
-        private void scheduleTransition(ServiceContext context) {
-            assert Thread.holdsLock(this);
-            assert completeTransitionTask != null;
-            performTransition = true;
-        }
-
         private synchronized TaskController<Void> scheduleRemoval(Transaction transaction, ServiceContext context) {
-            switch (transactionalState) {
-                case DOWN:
-                    transactionalState = TransactionalState.REMOVING;
-                    completeTransitionTask = context.newTask(new ServiceRemoveTask(ServiceController.this, transaction)).release();
-                    break;
-                case FAILED:
-                    // fall thru!
-                case UP:
-                    transactionalState = TransactionalState.STOPPING;
-                    Collection<TaskController<?>> dependentTasks = notifyDependencyUnavailable(transaction, context);
-                    final TaskController<Void> stopServiceTask = StoppingServiceTasks.createTasks(ServiceController.this, dependentTasks, transaction, context);
-                    completeTransitionTask = context.newTask(new ServiceRemoveTask(ServiceController.this, transaction)).addDependency(stopServiceTask).release();
-                    break;
-                case STARTING:
-                    // same thing as transition, discuss this with the team
-                    // must depende on completeTransitionTask, among other things
-                    @SuppressWarnings("unchecked")
-                    TaskController<?> downServiceTask = StoppingServiceTasks.createTasks(ServiceController.this, Collections.EMPTY_LIST, transaction, context);
-                    TaskController<Void> removingStateTask = context.newTask(new SetTransactionalStateTask(ServiceController.this, TransactionalState.REMOVING, transaction)).addDependency(downServiceTask).release();
-                    completeTransitionTask = context.newTask(new ServiceRemoveTask(ServiceController.this, transaction)).addDependency(removingStateTask).release();
-                    break;
-                case STOPPING:
-                    removingStateTask = context.newTask(new SetTransactionalStateTask(ServiceController.this, TransactionalState.REMOVING, transaction)).addDependency(completeTransitionTask).release();
-                    completeTransitionTask = context.newTask(new ServiceRemoveTask(ServiceController.this, transaction)).addDependency(removingStateTask).release();
-                    break;
-                default:
-                    throw new IllegalStateException("Service should not be at this state: " + transactionalState);
-                
-            }
             enabled = false;
+            transition(transaction, context);
+            completeTransitionTask = context.newTask(new ServiceRemoveTask(ServiceController.this, transaction)).release();
+            transitionCount ++;
             return completeTransitionTask;
         }
 

@@ -17,8 +17,10 @@
  */
 package org.jboss.msc._private;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
 import org.jboss.msc._private.ServiceController.TransactionalState;
 import org.jboss.msc._private.ServiceModeBehavior.Demand;
@@ -42,11 +44,11 @@ final class StoppingServiceTasks {
      * Create stopping service tasks. When all created tasks finish execution, {@code service} will enter {@code DOWN} state.
      * 
      * @param service          stopping service
-     * @param taskDependencies the task that must be first concluded before service can stop
+     * @param taskDependencies the tasks that must be first concluded before service can stop
      * @param transaction      the active transaction
      * @param context          the service context
-     * @return                the final task to be executed. Can be used for creating tasks that depend on the
-     *                        conclusion of stopping transition.
+     * @return                 the final task to be executed. Can be used for creating tasks that depend on the
+     *                         conclusion of stopping transition.
      */
     public static <T> TaskController<Void> createTasks(ServiceController<T> service, Collection<TaskController<?>> taskDependencies,
             Transaction transaction, ServiceContext context) {
@@ -78,6 +80,24 @@ final class StoppingServiceTasks {
             setDownStateBuilder.addDependency(notifyDependentStop);
         }
         return setDownStateBuilder.release();
+    }
+
+    /**
+     * Create stopping service tasks. When all created tasks finish execution, {@code service} will enter {@code DOWN} state.
+     * 
+     * @param service          stopping service
+     * @param taskDependency   the task that must be first concluded before service can stop
+     * @param transaction      the active transaction
+     * @param context          the service context
+     * @return                 the final task to be executed. Can be used for creating tasks that depend on the
+     *                         conclusion of stopping transition.
+     */
+    public static <T> TaskController<Void> createTasks(ServiceController<T> service, TaskController<?> taskDependency,
+            Transaction transaction, ServiceContext context) {
+
+        final List<TaskController<?>> taskDependencies = new ArrayList<TaskController<?>>(1);
+        taskDependencies.add(taskDependency);
+        return createTasks(service, taskDependencies, transaction, context);
     }
 
     /**
