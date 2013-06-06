@@ -49,7 +49,7 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
      * @throws ServiceNotFoundException if the service is not present in the registry
      */
     public Service<?> getRequiredService(ServiceName serviceName) throws ServiceNotFoundException {
-        return getRequiredServiceController(serviceName).getValue().get();
+        return getRequiredServiceController(serviceName).getService();
     }
 
     /**
@@ -63,7 +63,7 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
         if (registration == null) {
             return null;
         }
-        return registration.getController() == null? null: registration.getController().getValue().get();
+        return registration.getController() == null? null: registration.getController().getService();
     }
 
     Registration getOrCreateRegistration(ServiceContext context, Transaction transaction, ServiceName name) {

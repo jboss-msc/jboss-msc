@@ -53,7 +53,7 @@ final class StoppingServiceTasks {
     public static <T> TaskController<Void> createTasks(ServiceController<T> service, Collection<TaskController<?>> taskDependencies,
             Transaction transaction, ServiceContext context) {
 
-        final Service<T> serviceValue = service.getValue().get();
+        final Service<T> serviceValue = service.getService();
 
         // stop service
         final TaskBuilder<Void> stopTaskBuilder = context.newTask(new SimpleServiceStopTask(serviceValue));

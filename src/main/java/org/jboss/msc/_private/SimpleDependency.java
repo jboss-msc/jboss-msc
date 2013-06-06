@@ -133,7 +133,7 @@ final class  SimpleDependency<T> extends TransactionalObject implements Dependen
     @Override
     public void performInjections() {
         assert dependencyRegistration.getController() != null;
-        assert dependencyRegistration.getController().getValue() != null;
+        assert dependencyRegistration.getController().getService() != null;
         for (Injector <? super T> injection: injections) {
             // TODO injection.setValue();
         }

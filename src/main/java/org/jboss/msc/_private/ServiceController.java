@@ -46,7 +46,7 @@ final class ServiceController<T> extends TransactionalObject {
     /**
      * The service itself.
      */
-    private final Injector<Service<T>> value = new Injector<Service<T>>();
+    private final Service<T> value;
     /**
      * The primary registration of this service.
      */
@@ -105,10 +105,10 @@ final class ServiceController<T> extends TransactionalObject {
      * @param transaction         the active transaction
      * @param context             the service context
      */
-    ServiceController(final Registration primaryRegistration, final Registration[] aliasRegistrations,
+    ServiceController(final Registration primaryRegistration, final Registration[] aliasRegistrations, final Service<T> value,
             final org.jboss.msc.service.ServiceMode mode, final Dependency<?>[] dependencies, final Transaction transaction,
             final ServiceContext context) {
-
+        this.value = value;
         state = State.NEW;
         this.mode = ServiceModeBehavior.getInstance(mode);
         this.dependencies = dependencies;
@@ -174,9 +174,9 @@ final class ServiceController<T> extends TransactionalObject {
     }
 
     /**
-     * Gets the service value.
+     * Gets the service.
      */
-    Injector<Service<T>> getValue() {
+    Service<T> getService() {
         return value;
     }
 

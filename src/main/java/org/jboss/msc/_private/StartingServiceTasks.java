@@ -62,7 +62,7 @@ final class StartingServiceTasks {
     public static <T> TaskController<Void> createTasks(ServiceController<T> serviceController,
             Collection<TaskController<?>> taskDependencies, Transaction transaction, ServiceContext context) {
 
-        final Service<T> serviceValue = serviceController.getValue().get();
+        final Service<T> serviceValue = serviceController.getService();
 
         // start service task builder
         final TaskBuilder<T> startBuilder = context.newTask(new SimpleServiceStartTask<T>(serviceValue, transaction)).setTraits(serviceValue);
@@ -148,7 +148,7 @@ final class StartingServiceTasks {
             try {
                 T result = serviceStartTask.getResult();
                 // service failed
-                if (result == null && transaction.getAttachment(FAILED_SERVICES).contains(service.getValue().get())) {
+                if (result == null && transaction.getAttachment(FAILED_SERVICES).contains(service.getService())) {
                     service.setTransition(TransactionalState.FAILED, transaction, context);
                 } else {
                     performOutInjections();

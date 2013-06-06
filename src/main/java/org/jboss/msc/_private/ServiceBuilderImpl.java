@@ -276,8 +276,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         for (DependencySpec<?> spec : specs.values()) {
             dependencies[i++] = spec.createDependency(this, transaction, context);
         }
-        final ServiceController<T> serviceController =  new ServiceController<T>(registration, aliasRegistrations, mode, dependencies, transaction, context);
-        serviceController.getValue().set(service);
+        final ServiceController<T> serviceController =  new ServiceController<T>(registration, aliasRegistrations, service, mode, dependencies, transaction, context);
         serviceController.install(transaction, context);
         if (replacement) {
             concludeReplacement(serviceController, transaction);
