@@ -79,7 +79,7 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
         return registration;
     }
 
-    Registration getRegistration(Transaction transaction, ServiceName name) {
+    Registration getRegistration(ServiceName name) {
         return registry.get(name);
     }
 

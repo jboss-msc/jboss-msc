@@ -175,7 +175,7 @@ public final class TransactionImpl extends Transaction implements ServiceContext
         if (name == null) {
             throw new IllegalArgumentException("name is null");
         }
-        final Registration registration = ((ServiceRegistryImpl) registry).getRegistration(this, name);
+        final Registration registration = ((ServiceRegistryImpl) registry).getRegistration(name);
         if (registration == null) {
             return;
         }
