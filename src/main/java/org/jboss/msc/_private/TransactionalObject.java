@@ -89,17 +89,19 @@ abstract class TransactionalObject {
             }
         } 
         final Object snapshot = takeSnapshot();
-        final Map<TransactionalObject, Object> transactionalObjects;
-        synchronized (TRANSACTIONAL_OBJECTS) {
-            if (transaction.hasAttachment(TRANSACTIONAL_OBJECTS)) {
-                transactionalObjects = transaction.getAttachment(TRANSACTIONAL_OBJECTS);
-            } else {
-                transactionalObjects = new HashMap<TransactionalObject, Object>();
-                transaction.putAttachment(TRANSACTIONAL_OBJECTS, transactionalObjects);
-                context.newTask().setTraits(new UnlockWriteTask(transactionalObjects)).release();
+        if (snapshot != null) {
+            final Map<TransactionalObject, Object> transactionalObjects;
+            synchronized (TRANSACTIONAL_OBJECTS) {
+                if (transaction.hasAttachment(TRANSACTIONAL_OBJECTS)) {
+                    transactionalObjects = transaction.getAttachment(TRANSACTIONAL_OBJECTS);
+                } else {
+                    transactionalObjects = new HashMap<TransactionalObject, Object>();
+                    transaction.putAttachment(TRANSACTIONAL_OBJECTS, transactionalObjects);
+                    context.newTask().setTraits(new UnlockWriteTask(transactionalObjects)).release();
+                }
             }
+            transactionalObjects.put(this, snapshot);
         }
-        transactionalObjects.put(this, snapshot);
         writeLocked(transaction);
     }
 
