@@ -41,6 +41,8 @@ import org.jboss.msc.txn.Transaction;
  */
 final class ServiceController<T> extends TransactionalObject {
 
+    private final int TRANSITION_LIMIT = 8;
+
     /**
      * The service itself.
      */
@@ -461,7 +463,7 @@ final class ServiceController<T> extends TransactionalObject {
             state = transactionalState.getState();
             assert transitionCount > 0;
             // transition has finally come to an end, and calling task equals completeTransitionTask
-            if (-- transitionCount ==  0) {
+            if (-- transitionCount == 0) {
                 switch(transactionalState) {
                     case UP:
                         notifyDependencyAvailable(true, transaction, context);
@@ -493,9 +495,30 @@ final class ServiceController<T> extends TransactionalObject {
             completeTransitionTask = StartingServiceTasks.createTasks(ServiceController.this, Collections.EMPTY_LIST, transaction, transaction);
         }
 
+        private boolean checkCycle(ServiceController<?> serviceController) {
+            for (Dependency<?> dependency: serviceController.dependencies) {
+                ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
+                if (dependencyController != null) {
+                    if (dependencyController == ServiceController.this) {
+                        return true;
+                    }
+                    checkCycle(dependencyController);
+                }
+            }
+            return false;
+        }
+
         private synchronized TaskController<?> transition(Transaction transaction, ServiceContext context) {
             assert !Thread.holdsLock(ServiceController.this);
-            // TODO keep track of multiple toggle transitions from UP to DOWN and vice-versa... if 
+            // keep track of multiple toggle transitions from UP to DOWN and vice-versa... if 
+            // too  many transitions of this type are performed, a check for cycle involving this service
+            // must be performed. Cycle detected will result in service removal, besides adding a problem to the
+            // transaction
+            if (transitionCount >= TRANSITION_LIMIT && checkCycle(ServiceController.this)) {
+                transaction.rollback(null);
+                return null;
+            }
+            // keep track of multiple toggle transitions from UP to DOWN and vice-versa... if 
             // too  many transitions of this type are performed, a check for cycle involving this service
             // must be performed. Cycle detected will result in service removal, besides adding a problem to the
             // transaction
