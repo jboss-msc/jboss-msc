@@ -145,16 +145,19 @@ final class StartingServiceTasks {
 
         @Override
         public void execute(ExecuteContext<Void> context) {
-            T result = serviceStartTask.getResult();
-            // service failed
-            if (result == null && transaction.getAttachment(FAILED_SERVICES).contains(service.getValue().get())) {
-                service.setTransition(TransactionalState.FAILED, transaction, context);
-            } else {
-                performOutInjections();
-                // TODO store the actual value of result somewhere
-                service.setTransition(TransactionalState.UP, transaction, context);
+            try {
+                T result = serviceStartTask.getResult();
+                // service failed
+                if (result == null && transaction.getAttachment(FAILED_SERVICES).contains(service.getValue().get())) {
+                    service.setTransition(TransactionalState.FAILED, transaction, context);
+                } else {
+                    performOutInjections();
+                    // TODO store the actual value of result somewhere
+                    service.setTransition(TransactionalState.UP, transaction, context);
+                }
+            } finally {
+                context.complete();
             }
-            context.complete();
         }
 
         private void performOutInjections() {

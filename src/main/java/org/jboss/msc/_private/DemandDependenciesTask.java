@@ -75,9 +75,12 @@ class DemandDependenciesTask implements Executable<Void> {
 
     @Override
     public void execute(ExecuteContext<Void> context) {
-        for (Dependency<?> dependency: service.getDependencies()) {
-            dependency.demand(transaction, context);
+        try {
+            for (Dependency<?> dependency: service.getDependencies()) {
+                dependency.demand(transaction, context);
+            }
+        } finally {
+            context.complete();
         }
-        context.complete();
     }
 }

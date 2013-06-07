@@ -79,9 +79,12 @@ class UndemandDependenciesTask implements Executable<Void> {
 
     @Override
     public void execute(ExecuteContext<Void> context) {
-        for (Dependency<?> dependency: service.getDependencies()) {
-            dependency.undemand(transaction, context);
+        try {
+            for (Dependency<?> dependency: service.getDependencies()) {
+                dependency.undemand(transaction, context);
+            }
+        } finally {
+            context.complete();
         }
-        context.complete();
     }
 }
