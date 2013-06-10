@@ -70,7 +70,7 @@ final class ServiceController<T> extends TransactionalObject {
     /**
      * Indicates if service is enabled.
      */
-    private volatile boolean enabled = true;
+    private boolean enabled = true;
     /**
      * The number of dependencies that are not satisfied.
      */
@@ -614,7 +614,9 @@ final class ServiceController<T> extends TransactionalObject {
         }
 
         private synchronized TaskController<Void> scheduleRemoval(Transaction transaction, ServiceContext context) {
-            enabled = false;
+            synchronized (ServiceController.this) {
+                enabled = false;
+            }
             transition(transaction, context);
             completeTransitionTask = context.newTask(new ServiceRemoveTask(ServiceController.this, transaction)).release();
             transitionCount ++;
