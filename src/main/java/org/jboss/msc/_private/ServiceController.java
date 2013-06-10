@@ -66,7 +66,7 @@ final class ServiceController<T> extends TransactionalObject {
     /**
      * The controller state.
      */
-    private volatile State state = null;
+    private State state = State.NEW;
     /**
      * Indicates if service is enabled.
      */
@@ -109,7 +109,6 @@ final class ServiceController<T> extends TransactionalObject {
             final org.jboss.msc.service.ServiceMode mode, final Dependency<?>[] dependencies, final Transaction transaction,
             final ServiceContext context) {
         this.value = value;
-        state = State.NEW;
         this.mode = ServiceModeBehavior.getInstance(mode);
         this.dependencies = dependencies;
         this.aliasRegistrations = aliasRegistrations;
@@ -424,17 +423,17 @@ final class ServiceController<T> extends TransactionalObject {
     }
 
     @Override
-    protected void writeLocked(Transaction transaction) {
+    protected synchronized void writeLocked(Transaction transaction) {
         transactionalInfo = new TransactionalInfo();
     }
 
     @Override
-    protected void writeUnlocked() {
+    protected synchronized void writeUnlocked() {
         transactionalInfo = null;
     }
 
     @Override
-    public Object takeSnapshot() {
+    public synchronized Object takeSnapshot() {
         // no need to take snapshot of newly created objects
         if (state == State.NEW) {
             return null;
@@ -444,7 +443,7 @@ final class ServiceController<T> extends TransactionalObject {
 
     @SuppressWarnings("unchecked")
     @Override
-    public void revert(Object snapshot) {
+    public synchronized void revert(Object snapshot) {
         if (snapshot != null) {
             ((Snapshot) snapshot).apply();
         }
@@ -634,6 +633,7 @@ final class ServiceController<T> extends TransactionalObject {
 
         // take snapshot
         public Snapshot() {
+            assert Thread.holdsLock(ServiceController.this);
             state = ServiceController.this.state;
             upDemandedByCount = ServiceController.this.upDemandedByCount;
             downDemandedByCount = ServiceController.this.downDemandedByCount;
@@ -643,6 +643,7 @@ final class ServiceController<T> extends TransactionalObject {
 
         // revert ServiceController state to what it was when snapshot was taken; invoked on rollback
         public void apply() {
+            assert Thread.holdsLock(ServiceController.this);
             ServiceController.this.state = state;
             ServiceController.this.upDemandedByCount = upDemandedByCount;
             ServiceController.this.downDemandedByCount = downDemandedByCount;
