@@ -20,8 +20,6 @@ package org.jboss.msc._private;
 
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
-import org.jboss.msc.txn.Revertible;
-import org.jboss.msc.txn.RollbackContext;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -30,7 +28,7 @@ import org.jboss.msc.txn.Transaction;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
-final class ServiceInstallTask<T> implements Executable<ServiceController<T>>, Revertible {
+final class ServiceInstallTask<T> implements Executable<ServiceController<T>> {
     private final ServiceBuilderImpl<T> serviceBuilder;
     private final Transaction transaction;
 
@@ -48,9 +46,5 @@ final class ServiceInstallTask<T> implements Executable<ServiceController<T>>, R
         } finally {
             context.complete(serviceController);
         }
-    }
-
-    public void rollback(final RollbackContext context) {
-        serviceBuilder.remove(transaction);
     }
 }

@@ -147,8 +147,6 @@ public interface ServiceBuilder<T> {
 
     /**
      * Initiates installation of this configured service to the container.
-     *
-     * @throws IllegalStateException if {@link #install()} has been already called.
      */
     void install() throws IllegalStateException;
 

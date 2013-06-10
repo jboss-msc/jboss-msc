@@ -154,7 +154,7 @@ public final class TransactionImpl extends Transaction implements ServiceContext
         if (name == null) {
             throw new IllegalArgumentException("name is null");
         }
-        return new ServiceBuilderImpl<T>(registry, this, name, service);
+        return new ServiceBuilderImpl<T>(registry, name, service, this);
     }
 
     @Override
