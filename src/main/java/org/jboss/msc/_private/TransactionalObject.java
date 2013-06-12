@@ -89,19 +89,17 @@ abstract class TransactionalObject {
             }
         } 
         final Object snapshot = takeSnapshot();
-        if (snapshot != null) {
-            final Map<TransactionalObject, Object> transactionalObjects;
-            synchronized (TRANSACTIONAL_OBJECTS) {
-                if (transaction.hasAttachment(TRANSACTIONAL_OBJECTS)) {
-                    transactionalObjects = transaction.getAttachment(TRANSACTIONAL_OBJECTS);
-                } else {
-                    transactionalObjects = new HashMap<TransactionalObject, Object>();
-                    transaction.putAttachment(TRANSACTIONAL_OBJECTS, transactionalObjects);
-                    context.newTask().setTraits(new UnlockWriteTask(transactionalObjects)).release();
-                }
+        final Map<TransactionalObject, Object> transactionalObjects;
+        synchronized (TRANSACTIONAL_OBJECTS) {
+            if (transaction.hasAttachment(TRANSACTIONAL_OBJECTS)) {
+                transactionalObjects = transaction.getAttachment(TRANSACTIONAL_OBJECTS);
+            } else {
+                transactionalObjects = new HashMap<TransactionalObject, Object>();
+                transaction.putAttachment(TRANSACTIONAL_OBJECTS, transactionalObjects);
+                context.newTask().setTraits(new UnlockWriteTask(transactionalObjects)).release();
             }
-            transactionalObjects.put(this, snapshot);
         }
+        transactionalObjects.put(this, snapshot);
         writeLocked(transaction);
     }
 
@@ -175,35 +173,46 @@ abstract class TransactionalObject {
 
         @Override
         public void validate(ValidateContext context) {
-            for (TransactionalObject transactionalObject: transactionalObjects.keySet()) {
-                synchronized (transactionalObject) {
-                    transactionalObject.validate(context);
+            try {
+                for (TransactionalObject transactionalObject: transactionalObjects.keySet()) {
+                    synchronized (transactionalObject) {
+                        transactionalObject.validate(context);
+                    }
                 }
+            } finally {
+                context.complete();
             }
-            context.complete();
         }
 
         @Override
         public void rollback(RollbackContext context) {
-            for (Entry<TransactionalObject, Object> entry: transactionalObjects.entrySet()) {
-                final TransactionalObject transactionalObject = entry.getKey();
-                final Object snapshot = entry.getValue();
-                synchronized (transactionalObject) {
-                    transactionalObject.unlockWrite();
-                    transactionalObject.revert(snapshot);
+            try {
+                for (Entry<TransactionalObject, Object> entry: transactionalObjects.entrySet()) {
+                    final TransactionalObject transactionalObject = entry.getKey();
+                    final Object snapshot = entry.getValue();
+                    synchronized (transactionalObject) {
+                        transactionalObject.unlockWrite();
+                        if (snapshot != null) {
+                            transactionalObject.revert(snapshot);
+                        }
+                    }
                 }
+            } finally {
+                context.complete();
             }
-            context.complete();
         }
 
         @Override
         public void commit(CommitContext context) {
-            for (TransactionalObject transactionalObject: transactionalObjects.keySet()) {
-                synchronized (transactionalObject) {
-                    transactionalObject.unlockWrite();
+            try {
+                for (TransactionalObject transactionalObject: transactionalObjects.keySet()) {
+                    synchronized (transactionalObject) {
+                        transactionalObject.unlockWrite();
+                    }
                 }
+            } finally {
+                context.complete();
             }
-            context.complete();
         }
     }
 
