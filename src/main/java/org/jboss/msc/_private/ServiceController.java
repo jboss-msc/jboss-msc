@@ -18,15 +18,23 @@
 
 package org.jboss.msc._private;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.jboss.msc._private.ServiceModeBehavior.Demand;
-import org.jboss.msc.service.Injector;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceMode;
+import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.txn.AttachmentKey;
+import org.jboss.msc.txn.Factory;
+import org.jboss.msc.txn.Problem;
+import org.jboss.msc.txn.Problem.Severity;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
@@ -89,6 +97,7 @@ final class ServiceController<T> extends TransactionalObject {
      * {@link State#STOPPING} state) until all running dependents (and listeners) are stopped.
      */
     private int runningDependents;
+
     /**
      * Info enabled only when this service is write locked during a transaction.
      */
@@ -449,10 +458,26 @@ final class ServiceController<T> extends TransactionalObject {
         }
     }
 
+    /**
+     * A set containing all service controllers involved in dependency cycles that have been found during current
+     * transaction.
+     * This set avoids duplicate cycle detection and, most importantly, duplicate problem reports for the same cycle.
+     */
+    private static final AttachmentKey<HashSet<ServiceController<?>>> dependencyCycles = AttachmentKey.create(
+            new Factory<HashSet<ServiceController<?>>>() {
+
+                @Override
+                public HashSet<ServiceController<?>> create() {
+                    return new HashSet<ServiceController<?>>();
+                }
+        
+    });
+
+
     final class TransactionalInfo {
         // current transactional state
         private TransactionalState transactionalState = TransactionalState.getTransactionalState(ServiceController.this.state);
-        // if this service is under transition (STARTING or STOPPING), this field points to the task that completes the transition
+        // if this service is under transition, this field points to the task that completes the transition
         private TaskController<Void> completeTransitionTask = null;
         // the total number of setTransition calls expected until completeTransitionTask is finished
         private int transitionCount;
@@ -494,27 +519,13 @@ final class ServiceController<T> extends TransactionalObject {
             completeTransitionTask = StartingServiceTasks.createTasks(ServiceController.this, Collections.EMPTY_LIST, transaction, transaction);
         }
 
-        private boolean checkCycle(ServiceController<?> serviceController) {
-            for (Dependency<?> dependency: serviceController.dependencies) {
-                ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
-                if (dependencyController != null) {
-                    if (dependencyController == ServiceController.this) {
-                        return true;
-                    }
-                    checkCycle(dependencyController);
-                }
-            }
-            return false;
-        }
-
         private synchronized TaskController<?> transition(Transaction transaction, ServiceContext context) {
             assert !Thread.holdsLock(ServiceController.this);
             // keep track of multiple toggle transitions from UP to DOWN and vice-versa... if 
             // too  many transitions of this type are performed, a check for cycle involving this service
             // must be performed. Cycle detected will result in service removal, besides adding a problem to the
             // transaction
-            if (transitionCount >= TRANSITION_LIMIT && checkCycle(ServiceController.this)) {
-                transaction.rollback(null);
+            if (transitionCount >= TRANSITION_LIMIT && cycleFound(transaction)) {
                 return null;
             }
             // keep track of multiple toggle transitions from UP to DOWN and vice-versa... if 
@@ -579,6 +590,38 @@ final class ServiceController<T> extends TransactionalObject {
 
             }
             return completeTransitionTask;
+        }
+
+        private boolean cycleFound(Transaction transaction) {
+            final Set<ServiceController<?>> dependencyCyclesSet = transaction.getAttachment(dependencyCycles);
+            if (dependencyCyclesSet.contains(ServiceController.this)) {
+                return true;
+            }
+            final Deque<ServiceName> depPath = new ArrayDeque<ServiceName>();
+            depPath.add(primaryRegistration.getServiceName());
+            if (checkCycle(ServiceController.this, depPath, dependencyCyclesSet)) {
+                transaction.getProblemReport().addProblem(new Problem(completeTransitionTask,
+                        MSCLogger.SERVICE.dependencyCycle(depPath.toArray(new ServiceName[depPath.size()])), Severity.ERROR));
+                transaction.rollback(null);
+                return true;
+            }
+            return false;
+        }
+
+        private boolean checkCycle(ServiceController<?> serviceController, Deque<ServiceName> path, Set<ServiceController<?>> cycleFound) {
+            for (Dependency<?> dependency: serviceController.dependencies) {
+                final Registration dependencyRegistration = dependency.getDependencyRegistration();
+                path.add(dependencyRegistration.getServiceName());
+                final ServiceController<?> dependencyController = dependencyRegistration.getController();
+                if (dependencyController != null) {
+                    if (dependencyController == ServiceController.this || checkCycle(dependencyController, path, cycleFound)) {
+                        cycleFound.add(dependencyController);
+                        return true;
+                    }
+                    path.removeLast();
+                }
+            }
+            return false;
         }
 
         private void notifyDependencyAvailable(boolean up, Transaction transaction, ServiceContext context) {

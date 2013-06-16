@@ -122,6 +122,9 @@ public interface MSCLogger {
     @Message(id = 17, value ="Service %s has a required %sdependency on service %s that %s")
     String requiredDependency(ServiceName dependentName, String anti, ServiceName dependencyName, String dependencyStateDescription);
 
+    @Message(id = 18, value="Dependency cycle found: %s")
+    String dependencyCycle(ServiceName[] cycle);
+
     // jump to 100...
 
     /*
