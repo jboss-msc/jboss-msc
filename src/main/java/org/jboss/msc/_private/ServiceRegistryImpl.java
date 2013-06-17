@@ -38,8 +38,10 @@ import org.jboss.msc.txn.Transaction;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 final class ServiceRegistryImpl extends TransactionalObject implements ServiceRegistry {
-
+    // map of service registrations
     private final ConcurrentMap<ServiceName, Registration> registry = new ConcurrentHashMap<ServiceName, Registration>();
+    // indicates whether this registry is removed
+    private boolean removed;
 
     /**
      * Gets a service, throwing an exception if it is not found.
@@ -69,6 +71,7 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
     Registration getOrCreateRegistration(ServiceContext context, Transaction transaction, ServiceName name) {
         Registration registration = registry.get(name);
         if (registration == null) {
+            checkRemoved();
             lockWrite(transaction, context);
             registration = new Registration(name);
             Registration appearing = registry.putIfAbsent(name, registration);
@@ -91,7 +94,13 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
         return controller;
     }
 
-    void clear(Transaction transaction) {
+    void remove(Transaction transaction) {
+        synchronized(this) {
+            if (removed) {
+                return;
+            }
+            removed = true;
+        }
         final HashSet<ServiceController<?>> done = new HashSet<ServiceController<?>>();
         for (Registration registration : registry.values()) {
             ServiceController<?> serviceInstance = registration.getController();
@@ -101,7 +110,12 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
         }
     }
 
+    synchronized boolean isRemoved() {
+        return removed;
+    }
+
     synchronized void disable(Transaction transaction) {
+        checkRemoved();
         for (Registration registration: registry.values()) {
             final ServiceController<?> controller = registration.getController();
             if (controller != null) {
@@ -111,12 +125,18 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
     }
 
     synchronized void enable(Transaction transaction) {
+        checkRemoved();
         for (Registration registration: registry.values()) {
             final ServiceController<?> controller = registration.getController();
             if (controller != null) {
                 controller.enable(transaction);
             }
         }
+    }
+
+    // TODO ongoing work: code under review
+    public void install(ServiceController<?> serviceController) {
+        checkRemoved();
     }
 
     @SuppressWarnings("unchecked")
@@ -131,5 +151,11 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
         final Map<ServiceName, Registration> snapshot = new HashMap<ServiceName, Registration>(registry.size());
         snapshot.putAll(registry);
         return snapshot;
+    }
+
+    private synchronized void checkRemoved() {
+        if (removed) {
+            throw new IllegalStateException("ServiceRegistry is removed");
+        }
     }
 }

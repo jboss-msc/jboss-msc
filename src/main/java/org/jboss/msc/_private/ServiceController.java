@@ -49,6 +49,11 @@ import org.jboss.msc.txn.Transaction;
  */
 final class ServiceController<T> extends TransactionalObject {
 
+    /**
+     * Number defined as the limit of successive transitions in a single transaction before the service reaches the
+     * final state. If there is more than such number of transitions, a check for a cycle is performed, thus preventing
+     * the service from entering a loop.
+     */
     private final int TRANSITION_LIMIT = 8;
 
     /**
@@ -137,7 +142,6 @@ final class ServiceController<T> extends TransactionalObject {
      * @param context     the service context
      */
     void install(Transaction transaction, ServiceContext context) {
-        // TODO check if container is shutting down
         assert isWriteLocked(transaction);
         synchronized (this) {
             enabled = true;

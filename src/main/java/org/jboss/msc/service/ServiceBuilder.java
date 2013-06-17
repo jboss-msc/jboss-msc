@@ -18,7 +18,6 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.txn.TaskController;
 
 /**
  * A service builder.
@@ -134,16 +133,6 @@ public interface ServiceBuilder<T> {
      * @throws IllegalStateException if {@link #install()} has been called.
      */
     ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, Injector<?> injector, DependencyFlag... flags) throws IllegalStateException;
-
-    /**
-     * Adds a dependency on a task.  If the task fails, the service install will also fail.  The task must be
-     * part of the same transaction as the service.
-     *
-     * @param task the task
-     * @return a reference to this object
-     * @throws IllegalStateException if {@link #install()} has been called.
-     */
-    ServiceBuilder<T> addDependency(TaskController<?> task) throws IllegalStateException;
 
     /**
      * Initiates installation of this configured service to the container.

@@ -195,7 +195,7 @@ public final class TransactionImpl extends Transaction implements ServiceContext
     }
 
     public void removeRegistry(final ServiceRegistry registry) {
-        ((ServiceRegistryImpl)registry).clear(this);
+        ((ServiceRegistryImpl)registry).remove(this);
     }
 
     public void shutdownContainer(final ServiceContainer container) {

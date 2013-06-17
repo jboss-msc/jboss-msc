@@ -46,7 +46,7 @@ public final class ServiceContainerImpl implements ServiceContainer {
     void shutdown(final Transaction txn) {
         synchronized(registries) {
             for (final ServiceRegistryImpl registry : registries) {
-                registry.clear(txn);
+                registry.remove(txn);
             }
         }
     }

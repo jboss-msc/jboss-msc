@@ -27,7 +27,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.jboss.msc.service.CircularDependencyException;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.txn.AttachmentKey;
-import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.txn.Validatable;
 import org.jboss.msc.txn.ValidateContext;
@@ -49,13 +48,13 @@ final class CheckDependencyCycleTask implements Validatable {
      * @param transaction the active transaction
      * @param service     the service to be verified
      */
-    public static void checkDependencyCycle(ServiceController<?> service, Transaction transaction, ServiceContext context) {
+    public static void checkDependencyCycle(ServiceController<?> service, Transaction transaction) {
         final CheckDependencyCycleTask task;
         if (transaction.hasAttachment(key)) {
             task = transaction.getAttachment(key);
         } else {
             task = new CheckDependencyCycleTask();
-            context.newTask().setValidatable(task).release();
+            transaction.newTask().setValidatable(task).release();
         }
         task.checkService(service);
     }
