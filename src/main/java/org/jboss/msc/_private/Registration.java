@@ -46,7 +46,7 @@ final class Registration extends TransactionalObject {
     /**
      * Incoming dependencies, i.e., dependent services.
      */
-    private final Set<Dependency<?>> incomingDependencies = new CopyOnWriteArraySet<Dependency<?>>();
+    private final Set<AbstractDependency<?>> incomingDependencies = new CopyOnWriteArraySet<AbstractDependency<?>>();
     /**
      * The number of dependent instances which place a demand-to-start on this registration.  If this value is > 0,
      * propagate a demand to the instance, if any.
@@ -94,20 +94,20 @@ final class Registration extends TransactionalObject {
         }
     }
 
-    void addIncomingDependency(final Transaction transaction, final ServiceContext context, final Dependency<?> dependency) {
+    void addIncomingDependency(final Transaction transaction, final ServiceContext context, final AbstractDependency<?> dependency) {
         lockWrite(transaction, context);
         synchronized (this) {
             incomingDependencies.add(dependency);
         }
     }
 
-    void removeIncomingDependency(final Transaction transaction, final ServiceContext context, final Dependency<?> dependency) {
+    void removeIncomingDependency(final Transaction transaction, final ServiceContext context, final AbstractDependency<?> dependency) {
         lockWrite(transaction, context);
         assert incomingDependencies.contains(dependency);
         incomingDependencies.remove(dependency);
     }
 
-    Set<Dependency<?>> getIncomingDependencies() {
+    Set<AbstractDependency<?>> getIncomingDependencies() {
         return Collections.unmodifiableSet(incomingDependencies);
     }
 
@@ -169,14 +169,14 @@ final class Registration extends TransactionalObject {
     private final class Snapshot {
 
         private final ServiceController<?> controller;
-        private final Collection<Dependency<?>> incomingDependencies;
+        private final Collection<AbstractDependency<?>> incomingDependencies;
         private final int upDemandedByCount;
         private final int downDemandedByCount;
 
         // take snapshot
         public Snapshot() {
             controller = Registration.this.controller;
-            incomingDependencies = new ArrayList<Dependency<?>>(Registration.this.incomingDependencies.size());
+            incomingDependencies = new ArrayList<AbstractDependency<?>>(Registration.this.incomingDependencies.size());
             incomingDependencies.addAll(Registration.this.incomingDependencies);
             downDemandedByCount = Registration.this.downDemandedByCount;
             upDemandedByCount = Registration.this.upDemandedByCount;

@@ -50,53 +50,30 @@ public interface ServiceBuilder<T> {
      * Adds a dependency to the service being built with default flags.
      *
      * @param name the dependency name
-     * @return a reference to this object
+     * @return a reference to the dependency added
      * @throws IllegalStateException if {@link #install()} has been called.
      */
-    ServiceBuilder<T> addDependency(ServiceName name) throws IllegalStateException;
+    Dependency<?> addDependency(ServiceName name) throws IllegalStateException;
 
     /**
      * Adds a dependency to the service being built with specified flags.
      *
      * @param name the dependency name
      * @param flags the flags for the service dependency
-     * @return a reference to this object
+     * @return a reference to the dependency added
      * @throws IllegalStateException if {@link #install()} has been called.
      */
-    ServiceBuilder<T> addDependency(ServiceName name, DependencyFlag... flags) throws IllegalStateException;
-
-    /**
-     * Adds an injected dependency to the service being built with default flags.
-     * The dependency will be injected before service starts and uninjected after service stops.
-     *
-     * @param name the dependency name
-     * @param injector the injector for the dependency value
-     * @return a reference to this object
-     * @throws IllegalStateException if {@link #install()} has been called.
-     */
-    ServiceBuilder<T> addDependency(ServiceName name, Injector<?> injector) throws IllegalStateException;
-
-    /**
-     * Adds an injected dependency to the service being built with specified flags.
-     * The dependency will be injected before service starts and uninjected after service stops.
-     *
-     * @param name the dependency name
-     * @param injector the injector for the dependency value
-     * @param flags the flags for the service dependency
-     * @return a reference to this object
-     * @throws IllegalStateException if {@link #install()} has been called.
-     */
-    ServiceBuilder<T> addDependency(ServiceName name, Injector<?> injector, DependencyFlag... flags) throws IllegalStateException;
+    Dependency<?> addDependency(ServiceName name, DependencyFlag... flags) throws IllegalStateException;
 
     /**
      * Adds a dependency to the service being built with default flags.
      *
      * @param registry the service registry containing dependency
      * @param name the dependency name
-     * @return a reference to this object
+     * @return a reference to the dependency added
      * @throws IllegalStateException if {@link #install()} has been called.
      */
-    ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name) throws IllegalStateException;
+    Dependency<?> addDependency(ServiceRegistry registry, ServiceName name) throws IllegalStateException;
     
     /**
      * Adds a dependency to the service being built with specified flags.
@@ -104,35 +81,10 @@ public interface ServiceBuilder<T> {
      * @param registry the service registry containing dependency
      * @param name the dependency name
      * @param flags the flags for the service dependency
-     * @return a reference to this object
+     * @return a reference to the dependency added
      * @throws IllegalStateException if {@link #install()} has been called.
      */
-    ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, DependencyFlag... flags) throws IllegalStateException;
-
-    /**
-     * Adds an injected dependency to the service being built with default flags.
-     * The dependency will be injected before service starts and uninjected after service stops.
-     *
-     * @param registry the service registry containing dependency
-     * @param name the dependency name
-     * @param injector the injector for the dependency value
-     * @return a reference to this object
-     * @throws IllegalStateException if {@link #install()} has been called.
-     */
-    ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, Injector<?> injector) throws IllegalStateException;
-
-    /**
-     * Adds an injected dependency to the service being built with specified flags.
-     * The dependency will be injected before service starts and uninjected after service stops.
-     *
-     * @param registry the service registry containing dependency
-     * @param name the dependency name
-     * @param injector the injector for the dependency value
-     * @param flags the flags for the service dependency
-     * @return a reference to this object
-     * @throws IllegalStateException if {@link #install()} has been called.
-     */
-    ServiceBuilder<T> addDependency(ServiceRegistry registry, ServiceName name, Injector<?> injector, DependencyFlag... flags) throws IllegalStateException;
+    Dependency<?> addDependency(ServiceRegistry registry, ServiceName name, DependencyFlag... flags) throws IllegalStateException;
 
     /**
      * Initiates installation of this configured service to the container.

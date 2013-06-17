@@ -18,41 +18,17 @@
 
 package org.jboss.msc._private;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.jboss.msc.service.DependencyFlag;
-import org.jboss.msc.service.Injector;
 import org.jboss.msc.service.ServiceName;
-import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.Transaction;
 
 /**
- * Spec for creating a dependency during service installation.
+ * Factory for creating a dependency during service installation.
  * 
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
-final class DependencySpec<T> {
-    private final ServiceRegistryImpl registry;
-    private final ServiceName name;
-    private final DependencyFlag[] flags;
-    private final List<Injector<? super T>> injections = new ArrayList<Injector<? super T>>();
-
-    DependencySpec(final ServiceRegistryImpl registry, final ServiceName name, final DependencyFlag[] flags) {
-        this.registry = registry;
-        this.name = name;
-        this.flags = flags;
-    }
-
-    public ServiceName getName() {
-        return name;
-    }
-
-    public void addInjection(final Injector<? super T> injector) {
-        injections.add(injector);
-    }
-
+final class DependencyFactory {
     /**
      * Creates a dependency based on this spec. Invoked during service installation.
      * 
@@ -61,18 +37,18 @@ final class DependencySpec<T> {
      * @param context        the service context
      * @return the created dependency
      */
-    public Dependency<T> createDependency(ServiceBuilderImpl<?> serviceBuilder, Transaction transaction, ServiceContext context) {
-        @SuppressWarnings("unchecked")
-        final Injector<? super T>[] injectionArray = (Injector<? super T>[]) injections.toArray(new Injector<?>[injections.size()]);
-        final Registration dependencyRegistration = registry.getOrCreateRegistration(context, transaction, name);
-        final boolean dependencyUp = isDependencyUp();
-        final DependencyFlag demandFlag = getDemandFlag();
-        final boolean required = isRequired();
-        final Dependency<T> dependency = new SimpleDependency<T>(injectionArray, dependencyRegistration, dependencyUp, required, demandFlag, transaction, context);
-        return decorate(dependency, serviceBuilder);
+    public static <T> AbstractDependency<T> create(final ServiceRegistryImpl registry, final ServiceName name,
+            final DependencyFlag[] flags, final ServiceBuilderImpl<?> serviceBuilder, final Transaction transaction) {
+        final Registration dependencyRegistration = registry.getOrCreateRegistration(transaction, transaction, name);
+        final boolean dependencyUp = isDependencyUp(flags);
+        final DependencyFlag demandFlag = getDemandFlag(flags);
+        final boolean required = isRequired(flags);
+        final AbstractDependency<T> dependency = new SimpleDependency<T>(dependencyRegistration, dependencyUp,
+                required, demandFlag, transaction);
+        return decorate(dependency, flags, serviceBuilder);
     }
 
-    private boolean isDependencyUp() {
+    private static boolean isDependencyUp(DependencyFlag[] flags) {
         for (DependencyFlag flag: flags) {
             if (flag == DependencyFlag.ANTI) {
                 return false;
@@ -82,7 +58,7 @@ final class DependencySpec<T> {
         return true;
     }
 
-    private DependencyFlag getDemandFlag() {
+    private static DependencyFlag getDemandFlag(DependencyFlag[] flags) {
         for (DependencyFlag flag: flags) {
             if (flag == DependencyFlag.DEMANDED || flag == DependencyFlag.UNDEMANDED) {
                 return flag;
@@ -91,7 +67,7 @@ final class DependencySpec<T> {
         return null; 
     }
 
-    private boolean isRequired() {
+    private static boolean isRequired(DependencyFlag[] flags) {
         for (DependencyFlag flag: flags) {
             if (flag == DependencyFlag.UNREQUIRED) {
                 return false;
@@ -101,7 +77,7 @@ final class DependencySpec<T> {
         return true;
     }
 
-    private final Dependency<T> decorate(Dependency<T> dependency, ServiceBuilderImpl<?> serviceBuilder) {
+    private static <T> AbstractDependency<T> decorate(AbstractDependency<T> dependency, DependencyFlag[] flags, ServiceBuilderImpl<?> serviceBuilder) {
         for (DependencyFlag flag: flags) {
             switch(flag) {
                 case OPTIONAL:

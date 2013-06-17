@@ -34,9 +34,17 @@ package org.jboss.msc._private;
  */ 
 final class OptionalDependency<T> extends DependencyDecorator<T> {
 
-    public OptionalDependency(Dependency<T> dependency) {
+    public OptionalDependency(AbstractDependency<T> dependency) {
         super(dependency);
     }
 
     // TODO toggle connected on and off according to notifications
+    
+    @Override
+    Object takeSnapshot() {
+        return null;
+    }
+
+    @Override
+    void revert(Object snapshot) {}
 }

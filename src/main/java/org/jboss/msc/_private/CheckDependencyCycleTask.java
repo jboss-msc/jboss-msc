@@ -92,7 +92,7 @@ final class CheckDependencyCycleTask implements Validatable {
     }
 
     private void verifyCycle(ServiceController<?> service, LinkedHashMap<ServiceName, ServiceController<?>> pathTrace, Set<ServiceController<?>> checkedServices) throws CircularDependencyException {
-        for (Dependency<?> dependency: service.getDependencies()) {
+        for (AbstractDependency<?> dependency: service.getDependencies()) {
             final ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
             if (dependencyController != null && !checkedServices.contains(dependencyController)) {
                 if (pathTrace.containsValue(dependencyController)) {

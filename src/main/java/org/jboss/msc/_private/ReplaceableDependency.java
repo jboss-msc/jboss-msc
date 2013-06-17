@@ -26,8 +26,16 @@ final class ReplaceableDependency<T> extends DependencyDecorator<T> {
     /**
      * @param dependency
      */
-    public ReplaceableDependency(Dependency<T> dependency) {
+    public ReplaceableDependency(AbstractDependency<T> dependency) {
         super(dependency);
     }
+
+    @Override
+    Object takeSnapshot() {
+        return null;
+    }
+
+    @Override
+    void revert(Object snapshot) {}
 
 }

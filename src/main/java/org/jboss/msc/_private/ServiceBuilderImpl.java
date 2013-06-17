@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.jboss.msc.service.DependencyFlag;
-import org.jboss.msc.service.Injector;
+import org.jboss.msc.service.Dependency;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceMode;
@@ -54,7 +54,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     // service itself
     private final Service<T> service;
     // dependencies
-    private final Map<ServiceName, DependencySpec<?>> specs = new LinkedHashMap<ServiceName, DependencySpec<?>>();
+    private final Map<ServiceName, AbstractDependency<?>> dependencies= new LinkedHashMap<ServiceName, AbstractDependency<?>>();
     // TODO decide after discussion on IRC if we have a special API for replacement (in which case we will need this parameter
     // or if we will automatically remove previously existent service always, triggering always replacement notifications
     // to dependencies; or if we will automatically remove previously existent service only if there is a replacement
@@ -67,8 +67,8 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     private ServiceMode mode;
     // is service builder installed?
     private boolean installed;
-    // parent dependency spec, if any (only if this service is installed as a child
-    private DependencySpec<?> parentDependencySpec;
+    // parent dependency, if any (only if this service is installed as a child
+    private ParentDependency<?> parentDependency;
 
     /**
      * Creates service builder.
@@ -129,67 +129,35 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * {@inheritDoc}
      */
     @Override
-    public ServiceBuilder<T> addDependency(final ServiceName name) {
-        return addDependencyInternal(registry, name, null, (DependencyFlag[])null);
+    public Dependency<?> addDependency(final ServiceName name) {
+        return addDependencyInternal(registry, name, (DependencyFlag[])null);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public ServiceBuilder<T> addDependency(final ServiceName name, final DependencyFlag... flags) {
-        return addDependencyInternal(registry, name, null, flags);
+    public Dependency<?> addDependency(final ServiceName name, final DependencyFlag... flags) {
+        return addDependencyInternal(registry, name, flags);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public ServiceBuilder<T> addDependency(final ServiceName name, final Injector<?> injector) {
-        return addDependencyInternal(registry, name, injector, (DependencyFlag[])null);
+    public Dependency<?> addDependency(final ServiceRegistry registry, final ServiceName name) {
+        return addDependencyInternal(registry, name, (DependencyFlag[])null);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public ServiceBuilder<T> addDependency(final ServiceName name, final Injector<?> injector, final DependencyFlag... flags) {
-        return addDependencyInternal(registry, name, injector, flags);
+    public Dependency<?> addDependency(final ServiceRegistry registry, final ServiceName name, final DependencyFlag... flags) {
+        return addDependencyInternal(registry, name, flags);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public ServiceBuilder<T> addDependency(final ServiceRegistry registry, final ServiceName name) {
-        return addDependencyInternal(registry, name, null, (DependencyFlag[])null);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public ServiceBuilder<T> addDependency(final ServiceRegistry registry, final ServiceName name, final DependencyFlag... flags) {
-        return addDependencyInternal(registry, name, null, flags);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public ServiceBuilder<T> addDependency(final ServiceRegistry registry, final ServiceName name, final Injector<?> injector) {
-        return addDependencyInternal(registry, name, injector, (DependencyFlag[])null);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public ServiceBuilder<T> addDependency(final ServiceRegistry registry, final ServiceName name, final Injector<?> injector, final DependencyFlag... flags) {
-        return addDependencyInternal(registry, name, injector, flags);
-    }
-
-    private <D> ServiceBuilder<T> addDependencyInternal(final ServiceRegistry registry, final ServiceName name, final Injector<D> injector, final DependencyFlag... flags) {
+    private <D> Dependency<D> addDependencyInternal(final ServiceRegistry registry, final ServiceName name, final DependencyFlag... flags) {
         checkAlreadyInstalled();
         if (registry == null) {
             MSCLogger.SERVICE.methodParameterIsNull("registry");
@@ -197,29 +165,32 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         if (name == null) {
             MSCLogger.SERVICE.methodParameterIsNull("name");
         }
-        final DependencySpec<D> spec = new DependencySpec<D>((ServiceRegistryImpl)registry, name, flags != null ? flags : noFlags);
-        spec.addInjection(injector);
-        addDependencySpec(spec, name, flags != null ? flags : noFlags);
-        return this;
+        final AbstractDependency<D> dependency = DependencyFactory.create((ServiceRegistryImpl) registry, name, flags != null ? flags : noFlags, this, transaction);
+        addDependency(dependency, name, flags != null ? flags : noFlags);
+        return dependency;
     }
 
-    private void addDependencySpec(DependencySpec<?> dependencySpec, ServiceName name, DependencyFlag... flags) {
+    private void addDependency(AbstractDependency<?> dependency, ServiceName name, DependencyFlag... flags) {
         for (DependencyFlag flag: flags) {
             if (flag == DependencyFlag.PARENT) {
                 synchronized (this) {
-                    if (parentDependencySpec != null) {
+                    if (parentDependency != null) {
                         throw new IllegalStateException("Service cannot have more than one parent dependency");
                     }
-                    parentDependencySpec = dependencySpec;
-                    specs.remove(name);
+                    parentDependency = (ParentDependency<?>) dependency;
+                    dependencies.remove(name);
                     return;
                 }
             }
         }
-        if (parentDependencySpec != null && name == parentDependencySpec.getName()) {
-            parentDependencySpec = null;
+        if (parentDependency != null && name.equals(parentDependency.getDependencyRegistration().getServiceName())) {
+            parentDependency = null;
         }
-        specs.put(name, dependencySpec);
+        // TODO review this
+        if (dependencies.containsKey(name)) {
+            throw new IllegalStateException("ServiceBuilderImpl already contains a dependency to service " + name);
+        }
+        dependencies.put(name, dependency);
     }
 
     /**
@@ -231,8 +202,8 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         if (installed) {
             return;
         }
-        if (parentDependencySpec != null) {
-            parentDependencySpec.createDependency(this, transaction, transaction);
+        if (parentDependency != null) {
+            parentDependency.install(transaction);
             return;
         }
         performInstallation(null, transaction, transaction);
@@ -256,7 +227,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * 
      * @return the installed service controller
      */
-    void performInstallation(Dependency<?> parentDependency, Transaction transaction, ServiceContext context) {
+    void performInstallation(ParentDependency<?> parentDependency, Transaction transaction, ServiceContext context) {
         // create primary registration
         final Registration registration = registry.getOrCreateRegistration(context, transaction, name);
 
@@ -270,19 +241,15 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
         // create dependencies
         i = 0;
-        final Dependency<?>[] dependencies;
+        final AbstractDependency<?>[] dependenciesArray;
         if (parentDependency == null) {
-            dependencies = new Dependency<?>[specs.size()];
+            dependenciesArray = new AbstractDependency<?>[dependencies.size()];
         } else {
-            dependencies = new Dependency<?>[specs.size() + 1];
-            dependencies[i++] = parentDependency;
+            dependenciesArray = new AbstractDependency<?>[dependencies.size() + 1];
+            dependenciesArray[dependencies.size()] = parentDependency;
         }
-        for (DependencySpec<?> spec : specs.values()) {
-            dependencies[i++] = spec.createDependency(this, transaction, context);
-        }
-
         // create and install service controller
-        final ServiceController<T> serviceController =  new ServiceController<T>(registration, aliasRegistrations, service, mode, dependencies, transaction, context);
+        final ServiceController<T> serviceController =  new ServiceController<T>(registration, aliasRegistrations, service, mode, dependenciesArray, transaction, context);
         serviceController.install(transaction, context);
         // replace
         if (replacement) {
@@ -300,7 +267,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     }
 
     private void startReplacement(Registration registration, TaskBuilder<ServiceController<T>> serviceInstallTaskBuilder, Transaction transaction) {
-        for (Dependency<?> dependency: registration.getIncomingDependencies()) {
+        for (AbstractDependency<?> dependency: registration.getIncomingDependencies()) {
             dependency.dependencyReplacementStarted(transaction);
         }
         ServiceController<?> serviceController = registration.getController();
@@ -317,7 +284,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     }
 
     private void concludeReplacement(Registration registration, Transaction transaction) {
-        for (Dependency<?> dependency: registration.getIncomingDependencies()) {
+        for (AbstractDependency<?> dependency: registration.getIncomingDependencies()) {
             dependency.dependencyReplacementConcluded(transaction);
         }
     }

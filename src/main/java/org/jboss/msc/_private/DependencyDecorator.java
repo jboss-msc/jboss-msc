@@ -27,10 +27,10 @@ import org.jboss.msc.txn.Transaction;
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  *
  */
-abstract class DependencyDecorator<T> implements Dependency<T> {
-    protected final Dependency<T> dependency;
+abstract class DependencyDecorator<T> extends AbstractDependency<T> {
+    protected final AbstractDependency<T> dependency;
 
-    public DependencyDecorator(Dependency<T> dependency) {
+    public DependencyDecorator(AbstractDependency<T> dependency) {
         this.dependency = dependency;
     }
 
@@ -47,11 +47,6 @@ abstract class DependencyDecorator<T> implements Dependency<T> {
     @Override
     public final Registration getDependencyRegistration() {
         return dependency.getDependencyRegistration();
-    }
-
-    @Override
-    public void performInjections() {
-        dependency.performInjections();
     }
 
     @Override
@@ -82,5 +77,10 @@ abstract class DependencyDecorator<T> implements Dependency<T> {
     @Override
     public void dependencyReplacementConcluded(Transaction transaction) {
         dependency.dependencyReplacementConcluded(transaction);
+    }
+
+    @Override
+    public T get() {
+        return dependency.get();
     }
 }

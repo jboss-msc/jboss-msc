@@ -18,45 +18,17 @@
 
 package org.jboss.msc.service;
 
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * An injector. Every service that wants to inject some dependencies have to use this class.
+ * A dependency. Every service that needs to access a dependency value should use this class.
  * This class is thread safe.
  *
- * @param <T> the type of value to be injected
+ * @param <T> the type of dependency value
  *
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
-public final class Injector<T> {
-
-    private final AtomicReference<T> value;
-
-    /**
-     * Constructs new injector with {@code null} default value.
-     */
-    public Injector() {
-        this(null);
-    }
-
-    /**
-     * Constructs new injector with specified initial value.
-     *
-     * @param initialValue initial value
-     */
-    public Injector(final T initialValue) {
-        value = new AtomicReference<T>(initialValue);
-    }
-
-    /**
-     * Sets new value. This method will be invoked by the container to inject the satisfied dependencies.
-     * This method will be also called on service removal during the uninject phase with {@code null} parameter.
-     *
-     * @param newValue new value
-     */
-    public void set(final T newValue) {
-        value.set(newValue);
-    }
+public interface Dependency<T> {
 
     /**
      * Gets the current value. This method guarantees to return injected value if service have been properly
@@ -64,8 +36,6 @@ public final class Injector<T> {
      *
      * @return the value associated with this object
      */
-    public T get() {
-        return value.get();
-    }
+    public T get();
 
 }

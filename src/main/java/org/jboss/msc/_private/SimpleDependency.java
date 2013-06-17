@@ -19,7 +19,6 @@ package org.jboss.msc._private;
 
 import org.jboss.msc._private.ServiceController.State;
 import org.jboss.msc.service.DependencyFlag;
-import org.jboss.msc.service.Injector;
 import org.jboss.msc.txn.Problem.Severity;
 import org.jboss.msc.txn.ReportableContext;
 import org.jboss.msc.txn.ServiceContext;
@@ -34,7 +33,7 @@ import org.jboss.msc.txn.Transaction;
  *
  * @param <T>
  */
-final class  SimpleDependency<T> extends TransactionalObject implements Dependency<T> {
+final class  SimpleDependency<T> extends AbstractDependency<T> {
     /**
      * The dependency registration.
      */
@@ -58,10 +57,6 @@ final class  SimpleDependency<T> extends TransactionalObject implements Dependen
      */
     private final boolean required;
     /**
-     * List of injections.
-     */
-    private final Injector<? super T>[] injections;
-    /**
      * Indicates if this dependency is satisfied.
      */
     private boolean dependencySatisfied;
@@ -79,22 +74,18 @@ final class  SimpleDependency<T> extends TransactionalObject implements Dependen
      *                               demanded right away; if equal to {@link DependencyFlag#UNDEMANDED}, it indicates
      *                               dependency should never be demanded; if {@code null}, it indicates dependency
      *                               should be demanded when {@link #demand(Transaction, ServiceContext) requested}.
-     * @param transaction            active transaction
-     * @param context                service context
+     * @param transaction            the active transaction
      */
-    SimpleDependency(final Injector<? super T>[] injections, final Registration dependencyRegistration, final boolean dependencyUp,
-            final boolean required, final DependencyFlag demandFlag, Transaction transaction, ServiceContext context) {
-        this.injections = injections;
+    SimpleDependency(final Registration dependencyRegistration, final boolean dependencyUp,
+            final boolean required, final DependencyFlag demandFlag, Transaction transaction) {
         this.dependencyRegistration = dependencyRegistration;
         this.dependencyUp = dependencyUp;
         this.required = required;
-        if (demandFlag == null) {
-            this.propagateDemand = true;
-        } else {
-            this.propagateDemand = false;
+        this.propagateDemand = demandFlag == null;
+        if (demandFlag != null) {
             switch (demandFlag) {
                 case DEMANDED:
-                    dependencyRegistration.addDemand(transaction, context, dependencyUp);
+                    dependencyRegistration.addDemand(transaction, transaction, dependencyUp);
                     break;
                 case UNDEMANDED:
                     break;
@@ -102,6 +93,12 @@ final class  SimpleDependency<T> extends TransactionalObject implements Dependen
                     throw new IllegalArgumentException("Unexpected demand flag: " + demandFlag);
             }
         }
+    }
+
+    public T get() {
+        @SuppressWarnings("unchecked")
+        ServiceController<T> dependencyController = (ServiceController<T>) dependencyRegistration.getController();
+        return dependencyController == null? null: dependencyController.getValue();
     }
 
     @Override
@@ -128,15 +125,6 @@ final class  SimpleDependency<T> extends TransactionalObject implements Dependen
     @Override
     public Registration getDependencyRegistration() {
         return dependencyRegistration;
-    }
-
-    @Override
-    public void performInjections() {
-        assert dependencyRegistration.getController() != null;
-        assert dependencyRegistration.getController().getService() != null;
-        for (Injector <? super T> injection: injections) {
-            // TODO injection.setValue();
-        }
     }
 
     /**

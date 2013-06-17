@@ -71,11 +71,6 @@ final class StartingServiceTasks {
             // notify dependent is starting to dependencies
             final TaskController<Void> notifyDependentStart = context.newTask(new NotifyDependentStartTask(transaction, serviceController)).release();
             startBuilder.addDependency(notifyDependentStart);
-
-            // perform injections
-            final TaskController<Void> performInjections = context.newTask(new PerformInjectionsTask(serviceController.getDependencies())).
-                    addDependencies(taskDependencies).release();
-            startBuilder.addDependency(performInjections);
         } else {
             startBuilder.addDependencies(taskDependencies);
         }
@@ -121,7 +116,7 @@ final class StartingServiceTasks {
 
         @Override
         public void execute(ExecuteContext<Void> context) {
-            for (Dependency<?> dependency: serviceController.getDependencies()) {
+            for (AbstractDependency<?> dependency: serviceController.getDependencies()) {
                 ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
                 if (dependencyController != null) {
                     dependencyController.dependentStarted(transaction, context);
@@ -151,36 +146,12 @@ final class StartingServiceTasks {
                 if (result == null && transaction.getAttachment(FAILED_SERVICES).contains(service.getService())) {
                     service.setTransition(TransactionalState.FAILED, transaction, context);
                 } else {
-                    performOutInjections();
-                    // TODO store the actual value of result somewhere
+                    service.setValue(result);
                     service.setTransition(TransactionalState.UP, transaction, context);
                 }
             } finally {
                 context.complete();
             }
         }
-
-        private void performOutInjections() {
-            // TODO
-        }
-
-    }
-
-    private static class PerformInjectionsTask implements Executable<Void> {
-
-        private final Dependency<?>[] dependencies;
-
-        public PerformInjectionsTask(Dependency<?>[] dependencies) {
-            this.dependencies = dependencies;
-        }
-
-        @Override
-        public void execute(ExecuteContext<Void> context) {
-            for (Dependency<?> dependency: dependencies) {
-                dependency.performInjections();
-            }
-            context.complete();
-        }
-
     }
 }

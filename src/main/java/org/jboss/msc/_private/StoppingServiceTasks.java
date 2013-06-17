@@ -126,7 +126,7 @@ final class StoppingServiceTasks {
         @Override
         public void execute(ExecuteContext<Void> context) {
             try {
-                for (Dependency<?> dependency: serviceController.getDependencies()) {
+                for (AbstractDependency<?> dependency: serviceController.getDependencies()) {
                     ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
                     if (dependencyController != null) {
                         dependencyController.dependentStopped(transaction, context);

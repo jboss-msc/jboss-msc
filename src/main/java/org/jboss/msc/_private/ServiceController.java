@@ -59,7 +59,7 @@ final class ServiceController<T> extends TransactionalObject {
     /**
      * The service itself.
      */
-    private final Service<T> value;
+    private final Service<T> service;
     /**
      * The primary registration of this service.
      */
@@ -71,11 +71,15 @@ final class ServiceController<T> extends TransactionalObject {
     /**
      * The dependencies of this service.
      */
-    private final Dependency<?>[] dependencies;
+    private final AbstractDependency<?>[] dependencies;
     /**
      * The controller mode.
      */
     private final ServiceModeBehavior mode;
+    /**
+     * The service value, resulting of service start.
+     */
+    private T value;
     /**
      * The controller state.
      */
@@ -114,15 +118,16 @@ final class ServiceController<T> extends TransactionalObject {
      * 
      * @param primaryRegistration the primary registration
      * @param aliasRegistrations  the alias registrations
+     * @param service             the service itself
      * @param mode                the service mode
      * @param dependencies        the service dependencies
      * @param transaction         the active transaction
      * @param context             the service context
      */
-    ServiceController(final Registration primaryRegistration, final Registration[] aliasRegistrations, final Service<T> value,
-            final org.jboss.msc.service.ServiceMode mode, final Dependency<?>[] dependencies, final Transaction transaction,
+    ServiceController(final Registration primaryRegistration, final Registration[] aliasRegistrations, final Service<T> service,
+            final org.jboss.msc.service.ServiceMode mode, final AbstractDependency<?>[] dependencies, final Transaction transaction,
             final ServiceContext context) {
-        this.value = value;
+        this.service = service;
         this.mode = ServiceModeBehavior.getInstance(mode);
         this.dependencies = dependencies;
         this.aliasRegistrations = aliasRegistrations;
@@ -130,7 +135,7 @@ final class ServiceController<T> extends TransactionalObject {
         lockWrite(transaction, context);
         enabled = false;
         unsatisfiedDependencies = dependencies.length;
-        for (Dependency<?> dependency: dependencies) {
+        for (AbstractDependency<?> dependency: dependencies) {
             dependency.setDependent(this, transaction, context);
         }
     }
@@ -181,7 +186,7 @@ final class ServiceController<T> extends TransactionalObject {
     /**
      * Gets the dependencies.
      */
-    Dependency<?>[] getDependencies() {
+    AbstractDependency<?>[] getDependencies() {
         return dependencies;
     }
 
@@ -189,9 +194,17 @@ final class ServiceController<T> extends TransactionalObject {
      * Gets the service.
      */
     Service<T> getService() {
+        return service;
+    }
+
+    T getValue() {
         return value;
     }
 
+    void setValue(T value) {
+        this.value = value;
+    }
+    
     /**
      * Gets the current service controller state.
      */
@@ -500,7 +513,7 @@ final class ServiceController<T> extends TransactionalObject {
                         notifyDependencyAvailable(false, transaction, context);
                         break;
                     case REMOVED:
-                        for (Dependency<?> dependency: dependencies) {
+                        for (AbstractDependency<?> dependency: dependencies) {
                             dependency.clearDependent(transaction, context);
                         }
                         break;
@@ -613,7 +626,7 @@ final class ServiceController<T> extends TransactionalObject {
         }
 
         private boolean checkCycle(ServiceController<?> serviceController, Deque<ServiceName> path, Set<ServiceController<?>> cycleFound) {
-            for (Dependency<?> dependency: serviceController.dependencies) {
+            for (AbstractDependency<?> dependency: serviceController.dependencies) {
                 final Registration dependencyRegistration = dependency.getDependencyRegistration();
                 path.add(dependencyRegistration.getServiceName());
                 final ServiceController<?> dependencyController = dependencyRegistration.getController();
@@ -636,7 +649,7 @@ final class ServiceController<T> extends TransactionalObject {
         }
 
         private void notifyDependencyAvailable (boolean up, Registration serviceRegistration, Transaction transaction, ServiceContext context) {
-            for (Dependency<?> incomingDependency : serviceRegistration.getIncomingDependencies()) {
+            for (AbstractDependency<?> incomingDependency : serviceRegistration.getIncomingDependencies()) {
                 incomingDependency.dependencyAvailable(up, transaction, context);
             }
         }
@@ -651,7 +664,7 @@ final class ServiceController<T> extends TransactionalObject {
         }
 
         private void notifyDependencyUnavailable (Registration serviceRegistration, List<TaskController<?>> tasks, Transaction transaction, ServiceContext context) {
-            for (Dependency<?> incomingDependency : serviceRegistration.getIncomingDependencies()) {
+            for (AbstractDependency<?> incomingDependency : serviceRegistration.getIncomingDependencies()) {
                 TaskController<?> task = incomingDependency.dependencyUnavailable(transaction, context);
                 if (task != null) {
                     tasks.add(task);

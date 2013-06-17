@@ -17,8 +17,10 @@
  */
 package org.jboss.msc._private;
 
+import org.jboss.msc.txn.Transaction;
+
 /**
- * Parent dependency decorator. The dependent is created whenever dependency is satisfied, and is removed whenever
+ * Parent dependency. The dependent is created whenever dependency is satisfied, and is removed whenever
  * dependency is no longer satisfied.
  * 
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
@@ -29,10 +31,21 @@ final class ParentDependency<T> extends DependencyDecorator<T> {
     @SuppressWarnings("unused")
     private final ServiceBuilderImpl<?> childServiceBuilder;
 
-    public ParentDependency(Dependency<T> dependency, ServiceBuilderImpl<?> childServiceBuilder) {
+    public ParentDependency(AbstractDependency<T> dependency, ServiceBuilderImpl<?> childServiceBuilder) {
         super(dependency);
         this.childServiceBuilder = childServiceBuilder;
     }
 
-    // TODO install child when dependency is satisfied, and remove child when dependency is unsatisfied
+    public void install(Transaction transaction) {
+        // TODO install child when dependency is satisfied, and remove child when dependency is unsatisfied
+    }
+
+    @Override
+    Object takeSnapshot() {
+        return null;
+    }
+
+
+    @Override
+    void revert(Object snapshot) {}
 }
