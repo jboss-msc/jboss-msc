@@ -19,9 +19,7 @@ package org.jboss.msc.test.services;
 
 import static org.jboss.msc.service.ServiceMode.ACTIVE;
 import static org.jboss.msc.service.ServiceMode.LAZY;
-import static org.jboss.msc.service.ServiceMode.NEVER;
 import static org.jboss.msc.service.ServiceMode.ON_DEMAND;
-import static org.jboss.msc.service.ServiceMode.PASSIVE;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -41,27 +39,12 @@ public class OneService_NoDeps_TestCase extends AbstractServiceTest {
     /**
      * Usecase:
      * <UL>
-     *   <LI>first service (NEVER mode), no dependencies</LI>
-     *   <LI>service removed before container is shut down</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase1() throws Exception {
-        final TestService firstService = addService(firstSN, NEVER);
-        assertFalse(firstService.isUp());
-        removeService(firstSN);
-        assertFalse(firstService.isUp());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
      *   <LI>first service (ON_DEMAND mode), no dependencies</LI>
      *   <LI>service removed before container is shut down</LI>
      * </UL>
      */
     @Test
-    public void usecase2() throws Exception {
+    public void usecase1() throws Exception {
         final TestService firstService = addService(firstSN, ON_DEMAND);
         assertFalse(firstService.isUp());
         removeService(firstSN);
@@ -76,24 +59,9 @@ public class OneService_NoDeps_TestCase extends AbstractServiceTest {
      * </UL>
      */
     @Test
-    public void usecase3() throws Exception {
+    public void usecase2() throws Exception {
         final TestService firstService = addService(firstSN, LAZY);
         assertFalse(firstService.isUp());
-        removeService(firstSN);
-        assertFalse(firstService.isUp());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI>first service (PASSIVE mode), no dependencies</LI>
-     *   <LI>service removed before container is shut down</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase4() throws Exception {
-        final TestService firstService = addService(firstSN, PASSIVE);
-        assertTrue(firstService.isUp());
         removeService(firstSN);
         assertFalse(firstService.isUp());
     }
@@ -106,7 +74,7 @@ public class OneService_NoDeps_TestCase extends AbstractServiceTest {
      * </UL>
      */
     @Test
-    public void usecase5() throws Exception {
+    public void usecase3() throws Exception {
         final TestService firstService = addService(firstSN, ACTIVE);
         assertTrue(firstService.isUp());
         removeService(firstSN);

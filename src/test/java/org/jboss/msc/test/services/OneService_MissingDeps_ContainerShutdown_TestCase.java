@@ -19,9 +19,7 @@ package org.jboss.msc.test.services;
 
 import static org.jboss.msc.service.ServiceMode.ACTIVE;
 import static org.jboss.msc.service.ServiceMode.LAZY;
-import static org.jboss.msc.service.ServiceMode.NEVER;
 import static org.jboss.msc.service.ServiceMode.ON_DEMAND;
-import static org.jboss.msc.service.ServiceMode.PASSIVE;
 import static org.junit.Assert.assertFalse;
 
 import org.jboss.msc.service.ServiceName;
@@ -41,27 +39,12 @@ public class OneService_MissingDeps_ContainerShutdown_TestCase extends AbstractS
     /**
      * Usecase:
      * <UL>
-     *   <LI>first service (NEVER mode), no dependencies</LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase1() throws Exception {
-        final TestService firstService = addService(firstSN, NEVER, secondSN);
-        assertFalse(firstService.isUp());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
      *   <LI>first service (ON_DEMAND mode), no dependencies</LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
     @Test
-    public void usecase2() throws Exception {
+    public void usecase1() throws Exception {
         final TestService firstService = addService(firstSN, ON_DEMAND, secondSN);
         assertFalse(firstService.isUp());
         shutdownContainer();
@@ -76,23 +59,8 @@ public class OneService_MissingDeps_ContainerShutdown_TestCase extends AbstractS
      * </UL>
      */
     @Test
-    public void usecase3() throws Exception {
+    public void usecase2() throws Exception {
         final TestService firstService = addService(firstSN, LAZY, secondSN);
-        assertFalse(firstService.isUp());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI>first service (PASSIVE mode), no dependencies</LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase4() throws Exception {
-        final TestService firstService = addService(firstSN, PASSIVE, secondSN);
         assertFalse(firstService.isUp());
         shutdownContainer();
         assertFalse(firstService.isUp());
@@ -106,7 +74,7 @@ public class OneService_MissingDeps_ContainerShutdown_TestCase extends AbstractS
      * </UL>
      */
     @Test
-    public void usecase5() throws Exception {
+    public void usecase3() throws Exception {
         final TestService firstService = addService(firstSN, ACTIVE, secondSN);
         assertFalse(firstService.isUp());
         shutdownContainer();

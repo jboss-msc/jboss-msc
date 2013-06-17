@@ -46,23 +46,6 @@ abstract class ServiceModeBehavior {
     };
 
     /**
-     * Behavior for {@link ServiceMode#PASSIVE}.
-     */
-    private static final ServiceModeBehavior PASSIVE = new ServiceModeBehavior() {
-        boolean shouldStart(ServiceController<?> service) {
-            return true;
-        }
-
-        boolean shouldStop(ServiceController<?> service) {
-            return false;
-        }
-
-        Demand shouldDemandDependencies() {
-            return Demand.PROPAGATE;
-        }
-    };
-
-    /**
      * Behavior for {@link ServiceMode#LAZY}.
      */
     private static final ServiceModeBehavior LAZY = new ServiceModeBehavior() {
@@ -93,23 +76,6 @@ abstract class ServiceModeBehavior {
 
         Demand shouldDemandDependencies() {
             return Demand.PROPAGATE;
-        }
-    };
-
-    /**
-     * Behavior for {@link ServiceMode#NEVER}.
-     */
-    private static final ServiceModeBehavior NEVER = new ServiceModeBehavior() {
-        boolean shouldStart(ServiceController<?> service) {
-            return false;
-        }
-
-        boolean shouldStop(ServiceController<?> service) {
-            return true;
-        }
-
-        Demand shouldDemandDependencies() {
-            return Demand.NEVER;
         }
     };
 
@@ -155,12 +121,8 @@ abstract class ServiceModeBehavior {
                 return ACTIVE;
             case LAZY:
                 return LAZY;
-            case NEVER:
-                return NEVER;
             case ON_DEMAND:
                 return ON_DEMAND;
-            case PASSIVE:
-                return PASSIVE;
             default:
                 throw new IllegalArgumentException("Unexpected service mode");
         }

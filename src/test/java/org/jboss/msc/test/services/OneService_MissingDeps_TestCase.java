@@ -19,9 +19,7 @@ package org.jboss.msc.test.services;
 
 import static org.jboss.msc.service.ServiceMode.ACTIVE;
 import static org.jboss.msc.service.ServiceMode.LAZY;
-import static org.jboss.msc.service.ServiceMode.NEVER;
 import static org.jboss.msc.service.ServiceMode.ON_DEMAND;
-import static org.jboss.msc.service.ServiceMode.PASSIVE;
 import static org.junit.Assert.assertFalse;
 
 import org.jboss.msc.service.ServiceName;
@@ -37,21 +35,6 @@ public class OneService_MissingDeps_TestCase extends AbstractServiceTest {
 
     private static final ServiceName firstSN = ServiceName.of("first");
     private static final ServiceName secondSN = ServiceName.of("second");
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI>first service (NEVER mode), no dependencies</LI>
-     *   <LI>service removed before container is shut down</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase1() throws Exception {
-        final TestService firstService = addService(firstSN, NEVER, secondSN);
-        assertFalse(firstService.isUp());
-        removeService(firstSN);
-        assertFalse(firstService.isUp());
-    }
 
     /**
      * Usecase:
@@ -78,21 +61,6 @@ public class OneService_MissingDeps_TestCase extends AbstractServiceTest {
     @Test
     public void usecase3() throws Exception {
         final TestService firstService = addService(firstSN, LAZY, secondSN);
-        assertFalse(firstService.isUp());
-        removeService(firstSN);
-        assertFalse(firstService.isUp());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI>first service (PASSIVE mode), no dependencies</LI>
-     *   <LI>service removed before container is shut down</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase4() throws Exception {
-        final TestService firstService = addService(firstSN, PASSIVE, secondSN);
         assertFalse(firstService.isUp());
         removeService(firstSN);
         assertFalse(firstService.isUp());

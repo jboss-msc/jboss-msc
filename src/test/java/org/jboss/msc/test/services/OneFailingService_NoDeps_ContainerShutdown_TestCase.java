@@ -19,9 +19,7 @@ package org.jboss.msc.test.services;
 
 import static org.jboss.msc.service.ServiceMode.ACTIVE;
 import static org.jboss.msc.service.ServiceMode.LAZY;
-import static org.jboss.msc.service.ServiceMode.NEVER;
 import static org.jboss.msc.service.ServiceMode.ON_DEMAND;
-import static org.jboss.msc.service.ServiceMode.PASSIVE;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -41,29 +39,12 @@ public class OneFailingService_NoDeps_ContainerShutdown_TestCase extends Abstrac
     /**
      * Usecase:
      * <UL>
-     *   <LI>first failing service (NEVER mode), no dependencies</LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase1() throws Exception {
-        final TestService firstService = addService(firstSN, true, NEVER);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
      *   <LI>first failing service (ON_DEMAND mode), no dependencies</LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
     @Test
-    public void usecase2() throws Exception {
+    public void usecase1() throws Exception {
         final TestService firstService = addService(firstSN, true, ON_DEMAND);
         assertFalse(firstService.isUp());
         assertFalse(firstService.isFailed());
@@ -80,7 +61,7 @@ public class OneFailingService_NoDeps_ContainerShutdown_TestCase extends Abstrac
      * </UL>
      */
     @Test
-    public void usecase3() throws Exception {
+    public void usecase2() throws Exception {
         final TestService firstService = addService(firstSN, true, LAZY);
         assertFalse(firstService.isUp());
         assertFalse(firstService.isFailed());
@@ -92,29 +73,12 @@ public class OneFailingService_NoDeps_ContainerShutdown_TestCase extends Abstrac
     /**
      * Usecase:
      * <UL>
-     *   <LI>first failing service (PASSIVE mode), no dependencies</LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase4() throws Exception {
-        final TestService firstService = addService(firstSN, true, PASSIVE);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
      *   <LI>first failing service (ACTIVE mode), no dependencies</LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
     @Test
-    public void usecase5() throws Exception {
+    public void usecase3() throws Exception {
         final TestService firstService = addService(firstSN, true, ACTIVE);
         assertFalse(firstService.isUp());
         assertTrue(firstService.isFailed());

@@ -24,9 +24,7 @@ package org.jboss.msc.test.services;
 
 import static org.jboss.msc.service.ServiceMode.ACTIVE;
 import static org.jboss.msc.service.ServiceMode.LAZY;
-import static org.jboss.msc.service.ServiceMode.NEVER;
 import static org.jboss.msc.service.ServiceMode.ON_DEMAND;
-import static org.jboss.msc.service.ServiceMode.PASSIVE;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -47,139 +45,14 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
     /**
      * Usecase:
      * <UL>
-     *   <LI><B>first failing service</B> (NEVER mode), no dependencies</LI>
-     *   <LI><B>second service</B> (NEVER mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase1() throws Exception {
-        final TestService firstService = addService(firstSN, true, NEVER);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, NEVER, firstSN);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
      *   <LI><B>first failing service</B> (ON_DEMAND mode), no dependencies</LI>
-     *   <LI><B>second service</B> (NEVER mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase2() throws Exception {
-        final TestService firstService = addService(firstSN, true, ON_DEMAND);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, NEVER, firstSN);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (LAZY mode), no dependencies</LI>
-     *   <LI><B>second service</B> (NEVER mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase3() throws Exception {
-        final TestService firstService = addService(firstSN, true, LAZY);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, NEVER, firstSN);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (PASSIVE mode), no dependencies</LI>
-     *   <LI><B>second service</B> (NEVER mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase4() throws Exception {
-        final TestService firstService = addService(firstSN, true, PASSIVE);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        final TestService secondService = addService(secondSN, NEVER, firstSN);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (ACTIVE mode), no dependencies</LI>
-     *   <LI><B>second service</B> (NEVER mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase5() throws Exception {
-        final TestService firstService = addService(firstSN, true, ACTIVE);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        final TestService secondService = addService(secondSN, NEVER, firstSN);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (NEVER mode), no dependencies</LI>
      *   <LI><B>second service</B> (ON_DEMAND mode), depends on <B>first service</B></LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
     @Test
-    public void usecase6() throws Exception {
-        final TestService firstService = addService(firstSN, true, NEVER);
+    public void usecase1() throws Exception {
+        final TestService firstService = addService(firstSN, true, ON_DEMAND);
         assertFalse(firstService.isUp());
         assertFalse(firstService.isFailed());
         final TestService secondService = addService(secondSN, ON_DEMAND, firstSN);
@@ -197,8 +70,133 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
     /**
      * Usecase:
      * <UL>
-     *   <LI><B>first failing service</B> (ON_DEMAND mode), no dependencies</LI>
+     *   <LI><B>first failing service</B> (LAZY mode), no dependencies</LI>
      *   <LI><B>second service</B> (ON_DEMAND mode), depends on <B>first service</B></LI>
+     *   <LI>container shutdown</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase2() throws Exception {
+        final TestService firstService = addService(firstSN, true, LAZY);
+        assertFalse(firstService.isUp());
+        assertFalse(firstService.isFailed());
+        final TestService secondService = addService(secondSN, ON_DEMAND, firstSN);
+        assertFalse(firstService.isUp());
+        assertFalse(firstService.isFailed());
+        assertFalse(secondService.isUp());
+        assertFalse(secondService.isFailed());
+        shutdownContainer();
+        assertFalse(firstService.isUp());
+        assertFalse(firstService.isFailed());
+        assertFalse(secondService.isUp());
+        assertFalse(secondService.isFailed());
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI><B>first failing service</B> (ACTIVE mode), no dependencies</LI>
+     *   <LI><B>second service</B> (ON_DEMAND mode), depends on <B>first service</B></LI>
+     *   <LI>container shutdown</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase3() throws Exception {
+        final TestService firstService = addService(firstSN, true, ACTIVE);
+        assertFalse(firstService.isUp());
+        assertTrue(firstService.isFailed());
+        final TestService secondService = addService(secondSN, ON_DEMAND, firstSN);
+        assertFalse(firstService.isUp());
+        assertTrue(firstService.isFailed());
+        assertFalse(secondService.isUp());
+        assertFalse(secondService.isFailed());
+        shutdownContainer();
+        assertFalse(firstService.isUp());
+        assertTrue(firstService.isFailed());
+        assertFalse(secondService.isUp());
+        assertFalse(secondService.isFailed());
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI><B>first failing service</B> (ON_DEMAND mode), no dependencies</LI>
+     *   <LI><B>second service</B> (LAZY mode), depends on <B>first service</B></LI>
+     *   <LI>container shutdown</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase4() throws Exception {
+        final TestService firstService = addService(firstSN, true, ON_DEMAND);
+        assertFalse(firstService.isUp());
+        assertFalse(firstService.isFailed());
+        final TestService secondService = addService(secondSN, LAZY, firstSN);
+        assertFalse(firstService.isUp());
+        assertFalse(firstService.isFailed());
+        assertFalse(secondService.isUp());
+        assertFalse(secondService.isFailed());
+        shutdownContainer();
+        assertFalse(firstService.isUp());
+        assertFalse(firstService.isFailed());
+        assertFalse(secondService.isUp());
+        assertFalse(secondService.isFailed());
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI><B>first failing service</B> (LAZY mode), no dependencies</LI>
+     *   <LI><B>second service</B> (LAZY mode), depends on <B>first service</B></LI>
+     *   <LI>container shutdown</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase5() throws Exception {
+        final TestService firstService = addService(firstSN, true, LAZY);
+        assertFalse(firstService.isUp());
+        assertFalse(firstService.isFailed());
+        final TestService secondService = addService(secondSN, LAZY, firstSN);
+        assertFalse(firstService.isUp());
+        assertFalse(firstService.isFailed());
+        assertFalse(secondService.isUp());
+        assertFalse(secondService.isFailed());
+        shutdownContainer();
+        assertFalse(firstService.isUp());
+        assertFalse(firstService.isFailed());
+        assertFalse(secondService.isUp());
+        assertFalse(secondService.isFailed());
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI><B>first failing service</B> (ACTIVE mode), no dependencies</LI>
+     *   <LI><B>second service</B> (LAZY mode), depends on <B>first service</B></LI>
+     *   <LI>container shutdown</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase6() throws Exception {
+        final TestService firstService = addService(firstSN, true, ACTIVE);
+        assertFalse(firstService.isUp());
+        assertTrue(firstService.isFailed());
+        final TestService secondService = addService(secondSN, LAZY, firstSN);
+        assertFalse(firstService.isUp());
+        assertTrue(firstService.isFailed());
+        assertFalse(secondService.isUp());
+        assertFalse(secondService.isFailed());
+        shutdownContainer();
+        assertFalse(firstService.isUp());
+        assertTrue(firstService.isFailed());
+        assertFalse(secondService.isUp());
+        assertFalse(secondService.isFailed());
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI><B>first failing service</B> (ON_DEMAND mode), no dependencies</LI>
+     *   <LI><B>second service</B> (ACTIVE mode), depends on <B>first service</B></LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
@@ -207,14 +205,14 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
         final TestService firstService = addService(firstSN, true, ON_DEMAND);
         assertFalse(firstService.isUp());
         assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, ON_DEMAND, firstSN);
+        final TestService secondService = addService(secondSN, ACTIVE, firstSN);
         assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
+        assertTrue(firstService.isFailed());
         assertFalse(secondService.isUp());
         assertFalse(secondService.isFailed());
         shutdownContainer();
         assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
+        assertTrue(firstService.isFailed());
         assertFalse(secondService.isUp());
         assertFalse(secondService.isFailed());
     }
@@ -223,7 +221,7 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
      * Usecase:
      * <UL>
      *   <LI><B>first failing service</B> (LAZY mode), no dependencies</LI>
-     *   <LI><B>second service</B> (ON_DEMAND mode), depends on <B>first service</B></LI>
+     *   <LI><B>second service</B> (ACTIVE mode), depends on <B>first service</B></LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
@@ -232,14 +230,14 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
         final TestService firstService = addService(firstSN, true, LAZY);
         assertFalse(firstService.isUp());
         assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, ON_DEMAND, firstSN);
+        final TestService secondService = addService(secondSN, ACTIVE, firstSN);
         assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
+        assertTrue(firstService.isFailed());
         assertFalse(secondService.isUp());
         assertFalse(secondService.isFailed());
         shutdownContainer();
         assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
+        assertTrue(firstService.isFailed());
         assertFalse(secondService.isUp());
         assertFalse(secondService.isFailed());
     }
@@ -247,413 +245,13 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
     /**
      * Usecase:
      * <UL>
-     *   <LI><B>first failing service</B> (PASSIVE mode), no dependencies</LI>
-     *   <LI><B>second service</B> (ON_DEMAND mode), depends on <B>first service</B></LI>
+     *   <LI><B>first failing service</B> (ACTIVE mode), no dependencies</LI>
+     *   <LI><B>second service</B> (ACTIVE mode), depends on <B>first service</B></LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
     @Test
     public void usecase9() throws Exception {
-        final TestService firstService = addService(firstSN, true, PASSIVE);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        final TestService secondService = addService(secondSN, ON_DEMAND, firstSN);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (ACTIVE mode), no dependencies</LI>
-     *   <LI><B>second service</B> (ON_DEMAND mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase10() throws Exception {
-        final TestService firstService = addService(firstSN, true, ACTIVE);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        final TestService secondService = addService(secondSN, ON_DEMAND, firstSN);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (NEVER mode), no dependencies</LI>
-     *   <LI><B>second service</B> (LAZY mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase11() throws Exception {
-        final TestService firstService = addService(firstSN, true, NEVER);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, LAZY, firstSN);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (ON_DEMAND mode), no dependencies</LI>
-     *   <LI><B>second service</B> (LAZY mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase12() throws Exception {
-        final TestService firstService = addService(firstSN, true, ON_DEMAND);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, LAZY, firstSN);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (LAZY mode), no dependencies</LI>
-     *   <LI><B>second service</B> (LAZY mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase13() throws Exception {
-        final TestService firstService = addService(firstSN, true, LAZY);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, LAZY, firstSN);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (PASSIVE mode), no dependencies</LI>
-     *   <LI><B>second service</B> (LAZY mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase14() throws Exception {
-        final TestService firstService = addService(firstSN, true, PASSIVE);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        final TestService secondService = addService(secondSN, LAZY, firstSN);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (ACTIVE mode), no dependencies</LI>
-     *   <LI><B>second service</B> (LAZY mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase15() throws Exception {
-        final TestService firstService = addService(firstSN, true, ACTIVE);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        final TestService secondService = addService(secondSN, LAZY, firstSN);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (NEVER mode), no dependencies</LI>
-     *   <LI><B>second service</B> (PASSIVE mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase16() throws Exception {
-        final TestService firstService = addService(firstSN, true, NEVER);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, PASSIVE, firstSN);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (ON_DEMAND mode), no dependencies</LI>
-     *   <LI><B>second service</B> (PASSIVE mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase17() throws Exception {
-        final TestService firstService = addService(firstSN, true, ON_DEMAND);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, PASSIVE, firstSN);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (LAZY mode), no dependencies</LI>
-     *   <LI><B>second service</B> (PASSIVE mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase18() throws Exception {
-        final TestService firstService = addService(firstSN, true, LAZY);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, PASSIVE, firstSN);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (PASSIVE mode), no dependencies</LI>
-     *   <LI><B>second service</B> (PASSIVE mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase19() throws Exception {
-        final TestService firstService = addService(firstSN, true, PASSIVE);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        final TestService secondService = addService(secondSN, PASSIVE, firstSN);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (ACTIVE mode), no dependencies</LI>
-     *   <LI><B>second service</B> (PASSIVE mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase20() throws Exception {
-        final TestService firstService = addService(firstSN, true, ACTIVE);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        final TestService secondService = addService(secondSN, PASSIVE, firstSN);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (NEVER mode), no dependencies</LI>
-     *   <LI><B>second service</B> (ACTIVE mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase21() throws Exception {
-        final TestService firstService = addService(firstSN, true, NEVER);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, ACTIVE, firstSN);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (ON_DEMAND mode), no dependencies</LI>
-     *   <LI><B>second service</B> (ACTIVE mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase22() throws Exception {
-        final TestService firstService = addService(firstSN, true, ON_DEMAND);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, ACTIVE, firstSN);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (LAZY mode), no dependencies</LI>
-     *   <LI><B>second service</B> (ACTIVE mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase23() throws Exception {
-        final TestService firstService = addService(firstSN, true, LAZY);
-        assertFalse(firstService.isUp());
-        assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, ACTIVE, firstSN);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (PASSIVE mode), no dependencies</LI>
-     *   <LI><B>second service</B> (ACTIVE mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase24() throws Exception {
-        final TestService firstService = addService(firstSN, true, PASSIVE);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        final TestService secondService = addService(secondSN, ACTIVE, firstSN);
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
-        assertTrue(firstService.isFailed());
-        assertFalse(secondService.isUp());
-        assertFalse(secondService.isFailed());
-    }
-
-    /**
-     * Usecase:
-     * <UL>
-     *   <LI><B>first failing service</B> (ACTIVE mode), no dependencies</LI>
-     *   <LI><B>second service</B> (ACTIVE mode), depends on <B>first service</B></LI>
-     *   <LI>container shutdown</LI>
-     * </UL>
-     */
-    @Test
-    public void usecase25() throws Exception {
         final TestService firstService = addService(firstSN, true, ACTIVE);
         assertFalse(firstService.isUp());
         assertTrue(firstService.isFailed());

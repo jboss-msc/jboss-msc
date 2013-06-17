@@ -19,10 +19,11 @@
 package org.jboss.msc.service;
 
 /**
- * A service mode.
+ * Service modes.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public enum ServiceMode {
     /**
@@ -31,10 +32,6 @@ public enum ServiceMode {
      */
     ACTIVE,
     /**
-     * Start as soon as all dependencies are met.  Does not demand dependencies.
-     */
-    PASSIVE,
-    /**
      * Start only when demanded to, but stay running until required or demanded to stop.
      */
     LAZY,
@@ -42,9 +39,5 @@ public enum ServiceMode {
      * Start only when demanded to, and stop when demands disappear, or when demanded to stop.
      */
     ON_DEMAND,
-    /**
-     * Do not start; stay in a stopped state.
-     */
-    NEVER,
     ;
 }
