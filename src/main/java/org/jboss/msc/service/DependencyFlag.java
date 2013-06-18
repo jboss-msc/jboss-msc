@@ -18,17 +18,14 @@
 
 package org.jboss.msc.service;
 
-import java.util.Collection;
-
 /**
- * The possible values for a dependency flag.  The special value {@link #NONE} is provided
- * for varargs use when no flags are desired.
+ * Dependency flags.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public enum DependencyFlag {
-
     /**
      * The dependency is met when the target is down, rather than up.  Implies {@link #UNREQUIRED}.  Injection is
      * not allowed for {@code ANTI} dependencies.
@@ -66,65 +63,4 @@ public enum DependencyFlag {
      */
     REPLACEABLE,
     ;
-
-    public final boolean in(DependencyFlag flag) {
-        return this == flag;
-    }
-
-    public final boolean in(DependencyFlag flag1, DependencyFlag flag2) {
-        return this == flag1 || this == flag2;
-    }
-
-    public final boolean in(DependencyFlag flag1, DependencyFlag flag2, DependencyFlag flag3) {
-        return this == flag1 || this == flag2 || this == flag3;
-    }
-
-    public final boolean in(DependencyFlag flag1, DependencyFlag flag2, DependencyFlag flag3, DependencyFlag flag4) {
-        return this == flag1 || this == flag2 || this == flag3 || this == flag4;
-    }
-
-    public final boolean in(DependencyFlag... flags) {
-        for (DependencyFlag flag : flags) {
-            if (this == flag) return true;
-        }
-        return false;
-    }
-
-    public final boolean in(Collection<? super DependencyFlag> flags) {
-        return flags.contains(this);
-    }
-
-    /**
-     * An array containing no flags.
-     */
-    public static final DependencyFlag[] NONE = new DependencyFlag[0];
-
-    /**
-     * Determine whether a flag combination is valid.
-     *
-     * @param flags the flags to check
-     * @throws IllegalArgumentException if the combination is invalid
-     */
-    public static void validate(DependencyFlag... flags) throws IllegalArgumentException {
-        boolean anti = false, required = false, unrequired = false, optional = false, undemanded = false, demanded = false, parent = false, replaceable = false;
-        for (DependencyFlag flag : flags) {
-            if (optional && flag.in(REQUIRED, PARENT, UNREQUIRED, ANTI) || (parent || required) && flag.in(OPTIONAL, UNREQUIRED, ANTI) || (anti || unrequired) && flag.in(OPTIONAL, REQUIRED, PARENT)) {
-                throw new IllegalArgumentException("Only one of REQUIRED, UNREQUIRED, or OPTIONAL may be given (ANTI implies UNREQUIRED, PARENT implies REQUIRED)");
-            }
-            if (flag == DEMANDED && undemanded || flag == UNDEMANDED && demanded) {
-                throw new IllegalArgumentException("DEMANDED cannot coexist with UNDEMANDED");
-            }
-            if (flag == ANTI) anti = true;
-            if (flag == REQUIRED) required = true;
-            if (flag == UNREQUIRED) unrequired = true;
-            if (flag == OPTIONAL) optional = true;
-            if (flag == UNDEMANDED) undemanded = true;
-            if (flag == DEMANDED) demanded = true;
-            if (flag == PARENT) parent = true;
-            if (flag == REPLACEABLE) replaceable = true;
-        }
-        if (optional && ! replaceable) {
-            throw new IllegalArgumentException("OPTIONAL requires REPLACEABLE");
-        }
-    }
 }
