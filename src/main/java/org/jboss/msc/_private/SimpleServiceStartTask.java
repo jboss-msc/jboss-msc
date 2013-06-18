@@ -113,8 +113,8 @@ final class SimpleServiceStartTask<T> implements Executable<T> {
                 return context.newTask();
             }
             
-            public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name, Service<T> service) {
-                return context.addService(registry, name, service);
+            public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name) {
+                return context.addService(registry, name);
             }
 
             @Override

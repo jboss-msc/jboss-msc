@@ -28,7 +28,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import org.jboss.msc.Version;
-import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
@@ -147,14 +146,14 @@ public final class TransactionImpl extends Transaction implements ServiceContext
     }
 
     @Override
-    public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name, Service<T> service) {
+    public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name) {
         if (registry == null) {
             throw new IllegalArgumentException("registry is null");
         }
         if (name == null) {
             throw new IllegalArgumentException("name is null");
         }
-        return new ServiceBuilderImpl<T>(registry, name, service, this);
+        return new ServiceBuilderImpl<T>(registry, name, this);
     }
 
     @Override

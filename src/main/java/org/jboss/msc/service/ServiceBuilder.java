@@ -38,6 +38,15 @@ public interface ServiceBuilder<T> {
     ServiceBuilder<T> setMode(ServiceMode mode) throws IllegalStateException;
 
     /**
+     * Sets the service instance.
+     * 
+     * @param service the service
+     * @return a reference to this object
+     * @throws IllegalStateException if {@link #install()} has been called.
+     */
+    ServiceBuilder<T> setService(Service<T> service) throws IllegalStateException;
+
+    /**
      * Add aliases for the service.
      *
      * @param aliases the dependency names to use as aliases

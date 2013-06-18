@@ -114,8 +114,9 @@ public class AbstractServiceTest extends AbstractTransactionTest {
     protected final TestService addService(final ServiceRegistry serviceRegistry, final ServiceName serviceName, final boolean failToStart, final ServiceMode serviceMode, final ServiceName... dependencies) throws InterruptedException {
         final Transaction txn = newTransaction();
         final TestService service = new TestService(failToStart);
-        final ServiceBuilder<Void> serviceBuilder = txn.addService(serviceRegistry, serviceName, service);
+        final ServiceBuilder<Void> serviceBuilder = txn.addService(serviceRegistry, serviceName);
         if (serviceMode != null) serviceBuilder.setMode(serviceMode);
+        serviceBuilder.setService(service);
         for (ServiceName dependency: dependencies) {
             serviceBuilder.addDependency(dependency);
         }

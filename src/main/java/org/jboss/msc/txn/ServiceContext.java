@@ -54,10 +54,9 @@ public interface ServiceContext {
      *
      * @param registry the target service registry where new service will be installed
      * @param name the service name
-     * @param service the service
      * @return the builder for the service
      */
-    <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name, Service<T> service);
+    <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name);
 
     /**
      * Disables a service, causing this service to stop if it is {@code UP}.

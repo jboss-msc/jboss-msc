@@ -52,7 +52,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     // service aliases
     private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
     // service itself
-    private final Service<T> service;
+    private Service<T> service;
     // dependencies
     private final Map<ServiceName, AbstractDependency<?>> dependencies= new LinkedHashMap<ServiceName, AbstractDependency<?>>();
     // TODO decide after discussion on IRC if we have a special API for replacement (in which case we will need this parameter
@@ -77,8 +77,8 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * @param service      the service itself
      * @param transaction  active transaction
      */
-    ServiceBuilderImpl(final ServiceRegistry registry, final ServiceName name, final Service<T> service, final Transaction transaction) {
-        this(registry, name, service, false, transaction);
+    ServiceBuilderImpl(final ServiceRegistry registry, final ServiceName name, final Transaction transaction) {
+        this(registry, name, false, transaction);
     }
 
     /**
@@ -89,11 +89,10 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * @param replaceService {@code true} if this service is a replacement dependency of another
      * @param transaction    active transaction
      */
-    ServiceBuilderImpl(final ServiceRegistry registry, final ServiceName name, final Service<T> service, final boolean replaceService, final Transaction transaction) {
+    ServiceBuilderImpl(final ServiceRegistry registry, final ServiceName name, final boolean replaceService, final Transaction transaction) {
         this.transaction = transaction;
         this.registry = (ServiceRegistryImpl)registry;
         this.name = name;
-        this.service = service;
         this.replacement = replaceService;
         this.mode = ServiceMode.ACTIVE;
     }
@@ -108,6 +107,19 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
             MSCLogger.SERVICE.methodParameterIsNull("mode");
         }
         this.mode = mode;
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public ServiceBuilder<T> setService(final Service<T> service) {
+        checkAlreadyInstalled();
+        if (service == null) {
+            MSCLogger.SERVICE.methodParameterIsNull("service");
+        }
+        this.service = service;
         return this;
     }
 

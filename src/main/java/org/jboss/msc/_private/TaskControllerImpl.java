@@ -27,7 +27,6 @@ import static org.jboss.msc._private.Bits.oneIsSet;
 
 import java.util.ArrayList;
 
-import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
@@ -823,8 +822,8 @@ final class TaskControllerImpl<T> implements TaskController<T>, TaskParent, Task
             setClassLoader();
             exec.execute(new ExecuteContext<T>() {
                 @Override
-                public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name, Service<T> service) {
-                    return getTransaction().addService(registry, name, service);
+                public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name) {
+                    return getTransaction().addService(registry, name);
                 }
 
                 public void disableService(ServiceRegistry registry, ServiceName name) {
