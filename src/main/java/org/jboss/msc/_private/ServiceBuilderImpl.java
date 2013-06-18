@@ -248,6 +248,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
             dependenciesArray = new AbstractDependency<?>[dependencies.size() + 1];
             dependenciesArray[dependencies.size()] = parentDependency;
         }
+        dependencies.values().toArray(dependenciesArray);
         // create and install service controller
         final ServiceController<T> serviceController =  new ServiceController<T>(registration, aliasRegistrations, service, mode, dependenciesArray, transaction, context);
         serviceController.install(transaction, context);
