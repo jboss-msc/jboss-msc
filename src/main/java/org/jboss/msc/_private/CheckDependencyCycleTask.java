@@ -39,7 +39,7 @@ import org.jboss.msc.txn.ValidateContext;
  */
 final class CheckDependencyCycleTask implements Validatable {
 
-    public static final AttachmentKey<CheckDependencyCycleTask> key = AttachmentKey.create();
+    static final AttachmentKey<CheckDependencyCycleTask> key = AttachmentKey.create();
 
     /**
      * Schedule a check for dependency cycles involving {@code service}. The check is performed during transaction
@@ -48,7 +48,7 @@ final class CheckDependencyCycleTask implements Validatable {
      * @param transaction the active transaction
      * @param service     the service to be verified
      */
-    public static void checkDependencyCycle(ServiceController<?> service, Transaction transaction) {
+    static void checkDependencyCycle(ServiceController<?> service, Transaction transaction) {
         final CheckDependencyCycleTask task;
         if (transaction.hasAttachment(key)) {
             task = transaction.getAttachment(key);

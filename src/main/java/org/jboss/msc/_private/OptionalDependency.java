@@ -34,7 +34,7 @@ package org.jboss.msc._private;
  */ 
 final class OptionalDependency<T> extends DependencyDecorator<T> {
 
-    public OptionalDependency(AbstractDependency<T> dependency) {
+    OptionalDependency(AbstractDependency<T> dependency) {
         super(dependency);
     }
 

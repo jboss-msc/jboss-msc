@@ -40,8 +40,7 @@ final class SimpleServiceStartTask<T> implements Executable<T> {
     private final Service<T> service;
     private final Transaction transaction;
     
-
-    public SimpleServiceStartTask(final Service<T> service, final Transaction transaction) {
+    SimpleServiceStartTask(final Service<T> service, final Transaction transaction) {
         this.service = service;
         this.transaction = transaction;
     }

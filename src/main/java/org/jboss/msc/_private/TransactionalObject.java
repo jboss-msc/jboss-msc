@@ -163,11 +163,11 @@ abstract class TransactionalObject {
      */
     void writeUnlocked() {}
 
-    static class UnlockWriteTask implements Validatable, Committable, Revertible {
+    private static class UnlockWriteTask implements Validatable, Committable, Revertible {
 
         private Map<TransactionalObject, Object> transactionalObjects;
 
-        public UnlockWriteTask(Map<TransactionalObject, Object> transactionalObjects) {
+        private UnlockWriteTask(Map<TransactionalObject, Object> transactionalObjects) {
             this.transactionalObjects = transactionalObjects;
         }
 

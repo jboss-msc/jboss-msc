@@ -58,7 +58,7 @@ final class Registration extends TransactionalObject {
      */
     private int downDemandedByCount;
 
-    public Registration(ServiceName serviceName) {
+    Registration(ServiceName serviceName) {
         this.serviceName = serviceName;
     }
 

@@ -34,7 +34,7 @@ class SetTransactionalStateTask implements Executable<Void> {
     private final TransactionalState state;
     private final Transaction transaction;
 
-    public SetTransactionalStateTask(ServiceController<?> service, TransactionalState state, Transaction transaction) {
+    SetTransactionalStateTask(ServiceController<?> service, TransactionalState state, Transaction transaction) {
         this.service = service;
         this.state = state;
         this.transaction = transaction;

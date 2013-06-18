@@ -86,7 +86,7 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
         return registry.get(name);
     }
 
-    public ServiceController<?> getRequiredServiceController(ServiceName serviceName) throws ServiceNotFoundException {
+    ServiceController<?> getRequiredServiceController(ServiceName serviceName) throws ServiceNotFoundException {
         final ServiceController<?> controller = registry.containsKey(serviceName)? registry.get(serviceName).getController(): null;
         if (controller == null) {
             throw new ServiceNotFoundException("Service " + serviceName + " not found");
@@ -135,7 +135,7 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
     }
 
     // TODO ongoing work: code under review
-    public void install(ServiceController<?> serviceController) {
+    void install(ServiceController<?> serviceController) {
         checkRemoved();
     }
 

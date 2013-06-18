@@ -42,7 +42,7 @@ import org.jboss.msc.txn.Transaction;
  */
 final class StartingServiceTasks {
 
-    public static final AttachmentKey<Set<Service<?>>> FAILED_SERVICES = AttachmentKey.<Set<Service<?>>>create(new Factory<Set<Service<?>>>() {
+    static final AttachmentKey<Set<Service<?>>> FAILED_SERVICES = AttachmentKey.<Set<Service<?>>>create(new Factory<Set<Service<?>>>() {
         @Override
         public Set<Service<?>> create() {
             return new HashSet<Service<?>>();
@@ -59,7 +59,7 @@ final class StartingServiceTasks {
      * @return                   the final task to be executed. Can be used for creating tasks that depend on the
      *                           conclusion of starting transition.
      */
-    public static <T> TaskController<Void> createTasks(ServiceController<T> serviceController,
+    static <T> TaskController<Void> createTasks(ServiceController<T> serviceController,
             Collection<TaskController<?>> taskDependencies, Transaction transaction, ServiceContext context) {
 
         final Service<T> serviceValue = serviceController.getService();
@@ -91,7 +91,7 @@ final class StartingServiceTasks {
      * @return                   the final task to be executed. Can be used for creating tasks that depend on the
      *                           conclusion of starting transition.
      */
-    public static <T> TaskController<Void> createTasks(ServiceController<T> serviceController,
+    static <T> TaskController<Void> createTasks(ServiceController<T> serviceController,
             TaskController<?> taskDependency, Transaction transaction, ServiceContext context) {
 
         assert taskDependency != null;
@@ -132,7 +132,7 @@ final class StartingServiceTasks {
         private final TaskController<T> serviceStartTask;
         private final Transaction transaction;
 
-        public PostStartServiceTask (ServiceController<T> service, TaskController<T> serviceStartTask, Transaction transaction) {
+        private PostStartServiceTask (ServiceController<T> service, TaskController<T> serviceStartTask, Transaction transaction) {
             this.service = service;
             this.serviceStartTask = serviceStartTask;
             this.transaction = transaction;

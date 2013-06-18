@@ -31,7 +31,7 @@ final class ParentDependency<T> extends DependencyDecorator<T> {
     @SuppressWarnings("unused")
     private final ServiceBuilderImpl<?> childServiceBuilder;
 
-    public ParentDependency(AbstractDependency<T> dependency, ServiceBuilderImpl<?> childServiceBuilder) {
+    ParentDependency(AbstractDependency<T> dependency, ServiceBuilderImpl<?> childServiceBuilder) {
         super(dependency);
         this.childServiceBuilder = childServiceBuilder;
     }

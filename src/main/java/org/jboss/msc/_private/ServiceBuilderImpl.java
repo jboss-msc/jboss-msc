@@ -77,7 +77,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * @param service      the service itself
      * @param transaction  active transaction
      */
-    public ServiceBuilderImpl(final ServiceRegistry registry, final ServiceName name, final Service<T> service, final Transaction transaction) {
+    ServiceBuilderImpl(final ServiceRegistry registry, final ServiceName name, final Service<T> service, final Transaction transaction) {
         this(registry, name, service, false, transaction);
     }
 
@@ -89,7 +89,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * @param replaceService {@code true} if this service is a replacement dependency of another
      * @param transaction    active transaction
      */
-    public ServiceBuilderImpl(final ServiceRegistry registry, final ServiceName name, final Service<T> service, final boolean replaceService, final Transaction transaction) {
+    ServiceBuilderImpl(final ServiceRegistry registry, final ServiceName name, final Service<T> service, final boolean replaceService, final Transaction transaction) {
         this.transaction = transaction;
         this.registry = (ServiceRegistryImpl)registry;
         this.name = name;

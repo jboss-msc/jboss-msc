@@ -32,7 +32,7 @@ final class ServiceRemoveTask implements Executable<Void> {
     private final Transaction transaction;
     private final ServiceController<?> serviceController;
 
-    public ServiceRemoveTask(ServiceController<?> serviceController, Transaction transaction) {
+    ServiceRemoveTask(ServiceController<?> serviceController, Transaction transaction) {
         this.transaction = transaction;
         this.serviceController = serviceController;
     }

@@ -36,7 +36,7 @@ final class Bits {
      * @param high the high bit value
      * @return the bit mask
      */
-    public static int intBitMask(int low, int high) {
+    static int intBitMask(int low, int high) {
         assert low >= 0;
         assert low <= high;
         assert high < 32;
@@ -51,7 +51,7 @@ final class Bits {
      * @param high the high bit value
      * @return the bit mask
      */
-    public static long longBitMask(int low, int high) {
+    static long longBitMask(int low, int high) {
         assert low >= 0;
         assert low <= high;
         assert high < 64;
@@ -67,7 +67,7 @@ final class Bits {
      * @param flags the flags to test for
      * @return {@code true} if exactly one of {@code flags} are in {@code var}, {@code false} otherwise
      */
-    public static boolean oneIsSet(int var, int flags) {
+    static boolean oneIsSet(int var, int flags) {
         return Integer.bitCount(var & flags) == 1;
     }
 
@@ -78,7 +78,7 @@ final class Bits {
      * @param flags the flags to test for
      * @return {@code true} if any of {@code flags} are in {@code var}, {@code false} otherwise
      */
-    public static boolean anyAreSet(int var, int flags) {
+    static boolean anyAreSet(int var, int flags) {
         return (var & flags) != 0;
     }
 
@@ -89,7 +89,7 @@ final class Bits {
      * @param flags the flags to test for
      * @return {@code true} if all of {@code flags} are in {@code var}, {@code false} otherwise
      */
-    public static boolean allAreSet(int var, int flags) {
+    static boolean allAreSet(int var, int flags) {
         return (var & flags) == flags;
     }
 
@@ -100,7 +100,7 @@ final class Bits {
      * @param flags the flags to test for
      * @return {@code true} if not all of {@code flags} are in {@code var}, {@code false} otherwise
      */
-    public static boolean anyAreClear(int var, int flags) {
+    static boolean anyAreClear(int var, int flags) {
         return (var & flags) != flags;
     }
 
@@ -111,7 +111,7 @@ final class Bits {
      * @param flags the flags to test for
      * @return {@code true} if none of {@code flags} are in {@code var}, {@code false} otherwise
      */
-    public static boolean allAreClear(int var, int flags) {
+    static boolean allAreClear(int var, int flags) {
         return (var & flags) == 0;
     }
 
@@ -122,7 +122,7 @@ final class Bits {
      * @param flags the flags to test for
      * @return {@code true} if any of {@code flags} are in {@code var}, {@code false} otherwise
      */
-    public static boolean anyAreSet(long var, long flags) {
+    static boolean anyAreSet(long var, long flags) {
         return (var & flags) != 0;
     }
 
@@ -133,7 +133,7 @@ final class Bits {
      * @param flags the flags to test for
      * @return {@code true} if all of {@code flags} are in {@code var}, {@code false} otherwise
      */
-    public static boolean allAreSet(long var, long flags) {
+    static boolean allAreSet(long var, long flags) {
         return (var & flags) == flags;
     }
 
@@ -144,7 +144,7 @@ final class Bits {
      * @param flags the flags to test for
      * @return {@code true} if not all of {@code flags} are in {@code var}, {@code false} otherwise
      */
-    public static boolean anyAreClear(long var, long flags) {
+    static boolean anyAreClear(long var, long flags) {
         return (var & flags) != flags;
     }
 
@@ -155,7 +155,7 @@ final class Bits {
      * @param flags the flags to test for
      * @return {@code true} if none of {@code flags} are in {@code var}, {@code false} otherwise
      */
-    public static boolean allAreClear(long var, long flags) {
+    static boolean allAreClear(long var, long flags) {
         return (var & flags) == 0;
     }
 
@@ -167,7 +167,7 @@ final class Bits {
      * @param v the signed byte
      * @return the unsigned byte, as an int
      */
-    public static int unsigned(byte v) {
+    static int unsigned(byte v) {
         return v & 0xff;
     }
 
@@ -177,7 +177,7 @@ final class Bits {
      * @param v the signed short
      * @return the unsigned short, as an int
      */
-    public static int unsigned(short v) {
+    static int unsigned(short v) {
         return v & 0xffff;
     }
 
@@ -187,7 +187,7 @@ final class Bits {
      * @param v the signed int
      * @return the unsigned int, as a long
      */
-    public static long unsigned(int v) {
+    static long unsigned(int v) {
         return v & 0xffffffffL;
     }
 
@@ -200,7 +200,7 @@ final class Bits {
      * @param off the offset in the array
      * @return the signed short value
      */
-    public static short shortFromBytesLE(byte[] b, int off) {
+    static short shortFromBytesLE(byte[] b, int off) {
         return (short) (b[off + 1] << 8 | b[off] & 0xff);
     }
 
@@ -211,7 +211,7 @@ final class Bits {
      * @param off the offset in the array
      * @return the signed short value
      */
-    public static short shortFromBytesBE(byte[] b, int off) {
+    static short shortFromBytesBE(byte[] b, int off) {
         return (short) (b[off] << 8 | b[off + 1] & 0xff);
     }
 
@@ -222,7 +222,7 @@ final class Bits {
      * @param off the offset in the array
      * @return the signed char value
      */
-    public static char charFromBytesLE(byte[] b, int off) {
+    static char charFromBytesLE(byte[] b, int off) {
         return (char) (b[off + 1] << 8 | b[off] & 0xff);
     }
 
@@ -233,7 +233,7 @@ final class Bits {
      * @param off the offset in the array
      * @return the signed char value
      */
-    public static char charFromBytesBE(byte[] b, int off) {
+    static char charFromBytesBE(byte[] b, int off) {
         return (char) (b[off] << 8 | b[off + 1] & 0xff);
     }
 
@@ -244,7 +244,7 @@ final class Bits {
      * @param off the offset in the array
      * @return the signed medium value as an int
      */
-    public static int mediumFromBytesLE(byte[] b, int off) {
+    static int mediumFromBytesLE(byte[] b, int off) {
         return (b[off + 2] & 0xff) << 16 | (b[off + 1] & 0xff) << 8 | b[off] & 0xff;
     }
 
@@ -255,7 +255,7 @@ final class Bits {
      * @param off the offset in the array
      * @return the signed medium value as an int
      */
-    public static int mediumFromBytesBE(byte[] b, int off) {
+    static int mediumFromBytesBE(byte[] b, int off) {
         return (b[off] & 0xff) << 16 | (b[off + 1] & 0xff) << 8 | b[off + 2] & 0xff;
     }
 
@@ -266,7 +266,7 @@ final class Bits {
      * @param off the offset in the array
      * @return the signed int value
      */
-    public static int intFromBytesLE(byte[] b, int off) {
+    static int intFromBytesLE(byte[] b, int off) {
         return b[off + 3] << 24 | (b[off + 2] & 0xff) << 16 | (b[off + 1] & 0xff) << 8 | b[off] & 0xff;
     }
 
@@ -277,7 +277,7 @@ final class Bits {
      * @param off the offset in the array
      * @return the signed int value
      */
-    public static int intFromBytesBE(byte[] b, int off) {
+    static int intFromBytesBE(byte[] b, int off) {
         return b[off] << 24 | (b[off + 1] & 0xff) << 16 | (b[off + 2] & 0xff) << 8 | b[off + 3] & 0xff;
     }
 
@@ -288,7 +288,7 @@ final class Bits {
      * @param off the offset in the array
      * @return the signed long value
      */
-    public static long longFromBytesLE(byte[] b, int off) {
+    static long longFromBytesLE(byte[] b, int off) {
         return (b[off + 7] & 0xffL) << 56L | (b[off + 6] & 0xffL) << 48L | (b[off + 5] & 0xffL) << 40L | (b[off + 4] & 0xffL) << 32L | (b[off + 3] & 0xffL) << 24L | (b[off + 2] & 0xffL) << 16L | (b[off + 1] & 0xffL) << 8L | b[off] & 0xffL;
     }
 
@@ -299,7 +299,7 @@ final class Bits {
      * @param off the offset in the array
      * @return the signed long value
      */
-    public static long longFromBytesBE(byte[] b, int off) {
+    static long longFromBytesBE(byte[] b, int off) {
         return (b[off] & 0xffL) << 56L | (b[off + 1] & 0xffL) << 48L | (b[off + 2] & 0xffL) << 40L | (b[off + 3] & 0xffL) << 32L | (b[off + 4] & 0xffL) << 24L | (b[off + 5] & 0xffL) << 16L | (b[off + 6] & 0xffL) << 8L | b[off + 7] & 0xffL;
     }
 

@@ -30,7 +30,7 @@ import org.jboss.msc.txn.Transaction;
 abstract class DependencyDecorator<T> extends AbstractDependency<T> {
     protected final AbstractDependency<T> dependency;
 
-    public DependencyDecorator(AbstractDependency<T> dependency) {
+    DependencyDecorator(AbstractDependency<T> dependency) {
         this.dependency = dependency;
     }
 

@@ -26,7 +26,7 @@ final class ReplaceableDependency<T> extends DependencyDecorator<T> {
     /**
      * @param dependency
      */
-    public ReplaceableDependency(AbstractDependency<T> dependency) {
+    ReplaceableDependency(AbstractDependency<T> dependency) {
         super(dependency);
     }
 

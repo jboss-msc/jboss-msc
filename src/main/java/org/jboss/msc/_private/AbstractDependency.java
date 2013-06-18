@@ -34,7 +34,7 @@ import org.jboss.msc.txn.Transaction;
  *
  * @param <T>
  */
-public abstract class AbstractDependency<T> extends TransactionalObject implements Dependency<T> {
+abstract class AbstractDependency<T> extends TransactionalObject implements Dependency<T> {
 
     /**
      * Sets the dependency dependent, invoked during {@link dependentController} installation.
@@ -43,7 +43,7 @@ public abstract class AbstractDependency<T> extends TransactionalObject implemen
      * @param transaction  the active transaction
      * @param context      the service context
      */
-    public abstract void setDependent(ServiceController<?> dependent, Transaction transaction, ServiceContext context);
+    abstract void setDependent(ServiceController<?> dependent, Transaction transaction, ServiceContext context);
 
     /**
      * Clears the dependency dependent, invoked during {@link dependentController} removal.
@@ -51,14 +51,14 @@ public abstract class AbstractDependency<T> extends TransactionalObject implemen
      * @param transaction   the active transaction
      * @param context       the service context
      */
-    public abstract void clearDependent(Transaction transaction, ServiceContext context);
+    abstract void clearDependent(Transaction transaction, ServiceContext context);
 
     /**
      * Returns the dependency registration.
      * 
      * @return the dependency registration
      */
-    public abstract Registration getDependencyRegistration();
+    abstract Registration getDependencyRegistration();
 
     /**
      * Demands this dependency to be satisfied.
@@ -66,7 +66,7 @@ public abstract class AbstractDependency<T> extends TransactionalObject implemen
      * @param transaction the active transaction
      * @param context     the service context
      */
-    public abstract void demand(Transaction transaction, ServiceContext context);
+    abstract void demand(Transaction transaction, ServiceContext context);
 
     /**
      * Removes demand for this dependency to be satisfied.
@@ -74,7 +74,7 @@ public abstract class AbstractDependency<T> extends TransactionalObject implemen
      * @param transaction the active transaction
      * @param context     the service context
      */
-    public abstract void undemand(Transaction transaction, ServiceContext context);
+    abstract void undemand(Transaction transaction, ServiceContext context);
 
     /**
      * Notifies that dependency is now available, either {@code UP}, or {@code DOWN}. A dependency in any other state is
@@ -85,7 +85,7 @@ public abstract class AbstractDependency<T> extends TransactionalObject implemen
      * @param transaction   the active transaction
      * @param context       the service context
      */
-    public abstract TaskController<?> dependencyAvailable(boolean dependencyUp, Transaction transaction, ServiceContext context);
+    abstract TaskController<?> dependencyAvailable(boolean dependencyUp, Transaction transaction, ServiceContext context);
 
     /**
      * Notifies that dependency is now unavailable (it is not {@code UP}, nor {@code DOWN}). Every unavailable
@@ -94,15 +94,15 @@ public abstract class AbstractDependency<T> extends TransactionalObject implemen
      * @param transaction    the active transaction
      * @param serviceContext the service context
      */
-    public abstract TaskController<?> dependencyUnavailable(Transaction transaction, ServiceContext context);
+    abstract TaskController<?> dependencyUnavailable(Transaction transaction, ServiceContext context);
 
     /**
      * Notifies that dependency current service is about to be replaced by a different service.
      */
-    public abstract void dependencyReplacementStarted(Transaction transaction);
+    abstract void dependencyReplacementStarted(Transaction transaction);
 
     /**
      * Notifies that dependency replacement is concluded and now the newly installed service is available.
      */
-    public abstract void dependencyReplacementConcluded(Transaction transaction);
+    abstract void dependencyReplacementConcluded(Transaction transaction);
 }

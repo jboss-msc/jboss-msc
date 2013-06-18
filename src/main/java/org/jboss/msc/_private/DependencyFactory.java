@@ -37,7 +37,7 @@ final class DependencyFactory {
      * @param context        the service context
      * @return the created dependency
      */
-    public static <T> AbstractDependency<T> create(final ServiceRegistryImpl registry, final ServiceName name,
+    static <T> AbstractDependency<T> create(final ServiceRegistryImpl registry, final ServiceName name,
             final DependencyFlag[] flags, final ServiceBuilderImpl<?> serviceBuilder, final Transaction transaction) {
         final Registration dependencyRegistration = registry.getOrCreateRegistration(transaction, transaction, name);
         final boolean dependencyUp = isDependencyUp(flags);

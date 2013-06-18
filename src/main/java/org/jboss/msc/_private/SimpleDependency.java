@@ -102,7 +102,7 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
     }
 
     @Override
-    public void setDependent(ServiceController<?> dependentController, Transaction transaction, ServiceContext context) {
+    void setDependent(ServiceController<?> dependentController, Transaction transaction, ServiceContext context) {
         lockWrite(transaction, context);
         synchronized (this) {
             this.dependentController = dependentController;
@@ -118,12 +118,12 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
     }
 
     @Override
-    public void clearDependent(Transaction transaction, ServiceContext context) {
+    void clearDependent(Transaction transaction, ServiceContext context) {
         dependencyRegistration.removeIncomingDependency(transaction, context, this);
     }
 
     @Override
-    public Registration getDependencyRegistration() {
+    Registration getDependencyRegistration() {
         return dependencyRegistration;
     }
 
@@ -133,7 +133,7 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
      * @param transaction the active transaction
      */
     @Override
-    public void demand(Transaction transaction, ServiceContext context) {
+    void demand(Transaction transaction, ServiceContext context) {
         if (propagateDemand) {
             dependencyRegistration.addDemand(transaction, context, dependencyUp);
         }
@@ -145,14 +145,14 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
      * @param transaction the active transaction
      */
     @Override
-    public void undemand(Transaction transaction, ServiceContext context) {
+    void undemand(Transaction transaction, ServiceContext context) {
         if (propagateDemand) {
             dependencyRegistration.removeDemand(transaction, context, dependencyUp);
         }
     }
 
     @Override
-    public TaskController<?> dependencyAvailable(boolean dependencyUp, Transaction transaction, ServiceContext context) {
+    TaskController<?> dependencyAvailable(boolean dependencyUp, Transaction transaction, ServiceContext context) {
         lockWrite(transaction, context);
         final boolean satisfied;
         synchronized (this) {
@@ -168,7 +168,7 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
     }
 
     @Override
-    public TaskController<?> dependencyUnavailable(Transaction transaction, ServiceContext context) {
+    TaskController<?> dependencyUnavailable(Transaction transaction, ServiceContext context) {
         lockWrite(transaction, context);
         final boolean unsatisfied;
         synchronized (this) {
@@ -186,12 +186,12 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
     }
 
     @Override
-    public void dependencyReplacementStarted(Transaction transaction) {
+    void dependencyReplacementStarted(Transaction transaction) {
         // do nothing
     }
 
     @Override
-    public void dependencyReplacementConcluded(Transaction transaction) {
+    void dependencyReplacementConcluded(Transaction transaction) {
         // do nothing
     }
 

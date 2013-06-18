@@ -37,7 +37,7 @@ final class SimpleServiceStopTask implements Executable<Void> {
 
     private final Service<?> service;
 
-    public SimpleServiceStopTask(final Service<?> service) {
+    SimpleServiceStopTask(final Service<?> service) {
         this.service = service;
     }
 

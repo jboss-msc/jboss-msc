@@ -149,7 +149,7 @@ abstract class ServiceModeBehavior {
         // demand dependencies only when service enters up state
         SERVICE_UP};
 
-    public static ServiceModeBehavior getInstance(ServiceMode serviceMode) {
+    static ServiceModeBehavior getInstance(ServiceMode serviceMode) {
         switch (serviceMode) {
             case ACTIVE:
                 return ACTIVE;

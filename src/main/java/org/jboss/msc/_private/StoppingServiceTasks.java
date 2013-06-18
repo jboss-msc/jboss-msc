@@ -50,7 +50,7 @@ final class StoppingServiceTasks {
      * @return                 the final task to be executed. Can be used for creating tasks that depend on the
      *                         conclusion of stopping transition.
      */
-    public static <T> TaskController<Void> createTasks(ServiceController<T> service, Collection<TaskController<?>> taskDependencies,
+    static <T> TaskController<Void> createTasks(ServiceController<T> service, Collection<TaskController<?>> taskDependencies,
             Transaction transaction, ServiceContext context) {
 
         final Service<T> serviceValue = service.getService();
@@ -92,7 +92,7 @@ final class StoppingServiceTasks {
      * @return                 the final task to be executed. Can be used for creating tasks that depend on the
      *                         conclusion of stopping transition.
      */
-    public static <T> TaskController<Void> createTasks(ServiceController<T> service, TaskController<?> taskDependency,
+    static <T> TaskController<Void> createTasks(ServiceController<T> service, TaskController<?> taskDependency,
             Transaction transaction, ServiceContext context) {
 
         final List<TaskController<?>> taskDependencies = new ArrayList<TaskController<?>>(1);
@@ -109,7 +109,7 @@ final class StoppingServiceTasks {
      *                        conclusion of stopping transition.
      */
     @SuppressWarnings("unchecked")
-    public static <T> TaskController<Void> createTasks(ServiceController<T> serviceController, Transaction transaction, ServiceContext context) {
+    static <T> TaskController<Void> createTasks(ServiceController<T> serviceController, Transaction transaction, ServiceContext context) {
         return createTasks(serviceController, Collections.EMPTY_LIST, transaction, context);
     }
 
@@ -118,7 +118,7 @@ final class StoppingServiceTasks {
         private final Transaction transaction;
         private final ServiceController<?> serviceController;
 
-        public NotifyDependentStopTask(Transaction transaction, ServiceController<?> serviceController) {
+        private NotifyDependentStopTask(Transaction transaction, ServiceController<?> serviceController) {
             this.transaction = transaction;
             this.serviceController = serviceController;
         }

@@ -46,7 +46,7 @@ class UndemandDependenciesTask implements Executable<Void> {
      * @return the task controller
      */
     @SuppressWarnings("unchecked")
-    public static TaskController<Void> create(ServiceController<?> service, Transaction transaction, ServiceContext context) {
+    static TaskController<Void> create(ServiceController<?> service, Transaction transaction, ServiceContext context) {
         return create(service, Collections.EMPTY_LIST, transaction, context);
     }
 
@@ -61,7 +61,7 @@ class UndemandDependenciesTask implements Executable<Void> {
      * @param context          the service context
      * @return the task controller
      */
-    public static TaskController<Void> create(ServiceController<?> service, Collection<TaskController<?>> taskDependencies, Transaction transaction, ServiceContext context) {
+    static TaskController<Void> create(ServiceController<?> service, Collection<TaskController<?>> taskDependencies, Transaction transaction, ServiceContext context) {
         if (service.getDependencies().length == 0) {
             return null;
         }
