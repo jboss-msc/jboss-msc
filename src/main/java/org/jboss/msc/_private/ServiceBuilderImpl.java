@@ -141,7 +141,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * {@inheritDoc}
      */
     @Override
-    public Dependency<?> addDependency(final ServiceName name) {
+    public <D> Dependency<D> addDependency(final ServiceName name) {
         return addDependencyInternal(registry, name, (DependencyFlag[])null);
     }
 
@@ -149,7 +149,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * {@inheritDoc}
      */
     @Override
-    public Dependency<?> addDependency(final ServiceName name, final DependencyFlag... flags) {
+    public <D> Dependency<D> addDependency(final ServiceName name, final DependencyFlag... flags) {
         return addDependencyInternal(registry, name, flags);
     }
 
@@ -157,7 +157,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * {@inheritDoc}
      */
     @Override
-    public Dependency<?> addDependency(final ServiceRegistry registry, final ServiceName name) {
+    public <D> Dependency<D> addDependency(final ServiceRegistry registry, final ServiceName name) {
         return addDependencyInternal(registry, name, (DependencyFlag[])null);
     }
 
@@ -165,7 +165,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * {@inheritDoc}
      */
     @Override
-    public Dependency<?> addDependency(final ServiceRegistry registry, final ServiceName name, final DependencyFlag... flags) {
+    public <D> Dependency<D> addDependency(final ServiceRegistry registry, final ServiceName name, final DependencyFlag... flags) {
         return addDependencyInternal(registry, name, flags);
     }
 

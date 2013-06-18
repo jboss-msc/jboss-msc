@@ -22,9 +22,21 @@ package org.jboss.msc.service;
 /**
  * A service builder.
  * Implementations of this interface are not thread safe.
+ * Sample usage:
+ * <PRE>
+ * ServiceRegistry registry = ...
+ * ServiceBuilder builder = txn.addService(registry, ServiceName.of("foo", "bar", "service");
+ * builder.setMode(ServiceMode.ACTIVE);
+ * final Dependency<String> serverHost = builder.<String>addDependency(ServiceName.of("server", "host"));
+ * final Dependency<Integer> serverPort = builder.<Integer>addDependency(ServiceName.of("server", "port"));
+ * final FooBarService myService = new FooBarService(serverHost, serverPortPort);
+ * builder.setService(myService);
+ * builder.install();
+ * </PRE>
  *
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ * <T> service type
  */
 public interface ServiceBuilder<T> {
 
@@ -58,42 +70,46 @@ public interface ServiceBuilder<T> {
     /**
      * Adds a dependency to the service being built with default flags.
      *
+     * @param <D> dependency type
      * @param name the dependency name
      * @return a reference to the dependency added
-     * @throws IllegalStateException if {@link #install()} has been called.
+     * @throws IlegalStateException if {@link #install()} has been called.
      */
-    Dependency<?> addDependency(ServiceName name) throws IllegalStateException;
+    <D> Dependency<D> addDependency(ServiceName name) throws IllegalStateException;
 
     /**
      * Adds a dependency to the service being built with specified flags.
      *
+     * @param <D> dependency type
      * @param name the dependency name
      * @param flags the flags for the service dependency
      * @return a reference to the dependency added
      * @throws IllegalStateException if {@link #install()} has been called.
      */
-    Dependency<?> addDependency(ServiceName name, DependencyFlag... flags) throws IllegalStateException;
+    <D> Dependency<D> addDependency(ServiceName name, DependencyFlag... flags) throws IllegalStateException;
 
     /**
      * Adds a dependency to the service being built with default flags.
      *
+     * @param <D> dependency type
      * @param registry the service registry containing dependency
      * @param name the dependency name
      * @return a reference to the dependency added
      * @throws IllegalStateException if {@link #install()} has been called.
      */
-    Dependency<?> addDependency(ServiceRegistry registry, ServiceName name) throws IllegalStateException;
+    <D> Dependency<D> addDependency(ServiceRegistry registry, ServiceName name) throws IllegalStateException;
     
     /**
      * Adds a dependency to the service being built with specified flags.
      *
+     * @param <D> dependency type
      * @param registry the service registry containing dependency
      * @param name the dependency name
      * @param flags the flags for the service dependency
      * @return a reference to the dependency added
      * @throws IllegalStateException if {@link #install()} has been called.
      */
-    Dependency<?> addDependency(ServiceRegistry registry, ServiceName name, DependencyFlag... flags) throws IllegalStateException;
+    <D> Dependency<D> addDependency(ServiceRegistry registry, ServiceName name, DependencyFlag... flags) throws IllegalStateException;
 
     /**
      * Initiates installation of this configured service to the container.
