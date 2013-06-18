@@ -27,29 +27,19 @@ package org.jboss.msc.service;
  */
 public enum DependencyFlag {
     /**
-     * The dependency is met when the target is down, rather than up.  Implies {@link #UNREQUIRED}.  Injection is
-     * not allowed for {@code ANTI} dependencies.
-     */
-    ANTI,
-    /**
-     * A missing dependency will cause a transaction error.  This is implied by default.
+     * A missing dependency will cause a transaction error.
      */
     REQUIRED,
     /**
-     * A missing dependency will not cause an error, though unmet dependencies will still prevent start.
-     */
-    UNREQUIRED,
-    /**
-     * Start without the dependency when the dependency is not met at the time the service is otherwise ready.
-     * Cannot coexist with {@link #ANTI}.
+     * A missing dependency will not cause a transaction error. 
      */
     OPTIONAL,
     /**
-     * Do not place a demand on this dependency even if the mode otherwise would.
+     * Do not place a demand on this dependency. Overrides default mode behavior.
      */
     UNDEMANDED,
     /**
-     * Always place a demand on this dependency even if the mode otherwise wouldn't.
+     * Always place a demand on this dependency. Overrides default mode behavior.
      */
     DEMANDED,
     /**
@@ -58,9 +48,5 @@ public enum DependencyFlag {
      * adds the service as part of its start process.  Implies {@link #REQUIRED}.
      */
     PARENT,
-    /**
-     * Indicate that the dependency can be replaced without stopping this service.
-     */
-    REPLACEABLE,
     ;
 }

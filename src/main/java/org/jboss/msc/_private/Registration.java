@@ -52,11 +52,6 @@ final class Registration extends TransactionalObject {
      * propagate a demand to the instance, if any.
      */
     private int upDemandedByCount;
-    /**
-     * The number of dependent instances which place a demand-to-stop this registration.  If this value is > 0,
-     * propagate a demand to the instance, if any.
-     */
-    private int downDemandedByCount;
 
     Registration(ServiceName serviceName) {
         this.serviceName = serviceName;
@@ -73,17 +68,12 @@ final class Registration extends TransactionalObject {
     void setController(final ServiceContext context, final Transaction transaction, final ServiceController<?> serviceController) {
         lockWrite(transaction, context);
         final boolean upDemanded;
-        final boolean downDemanded;
         synchronized (this) {
             this.controller = serviceController;
             upDemanded = upDemandedByCount > 0;
-            downDemanded = downDemandedByCount > 0;
         }
         if (upDemanded) {
             serviceController.upDemanded(transaction, transaction);
-        }
-        if (downDemanded) {
-            serviceController.downDemanded(transaction, transaction);
         }
     }
 
@@ -111,48 +101,32 @@ final class Registration extends TransactionalObject {
         return Collections.unmodifiableSet(incomingDependencies);
     }
 
-    void addDemand(Transaction transaction, ServiceContext context, boolean up) {
+    void addDemand(Transaction transaction, ServiceContext context) {
         assert ! Thread.holdsLock(this);
         lockWrite(transaction, context);
         final ServiceController<?> controller;
         synchronized (this) {
             controller = this.controller;
-            if (up) {
-                if (++ upDemandedByCount > 1) {
-                    return;
-                }
-            } else if (++ downDemandedByCount > 1) {
+            if (++ upDemandedByCount > 1) {
                 return;
             }
         }
         if (controller != null) {
-            if (up) {
-                controller.upDemanded(transaction, context);
-            } else {
-                controller.downDemanded(transaction, context);
-            }
+            controller.upDemanded(transaction, context);
         }
     }
 
-    void removeDemand(Transaction transaction, ServiceContext context, boolean up) {
+    void removeDemand(Transaction transaction, ServiceContext context) {
         assert ! Thread.holdsLock(this);
         lockWrite(transaction, context);
         synchronized (this) {
             controller = this.controller;
-            if (up) {
-                if (upDemandedByCount-- > 0) {
-                    return;
-                }
-            } else if (downDemandedByCount -- > 0) {
+            if (upDemandedByCount-- > 0) {
                 return;
             }
         }
         if (controller != null) {
-            if (up) {
-                controller.upUndemanded(transaction, context);
-            } else {
-                controller.downUndemanded(transaction, context);
-            }
+            controller.upUndemanded(transaction, context);
         }
     }
 
@@ -171,21 +145,18 @@ final class Registration extends TransactionalObject {
         private final ServiceController<?> controller;
         private final Collection<AbstractDependency<?>> incomingDependencies;
         private final int upDemandedByCount;
-        private final int downDemandedByCount;
 
         // take snapshot
         public Snapshot() {
             controller = Registration.this.controller;
             incomingDependencies = new ArrayList<AbstractDependency<?>>(Registration.this.incomingDependencies.size());
             incomingDependencies.addAll(Registration.this.incomingDependencies);
-            downDemandedByCount = Registration.this.downDemandedByCount;
             upDemandedByCount = Registration.this.upDemandedByCount;
         }
 
         // revert ServiceController state to what it was when snapshot was taken; invoked on rollback
         public void apply() {
             Registration.this.controller = controller;
-            Registration.this.downDemandedByCount = downDemandedByCount;
             Registration.this.upDemandedByCount = upDemandedByCount;
             Registration.this.incomingDependencies.clear();
             Registration.this.incomingDependencies.addAll(incomingDependencies);

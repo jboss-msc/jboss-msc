@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.List;
 
 import org.jboss.msc._private.ServiceController.TransactionalState;
-import org.jboss.msc._private.ServiceModeBehavior.Demand;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
@@ -59,7 +58,7 @@ final class StoppingServiceTasks {
         final TaskBuilder<Void> stopTaskBuilder = context.newTask(new SimpleServiceStopTask(serviceValue));
 
         // undemand dependencies if needed
-        if (service.getMode().shouldDemandDependencies() == Demand.SERVICE_UP && service.getDependencies().length > 0) {
+        if (service.getDependencies().length > 0) {
             TaskController<Void> undemandDependenciesTask = UndemandDependenciesTask.create(service, taskDependencies, transaction, transaction);
             stopTaskBuilder.addDependency(undemandDependenciesTask);
         } else if (!taskDependencies.isEmpty()) {

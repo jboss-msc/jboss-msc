@@ -119,8 +119,8 @@ public interface MSCLogger {
     @Message(id = 16, value = "Internal task \"%s\" execution failed (transaction is likely permanently jammed)")
     void runnableExecuteFailed(@Cause Throwable cause, Runnable command);
 
-    @Message(id = 17, value ="Service %s has a required %sdependency on service %s that %s")
-    String requiredDependency(ServiceName dependentName, String anti, ServiceName dependencyName, String dependencyStateDescription);
+    @Message(id = 17, value ="Service %s has a required dependency on service %s that %s")
+    String requiredDependency(ServiceName dependentName, ServiceName dependencyName, String dependencyStateDescription);
 
     @Message(id = 18, value="Dependency cycle found: %s")
     String dependencyCycle(ServiceName[] cycle);

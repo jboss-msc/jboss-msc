@@ -40,22 +40,9 @@ final class DependencyFactory {
     static <T> AbstractDependency<T> create(final ServiceRegistryImpl registry, final ServiceName name,
             final DependencyFlag[] flags, final ServiceBuilderImpl<?> serviceBuilder, final Transaction transaction) {
         final Registration dependencyRegistration = registry.getOrCreateRegistration(transaction, transaction, name);
-        final boolean dependencyUp = isDependencyUp(flags);
         final DependencyFlag demandFlag = getDemandFlag(flags);
-        final boolean required = isRequired(flags);
-        final AbstractDependency<T> dependency = new SimpleDependency<T>(dependencyRegistration, dependencyUp,
-                required, demandFlag, transaction);
+        final AbstractDependency<T> dependency = new SimpleDependency<T>(dependencyRegistration, demandFlag, transaction);
         return decorate(dependency, flags, serviceBuilder);
-    }
-
-    private static boolean isDependencyUp(DependencyFlag[] flags) {
-        for (DependencyFlag flag: flags) {
-            if (flag == DependencyFlag.ANTI) {
-                return false;
-            }
-        }
-        // notice that, when there are no flags, the service is required to be UP
-        return true;
     }
 
     private static DependencyFlag getDemandFlag(DependencyFlag[] flags) {
@@ -67,16 +54,6 @@ final class DependencyFactory {
         return null; 
     }
 
-    private static boolean isRequired(DependencyFlag[] flags) {
-        for (DependencyFlag flag: flags) {
-            if (flag == DependencyFlag.UNREQUIRED) {
-                return false;
-            }
-        }
-        // notice that, when there are no flags, the dependency is required by default
-        return true;
-    }
-
     private static <T> AbstractDependency<T> decorate(AbstractDependency<T> dependency, DependencyFlag[] flags, ServiceBuilderImpl<?> serviceBuilder) {
         for (DependencyFlag flag: flags) {
             switch(flag) {
@@ -84,8 +61,6 @@ final class DependencyFactory {
                     dependency = new OptionalDependency<T>(dependency);
                 case PARENT:
                     dependency = new ParentDependency<T>(dependency, serviceBuilder);
-                case REPLACEABLE:
-                    dependency = new ReplaceableDependency<T>(dependency);
                 default:
                     // do nothing
             }

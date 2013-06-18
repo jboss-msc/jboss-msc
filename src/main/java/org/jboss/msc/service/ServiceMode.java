@@ -27,16 +27,22 @@ package org.jboss.msc.service;
  */
 public enum ServiceMode {
     /**
-     * Start as soon as all dependencies are met, unless this service is demanded to start by an ANTI dependency. 
-     * Demands dependencies.
+     * Starts as soon as all required dependencies are met.
+     * Will start even if there are no demandants
+     * and will stay running if all demandants are gone. 
+     * Actively demands dependencies at install time.
      */
     ACTIVE,
     /**
-     * Start only when demanded to, but stay running until required or demanded to stop.
+     * Starts as soon as all required dependencies are met and demanded to start.
+     * Will stay running if all demandants are gone.
+     * Does not demand dependencies at install time.
      */
     LAZY,
     /**
-     * Start only when demanded to, and stop when demands disappear, or when demanded to stop.
+     * Starts as soon as all required dependencies are met and demanded to start.
+     * Will stop if all demandants are gone.
+     * Does not demand dependencies at install time.
      */
     ON_DEMAND,
     ;

@@ -33,11 +33,11 @@ abstract class ServiceModeBehavior {
      */
     private static final ServiceModeBehavior ACTIVE = new ServiceModeBehavior() {
         boolean shouldStart(ServiceController<?> service) {
-            return !service.isDownDemanded();
+            return true;
         }
 
         boolean shouldStop(ServiceController<?> service) {
-            return service.isDownDemanded();
+            return false;
         }
 
         Demand shouldDemandDependencies() {
@@ -54,11 +54,11 @@ abstract class ServiceModeBehavior {
         }
 
         boolean shouldStop(ServiceController<?> service) {
-            return service.isDownDemanded();
+            return false;
         }
 
         Demand shouldDemandDependencies() {
-            return Demand.SERVICE_UP;
+            return Demand.PROPAGATE;
         }
     };
 
@@ -108,12 +108,9 @@ abstract class ServiceModeBehavior {
     enum Demand {
         // always demand dependencies
         ALWAYS,
-        // never demand dependencies
-        NEVER,
         // demand dependencies only when demanded
         PROPAGATE,
-        // demand dependencies only when service enters up state
-        SERVICE_UP};
+    };
 
     static ServiceModeBehavior getInstance(ServiceMode serviceMode) {
         switch (serviceMode) {

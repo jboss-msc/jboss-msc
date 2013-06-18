@@ -97,10 +97,6 @@ final class ServiceController<T> extends TransactionalObject {
      */
     private int upDemandedByCount;
     /**
-     * Indicates if this service is demanded to stop.
-     */
-    private int downDemandedByCount;
-    /**
      * The number of dependents that are currently running. The deployment will
      * not execute the {@code stop()} method (and subsequently leave the
      * {@link State#STOPPING} state) until all running dependents (and listeners) are stopped.
@@ -300,7 +296,7 @@ final class ServiceController<T> extends TransactionalObject {
             if (-- upDemandedByCount > 0) {
                 return;
             }
-            propagate = mode.shouldDemandDependencies() == Demand.PROPAGATE || (downDemandedByCount > 0 && mode.shouldDemandDependencies() == Demand.ALWAYS);
+            propagate = mode.shouldDemandDependencies() == Demand.PROPAGATE;
         }
         if (propagate) {
             UndemandDependenciesTask.create(this, transaction, context);
@@ -314,57 +310,6 @@ final class ServiceController<T> extends TransactionalObject {
      */
     synchronized boolean isUpDemanded() {
         return upDemandedByCount > 0;
-    }
-
-    /**
-     * Notifies this service that it is down demanded (demanded to be DOWN) by one of its incoming dependencies.
-     *  
-     * @param transaction the active transaction
-     * @param context     the service context
-     */
-    void downDemanded(Transaction transaction, ServiceContext context) {
-        lockWrite(transaction, context);
-        final boolean propagate;
-        synchronized (this) {
-            if(downDemandedByCount ++ > 0 ) {
-                return;
-            }
-            propagate = upDemandedByCount == 0 && mode.shouldDemandDependencies() == Demand.ALWAYS;
-        }
-        if (propagate) {
-            UndemandDependenciesTask.create(this, transaction, context);
-        }
-        transition(transaction, context);
-    }
-
-    /**
-     * Notifies this service that it is no longer down demanded by one of its incoming dependencies (invoked when
-     * incoming dependency is being disabled or removed).
-     * 
-     * @param transaction the active transaction
-     * @param context     the service context
-     */
-    void downUndemanded(Transaction transaction, ServiceContext context) {
-        lockWrite(transaction, context);
-        final boolean propagate;
-        synchronized (this) {
-            if (-- downDemandedByCount > 0) {
-                return;
-            }
-            propagate = upDemandedByCount == 0 && mode.shouldDemandDependencies() == Demand.ALWAYS;
-        }
-        if (propagate) {
-            DemandDependenciesTask.create(this, transaction, context);
-        }
-        transition(transaction, context);
-    }
-
-    /**
-     * Indicates if this service is demanded to stop by one or more of its incoming dependencies.
-     * @return
-     */
-    synchronized boolean isDownDemanded() {
-        return downDemandedByCount > 0 && upDemandedByCount == 0;
     }
 
     /**
@@ -560,9 +505,6 @@ final class ServiceController<T> extends TransactionalObject {
                         transactionalState = TransactionalState.STARTING;
                         completeTransitionTask = StartingServiceTasks.createTasks(ServiceController.this, dependentTasks, transaction, context);
                         transitionCount ++;
-                        if (mode.shouldDemandDependencies() == Demand.SERVICE_UP) {
-                            DemandDependenciesTask.create(ServiceController.this, completeTransitionTask, transaction, context);
-                        }
                     }
                     break;
                 case STOPPING:
@@ -571,9 +513,6 @@ final class ServiceController<T> extends TransactionalObject {
                         TaskController<?> setStartingState = transaction.newTask(new SetTransactionalStateTask(ServiceController.this, TransactionalState.STARTING, transaction))
                             .addDependency(completeTransitionTask).release();
                         completeTransitionTask = StartingServiceTasks.createTasks(ServiceController.this, setStartingState, transaction, context);
-                        if (mode.shouldDemandDependencies() == Demand.SERVICE_UP) {
-                            DemandDependenciesTask.create(ServiceController.this, completeTransitionTask, transaction, context);
-                        }
                         transitionCount += 2;
                     }
                     break;
@@ -687,7 +626,6 @@ final class ServiceController<T> extends TransactionalObject {
     private final class Snapshot {
         private final State state;
         private final int upDemandedByCount;
-        private final int downDemandedByCount;
         private final int unsatisfiedDependencies;
         private final int runningDependents;
 
@@ -696,7 +634,6 @@ final class ServiceController<T> extends TransactionalObject {
             assert Thread.holdsLock(ServiceController.this);
             state = ServiceController.this.state;
             upDemandedByCount = ServiceController.this.upDemandedByCount;
-            downDemandedByCount = ServiceController.this.downDemandedByCount;
             unsatisfiedDependencies = ServiceController.this.unsatisfiedDependencies;
             runningDependents = ServiceController.this.runningDependents;
         }
@@ -706,7 +643,6 @@ final class ServiceController<T> extends TransactionalObject {
             assert Thread.holdsLock(ServiceController.this);
             ServiceController.this.state = state;
             ServiceController.this.upDemandedByCount = upDemandedByCount;
-            ServiceController.this.downDemandedByCount = downDemandedByCount;
             ServiceController.this.unsatisfiedDependencies = unsatisfiedDependencies;
             ServiceController.this.runningDependents = runningDependents;
         }

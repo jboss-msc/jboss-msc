@@ -43,19 +43,9 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
      */
     private ServiceController<?> dependentController;
     /**
-     * Indicates if this dependency is required to be UP. If false, indicates that this dependency is required to be
-     * down in order for the dependency to be satisfied.
-     */
-    private final boolean dependencyUp;
-    /**
      * Indicates if the dependency should be demanded to be satisfied when service is attempting to start.
      */
     private final boolean propagateDemand;
-    /**
-     * Indicates if the dependency is required to be satisfied. If it is, the transaction will be invalidated if the
-     * dependency is not satisfied.
-     */
-    private final boolean required;
     /**
      * Indicates if this dependency is satisfied.
      */
@@ -66,26 +56,19 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
      * 
      * @param injections             the dependency injections
      * @param dependencyRegistration the dependency registration
-     * @param dependencyUp           {@code true} if the dependency is expected to be {@code UP}, {@code} false if the
-     *                               dependency is expected to be {@code DOWN}.
-     * @param required               {@code true} if dependency is required, i.e., every transaction that finishes
-     *                               with the dependency not satisfied should be invalidated
      * @param demandFlag             if equal to {@link DependencyFlag#DEMANDED}, it indicates dependency should be
      *                               demanded right away; if equal to {@link DependencyFlag#UNDEMANDED}, it indicates
      *                               dependency should never be demanded; if {@code null}, it indicates dependency
      *                               should be demanded when {@link #demand(Transaction, ServiceContext) requested}.
      * @param transaction            the active transaction
      */
-    SimpleDependency(final Registration dependencyRegistration, final boolean dependencyUp,
-            final boolean required, final DependencyFlag demandFlag, Transaction transaction) {
+    SimpleDependency(final Registration dependencyRegistration, final DependencyFlag demandFlag, Transaction transaction) {
         this.dependencyRegistration = dependencyRegistration;
-        this.dependencyUp = dependencyUp;
-        this.required = required;
         this.propagateDemand = demandFlag == null;
         if (demandFlag != null) {
             switch (demandFlag) {
                 case DEMANDED:
-                    dependencyRegistration.addDemand(transaction, transaction, dependencyUp);
+                    dependencyRegistration.addDemand(transaction, transaction);
                     break;
                 case UNDEMANDED:
                     break;
@@ -108,8 +91,7 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
             this.dependentController = dependentController;
             final ServiceController<?> dependencyController = dependencyRegistration.getController();
             // check if dependency is satisfied
-            if ((dependencyUp && dependencyController != null && dependencyController.getState() == State.UP) ||
-                    (!dependencyUp && (dependencyController == null || dependencyController.getState() != State.UP))) {
+            if (dependencyController != null && dependencyController.getState() == State.UP) {
                 dependencySatisfied = true;
                 dependentController.dependencySatisfied(transaction, context);
             }
@@ -135,7 +117,7 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
     @Override
     void demand(Transaction transaction, ServiceContext context) {
         if (propagateDemand) {
-            dependencyRegistration.addDemand(transaction, context, dependencyUp);
+            dependencyRegistration.addDemand(transaction, context);
         }
     }
 
@@ -147,7 +129,7 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
     @Override
     void undemand(Transaction transaction, ServiceContext context) {
         if (propagateDemand) {
-            dependencyRegistration.removeDemand(transaction, context, dependencyUp);
+            dependencyRegistration.removeDemand(transaction, context);
         }
     }
 
@@ -156,7 +138,7 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
         lockWrite(transaction, context);
         final boolean satisfied;
         synchronized (this) {
-            if (this.dependencyUp == dependencyUp) {
+            if (dependencyUp) {
                 dependencySatisfied = true;
             }
             satisfied = dependencySatisfied;
@@ -202,7 +184,7 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
 
     @Override
     void validate(ReportableContext context) {
-        if (required && !dependencySatisfied) {
+        if (!dependencySatisfied) {
             context.addProblem(Severity.ERROR, getRequirementProblem());
         }
     }
@@ -213,9 +195,7 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
     }
 
     private String getRequirementProblem() {
-        assert required;
         final String dependencyState;
-        final String anti = dependencyUp? "": "anti ";
         final ServiceController<?> dependencyController = dependencyRegistration.getController();
         if (dependencyController == null) {
             dependencyState = "is missing";
@@ -234,7 +214,7 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
                     throw new RuntimeException("Unexpected dependency state: " + dependencyController.getState());
             }
         }
-        return MSCLogger.SERVICE.requiredDependency(dependentController.getPrimaryRegistration().getServiceName(), anti,
+        return MSCLogger.SERVICE.requiredDependency(dependentController.getPrimaryRegistration().getServiceName(),
                 dependencyRegistration.getServiceName(), dependencyState);
     }
 
