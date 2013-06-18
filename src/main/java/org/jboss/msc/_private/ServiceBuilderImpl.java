@@ -185,14 +185,12 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     private void addDependency(AbstractDependency<?> dependency, ServiceName name, DependencyFlag... flags) {
         for (DependencyFlag flag: flags) {
             if (flag == DependencyFlag.PARENT) {
-                synchronized (this) {
-                    if (parentDependency != null) {
-                        throw new IllegalStateException("Service cannot have more than one parent dependency");
-                    }
-                    parentDependency = (ParentDependency<?>) dependency;
-                    dependencies.remove(name);
-                    return;
+                if (parentDependency != null) {
+                    throw new IllegalStateException("Service cannot have more than one parent dependency");
                 }
+                parentDependency = (ParentDependency<?>) dependency;
+                dependencies.remove(name);
+                return;
             }
         }
         if (parentDependency != null && name.equals(parentDependency.getDependencyRegistration().getServiceName())) {
@@ -209,7 +207,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * {@inheritDoc}
      */
     @Override
-    public synchronized void install() {
+    public void install() {
         // idempotent
         if (installed) {
             return;
@@ -224,7 +222,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         }
     }
 
-    private synchronized void checkAlreadyInstalled() {
+    private void checkAlreadyInstalled() {
         if (installed) {
             throw new IllegalStateException("ServiceBuilder installation already requested.");
         }
