@@ -23,15 +23,14 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.jboss.msc.service.DependencyFlag;
 import org.jboss.msc.service.Dependency;
+import org.jboss.msc.service.DependencyFlag;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceMode;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.txn.ServiceContext;
-import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -55,12 +54,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     private Service<T> service;
     // dependencies
     private final Map<ServiceName, AbstractDependency<?>> dependencies= new LinkedHashMap<ServiceName, AbstractDependency<?>>();
-    // TODO decide after discussion on IRC if we have a special API for replacement (in which case we will need this parameter
-    // or if we will automatically remove previously existent service always, triggering always replacement notifications
-    // to dependencies; or if we will automatically remove previously existent service only if there is a replacement
-    // dependent
-    // indicates if this service is a replacement dependency of another service
-    private final boolean replacement;
     // active transaction
     private final Transaction transaction;
     // service mode
@@ -78,22 +71,9 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * @param transaction  active transaction
      */
     ServiceBuilderImpl(final ServiceRegistry registry, final ServiceName name, final Transaction transaction) {
-        this(registry, name, false, transaction);
-    }
-
-    /**
-     * Creates the service builder.
-     * @param registry       the service registry
-     * @param name           the service name
-     * @param service        the service itself
-     * @param replaceService {@code true} if this service is a replacement dependency of another
-     * @param transaction    active transaction
-     */
-    ServiceBuilderImpl(final ServiceRegistry registry, final ServiceName name, final boolean replaceService, final Transaction transaction) {
         this.transaction = transaction;
         this.registry = (ServiceRegistryImpl)registry;
         this.name = name;
-        this.replacement = replaceService;
         this.mode = ServiceMode.ACTIVE;
     }
 
@@ -217,9 +197,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
             return;
         }
         performInstallation(null, transaction, transaction);
-        if (replacement) {
-            startReplacement(null, transaction);
-        }
     }
 
     private void checkAlreadyInstalled() {
@@ -233,7 +210,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * 
      * @param parentDependency parent dependency, if any
      * @param transaction      active transaction
-     * @param context          the execute context
+     * @param context          the execute context (this parameter will be needed by the parent dependency)
      * 
      * @return the installed service controller
      */
@@ -262,41 +239,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         // create and install service controller
         final ServiceController<T> serviceController =  new ServiceController<T>(registration, aliasRegistrations, service, mode, dependenciesArray, transaction, context);
         serviceController.install(registry, transaction, context);
-        // replace
-        if (replacement) {
-            concludeReplacement(serviceController, transaction);
-        }
         CheckDependencyCycleTask.checkDependencyCycle(serviceController, transaction);
-    }
-
-    private void startReplacement(TaskBuilder<ServiceController<T>> serviceInstallTaskBuilder, Transaction transaction) {
-        // TODO remove this
-        startReplacement(registry.getOrCreateRegistration(transaction,transaction, name), serviceInstallTaskBuilder, transaction);
-        for (ServiceName alias: aliases) {
-            startReplacement(registry.getOrCreateRegistration(transaction, transaction, alias), serviceInstallTaskBuilder, transaction);
-        }
-    }
-
-    private void startReplacement(Registration registration, TaskBuilder<ServiceController<T>> serviceInstallTaskBuilder, Transaction transaction) {
-        for (AbstractDependency<?> dependency: registration.getIncomingDependencies()) {
-            dependency.dependencyReplacementStarted(transaction);
-        }
-        ServiceController<?> serviceController = registration.getController();
-        if (serviceController != null) {
-            serviceInstallTaskBuilder.addDependency(serviceController.remove(transaction));
-        }
-    }
-
-    private void concludeReplacement(ServiceController<?> serviceController, Transaction transaction) {
-        concludeReplacement(serviceController.getPrimaryRegistration(), transaction);
-        for (Registration registration: serviceController.getAliasRegistrations()) {
-            concludeReplacement(registration,  transaction);
-        }
-    }
-
-    private void concludeReplacement(Registration registration, Transaction transaction) {
-        for (AbstractDependency<?> dependency: registration.getIncomingDependencies()) {
-            dependency.dependencyReplacementConcluded(transaction);
-        }
     }
 }
