@@ -44,13 +44,14 @@ import org.jboss.msc.txn.Transaction;
 final class ServiceController<T> extends TransactionalObject {
 
     // controller states
-    static final byte STATE_DOWN       = (byte)0b00000000;
-    static final byte STATE_STARTING   = (byte)0b00000001;
-    static final byte STATE_UP         = (byte)0b00000010;
-    static final byte STATE_FAILED     = (byte)0b00000011;
-    static final byte STATE_STOPPING   = (byte)0b00000100;
-    static final byte STATE_REMOVING   = (byte)0b00000101;
-    static final byte STATE_REMOVED    = (byte)0b00000110;
+    static final byte STATE_NEW        = (byte)0b00000000;
+    static final byte STATE_DOWN       = (byte)0b00000001;
+    static final byte STATE_STARTING   = (byte)0b00000010;
+    static final byte STATE_UP         = (byte)0b00000011;
+    static final byte STATE_FAILED     = (byte)0b00000100;
+    static final byte STATE_STOPPING   = (byte)0b00000101;
+    static final byte STATE_REMOVING   = (byte)0b00000110;
+    static final byte STATE_REMOVED    = (byte)0b00000111;
     static final byte STATE_MASK       = (byte)0b00000111;
     // controller disposal flags
     static final byte SERVICE_ENABLED  = (byte)0b00001000;
@@ -84,7 +85,7 @@ final class ServiceController<T> extends TransactionalObject {
     /**
      * The controller state.
      */
-    private byte state = STATE_DOWN | SERVICE_ENABLED | REGISTRY_ENABLED;
+    private byte state = STATE_NEW;
     /**
      * The number of dependencies that are not satisfied.
      */
@@ -152,16 +153,17 @@ final class ServiceController<T> extends TransactionalObject {
      */
     void install(ServiceRegistryImpl registry, Transaction transaction, ServiceContext context) {
         assert isWriteLocked(transaction);
+        // if registry is removed, get an exception right away
+        registry.newServiceInstalled(this, transaction);
         primaryRegistration.setController(context, transaction,  this);
         for (Registration alias: aliasRegistrations) {
             alias.setController(context, transaction, this);
         }
-        registry.newServiceInstalled(this, transaction);
         boolean demandDependencies;
         synchronized (this) {
             state |= SERVICE_ENABLED;
-            setState(STATE_DOWN);
-            demandDependencies = isCurrentMode(MODE_ACTIVE);
+            transactionalInfo.setState(STATE_DOWN);
+            demandDependencies = isMode(MODE_ACTIVE);
         }
         if (demandDependencies) {
             DemandDependenciesTask.create(this, transaction, context);
@@ -306,7 +308,7 @@ final class ServiceController<T> extends TransactionalObject {
             if (upDemandedByCount ++ > 0) {
                 return;
             }
-            propagate = !isCurrentMode(MODE_ACTIVE);
+            propagate = !isMode(MODE_ACTIVE);
         }
         if (propagate) {
             DemandDependenciesTask.create(this, transaction, context);
@@ -328,7 +330,7 @@ final class ServiceController<T> extends TransactionalObject {
             if (-- upDemandedByCount > 0) {
                 return;
             }
-            propagate = !isCurrentMode(MODE_ACTIVE);
+            propagate = !isMode(MODE_ACTIVE);
         }
         if (propagate) {
             UndemandDependenciesTask.create(this, transaction, context);
@@ -432,11 +434,16 @@ final class ServiceController<T> extends TransactionalObject {
 
     @Override
     protected synchronized void writeUnlocked() {
+        state = (byte) (transactionalInfo.getState() & STATE_MASK | state & ~STATE_MASK);
         transactionalInfo = null;
     }
 
     @Override
     public synchronized Object takeSnapshot() {
+        // if service is new, no need to retrieve snapshot
+        if ((state & STATE_MASK) == STATE_NEW) {
+            return null;
+        }
         return new Snapshot();
     }
 
@@ -458,9 +465,6 @@ final class ServiceController<T> extends TransactionalObject {
 
         synchronized void setTransition(byte transactionalState, Transaction transaction, ServiceContext context) {
             this.transactionalState = transactionalState;
-            synchronized(ServiceController.this) {
-                setState(transactionalState);
-            }
             assert transitionCount > 0;
             // transition has finally come to an end, and calling task equals completeTransitionTask
             if (-- transitionCount == 0) {
@@ -588,6 +592,13 @@ final class ServiceController<T> extends TransactionalObject {
             return completeTransitionTask;
         }
 
+        private void setState(final byte sid) {
+            transactionalState = sid;
+        }
+
+        private byte getState() {
+            return transactionalState;
+        }
     }
 
     private final class Snapshot {
@@ -616,27 +627,22 @@ final class ServiceController<T> extends TransactionalObject {
     }
 
     private synchronized boolean shouldStart() {
-        return isCurrentMode(MODE_ACTIVE) || (upDemandedByCount > 0 && allAreSet(state, SERVICE_ENABLED | REGISTRY_ENABLED));
+        return isMode(MODE_ACTIVE) || (upDemandedByCount > 0 && allAreSet(state, SERVICE_ENABLED | REGISTRY_ENABLED));
     }
 
     private synchronized boolean shouldStop() {
-        return (isCurrentMode(MODE_ON_DEMAND) && upDemandedByCount == 0) || !allAreSet(state, SERVICE_ENABLED | REGISTRY_ENABLED);
-    }
-
-    private void setState(final byte sid) {
-        assert holdsLock(this);
-        state = (byte) (sid & STATE_MASK | state & ~STATE_MASK);
+        return (isMode(MODE_ON_DEMAND) && upDemandedByCount == 0) || !allAreSet(state, SERVICE_ENABLED | REGISTRY_ENABLED);
     }
 
     private void setMode(final byte mid) {
         state = (byte) (mid & MODE_MASK | state & ~MODE_MASK);
     }
 
-    private boolean isCurrentMode(final byte mode) {
+    private boolean isMode(final byte mode) {
         assert holdsLock(this);
         return allAreSet(mode, state & MODE_MASK);
     }
-    
+
     private byte currentState() {
         assert holdsLock(this);
         return (byte)(state & STATE_MASK);
