@@ -17,7 +17,6 @@
  */
 package org.jboss.msc._private;
 
-import org.jboss.msc._private.ServiceController.TransactionalState;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.Transaction;
@@ -31,10 +30,10 @@ import org.jboss.msc.txn.Transaction;
 class SetTransactionalStateTask implements Executable<Void> {
 
     private final ServiceController<?> service;
-    private final TransactionalState state;
+    private final byte state;
     private final Transaction transaction;
 
-    SetTransactionalStateTask(ServiceController<?> service, TransactionalState state, Transaction transaction) {
+    SetTransactionalStateTask(ServiceController<?> service, byte state, Transaction transaction) {
         this.service = service;
         this.state = state;
         this.transaction = transaction;

@@ -158,12 +158,12 @@ public final class TransactionImpl extends Transaction implements ServiceContext
 
     @Override
     public void disableService(ServiceRegistry registry, ServiceName name) {
-        ((ServiceRegistryImpl) registry).getRequiredServiceController(name).disable(this);
+        ((ServiceRegistryImpl) registry).getRequiredServiceController(name).disableService(this);
     }
 
     @Override
     public void enableService(ServiceRegistry registry, ServiceName name) {
-        ((ServiceRegistryImpl) registry).getRequiredServiceController(name).enable(this);
+        ((ServiceRegistryImpl) registry).getRequiredServiceController(name).enableService(this);
     }
 
     @Override

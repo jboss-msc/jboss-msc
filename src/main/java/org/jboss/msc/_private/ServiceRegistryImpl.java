@@ -123,9 +123,9 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
     synchronized void newServiceInstalled(ServiceController<?> service, Transaction transaction) {
         checkRemoved();
         if (Bits.anyAreSet(state, ENABLED)) {
-            service.registryEnabled(transaction);
+            service.enableRegistry(transaction);
         } else {
-            service.registryDisabled(transaction);
+            service.disableRegistry(transaction);
         }
     }
 
@@ -139,7 +139,7 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
         for (Registration registration: registry.values()) {
             final ServiceController<?> controller = registration.getController();
             if (controller != null) {
-                controller.registryDisabled(transaction);
+                controller.disableRegistry(transaction);
             }
         }
     }
@@ -154,7 +154,7 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
         for (Registration registration: registry.values()) {
             final ServiceController<?> controller = registration.getController();
             if (controller != null) {
-                controller.registryEnabled(transaction);
+                controller.enableRegistry(transaction);
             }
         }
     }

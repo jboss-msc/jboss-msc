@@ -18,12 +18,14 @@
 
 package org.jboss.msc._private;
 
+import static java.lang.Thread.holdsLock;
+import static org.jboss.msc._private.Bits.allAreSet;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import org.jboss.msc._private.ServiceModeBehavior.Demand;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceMode;
 import org.jboss.msc.txn.ServiceContext;
@@ -31,17 +33,33 @@ import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 
 /**
- * A controller for a single service instance.
+ * A service controller.
  *
  * @param <S> the service type
  * 
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 final class ServiceController<T> extends TransactionalObject {
 
-    private static final byte SERVICE_ENABLED = 1 << 0x00;    // service is {@link ServiceController#enable enabled}
-    private static final byte REGISTRY_ENABLED  = 1 << 0x01;  // registry is {@link ServiceController#registryEnabled enabled}
+    // controller states
+    static final byte STATE_DOWN       = (byte)0b00000000;
+    static final byte STATE_STARTING   = (byte)0b00000001;
+    static final byte STATE_UP         = (byte)0b00000010;
+    static final byte STATE_FAILED     = (byte)0b00000011;
+    static final byte STATE_STOPPING   = (byte)0b00000100;
+    static final byte STATE_REMOVING   = (byte)0b00000101;
+    static final byte STATE_REMOVED    = (byte)0b00000110;
+    static final byte STATE_MASK       = (byte)0b00000111;
+    // controller disposal flags
+    static final byte SERVICE_ENABLED  = (byte)0b00001000;
+    static final byte REGISTRY_ENABLED = (byte)0b00010000;
+    // controller modes
+    static final byte MODE_ACTIVE      = (byte)0b00000000;
+    static final byte MODE_LAZY        = (byte)0b00100000;
+    static final byte MODE_ON_DEMAND   = (byte)0b01000000;
+    static final byte MODE_MASK        = (byte)0b01100000;
 
     /**
      * The service itself.
@@ -60,21 +78,13 @@ final class ServiceController<T> extends TransactionalObject {
      */
     private final AbstractDependency<?>[] dependencies;
     /**
-     * The controller mode.
-     */
-    private final ServiceModeBehavior mode;
-    /**
      * The service value, resulting of service start.
      */
     private T value;
     /**
      * The controller state.
      */
-    private State state = State.NEW;
-    /**
-     * Indicates if service is enabled.
-     */
-    private byte enabled;
+    private byte state = STATE_DOWN | SERVICE_ENABLED | REGISTRY_ENABLED;
     /**
      * The number of dependencies that are not satisfied.
      */
@@ -111,7 +121,7 @@ final class ServiceController<T> extends TransactionalObject {
             final org.jboss.msc.service.ServiceMode mode, final AbstractDependency<?>[] dependencies, final Transaction transaction,
             final ServiceContext context) {
         this.service = service;
-        this.mode = ServiceModeBehavior.getInstance(mode);
+        setMode(mode);
         this.dependencies = dependencies;
         this.aliasRegistrations = aliasRegistrations;
         this.primaryRegistration = primaryRegistration;
@@ -119,6 +129,18 @@ final class ServiceController<T> extends TransactionalObject {
         unsatisfiedDependencies = dependencies.length;
         for (AbstractDependency<?> dependency: dependencies) {
             dependency.setDependent(this, transaction, context);
+        }
+    }
+
+    private void setMode(final ServiceMode mode) {
+        if (mode != null) switch (mode) {
+            case ACTIVE: { setMode(MODE_ACTIVE); } break;
+            case LAZY: { setMode(MODE_LAZY); } break;
+            case ON_DEMAND: { setMode(MODE_ON_DEMAND); } break;
+            default: throw new UnsupportedOperationException();
+        } else {
+            // default mode (if not provided) is ACTIVE
+            setMode(MODE_ACTIVE);
         }
     }
 
@@ -130,18 +152,19 @@ final class ServiceController<T> extends TransactionalObject {
      */
     void install(ServiceRegistryImpl registry, Transaction transaction, ServiceContext context) {
         assert isWriteLocked(transaction);
-        if (mode.shouldDemandDependencies() == Demand.ALWAYS) {
-            DemandDependenciesTask.create(this, transaction, context);
-        }
         primaryRegistration.setController(context, transaction,  this);
         for (Registration alias: aliasRegistrations) {
             alias.setController(context, transaction, this);
         }
         registry.newServiceInstalled(this, transaction);
+        boolean demandDependencies;
         synchronized (this) {
-            // enable service only now
-            enabled = (byte) (enabled | SERVICE_ENABLED);
-            state = State.DOWN;
+            state |= SERVICE_ENABLED;
+            setState(STATE_DOWN);
+            demandDependencies = isCurrentMode(MODE_ACTIVE);
+        }
+        if (demandDependencies) {
+            DemandDependenciesTask.create(this, transaction, context);
         }
         transactionalInfo.transition(transaction, context);
     }
@@ -158,13 +181,6 @@ final class ServiceController<T> extends TransactionalObject {
      */
     Registration[] getAliasRegistrations() {
         return aliasRegistrations;
-    }
-
-    /**
-     * Gets the service mode.
-     */
-    ServiceModeBehavior getMode() {
-        return this.mode;
     }
 
     /**
@@ -192,21 +208,19 @@ final class ServiceController<T> extends TransactionalObject {
     /**
      * Gets the current service controller state.
      */
-    synchronized State getState() {
-        return state;
+    synchronized byte getState() {
+        return (byte)(state & STATE_MASK);
     }
 
     /**
      * Management operation for disabling a service. As a result, this service will stop if it is {@code UP}.
      */
-    void disable(Transaction transaction) {
+    void disableService(Transaction transaction) {
         lockWrite(transaction, transaction);
         synchronized(this) {
-            enabled = (byte) (enabled & ~SERVICE_ENABLED);
-            // if service was already disabled, return
-            if (enabled != REGISTRY_ENABLED) {
-                return;
-            }
+            if (!isServiceEnabled()) return;
+            state &= ~SERVICE_ENABLED;
+            if (!isRegistryEnabled()) return;
         }
         transactionalInfo.transition(transaction, transaction);
     }
@@ -216,47 +230,44 @@ final class ServiceController<T> extends TransactionalObject {
      * ServiceMode mode} rules.
      * <p> Services are enabled by default.
      */
-    void enable(Transaction transaction) {
+    void enableService(Transaction transaction) {
         lockWrite(transaction, transaction);
         synchronized(this) {
-            final byte oldEnabled = enabled;
-            enabled = (byte) (enabled | SERVICE_ENABLED);
-            // if service has not been enabled, return
-            if (oldEnabled != REGISTRY_ENABLED) {
-                return;
-            }
+            if (isServiceEnabled()) return;
+            state |= SERVICE_ENABLED;
+            if (!isRegistryEnabled()) return;
         }
         transactionalInfo.transition(transaction, transaction);
     }
 
-    void registryDisabled(Transaction transaction) {
+    private boolean isServiceEnabled() {
+        assert holdsLock(this);
+        return allAreSet(state, SERVICE_ENABLED);
+    }
+
+    void disableRegistry(Transaction transaction) {
         lockWrite(transaction, transaction);
         synchronized (this) {
-            enabled = (byte) (enabled & ~REGISTRY_ENABLED);
-            // if service was already disabled, return
-            if (enabled != SERVICE_ENABLED) {
-                return;
-            }
+            if (!isRegistryEnabled()) return;
+            state &= ~REGISTRY_ENABLED;
+            if (!isServiceEnabled()) return;
         }
         transactionalInfo.transition(transaction, transaction);
     }
 
-    void registryEnabled(Transaction transaction) {
+    void enableRegistry(Transaction transaction) {
         lockWrite(transaction, transaction);
         synchronized (this) {
-            final byte oldEnabled = enabled;
-            enabled = (byte) (enabled | REGISTRY_ENABLED);
-            // if service has not been enabled, return
-            if (oldEnabled != SERVICE_ENABLED) {
-                return;
-            }
+            if (isRegistryEnabled()) return;
+            state |= REGISTRY_ENABLED;
+            if (!isServiceEnabled()) return;
         }
         transactionalInfo.transition(transaction, transaction);
     }
 
-    private boolean isEnabled() {
-        // service is only enabled when both flags are set
-        return Bits.allAreSet(enabled, SERVICE_ENABLED | REGISTRY_ENABLED);
+    private boolean isRegistryEnabled() {
+        assert holdsLock(this);
+        return allAreSet(state, REGISTRY_ENABLED);
     }
 
     /**
@@ -295,7 +306,7 @@ final class ServiceController<T> extends TransactionalObject {
             if (upDemandedByCount ++ > 0) {
                 return;
             }
-            propagate = mode.shouldDemandDependencies() == Demand.PROPAGATE;
+            propagate = !isCurrentMode(MODE_ACTIVE);
         }
         if (propagate) {
             DemandDependenciesTask.create(this, transaction, context);
@@ -317,7 +328,7 @@ final class ServiceController<T> extends TransactionalObject {
             if (-- upDemandedByCount > 0) {
                 return;
             }
-            propagate = mode.shouldDemandDependencies() == Demand.PROPAGATE;
+            propagate = !isCurrentMode(MODE_ACTIVE);
         }
         if (propagate) {
             UndemandDependenciesTask.create(this, transaction, context);
@@ -404,7 +415,7 @@ final class ServiceController<T> extends TransactionalObject {
      * @param transactionalState the transactional state
      * @param context            the service context
      */
-    void setTransition(TransactionalState transactionalState, Transaction transaction, ServiceContext context) {
+    void setTransition(byte transactionalState, Transaction transaction, ServiceContext context) {
         assert isWriteLocked();
         transactionalInfo.setTransition(transactionalState, transaction, context);
     }
@@ -426,10 +437,6 @@ final class ServiceController<T> extends TransactionalObject {
 
     @Override
     public synchronized Object takeSnapshot() {
-        // no need to take snapshot of newly created objects
-        if (state == State.NEW) {
-            return null;
-        }
         return new Snapshot();
     }
 
@@ -443,31 +450,33 @@ final class ServiceController<T> extends TransactionalObject {
 
     final class TransactionalInfo {
         // current transactional state
-        private TransactionalState transactionalState = TransactionalState.getTransactionalState(ServiceController.this.state);
+        private byte transactionalState = ServiceController.this.currentState();
         // if this service is under transition, this field points to the task that completes the transition
         private TaskController<Void> completeTransitionTask = null;
         // the total number of setTransition calls expected until completeTransitionTask is finished
         private int transitionCount;
 
-        synchronized void setTransition(TransactionalState transactionalState, Transaction transaction, ServiceContext context) {
+        synchronized void setTransition(byte transactionalState, Transaction transaction, ServiceContext context) {
             this.transactionalState = transactionalState;
-            state = transactionalState.getState();
+            synchronized(ServiceController.this) {
+                setState(transactionalState);
+            }
             assert transitionCount > 0;
             // transition has finally come to an end, and calling task equals completeTransitionTask
             if (-- transitionCount == 0) {
                 switch(transactionalState) {
-                    case UP:
+                    case STATE_UP:
                         notifyDependencyAvailable(true, transaction, context);
                         break;
-                    case DOWN:
+                    case STATE_DOWN:
                         notifyDependencyAvailable(false, transaction, context);
                         break;
-                    case REMOVED:
+                    case STATE_REMOVED:
                         for (AbstractDependency<?> dependency: dependencies) {
                             dependency.clearDependent(transaction, context);
                         }
                         break;
-                    case FAILED:
+                    case STATE_FAILED:
                         // ok
                         break;
                     default:
@@ -479,7 +488,7 @@ final class ServiceController<T> extends TransactionalObject {
 
         @SuppressWarnings("unchecked")
         private synchronized void retry(Transaction transaction) {
-            if (transactionalState != TransactionalState.FAILED) {
+            if (transactionalState != STATE_FAILED) {
                 return;
             }
             assert completeTransitionTask == null;
@@ -487,49 +496,45 @@ final class ServiceController<T> extends TransactionalObject {
         }
 
         private synchronized TaskController<?> transition(Transaction transaction, ServiceContext context) {
-            assert !Thread.holdsLock(ServiceController.this);
-            final boolean enabled;
-            synchronized (ServiceController.this) {
-                enabled = isEnabled();
-            }
+            assert !holdsLock(ServiceController.this);
             switch (transactionalState) {
-                case DOWN:
-                    if (unsatisfiedDependencies == 0 && mode.shouldStart(ServiceController.this) && enabled) {
+                case STATE_DOWN:
+                    if (unsatisfiedDependencies == 0 && shouldStart()) {
                         final Collection<TaskController<?>> dependentTasks = notifyDependencyUnavailable(transaction, context);
-                        transactionalState = TransactionalState.STARTING;
+                        transactionalState = STATE_STARTING;
                         completeTransitionTask = StartingServiceTasks.createTasks(ServiceController.this, dependentTasks, transaction, context);
                         transitionCount ++;
                     }
                     break;
-                case STOPPING:
-                    if (unsatisfiedDependencies == 0 && !mode.shouldStop(ServiceController.this) && enabled) {
+                case STATE_STOPPING:
+                    if (unsatisfiedDependencies == 0 && !shouldStop()) {
                         // ongoing transition from UP to DOWN, transition to UP just once service is DOWN
-                        TaskController<?> setStartingState = transaction.newTask(new SetTransactionalStateTask(ServiceController.this, TransactionalState.STARTING, transaction))
+                        TaskController<?> setStartingState = transaction.newTask(new SetTransactionalStateTask(ServiceController.this, STATE_STARTING, transaction))
                             .addDependency(completeTransitionTask).release();
                         completeTransitionTask = StartingServiceTasks.createTasks(ServiceController.this, setStartingState, transaction, context);
                         transitionCount += 2;
                     }
                     break;
-                case FAILED:
-                    if (unsatisfiedDependencies > 0 || mode.shouldStop(ServiceController.this) || !enabled) {
-                        transactionalState = TransactionalState.STOPPING;
+                case STATE_FAILED:
+                    if (unsatisfiedDependencies > 0 || shouldStop()) {
+                        transactionalState = STATE_STOPPING;
                         completeTransitionTask = StoppingServiceTasks.createTasks(ServiceController.this, transaction, context);
                         transitionCount ++;
                     }
                     break;
-                case UP:
-                    if (unsatisfiedDependencies > 0 || mode.shouldStop(ServiceController.this) || !enabled) {
+                case STATE_UP:
+                    if (unsatisfiedDependencies > 0 || shouldStop()) {
                         final Collection<TaskController<?>> dependentTasks = notifyDependencyUnavailable(transaction, context);
-                        transactionalState = TransactionalState.STOPPING;
+                        transactionalState = STATE_STOPPING;
                         completeTransitionTask = StoppingServiceTasks.createTasks(ServiceController.this, dependentTasks, transaction, context);
                         transitionCount ++;
                     }
                     break;
-                case STARTING:
-                    if (unsatisfiedDependencies > 0 || !mode.shouldStart(ServiceController.this) || !enabled) {
+                case STATE_STARTING:
+                    if (unsatisfiedDependencies > 0 || !shouldStart()) {
                         // ongoing transition from DOWN to UP, transition to DOWN just once service is UP
                         TaskController<?> setStoppingState = transaction.newTask(new SetTransactionalStateTask(
-                                ServiceController.this, TransactionalState.STOPPING, transaction))
+                                ServiceController.this, STATE_STOPPING, transaction))
                                 .addDependency(completeTransitionTask).release();
                         completeTransitionTask = StoppingServiceTasks.createTasks(ServiceController.this, setStoppingState, transaction, context);
                         transitionCount +=2;
@@ -575,7 +580,7 @@ final class ServiceController<T> extends TransactionalObject {
 
         private synchronized TaskController<Void> scheduleRemoval(Transaction transaction, ServiceContext context) {
             synchronized (ServiceController.this) {
-                enabled = (byte) (enabled & ~SERVICE_ENABLED);
+                state &= ~SERVICE_ENABLED;
             }
             transition(transaction, context);
             completeTransitionTask = context.newTask(new ServiceRemoveTask(ServiceController.this, transaction)).release();
@@ -586,14 +591,14 @@ final class ServiceController<T> extends TransactionalObject {
     }
 
     private final class Snapshot {
-        private final State state;
+        private final byte state;
         private final int upDemandedByCount;
         private final int unsatisfiedDependencies;
         private final int runningDependents;
 
         // take snapshot
         public Snapshot() {
-            assert Thread.holdsLock(ServiceController.this);
+            assert holdsLock(ServiceController.this);
             state = ServiceController.this.state;
             upDemandedByCount = ServiceController.this.upDemandedByCount;
             unsatisfiedDependencies = ServiceController.this.unsatisfiedDependencies;
@@ -602,7 +607,7 @@ final class ServiceController<T> extends TransactionalObject {
 
         // revert ServiceController state to what it was when snapshot was taken; invoked on rollback
         public void apply() {
-            assert Thread.holdsLock(ServiceController.this);
+            assert holdsLock(ServiceController.this);
             ServiceController.this.state = state;
             ServiceController.this.upDemandedByCount = upDemandedByCount;
             ServiceController.this.unsatisfiedDependencies = unsatisfiedDependencies;
@@ -610,93 +615,30 @@ final class ServiceController<T> extends TransactionalObject {
         }
     }
 
-    /**
-     * A possible state for a service controller.
-     */
-    public enum State {
-        /**
-         * New. Service is being installed.
-         */
-        NEW,
-        /**
-         * Up. Satisfied dependencies may not change state without causing this service to stop.
-         */
-        UP,
-        /**
-         * Down.  All up dependents are down.
-         */
-        DOWN,
-        /**
-         * Start failed, or was cancelled.  From this state, the start may be {@link ServiceController#retry retried} or
-         * the service may enter the {@code DOWN} state.
-         */
-        FAILED,
-        /**
-         * Removed from the container.
-         */
-        REMOVED,
-        ;
-    };
-
-    public enum TransactionalState {
-        /**
-         * Up. Satisfied dependencies may not change state without causing this service to stop.
-         */
-        UP(State.UP),
-        /**
-         * Down.  All up dependents are down.
-         */
-        DOWN(State.DOWN),
-        /**
-         * Start failed, or was cancelled.  From this state, the start may be {@link ServiceController#retry retried} or
-         * the service may enter the {@code DOWN} state.
-         */
-        FAILED(State.FAILED),
-        /**
-         * Removed from the container.
-         */
-        REMOVED(State.REMOVED),
-        /**
-         * Service is starting.  Satisfied dependencies may not change state.  This state may not be left until
-         * the {@code start} method has finished or failed.
-         */
-        STARTING(State.DOWN),
-        /**
-         * Service is stopping.  Up dependents are {@code DOWN} and may not enter the {@code STARTING} state. 
-         * This state may not be left until the {@code stop} method has finished.
-         */
-        STOPPING(State.UP),
-        /**
-         * Service is {@code DOWN} and being removed.
-         */
-        REMOVING(State.DOWN),
-        ;
-        private final State state;
-
-        public State getState() {
-            return state;
-        }
-
-        public static TransactionalState getTransactionalState(State state) {
-            switch(state) {
-                case UP:
-                    return UP;
-                case NEW:
-                    // fall thru!
-                case DOWN:
-                    return DOWN;
-                case FAILED:
-                    return FAILED;
-                case REMOVED:
-                    return REMOVED;
-                default:
-                    throw new IllegalArgumentException("Unexpected state");
-            }
-        }
-
-        private TransactionalState(final State state) {
-            this.state = state;
-        }
+    private synchronized boolean shouldStart() {
+        return isCurrentMode(MODE_ACTIVE) || (upDemandedByCount > 0 && allAreSet(state, SERVICE_ENABLED | REGISTRY_ENABLED));
     }
 
+    private synchronized boolean shouldStop() {
+        return (isCurrentMode(MODE_ON_DEMAND) && upDemandedByCount == 0) || !allAreSet(state, SERVICE_ENABLED | REGISTRY_ENABLED);
+    }
+
+    private void setState(final byte sid) {
+        assert holdsLock(this);
+        state = (byte) (sid & STATE_MASK | state & ~STATE_MASK);
+    }
+
+    private void setMode(final byte mid) {
+        state = (byte) (mid & MODE_MASK | state & ~MODE_MASK);
+    }
+
+    private boolean isCurrentMode(final byte mode) {
+        assert holdsLock(this);
+        return allAreSet(mode, state & MODE_MASK);
+    }
+    
+    private byte currentState() {
+        assert holdsLock(this);
+        return (byte)(state & STATE_MASK);
+    }
 }

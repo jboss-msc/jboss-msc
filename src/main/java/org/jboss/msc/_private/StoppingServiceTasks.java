@@ -17,12 +17,13 @@
  */
 package org.jboss.msc._private;
 
+import static org.jboss.msc._private.ServiceController.STATE_DOWN;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import org.jboss.msc._private.ServiceController.TransactionalState;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
@@ -71,7 +72,7 @@ final class StoppingServiceTasks {
         final TaskController<Void> revertInjections = context.newTask(new RevertInjectionsTask()).addDependency(stop).release();
 
         // set DOWN state
-        final TaskBuilder<Void> setDownStateBuilder = context.newTask(new SetTransactionalStateTask(service, TransactionalState.DOWN, transaction)).addDependency(revertInjections);
+        final TaskBuilder<Void> setDownStateBuilder = context.newTask(new SetTransactionalStateTask(service, STATE_DOWN, transaction)).addDependency(revertInjections);
 
         // notify dependencies that service is stopped 
         if (service.getDependencies().length != 0) {

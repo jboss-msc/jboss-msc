@@ -17,7 +17,8 @@
  */
 package org.jboss.msc._private;
 
-import org.jboss.msc._private.ServiceController.TransactionalState;
+import static org.jboss.msc._private.ServiceController.STATE_REMOVED;
+
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.Transaction;
@@ -44,7 +45,7 @@ final class ServiceRemoveTask implements Executable<Void> {
             for (Registration registration: serviceController.getAliasRegistrations()) {
                 registration.clearController(transaction, context);
             }
-            serviceController.setTransition(TransactionalState.REMOVED, transaction, context);
+            serviceController.setTransition(STATE_REMOVED, transaction, context);
         } finally {
             context.complete();
         }

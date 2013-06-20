@@ -17,7 +17,10 @@
  */
 package org.jboss.msc._private;
 
-import org.jboss.msc._private.ServiceController.State;
+import static org.jboss.msc._private.ServiceController.STATE_DOWN;
+import static org.jboss.msc._private.ServiceController.STATE_FAILED;
+import static org.jboss.msc._private.ServiceController.STATE_UP;
+
 import org.jboss.msc.service.DependencyFlag;
 import org.jboss.msc.txn.Problem.Severity;
 import org.jboss.msc.txn.ReportableContext;
@@ -91,7 +94,7 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
             this.dependentController = dependentController;
             final ServiceController<?> dependencyController = dependencyRegistration.getController();
             // check if dependency is satisfied
-            if (dependencyController != null && dependencyController.getState() == State.UP) {
+            if (dependencyController != null && dependencyController.getState() == STATE_UP) {
                 dependencySatisfied = true;
                 dependentController.dependencySatisfied(transaction, context);
             }
@@ -201,13 +204,13 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
             dependencyState = "is missing";
         } else {
             switch (dependencyController.getState()) {
-                case DOWN:
+                case STATE_DOWN:
                     dependencyState = "is not started";
                     break;
-                case UP:
+                case STATE_UP:
                     dependencyState = "is started";
                     break;
-                case FAILED:
+                case STATE_FAILED:
                     dependencyState = "has failed";
                     break;
                 default:

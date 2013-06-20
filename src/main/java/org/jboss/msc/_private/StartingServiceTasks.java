@@ -17,13 +17,15 @@
  */
 package org.jboss.msc._private;
 
+import static org.jboss.msc._private.ServiceController.STATE_FAILED;
+import static org.jboss.msc._private.ServiceController.STATE_UP;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.jboss.msc._private.ServiceController.TransactionalState;
 import org.jboss.msc.service.Service;
 import org.jboss.msc.txn.AttachmentKey;
 import org.jboss.msc.txn.Executable;
@@ -144,10 +146,10 @@ final class StartingServiceTasks {
                 T result = serviceStartTask.getResult();
                 // service failed
                 if (result == null && transaction.getAttachment(FAILED_SERVICES).contains(service.getService())) {
-                    service.setTransition(TransactionalState.FAILED, transaction, context);
+                    service.setTransition(STATE_FAILED, transaction, context);
                 } else {
                     service.setValue(result);
-                    service.setTransition(TransactionalState.UP, transaction, context);
+                    service.setTransition(STATE_UP, transaction, context);
                 }
             } finally {
                 context.complete();
