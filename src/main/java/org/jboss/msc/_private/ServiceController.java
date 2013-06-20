@@ -49,6 +49,9 @@ import org.jboss.msc.txn.Transaction;
  */
 final class ServiceController<T> extends TransactionalObject {
 
+    private static final byte SERVICE_ENABLED = 1 << 0x00;    // service is {@link ServiceController#enable enabled}
+    private static final byte REGISTRY_ENABLED  = 1 << 0x01;  // registry is {@link ServiceController#registryEnabled enabled}
+
     /**
      * Number defined as the limit of successive transitions in a single transaction before the service reaches the
      * final state. If there is more than such number of transitions, a check for a cycle is performed, thus preventing
@@ -87,7 +90,7 @@ final class ServiceController<T> extends TransactionalObject {
     /**
      * Indicates if service is enabled.
      */
-    private boolean enabled = true;
+    private byte enabled;
     /**
      * The number of dependencies that are not satisfied.
      */
@@ -129,7 +132,6 @@ final class ServiceController<T> extends TransactionalObject {
         this.aliasRegistrations = aliasRegistrations;
         this.primaryRegistration = primaryRegistration;
         lockWrite(transaction, context);
-        enabled = false;
         unsatisfiedDependencies = dependencies.length;
         for (AbstractDependency<?> dependency: dependencies) {
             dependency.setDependent(this, transaction, context);
@@ -142,18 +144,20 @@ final class ServiceController<T> extends TransactionalObject {
      * @param transaction the active transaction
      * @param context     the service context
      */
-    void install(Transaction transaction, ServiceContext context) {
+    void install(ServiceRegistryImpl registry, Transaction transaction, ServiceContext context) {
         assert isWriteLocked(transaction);
-        synchronized (this) {
-            enabled = true;
-            state = State.DOWN;
-        }
         if (mode.shouldDemandDependencies() == Demand.ALWAYS) {
             DemandDependenciesTask.create(this, transaction, context);
         }
         primaryRegistration.setController(context, transaction,  this);
         for (Registration alias: aliasRegistrations) {
             alias.setController(context, transaction, this);
+        }
+        registry.newServiceInstalled(this, transaction);
+        synchronized (this) {
+            // enable service only now
+            enabled = (byte) (enabled | SERVICE_ENABLED);
+            state = State.DOWN;
         }
         transactionalInfo.transition(transaction, context);
     }
@@ -214,10 +218,11 @@ final class ServiceController<T> extends TransactionalObject {
     void disable(Transaction transaction) {
         lockWrite(transaction, transaction);
         synchronized(this) {
-            if (!enabled) {
+            enabled = (byte) (enabled & ~SERVICE_ENABLED);
+            // if service was already disabled, return
+            if (enabled != REGISTRY_ENABLED) {
                 return;
             }
-            enabled = false;
         }
         transactionalInfo.transition(transaction, transaction);
     }
@@ -230,12 +235,44 @@ final class ServiceController<T> extends TransactionalObject {
     void enable(Transaction transaction) {
         lockWrite(transaction, transaction);
         synchronized(this) {
-            if (enabled) {
+            final byte oldEnabled = enabled;
+            enabled = (byte) (enabled | SERVICE_ENABLED);
+            // if service has not been enabled, return
+            if (oldEnabled != REGISTRY_ENABLED) {
                 return;
             }
-            enabled = true;
         }
         transactionalInfo.transition(transaction, transaction);
+    }
+
+    void registryDisabled(Transaction transaction) {
+        lockWrite(transaction, transaction);
+        synchronized (this) {
+            enabled = (byte) (enabled & ~REGISTRY_ENABLED);
+            // if service was already disabled, return
+            if (enabled != SERVICE_ENABLED) {
+                return;
+            }
+        }
+        transactionalInfo.transition(transaction, transaction);
+    }
+
+    void registryEnabled(Transaction transaction) {
+        lockWrite(transaction, transaction);
+        synchronized (this) {
+            final byte oldEnabled = enabled;
+            enabled = (byte) (enabled | REGISTRY_ENABLED);
+            // if service has not been enabled, return
+            if (oldEnabled != SERVICE_ENABLED) {
+                return;
+            }
+        }
+        transactionalInfo.transition(transaction, transaction);
+    }
+
+    private boolean isEnabled() {
+        // service is only enabled when both flags are set
+        return Bits.allAreSet(enabled, SERVICE_ENABLED | REGISTRY_ENABLED);
     }
 
     /**
@@ -496,7 +533,7 @@ final class ServiceController<T> extends TransactionalObject {
             // transaction
             final boolean enabled;
             synchronized (ServiceController.this) {
-                enabled = ServiceController.this.enabled;
+                enabled = isEnabled();
             }
             switch (transactionalState) {
                 case DOWN:
@@ -613,7 +650,7 @@ final class ServiceController<T> extends TransactionalObject {
 
         private synchronized TaskController<Void> scheduleRemoval(Transaction transaction, ServiceContext context) {
             synchronized (ServiceController.this) {
-                enabled = false;
+                enabled = (byte) (enabled & ~SERVICE_ENABLED);
             }
             transition(transaction, context);
             completeTransitionTask = context.newTask(new ServiceRemoveTask(ServiceController.this, transaction)).release();

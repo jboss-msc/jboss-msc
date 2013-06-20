@@ -38,10 +38,16 @@ import org.jboss.msc.txn.Transaction;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 final class ServiceRegistryImpl extends TransactionalObject implements ServiceRegistry {
+
+    private static final byte ENABLED = 1 << 0x00;
+    private static final byte REMOVED  = 1 << 0x01;
+
     // map of service registrations
     private final ConcurrentMap<ServiceName, Registration> registry = new ConcurrentHashMap<ServiceName, Registration>();
-    // indicates whether this registry is removed
-    private boolean removed;
+    // service registry state, which could be: enabled, disabled, or removed
+    private byte state = ENABLED;
+
+
 
     /**
      * Gets a service, throwing an exception if it is not found.
@@ -96,10 +102,10 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
 
     void remove(Transaction transaction) {
         synchronized(this) {
-            if (removed) {
+            if (isRemoved()) {
                 return;
             }
-            removed = true;
+            state = (byte) (state | REMOVED);
         }
         final HashSet<ServiceController<?>> done = new HashSet<ServiceController<?>>();
         for (Registration registration : registry.values()) {
@@ -111,30 +117,48 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
     }
 
     synchronized boolean isRemoved() {
-        return removed;
+        return Bits.anyAreSet(state, REMOVED);
+    }
+
+    synchronized void newServiceInstalled(ServiceController<?> service, Transaction transaction) {
+        checkRemoved();
+        if (Bits.anyAreSet(state, ENABLED)) {
+            service.registryEnabled(transaction);
+        } else {
+            service.registryDisabled(transaction);
+        }
     }
 
     synchronized void disable(Transaction transaction) {
         checkRemoved();
+        // idempotent
+        if (!Bits.anyAreSet(state, ENABLED)) {
+            return;
+        }
+        state = (byte) (state | ~ENABLED);
         for (Registration registration: registry.values()) {
             final ServiceController<?> controller = registration.getController();
             if (controller != null) {
-                controller.disable(transaction);
+                controller.registryDisabled(transaction);
             }
         }
     }
 
     synchronized void enable(Transaction transaction) {
         checkRemoved();
+        // idempotent
+        if (Bits.anyAreSet(state, ENABLED)) {
+            return;
+        }
+        state = (byte) (state | ENABLED);
         for (Registration registration: registry.values()) {
             final ServiceController<?> controller = registration.getController();
             if (controller != null) {
-                controller.enable(transaction);
+                controller.registryEnabled(transaction);
             }
         }
     }
 
-    // TODO ongoing work: code under review
     void install(ServiceController<?> serviceController) {
         checkRemoved();
     }
@@ -154,7 +178,7 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
     }
 
     private synchronized void checkRemoved() {
-        if (removed) {
+        if (Bits.anyAreSet(state, REMOVED)) {
             throw new IllegalStateException("ServiceRegistry is removed");
         }
     }
