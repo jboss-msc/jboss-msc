@@ -176,10 +176,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         if (parentDependency != null && name.equals(parentDependency.getDependencyRegistration().getServiceName())) {
             parentDependency = null;
         }
-        // TODO review this
-        if (dependencies.containsKey(name)) {
-            throw new IllegalStateException("ServiceBuilderImpl already contains a dependency to service " + name);
-        }
         dependencies.put(name, dependency);
     }
 
