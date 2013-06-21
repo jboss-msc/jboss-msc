@@ -18,6 +18,8 @@
 
 package org.jboss.msc.service;
 
+import java.util.Collection;
+
 /**
  * Service modes.
  *
@@ -46,4 +48,58 @@ public enum ServiceMode {
      */
     ON_DEMAND,
     ;
+    
+    /**
+     * Returns true if the specified service mode is identical to this enum constant.
+     * @param other the service mode to be compared for identity with this object
+     * @return true if the specified service mode is identical to this enum constant
+     */
+    public final boolean in(final ServiceMode other) {
+        return this == other;
+    }
+
+    /**
+     * Returns true if this enum constant is identical to any of the specified service modes.
+     * @param other1 first service mode to be compared for identity with this object
+     * @param other2 second service mode to be compared for identity with this object
+     * @return true if this enum constant is identical to any of the specified service modes 
+     */
+    public final boolean in(final ServiceMode other1, final ServiceMode other2) {
+        return this == other1 || this == other2;
+    }
+
+    /**
+     * Returns true if this enum constant is identical to any of the specified service modes.
+     * @param other1 first service mode to be compared for identity with this object
+     * @param other2 second service mode to be compared for identity with this object
+     * @param other3 third service mode to be compared for identity with this object
+     * @return true if this enum constant is identical to any of the specified service modes 
+     */
+    public final boolean in(final ServiceMode other1, final ServiceMode other2, final ServiceMode other3) {
+        return this == other1 || this == other2 || this == other3;
+    }
+
+    /**
+     * Returns true if this enum constant is identical to any of the specified service modes.
+     * @param others service modes to be compared for identity with this object
+     * @return true if this enum constant is identical to any of the specified service modes 
+     */
+    public final boolean in(final ServiceMode... others) {
+        if (others != null) {
+            for (final ServiceMode other : others) {
+                if (this == other) return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns true if this enum constant is identical to any of the specified service modes.
+     * @param others service modes to be compared for identity with this object
+     * @return true if this enum constant is identical to any of the specified service modes 
+     */
+    public final boolean in(final Collection<ServiceMode> others) {
+        return others != null ? others.contains(this) : false;
+    }
+
 }

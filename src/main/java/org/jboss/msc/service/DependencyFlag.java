@@ -18,6 +18,8 @@
 
 package org.jboss.msc.service;
 
+import java.util.Collection;
+
 /**
  * Dependency flags.
  *
@@ -49,4 +51,58 @@ public enum DependencyFlag {
      */
     PARENT,
     ;
+
+    /**
+     * Returns true if the specified dependency flag is identical to this enum constant.
+     * @param other the dependency flag to be compared for identity with this object
+     * @return true if the specified dependency flag is identical to this enum constant
+     */
+    public final boolean in(final DependencyFlag other) {
+        return this == other;
+    }
+
+    /**
+     * Returns true if this enum constant is identical to any of the specified dependency flags.
+     * @param other1 first dependency flag to be compared for identity with this object
+     * @param other2 second dependency flag to be compared for identity with this object
+     * @return true if this enum constant is identical to any of the specified dependency flags 
+     */
+    public final boolean in(final DependencyFlag other1, final DependencyFlag other2) {
+        return this == other1 || this == other2;
+    }
+
+    /**
+     * Returns true if this enum constant is identical to any of the specified dependency flags.
+     * @param other1 first dependency flag to be compared for identity with this object
+     * @param other2 second dependency flag to be compared for identity with this object
+     * @param other3 third dependency flag to be compared for identity with this object
+     * @return true if this enum constant is identical to any of the specified dependency flags 
+     */
+    public final boolean in(final DependencyFlag other1, final DependencyFlag other2, final DependencyFlag other3) {
+        return this == other1 || this == other2 || this == other3;
+    }
+
+    /**
+     * Returns true if this enum constant is identical to any of the specified dependency flags.
+     * @param others dependency flags to be compared for identity with this object
+     * @return true if this enum constant is identical to any of the specified dependency flags 
+     */
+    public final boolean in(final DependencyFlag... others) {
+        if (others != null) {
+            for (final DependencyFlag other : others) {
+                if (this == other) return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns true if this enum constant is identical to any of the specified dependency flags.
+     * @param others dependency flags to be compared for identity with this object
+     * @return true if this enum constant is identical to any of the specified dependency flags 
+     */
+    public final boolean in(final Collection<DependencyFlag> others) {
+        return others != null ? others.contains(this) : false;
+    }
+
 }
