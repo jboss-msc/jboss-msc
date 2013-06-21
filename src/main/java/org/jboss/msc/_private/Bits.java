@@ -22,7 +22,6 @@ package org.jboss.msc._private;
  * General bit-affecting utility methods.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
- * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 final class Bits {
     private Bits() {}
@@ -60,50 +59,6 @@ final class Bits {
     }
 
     //--- Flags methods
-
-    /**
-     * Determine if any of the {@code flags} in the given {@code var} are set.
-     *
-     * @param var the value to test
-     * @param flags the flags to test for
-     * @return {@code true} if any of {@code flags} are in {@code var}, {@code false} otherwise
-     */
-    static boolean anyAreSet(byte var, byte flags) {
-        return (var & flags) != 0;
-    }
-
-    /**
-     * Determine if all of the {@code flags} in the given {@code var} are set.
-     *
-     * @param var the value to test
-     * @param flags the flags to test for
-     * @return {@code true} if all of {@code flags} are in {@code var}, {@code false} otherwise
-     */
-    static boolean allAreSet(byte var, byte flags) {
-        return (var & flags) == flags;
-    }
-
-    /**
-     * Determine if any of the {@code flags} in the given {@code var} are clear.
-     *
-     * @param var the value to test
-     * @param flags the flags to test for
-     * @return {@code true} if not all of {@code flags} are in {@code var}, {@code false} otherwise
-     */
-    static boolean anyAreClear(byte var, byte flags) {
-        return (var & flags) != flags;
-    }
-
-    /**
-     * Determine if all of the {@code flags} in the given {@code var} are clear.
-     *
-     * @param var the value to test
-     * @param flags the flags to test for
-     * @return {@code true} if none of {@code flags} are in {@code var}, {@code false} otherwise
-     */
-    static boolean allAreClear(byte var, byte flags) {
-        return (var & flags) == 0;
-    }
 
     /**
      * Determine if exactly one of the {@code flags} in the given {@code var} is set.

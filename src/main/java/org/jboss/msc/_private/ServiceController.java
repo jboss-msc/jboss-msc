@@ -43,25 +43,25 @@ import org.jboss.msc.txn.Transaction;
  */
 final class ServiceController<T> extends TransactionalObject {
 
+    // controller modes
+    static final byte MODE_ACTIVE      = (byte)ServiceMode.ACTIVE.ordinal();
+    static final byte MODE_LAZY        = (byte)ServiceMode.LAZY.ordinal();
+    static final byte MODE_ON_DEMAND   = (byte)ServiceMode.ON_DEMAND.ordinal();
+    static final byte MODE_MASK        = (byte)0b00000011;
     // controller states
     static final byte STATE_NEW        = (byte)0b00000000;
-    static final byte STATE_DOWN       = (byte)0b00000001;
-    static final byte STATE_STARTING   = (byte)0b00000010;
-    static final byte STATE_UP         = (byte)0b00000011;
-    static final byte STATE_FAILED     = (byte)0b00000100;
-    static final byte STATE_STOPPING   = (byte)0b00000101;
-    static final byte STATE_REMOVING   = (byte)0b00000110;
-    static final byte STATE_REMOVED    = (byte)0b00000111;
-    static final byte STATE_MASK       = (byte)0b00000111;
+    static final byte STATE_DOWN       = (byte)0b00000100;
+    static final byte STATE_STARTING   = (byte)0b00001000;
+    static final byte STATE_UP         = (byte)0b00001100;
+    static final byte STATE_FAILED     = (byte)0b00010000;
+    static final byte STATE_STOPPING   = (byte)0b00010100;
+    static final byte STATE_REMOVING   = (byte)0b00011000;
+    static final byte STATE_REMOVED    = (byte)0b00011100;
+    static final byte STATE_MASK       = (byte)0b00011100;
     // controller disposal flags
-    static final byte SERVICE_ENABLED  = (byte)0b00001000;
-    static final byte REGISTRY_ENABLED = (byte)0b00010000;
-    // controller modes
-    static final byte MODE_ACTIVE      = (byte)0b00000000;
-    static final byte MODE_LAZY        = (byte)0b00100000;
-    static final byte MODE_ON_DEMAND   = (byte)0b01000000;
-    static final byte MODE_MASK        = (byte)0b01100000;
-
+    static final byte SERVICE_ENABLED  = (byte)0b00100000;
+    static final byte REGISTRY_ENABLED = (byte)0b01000000;
+    
     /**
      * The service itself.
      */
@@ -85,7 +85,7 @@ final class ServiceController<T> extends TransactionalObject {
     /**
      * The controller state.
      */
-    private byte state = STATE_NEW;
+    private byte state = (byte)(STATE_NEW | MODE_ACTIVE);
     /**
      * The number of dependencies that are not satisfied.
      */
@@ -134,14 +134,10 @@ final class ServiceController<T> extends TransactionalObject {
     }
 
     private void setMode(final ServiceMode mode) {
-        if (mode != null) switch (mode) {
-            case ACTIVE: { setMode(MODE_ACTIVE); } break;
-            case LAZY: { setMode(MODE_LAZY); } break;
-            case ON_DEMAND: { setMode(MODE_ON_DEMAND); } break;
-            default: throw new UnsupportedOperationException();
+        if (mode != null) {
+            setMode((byte)mode.ordinal());
         } else {
             // default mode (if not provided) is ACTIVE
-            setMode(MODE_ACTIVE);
         }
     }
 
@@ -210,8 +206,8 @@ final class ServiceController<T> extends TransactionalObject {
     /**
      * Gets the current service controller state.
      */
-    synchronized byte getState() {
-        return (byte)(state & STATE_MASK);
+    synchronized int getState() {
+        return (state & STATE_MASK);
     }
 
     /**
