@@ -70,16 +70,6 @@ abstract class DependencyDecorator<T> extends AbstractDependency<T> {
     }
 
     @Override
-    public void dependencyReplacementStarted(Transaction transaction) {
-        dependency.dependencyReplacementStarted(transaction);
-    }
-
-    @Override
-    public void dependencyReplacementConcluded(Transaction transaction) {
-        dependency.dependencyReplacementConcluded(transaction);
-    }
-
-    @Override
     public T get() {
         return dependency.get();
     }

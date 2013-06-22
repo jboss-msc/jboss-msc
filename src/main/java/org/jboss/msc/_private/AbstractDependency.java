@@ -95,14 +95,4 @@ abstract class AbstractDependency<T> extends TransactionalObject implements Depe
      * @param serviceContext the service context
      */
     abstract TaskController<?> dependencyUnavailable(Transaction transaction, ServiceContext context);
-
-    /**
-     * Notifies that dependency current service is about to be replaced by a different service.
-     */
-    abstract void dependencyReplacementStarted(Transaction transaction);
-
-    /**
-     * Notifies that dependency replacement is concluded and now the newly installed service is available.
-     */
-    abstract void dependencyReplacementConcluded(Transaction transaction);
 }

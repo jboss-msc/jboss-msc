@@ -171,16 +171,6 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
     }
 
     @Override
-    void dependencyReplacementStarted(Transaction transaction) {
-        // do nothing
-    }
-
-    @Override
-    void dependencyReplacementConcluded(Transaction transaction) {
-        // do nothing
-    }
-
-    @Override
     synchronized Boolean takeSnapshot() {
         return dependencySatisfied;
     }
