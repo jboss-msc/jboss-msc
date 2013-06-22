@@ -56,13 +56,8 @@ final class DependencyFactory {
 
     private static <T> AbstractDependency<T> decorate(AbstractDependency<T> dependency, DependencyFlag[] flags, ServiceBuilderImpl<?> serviceBuilder) {
         for (DependencyFlag flag: flags) {
-            switch(flag) {
-                case OPTIONAL:
-                    dependency = new OptionalDependency<T>(dependency);
-                case PARENT:
-                    dependency = new ParentDependency<T>(dependency, serviceBuilder);
-                default:
-                    // do nothing
+            if (flag == DependencyFlag.PARENT) {
+                return new ParentDependency<T>(dependency, serviceBuilder);
             }
         }
         return dependency;

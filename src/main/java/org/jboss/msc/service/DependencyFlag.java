@@ -33,10 +33,6 @@ public enum DependencyFlag {
      */
     REQUIRED,
     /**
-     * A missing dependency will not cause a transaction error. 
-     */
-    OPTIONAL,
-    /**
      * Do not place a demand on this dependency. Overrides default mode behavior.
      */
     UNDEMANDED,
