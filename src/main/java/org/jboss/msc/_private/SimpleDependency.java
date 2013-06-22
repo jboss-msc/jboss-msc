@@ -42,9 +42,9 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
      */
     private final Registration dependencyRegistration;
     /**
-     * The incoming dependency service controller.
+     * The incoming dependency.
      */
-    private ServiceController<?> dependentController;
+    private Dependent dependent;
     /**
      * Indicates if the dependency should be demanded to be satisfied when service is attempting to start.
      */
@@ -88,15 +88,15 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
     }
 
     @Override
-    void setDependent(ServiceController<?> dependentController, Transaction transaction, ServiceContext context) {
+    void setDependent(Dependent dependent, Transaction transaction, ServiceContext context) {
         lockWrite(transaction, context);
         synchronized (this) {
-            this.dependentController = dependentController;
+            this.dependent = dependent;
             final ServiceController<?> dependencyController = dependencyRegistration.getController();
             // check if dependency is satisfied
             if (dependencyController != null && dependencyController.getState() == STATE_UP) {
                 dependencySatisfied = true;
-                dependentController.dependencySatisfied(transaction, context);
+                dependent.dependencySatisfied(transaction, context);
             }
             dependencyRegistration.addIncomingDependency(transaction, context, this);
         }
@@ -147,7 +147,7 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
             satisfied = dependencySatisfied;
         }
         if (satisfied) {
-            return dependentController.dependencySatisfied(transaction, context);
+            return dependent.dependencySatisfied(transaction, context);
         }
         return null;
     }
@@ -165,7 +165,7 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
             }
         }
         if (unsatisfied) {
-            return dependentController.dependencyUnsatisfied(transaction, context);
+            return dependent.dependencyUnsatisfied(transaction, context);
         }
         return null;
     }
@@ -207,8 +207,8 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
                     throw new RuntimeException("Unexpected dependency state: " + dependencyController.getState());
             }
         }
-        return MSCLogger.SERVICE.requiredDependency(dependentController.getPrimaryRegistration().getServiceName(),
-                dependencyRegistration.getServiceName(), dependencyState);
+        return MSCLogger.SERVICE.requiredDependency(dependent.getServiceName(), dependencyRegistration.getServiceName(),
+                dependencyState);
     }
 
 }

@@ -37,13 +37,14 @@ import org.jboss.msc.txn.Transaction;
 abstract class AbstractDependency<T> extends TransactionalObject implements Dependency<T> {
 
     /**
-     * Sets the dependency dependent, invoked during {@link dependentController} installation.
+     * Sets the dependency dependent, invoked during {@link dependentController} installation or {@link ParentDependency}
+     * activation (when parent dependency is satisfied and installed).
      * 
      * @param dependent    dependent associated with this dependency
      * @param transaction  the active transaction
      * @param context      the service context
      */
-    abstract void setDependent(ServiceController<?> dependent, Transaction transaction, ServiceContext context);
+    abstract void setDependent(Dependent dependent, Transaction transaction, ServiceContext context);
 
     /**
      * Clears the dependency dependent, invoked during {@link dependentController} removal.

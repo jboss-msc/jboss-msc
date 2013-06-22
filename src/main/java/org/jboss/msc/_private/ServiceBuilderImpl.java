@@ -77,6 +77,10 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         this.mode = ServiceMode.ACTIVE;
     }
 
+    ServiceName getServiceName() {
+        return name;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -210,7 +214,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * 
      * @return the installed service controller
      */
-    void performInstallation(ParentDependency<?> parentDependency, Transaction transaction, ServiceContext context) {
+    ServiceController<?> performInstallation(ParentDependency<?> parentDependency, Transaction transaction, ServiceContext context) {
         // create primary registration
         final Registration registration = registry.getOrCreateRegistration(context, transaction, name);
 
@@ -236,5 +240,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         final ServiceController<T> serviceController =  new ServiceController<T>(registration, aliasRegistrations, service, mode, dependenciesArray, transaction, context);
         serviceController.install(registry, transaction, context);
         CheckDependencyCycleTask.checkDependencyCycle(serviceController, transaction);
+        return serviceController;
     }
 }

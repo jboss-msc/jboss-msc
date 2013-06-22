@@ -111,7 +111,7 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
         for (Registration registration : registry.values()) {
             ServiceController<?> serviceInstance = registration.getController();
             if (serviceInstance != null && done.add(serviceInstance)) {
-                serviceInstance.remove(transaction);
+                serviceInstance.remove(transaction, transaction);
             }
         }
     }

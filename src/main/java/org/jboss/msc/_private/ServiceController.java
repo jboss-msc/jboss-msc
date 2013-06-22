@@ -28,9 +28,12 @@ import java.util.List;
 
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceMode;
+import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
+
+import com.sun.corba.se.spi.orbutil.fsm.State;
 
 /**
  * A service controller.
@@ -41,7 +44,7 @@ import org.jboss.msc.txn.Transaction;
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-final class ServiceController<T> extends TransactionalObject {
+final class ServiceController<T> extends TransactionalObject implements Dependent {
 
     // controller modes
     static final byte MODE_ACTIVE      = (byte)ServiceMode.ACTIVE.ordinal();
@@ -283,12 +286,13 @@ final class ServiceController<T> extends TransactionalObject {
      * All dependent services will be automatically stopped as the result of this operation.
      * 
      * @param  transaction the active transaction
+     * @param  context     the service context
      * @return the task that completes removal. Once this task is executed, the service will be at the
      *         {@code REMOVED} state.
      */
-    TaskController<Void> remove(Transaction transaction) {
-        lockWrite(transaction, transaction);
-        return transactionalInfo.scheduleRemoval(transaction, transaction);
+    TaskController<Void> remove(Transaction transaction, ServiceContext context) {
+        lockWrite(transaction, context);
+        return transactionalInfo.scheduleRemoval(transaction, context);
     }
 
     /**
@@ -371,15 +375,13 @@ final class ServiceController<T> extends TransactionalObject {
         transition(transaction, context);
     }
 
-    /**
-     * Notifies that one of the dependencies of this service is satisfied (during installation, all dependencies are
-     * considered unsatisfied until a dependencySatisfied notification is received for each dependency).
-     * 
-     * @param transaction the active transaction
-     * @param context     the service context
-     * @return the transition task resulting of this notification, if any
-     */
-    TaskController<?> dependencySatisfied(Transaction transaction, ServiceContext context) {
+    @Override
+    public ServiceName getServiceName() {
+        return primaryRegistration.getServiceName();
+    }
+
+    @Override
+    public TaskController<?> dependencySatisfied(Transaction transaction, ServiceContext context) {
         lockWrite(transaction, context);
         synchronized (this) {
             if (-- unsatisfiedDependencies > 0) {
@@ -389,15 +391,8 @@ final class ServiceController<T> extends TransactionalObject {
         return transition(transaction, context);
     }
 
-
-    /**
-     * Notifies that one of the dependencies of this service is no longer satisfied.
-     * 
-     * @param transaction the active transaction
-     * @param context     the service context
-     * @return the transition task resulting of this notification, if any
-     */
-    TaskController<?> dependencyUnsatisfied(Transaction transaction, ServiceContext context) {
+    @Override
+    public TaskController<?> dependencyUnsatisfied(Transaction transaction, ServiceContext context) {
         lockWrite(transaction, context);
         synchronized (this) {
            if (++ unsatisfiedDependencies > 1) {

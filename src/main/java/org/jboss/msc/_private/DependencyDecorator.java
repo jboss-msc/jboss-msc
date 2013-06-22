@@ -35,8 +35,8 @@ abstract class DependencyDecorator<T> extends AbstractDependency<T> {
     }
 
     @Override
-    public void setDependent(ServiceController<?> dependentController, Transaction transaction, ServiceContext context) {
-        dependency.setDependent(dependentController, transaction, context);
+    public void setDependent(Dependent dependent, Transaction transaction, ServiceContext context) {
+        dependency.setDependent(dependent, transaction, context);
     }
 
     @Override

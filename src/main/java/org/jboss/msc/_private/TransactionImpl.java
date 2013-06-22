@@ -182,7 +182,7 @@ public final class TransactionImpl extends Transaction implements ServiceContext
         if (controller == null) {
             return;
         }
-        controller.remove(this);
+        controller.remove(this, this);
     }
 
     public void disableRegistry(final ServiceRegistry registry) {

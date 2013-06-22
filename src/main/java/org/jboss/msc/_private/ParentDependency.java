@@ -17,6 +17,9 @@
  */
 package org.jboss.msc._private;
 
+import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.txn.ServiceContext;
+import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -26,18 +29,37 @@ import org.jboss.msc.txn.Transaction;
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  *
  */
-final class ParentDependency<T> extends DependencyDecorator<T> {
-
-    @SuppressWarnings("unused")
+final class ParentDependency<T> extends DependencyDecorator<T> implements Dependent {
+    // child service (non-null if dependency is satisfied only)
+    private ServiceController<?> childService;
+    // child service builder, used to created child service whenever needed
     private final ServiceBuilderImpl<?> childServiceBuilder;
 
-    ParentDependency(AbstractDependency<T> dependency, ServiceBuilderImpl<?> childServiceBuilder) {
+    ParentDependency(SimpleDependency<T> dependency, ServiceBuilderImpl<?> childServiceBuilder, Transaction transaction) {
         super(dependency);
         this.childServiceBuilder = childServiceBuilder;
     }
 
     public void install(Transaction transaction) {
-        // TODO install child when dependency is satisfied, and remove child when dependency is unsatisfied
+        // only at this moment the child service may be invoked
+        // for that reason, only at this moment we invoke setDependent at dependency
+        dependency.setDependent(this, transaction, transaction);
+    }
+
+    @Override
+    public TaskController<?> dependencySatisfied(Transaction transaction, ServiceContext context) {
+        childService = childServiceBuilder.performInstallation(this, transaction, context);
+        return null;
+    }
+
+    @Override
+    public TaskController<?> dependencyUnsatisfied(Transaction transaction, ServiceContext context) {
+        return childService.remove(transaction, context);
+    }
+
+    @Override
+    public ServiceName getServiceName() {
+        return childServiceBuilder.getServiceName();
     }
 
     @Override
@@ -45,7 +67,7 @@ final class ParentDependency<T> extends DependencyDecorator<T> {
         return null;
     }
 
-
     @Override
     void revert(Object snapshot) {}
+
 }
