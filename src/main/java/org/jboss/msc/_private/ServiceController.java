@@ -492,7 +492,7 @@ final class ServiceController<T> extends TransactionalObject {
                 return;
             }
             assert completeTransitionTask == null;
-            completeTransitionTask = StartingServiceTasks.createTasks(ServiceController.this, Collections.EMPTY_LIST, transaction, transaction);
+            completeTransitionTask = StartingServiceTasks.create(ServiceController.this, Collections.EMPTY_LIST, transaction, transaction);
         }
 
         private synchronized TaskController<?> transition(Transaction transaction, ServiceContext context) {
@@ -502,7 +502,7 @@ final class ServiceController<T> extends TransactionalObject {
                     if (unsatisfiedDependencies == 0 && shouldStart()) {
                         final Collection<TaskController<?>> dependentTasks = notifyDependencyUnavailable(transaction, context);
                         transactionalState = STATE_STARTING;
-                        completeTransitionTask = StartingServiceTasks.createTasks(ServiceController.this, dependentTasks, transaction, context);
+                        completeTransitionTask = StartingServiceTasks.create(ServiceController.this, dependentTasks, transaction, context);
                         transitionCount ++;
                     }
                     break;
@@ -511,14 +511,14 @@ final class ServiceController<T> extends TransactionalObject {
                         // ongoing transition from UP to DOWN, transition to UP just once service is DOWN
                         TaskController<?> setStartingState = transaction.newTask(new SetTransactionalStateTask(ServiceController.this, STATE_STARTING, transaction))
                             .addDependency(completeTransitionTask).release();
-                        completeTransitionTask = StartingServiceTasks.createTasks(ServiceController.this, setStartingState, transaction, context);
+                        completeTransitionTask = StartingServiceTasks.create(ServiceController.this, setStartingState, transaction, context);
                         transitionCount += 2;
                     }
                     break;
                 case STATE_FAILED:
                     if (unsatisfiedDependencies > 0 || shouldStop()) {
                         transactionalState = STATE_STOPPING;
-                        completeTransitionTask = StoppingServiceTasks.createTasks(ServiceController.this, transaction, context);
+                        completeTransitionTask = StoppingServiceTasks.create(ServiceController.this, transaction, context);
                         transitionCount ++;
                     }
                     break;
@@ -526,7 +526,7 @@ final class ServiceController<T> extends TransactionalObject {
                     if (unsatisfiedDependencies > 0 || shouldStop()) {
                         final Collection<TaskController<?>> dependentTasks = notifyDependencyUnavailable(transaction, context);
                         transactionalState = STATE_STOPPING;
-                        completeTransitionTask = StoppingServiceTasks.createTasks(ServiceController.this, dependentTasks, transaction, context);
+                        completeTransitionTask = StoppingServiceTasks.create(ServiceController.this, dependentTasks, transaction, context);
                         transitionCount ++;
                     }
                     break;
@@ -536,7 +536,7 @@ final class ServiceController<T> extends TransactionalObject {
                         TaskController<?> setStoppingState = transaction.newTask(new SetTransactionalStateTask(
                                 ServiceController.this, STATE_STOPPING, transaction))
                                 .addDependency(completeTransitionTask).release();
-                        completeTransitionTask = StoppingServiceTasks.createTasks(ServiceController.this, setStoppingState, transaction, context);
+                        completeTransitionTask = StoppingServiceTasks.create(ServiceController.this, setStoppingState, transaction, context);
                         transitionCount +=2;
                     }
                     break;
