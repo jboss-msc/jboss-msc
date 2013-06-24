@@ -17,14 +17,12 @@
  */
 package org.jboss.msc._private;
 
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.jboss.msc.service.CircularDependencyException;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.txn.AttachmentKey;
 import org.jboss.msc.txn.Transaction;
@@ -80,28 +78,27 @@ final class CheckDependencyCycleTask implements Validatable {
                 }
                 final ServiceName serviceName = service.getPrimaryRegistration().getServiceName();
                 pathTrace.put(serviceName, service);
-                verifyCycle(service, pathTrace, checkedServices);
+                verifyCycle(service, pathTrace, checkedServices, context);
                 checkedServices.add(service);
                 pathTrace.remove(serviceName);
             }
-        } catch (CircularDependencyException e) {
-            context.addProblem(e);
         } finally {
             context.complete();
         }
     }
 
-    private void verifyCycle(ServiceController<?> service, LinkedHashMap<ServiceName, ServiceController<?>> pathTrace, Set<ServiceController<?>> checkedServices) throws CircularDependencyException {
+    private void verifyCycle(ServiceController<?> service, LinkedHashMap<ServiceName, ServiceController<?>> pathTrace, Set<ServiceController<?>> checkedServices, ValidateContext context) {
         for (AbstractDependency<?> dependency: service.getDependencies()) {
             final ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
             if (dependencyController != null && !checkedServices.contains(dependencyController)) {
                 if (pathTrace.containsValue(dependencyController)) {
                     final ServiceName[] cycle = pathTrace.keySet().toArray(new ServiceName[pathTrace.size()]);
-                    throw new CircularDependencyException("Dependency cycle found: " + Arrays.toString(cycle), cycle);
-                } // TODO add a problem and log
+                    context.addProblem(MSCLogger.SERVICE.dependencyCycle(cycle));
+                    return;
+                }
                 final ServiceName dependencyName = dependency.getDependencyRegistration().getServiceName();
                 pathTrace.put(dependencyName, dependencyController);
-                verifyCycle(dependencyController, pathTrace, checkedServices);
+                verifyCycle(dependencyController, pathTrace, checkedServices, context);
                 checkedServices.add(dependencyController);
                 pathTrace.remove(dependencyName);
             }
