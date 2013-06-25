@@ -47,8 +47,19 @@ final class ParentDependency<T> extends DependencyDecorator<T> implements Depend
     }
 
     @Override
+    public void setDependent(Dependent dependent, Transaction transaction, ServiceContext context) {
+        // do nothing
+    }
+
+    @Override
+    public void clearDependent(Transaction transaction, ServiceContext context) {
+        // do nothing
+    }
+
+    @Override
     public TaskController<?> dependencySatisfied(Transaction transaction, ServiceContext context) {
         childService = childServiceBuilder.performInstallation(this, transaction, context);
+        childService.dependencySatisfied(transaction, context);
         return null;
     }
 
