@@ -18,7 +18,10 @@
 
 package org.jboss.msc.txn;
 
-import org.jboss.msc.service.*;
+import org.jboss.msc.service.ServiceBuilder;
+import org.jboss.msc.service.ServiceContainer;
+import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.service.ServiceRegistry;
 
 /**
  * A service context, which can be used to add new tasks and manipulate services, containers and registries

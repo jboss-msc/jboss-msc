@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+
 import org.jboss.msc._private.MSCLogger;
 
 /**

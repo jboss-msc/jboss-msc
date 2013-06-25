@@ -37,11 +37,11 @@ import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.Factory;
 import org.jboss.msc.txn.Problem;
+import org.jboss.msc.txn.Problem.Severity;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.txn.Problem.Severity;
 
 /**
  * Tasks executed when a service is starting.

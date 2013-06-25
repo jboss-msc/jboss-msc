@@ -18,8 +18,8 @@
 
 package org.jboss.msc.test.utils;
 
-import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.txn.Listener;
+import org.jboss.msc.txn.Transaction;
 
 /**
  * Listener that rolls back the transaction. It provides utility method {@link #awaitRollback()} to wait until transaction have

@@ -18,12 +18,12 @@
 
 package org.jboss.msc.txn;
 
-import org.jboss.msc._private.TransactionImpl;
-
 import static org.jboss.msc._private.MSCLogger.TXN;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+
+import org.jboss.msc._private.TransactionImpl;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>

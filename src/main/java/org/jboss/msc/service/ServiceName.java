@@ -30,7 +30,6 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.regex.Pattern;
 
 /**
  * Service name class.

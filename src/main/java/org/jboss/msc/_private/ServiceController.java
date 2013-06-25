@@ -33,8 +33,6 @@ import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 
-import com.sun.corba.se.spi.orbutil.fsm.State;
-
 /**
  * A service controller.
  *
