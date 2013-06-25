@@ -197,6 +197,9 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
     }
 
     T getValue() {
+        if (value == null) {
+            throw MSCLogger.SERVICE.serviceNotStarted();
+        }
         return value;
     }
 

@@ -224,7 +224,7 @@ final class StartingServiceTasks {
                 public TaskBuilder<Void> newTask() throws IllegalStateException {
                     return context.newTask();
                 }
-                
+
                 public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name) {
                     return context.addService(registry, name);
                 }
@@ -296,6 +296,7 @@ final class StartingServiceTasks {
                 T result = serviceStartTask.getResult();
                 // service failed
                 if (result == null && transaction.getAttachment(FAILED_SERVICES).contains(service.getService())) {
+                    MSCLogger.FAIL.startFailed(service.getServiceName());
                     service.setTransition(STATE_FAILED, transaction, context);
                 } else {
                     service.setValue(result);
