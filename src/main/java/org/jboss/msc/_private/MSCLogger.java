@@ -143,6 +143,9 @@ public interface MSCLogger {
     @Message(id = 103, value = "Too many active transactions")
     IllegalStateException tooManyActiveTransactions();
 
+    @Message(id = 104, value = "%s and %s flags are mutually exclusive")
+    IllegalStateException mutuallyExclusiveFlags(final String flag1, final String flag2);
+
     /*
      * Location nesting types.
      */

@@ -40,27 +40,11 @@ final class DependencyFactory {
     static <T> AbstractDependency<T> create(final ServiceRegistryImpl registry, final ServiceName name,
             final DependencyFlag[] flags, final ServiceBuilderImpl<?> serviceBuilder, final Transaction transaction) {
         final Registration dependencyRegistration = registry.getOrCreateRegistration(transaction, transaction, name);
-        final DependencyFlag demandFlag = getDemandFlag(flags);
-        final SimpleDependency<T> dependency = new SimpleDependency<T>(dependencyRegistration, demandFlag, transaction);
-        return decorate(dependency, flags, serviceBuilder, transaction);
+        final SimpleDependency<T> dependency = new SimpleDependency<T>(dependencyRegistration, transaction, flags);
+        return decorate(dependency, serviceBuilder, transaction);
     }
 
-    private static DependencyFlag getDemandFlag(DependencyFlag[] flags) {
-        for (DependencyFlag flag: flags) {
-            if (flag == DependencyFlag.DEMANDED || flag == DependencyFlag.UNDEMANDED) {
-                return flag;
-            }
-        }
-        return null; 
-    }
-
-    private static <T> AbstractDependency<T> decorate(SimpleDependency<T> dependency, DependencyFlag[] flags,
-            ServiceBuilderImpl<?> serviceBuilder, Transaction transaction) {
-        for (DependencyFlag flag: flags) {
-            if (flag == DependencyFlag.PARENT) {
-                return new ParentDependency<T>(dependency, serviceBuilder, transaction);
-            }
-        }
-        return dependency;
+    private static <T> AbstractDependency<T> decorate(SimpleDependency<T> dependency, ServiceBuilderImpl<?> serviceBuilder, Transaction transaction) {
+        return dependency.hasParentFlag() ? new ParentDependency<T>(dependency, serviceBuilder, transaction) : dependency;  
     }
 }

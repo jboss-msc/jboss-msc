@@ -18,7 +18,11 @@
 
 package org.jboss.msc._private;
 
+import static org.jboss.msc._private.Bits.allAreSet;
+import static org.jboss.msc._private.MSCLogger.SERVICE;
+
 import org.jboss.msc.service.Dependency;
+import org.jboss.msc.service.DependencyFlag;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
@@ -35,6 +39,52 @@ import org.jboss.msc.txn.Transaction;
  * @param <T>
  */
 abstract class AbstractDependency<T> extends TransactionalObject implements Dependency<T> {
+
+    private static final byte REQUIRED_FLAG   = (byte)(1 << DependencyFlag.REQUIRED.ordinal());
+    private static final byte UNREQUIRED_FLAG = (byte)(1 << DependencyFlag.UNREQUIRED.ordinal());
+    private static final byte DEMANDED_FLAG   = (byte)(1 << DependencyFlag.DEMANDED.ordinal());
+    private static final byte UNDEMANDED_FLAG = (byte)(1 << DependencyFlag.UNDEMANDED.ordinal());
+    private static final byte PARENT_FLAG     = (byte)(1 << DependencyFlag.PARENT.ordinal());
+    private final byte flags;
+    
+    protected AbstractDependency(final DependencyFlag... flags) {
+        byte translatedFlags = 0;
+        for (final DependencyFlag flag : flags) {
+            if (flag != null) {
+                translatedFlags |= (1 << flag.ordinal());
+            }
+        }
+        if (allAreSet(translatedFlags, UNDEMANDED_FLAG | DEMANDED_FLAG)) {
+            throw SERVICE.mutuallyExclusiveFlags(DependencyFlag.DEMANDED.toString(), DependencyFlag.UNDEMANDED.toString());
+        }
+        if (allAreSet(translatedFlags, REQUIRED_FLAG | UNREQUIRED_FLAG)) {
+            throw SERVICE.mutuallyExclusiveFlags(DependencyFlag.REQUIRED.toString(), DependencyFlag.UNREQUIRED.toString());
+        }
+        if (allAreSet(translatedFlags, PARENT_FLAG | UNREQUIRED_FLAG)) {
+            throw SERVICE.mutuallyExclusiveFlags(DependencyFlag.PARENT.toString(), DependencyFlag.UNREQUIRED.toString());
+        }
+        this.flags = translatedFlags;
+    }
+
+    protected final boolean hasRequiredFlag() {
+        return allAreSet(flags, REQUIRED_FLAG);
+    }
+
+    protected final boolean hasUnrequiredFlag() {
+        return allAreSet(flags, UNREQUIRED_FLAG);
+    }
+
+    protected final boolean hasDemandedFlag() {
+        return allAreSet(flags, DEMANDED_FLAG);
+    }
+
+    protected final boolean hasUndemandedFlag() {
+        return allAreSet(flags, UNDEMANDED_FLAG);
+    }
+
+    protected final boolean hasParentFlag() {
+        return allAreSet(flags, PARENT_FLAG);
+    }
 
     /**
      * Sets the dependency dependent, invoked during {@link dependentController} installation or {@link ParentDependency}

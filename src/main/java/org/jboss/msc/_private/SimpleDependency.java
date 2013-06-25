@@ -65,18 +65,13 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
      *                               should be demanded when {@link #demand(Transaction, ServiceContext) requested}.
      * @param transaction            the active transaction
      */
-    SimpleDependency(final Registration dependencyRegistration, final DependencyFlag demandFlag, Transaction transaction) {
+    SimpleDependency(final Registration dependencyRegistration, Transaction transaction, final DependencyFlag... flags) {
+        super(flags);
         this.dependencyRegistration = dependencyRegistration;
-        this.propagateDemand = demandFlag == null;
-        if (demandFlag != null) {
-            switch (demandFlag) {
-                case DEMANDED:
-                    dependencyRegistration.addDemand(transaction, transaction);
-                    break;
-                case UNDEMANDED:
-                    break;
-                default: 
-                    throw new IllegalArgumentException("Unexpected demand flag: " + demandFlag);
+        this.propagateDemand = !hasDemandedFlag() && !hasUndemandedFlag();
+        if (!propagateDemand) {
+            if (hasDemandedFlag()) {
+                dependencyRegistration.addDemand(transaction, transaction);
             }
         }
     }
