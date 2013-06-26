@@ -33,6 +33,10 @@ public enum DependencyFlag {
      */
     REQUIRED,
     /**
+     * A missing dependency will not cause a transaction error.
+     */
+    UNREQUIRED,
+    /**
      * Do not place a demand on this dependency. Overrides default mode behavior.
      */
     UNDEMANDED,
@@ -41,9 +45,8 @@ public enum DependencyFlag {
      */
     DEMANDED,
     /**
-     * Treat the dependency as a parent; that is, when the dependency is stopped, this service should be removed.  Be
-     * sure to consider what happens if the parent re-starts however - this flag should only be used when the parent
-     * adds the service as part of its start process.  Implies {@link #REQUIRED}.
+     * Treat the dependency as a parent. That is when the dependency is stopped this service should be removed.
+     * Implies {@link #REQUIRED}.
      */
     PARENT,
     ;
