@@ -20,10 +20,7 @@ package org.jboss.msc._private;
 import static org.jboss.msc._private.ServiceController.STATE_FAILED;
 import static org.jboss.msc._private.ServiceController.STATE_UP;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.jboss.msc.service.Service;
@@ -64,14 +61,14 @@ final class StartingServiceTasks {
      * state.
      * 
      * @param serviceController  starting service
-     * @param taskDependencies   the tasks that must be first concluded before service can start
+     * @param taskDependency     the task that must be first concluded before service can start
      * @param transaction        the active transaction
      * @param context            the service context
      * @return                   the final task to be executed. Can be used for creating tasks that depend on the
      *                           conclusion of starting transition.
      */
     static <T> TaskController<Void> create(ServiceController<T> serviceController,
-            Collection<TaskController<?>> taskDependencies, Transaction transaction, ServiceContext context) {
+            TaskController<?> taskDependency, Transaction transaction, ServiceContext context) {
 
         final Service<T> serviceValue = serviceController.getService();
 
@@ -80,10 +77,14 @@ final class StartingServiceTasks {
 
         if (hasDependencies(serviceController)) {
             // notify dependent is starting to dependencies
-            final TaskController<Void> notifyDependentStart = context.newTask(new NotifyDependentStartTask(transaction, serviceController)).addDependencies(taskDependencies).release();
+            final TaskBuilder<Void> notifyDependentStartBuilder = context.newTask(new NotifyDependentStartTask(transaction, serviceController));
+            if (taskDependency != null) {
+                notifyDependentStartBuilder.addDependency(taskDependency);
+            }
+            final TaskController<Void> notifyDependentStart = notifyDependentStartBuilder.release();
             startBuilder.addDependency(notifyDependentStart);
-        } else {
-            startBuilder.addDependencies(taskDependencies);
+        } else if (taskDependency != null) {
+            startBuilder.addDependency(taskDependency);
         }
 
         // start service
@@ -97,19 +98,13 @@ final class StartingServiceTasks {
      * state.
      * 
      * @param serviceController  starting service
-     * @param taskDependency     the task that must be first concluded before service can start
      * @param transaction        the active transaction
      * @param context            the service context
      * @return                   the final task to be executed. Can be used for creating tasks that depend on the
      *                           conclusion of starting transition.
      */
-    static <T> TaskController<Void> create(ServiceController<T> serviceController,
-            TaskController<?> taskDependency, Transaction transaction, ServiceContext context) {
-
-        assert taskDependency != null;
-        final List<TaskController<?>> taskDependencies = new ArrayList<TaskController<?>>(1);
-        taskDependencies.add(taskDependency);
-        return create(serviceController, taskDependencies, transaction, context);
+    static <T> TaskController<Void> create(ServiceController<T> serviceController, Transaction transaction, ServiceContext context) {
+        return create(serviceController, null, transaction, context);
     }
 
     private static boolean hasDependencies(ServiceController<?> service) {

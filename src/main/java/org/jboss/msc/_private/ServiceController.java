@@ -23,7 +23,6 @@ import static org.jboss.msc._private.Bits.allAreSet;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 import org.jboss.msc.service.Service;
@@ -462,18 +461,16 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
             if (-- transitionCount == 0) {
                 switch(transactionalState) {
                     case STATE_UP:
-                        notifyDependencyAvailable(true, transaction, context);
-                        break;
-                    case STATE_DOWN:
-                        notifyDependencyAvailable(false, transaction, context);
+                        notifyServiceUp(transaction, context);
                         break;
                     case STATE_REMOVED:
                         for (AbstractDependency<?> dependency: dependencies) {
                             dependency.clearDependent(transaction, context);
                         }
                         break;
+                    case STATE_DOWN:
+                        // fall thru!
                     case STATE_FAILED:
-                        // ok
                         break;
                     default:
                         throw new IllegalStateException("Illegal state for finishing transition: " + transactionalState);
@@ -482,13 +479,12 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
             }
         }
 
-        @SuppressWarnings("unchecked")
         private synchronized void retry(Transaction transaction) {
             if (transactionalState != STATE_FAILED) {
                 return;
             }
             assert completeTransitionTask == null;
-            completeTransitionTask = StartingServiceTasks.create(ServiceController.this, Collections.EMPTY_LIST, transaction, transaction);
+            completeTransitionTask = StartingServiceTasks.create(ServiceController.this, transaction, transaction);
         }
 
         private synchronized TaskController<?> transition(Transaction transaction, ServiceContext context) {
@@ -496,9 +492,8 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
             switch (transactionalState) {
                 case STATE_DOWN:
                     if (unsatisfiedDependencies == 0 && shouldStart()) {
-                        final Collection<TaskController<?>> dependentTasks = notifyDependencyUnavailable(transaction, context);
                         transactionalState = STATE_STARTING;
-                        completeTransitionTask = StartingServiceTasks.create(ServiceController.this, dependentTasks, transaction, context);
+                        completeTransitionTask = StartingServiceTasks.create(ServiceController.this, transaction, context);
                         transitionCount ++;
                     }
                     break;
@@ -520,7 +515,7 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
                     break;
                 case STATE_UP:
                     if (unsatisfiedDependencies > 0 || shouldStop()) {
-                        final Collection<TaskController<?>> dependentTasks = notifyDependencyUnavailable(transaction, context);
+                        final Collection<TaskController<?>> dependentTasks = notifyServiceDown(transaction, context);
                         transactionalState = STATE_STOPPING;
                         completeTransitionTask = StoppingServiceTasks.create(ServiceController.this, dependentTasks, transaction, context);
                         transitionCount ++;
@@ -543,35 +538,20 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
             return completeTransitionTask;
         }
 
-        private void notifyDependencyAvailable(boolean up, Transaction transaction, ServiceContext context) {
-            notifyDependencyAvailable(up, primaryRegistration, transaction, context);
+        private void notifyServiceUp(Transaction transaction, ServiceContext context) {
+            primaryRegistration.serviceUp(transaction, context);
             for (Registration registration: aliasRegistrations) {
-                notifyDependencyAvailable(up, registration, transaction, context);
+                registration.serviceUp(transaction, context);
             }
         }
 
-        private void notifyDependencyAvailable (boolean up, Registration serviceRegistration, Transaction transaction, ServiceContext context) {
-            for (AbstractDependency<?> incomingDependency : serviceRegistration.getIncomingDependencies()) {
-                incomingDependency.dependencyAvailable(up, transaction, context);
-            }
-        }
-
-        private Collection<TaskController<?>> notifyDependencyUnavailable(Transaction transaction, ServiceContext context) {
+        private Collection<TaskController<?>> notifyServiceDown(Transaction transaction, ServiceContext context) {
             final List<TaskController<?>> tasks = new ArrayList<TaskController<?>>();
-            notifyDependencyUnavailable(primaryRegistration, tasks, transaction, context);
+            primaryRegistration.serviceDown(transaction, context, tasks);
             for (Registration registration: aliasRegistrations) {
-                notifyDependencyUnavailable(registration, tasks, transaction, context);
+                registration.serviceDown(transaction, context, tasks);
             }
             return tasks;
-        }
-
-        private void notifyDependencyUnavailable (Registration serviceRegistration, List<TaskController<?>> tasks, Transaction transaction, ServiceContext context) {
-            for (AbstractDependency<?> incomingDependency : serviceRegistration.getIncomingDependencies()) {
-                TaskController<?> task = incomingDependency.dependencyUnavailable(transaction, context);
-                if (task != null) {
-                    tasks.add(task);
-                }
-            }
         }
 
         private synchronized TaskController<Void> scheduleRemoval(Transaction transaction, ServiceContext context) {

@@ -23,6 +23,7 @@ import static org.jboss.msc._private.MSCLogger.SERVICE;
 
 import org.jboss.msc.service.Dependency;
 import org.jboss.msc.service.DependencyFlag;
+import org.jboss.msc.txn.ReportableContext;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
@@ -38,7 +39,7 @@ import org.jboss.msc.txn.Transaction;
  *
  * @param <T>
  */
-abstract class AbstractDependency<T> extends TransactionalObject implements Dependency<T> {
+abstract class AbstractDependency<T> implements Dependency<T> {
 
     private static final byte REQUIRED_FLAG   = (byte)(1 << DependencyFlag.REQUIRED.ordinal());
     private static final byte UNREQUIRED_FLAG = (byte)(1 << DependencyFlag.UNREQUIRED.ordinal());
@@ -46,7 +47,7 @@ abstract class AbstractDependency<T> extends TransactionalObject implements Depe
     private static final byte UNDEMANDED_FLAG = (byte)(1 << DependencyFlag.UNDEMANDED.ordinal());
     private static final byte PARENT_FLAG     = (byte)(1 << DependencyFlag.PARENT.ordinal());
     private final byte flags;
-    
+
     protected AbstractDependency(final DependencyFlag... flags) {
         byte translatedFlags = 0;
         for (final DependencyFlag flag : flags) {
@@ -128,22 +129,26 @@ abstract class AbstractDependency<T> extends TransactionalObject implements Depe
     abstract void undemand(Transaction transaction, ServiceContext context);
 
     /**
-     * Notifies that dependency is now available, either {@code UP}, or {@code DOWN}. A dependency in any other state is
-     * considered unavailable.
+     * Notifies that dependency is now {@code UP}.
      * 
-     * @param dependencyUp  {@code true} if dependency is now {@link ServiceController.State#UP}; {@code false} if it is
-     *                      now {@link ServiceController.State#DOWN}.
      * @param transaction   the active transaction
      * @param context       the service context
      */
-    abstract TaskController<?> dependencyAvailable(boolean dependencyUp, Transaction transaction, ServiceContext context);
+    abstract TaskController<?> dependencyUp(Transaction transaction, ServiceContext context);
 
     /**
-     * Notifies that dependency is now unavailable (it is not {@code UP}, nor {@code DOWN}). Every unavailable
-     * dependency is considered unsatisfied.
+     * Notifies that dependency is now {@code DOWN}).
      *  
      * @param transaction    the active transaction
      * @param serviceContext the service context
      */
-    abstract TaskController<?> dependencyUnavailable(Transaction transaction, ServiceContext context);
+    abstract TaskController<?> dependencyDown(Transaction transaction, ServiceContext context);
+
+    /**
+     * Validates dependency state before active transaction commits.
+     * 
+     * @param controllerDependency the dependency controller, if available
+     * @param context              context where all validation problems found will be added
+     */
+    abstract void validate(ServiceController<?> controllerDependency, ReportableContext context);
 }

@@ -29,7 +29,7 @@ import java.util.Collection;
  */
 public enum DependencyFlag {
     /**
-     * A missing dependency will cause a transaction error.
+     * A missing dependency will cause a transaction error. This is implied by default.
      */
     REQUIRED,
     /**

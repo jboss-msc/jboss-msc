@@ -72,13 +72,4 @@ final class ParentDependency<T> extends DependencyDecorator<T> implements Depend
     public ServiceName getServiceName() {
         return childServiceBuilder.getServiceName();
     }
-
-    @Override
-    Object takeSnapshot() {
-        return null;
-    }
-
-    @Override
-    void revert(Object snapshot) {}
-
 }

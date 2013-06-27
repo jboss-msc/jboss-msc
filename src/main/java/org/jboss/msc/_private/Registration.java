@@ -18,14 +18,18 @@
 
 package org.jboss.msc._private;
 
+import static org.jboss.msc._private.ServiceController.STATE_UP;
+
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.txn.ReportableContext;
 import org.jboss.msc.txn.ServiceContext;
+import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 
 
@@ -86,8 +90,13 @@ final class Registration extends TransactionalObject {
 
     void addIncomingDependency(final Transaction transaction, final ServiceContext context, final AbstractDependency<?> dependency) {
         lockWrite(transaction, context);
+        final boolean dependencyUp;
         synchronized (this) {
             incomingDependencies.add(dependency);
+            dependencyUp = controller != null && controller.getState() == STATE_UP;
+        }
+        if (dependencyUp) {
+            dependency.dependencyUp(transaction, context);
         }
     }
 
@@ -97,8 +106,19 @@ final class Registration extends TransactionalObject {
         incomingDependencies.remove(dependency);
     }
 
-    Set<AbstractDependency<?>> getIncomingDependencies() {
-        return Collections.unmodifiableSet(incomingDependencies);
+    void serviceUp(final Transaction transaction, final ServiceContext context) {
+        for (AbstractDependency<?> incomingDependency: incomingDependencies) {
+            incomingDependency.dependencyUp(transaction, context);
+        }
+    }
+
+    void serviceDown(final Transaction transaction, final ServiceContext context, final List<TaskController<?>> tasks) {
+        for (AbstractDependency<?> incomingDependency: incomingDependencies) {
+            final TaskController<?> task = incomingDependency.dependencyDown(transaction, context);
+            if (task != null) {
+                tasks.add(task);
+            }
+        }
     }
 
     void addDemand(Transaction transaction, ServiceContext context) {
@@ -133,6 +153,13 @@ final class Registration extends TransactionalObject {
     @Override
     protected synchronized Object takeSnapshot() {
         return new Snapshot();
+    }
+
+    @Override
+    protected synchronized void validate(ReportableContext context) {
+        for (AbstractDependency<?> incomingDependency: incomingDependencies) {
+            incomingDependency.validate(controller, context);
+        }
     }
 
     @Override

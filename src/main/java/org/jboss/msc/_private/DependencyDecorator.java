@@ -17,6 +17,7 @@
  */
 package org.jboss.msc._private;
 
+import org.jboss.msc.txn.ReportableContext;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
@@ -60,13 +61,18 @@ abstract class DependencyDecorator<T> extends AbstractDependency<T> {
     }
 
     @Override
-    public TaskController<?> dependencyAvailable(boolean dependencyUp, Transaction transaction, ServiceContext context) {
-        return dependency.dependencyAvailable(dependencyUp, transaction, context);
+    public TaskController<?> dependencyUp(Transaction transaction, ServiceContext context) {
+        return dependency.dependencyUp(transaction, context);
     }
 
     @Override
-    public TaskController<?> dependencyUnavailable(Transaction transaction, ServiceContext context) {
-        return dependency.dependencyUnavailable(transaction, context);
+    public TaskController<?> dependencyDown(Transaction transaction, ServiceContext context) {
+        return dependency.dependencyDown(transaction, context);
+    }
+
+    @Override
+    void validate(ServiceController<?> controllerDependency, ReportableContext context) {
+        dependency.validate(controllerDependency, context);
     }
 
     @Override
