@@ -80,7 +80,7 @@ final class StartingServiceTasks {
 
         if (hasDependencies(serviceController)) {
             // notify dependent is starting to dependencies
-            final TaskController<Void> notifyDependentStart = context.newTask(new NotifyDependentStartTask(transaction, serviceController)).release();
+            final TaskController<Void> notifyDependentStart = context.newTask(new NotifyDependentStartTask(transaction, serviceController)).addDependencies(taskDependencies).release();
             startBuilder.addDependency(notifyDependentStart);
         } else {
             startBuilder.addDependencies(taskDependencies);
