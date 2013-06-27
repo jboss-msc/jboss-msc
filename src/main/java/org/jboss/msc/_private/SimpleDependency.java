@@ -62,11 +62,6 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
         super(flags);
         this.dependencyRegistration = dependencyRegistration;
         this.propagateDemand = !hasDemandedFlag() && !hasUndemandedFlag();
-        if (!propagateDemand) {
-            if (hasDemandedFlag()) {
-                dependencyRegistration.addDemand(transaction, transaction);
-            }
-        }
     }
 
     public T get() {
@@ -80,6 +75,11 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
         synchronized (this) {
             this.dependent = dependent;
             dependencyRegistration.addIncomingDependency(transaction, context, this);
+            if (!propagateDemand) {
+                if (hasDemandedFlag()) {
+                    dependencyRegistration.addDemand(transaction, transaction);
+                }
+            }
         }
     }
 
