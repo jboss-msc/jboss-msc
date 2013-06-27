@@ -29,6 +29,7 @@ import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceMode;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.txn.ServiceContext;
+import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
 import org.jboss.msc.txn.Transaction;
 
@@ -559,7 +560,11 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
                 state &= ~SERVICE_ENABLED;
             }
             transition(transaction, context);
-            completeTransitionTask = context.newTask(new ServiceRemoveTask(ServiceController.this, transaction)).release();
+            final TaskBuilder<Void> removeTaskBuilder = context.newTask(new ServiceRemoveTask(ServiceController.this, transaction));
+            if (completeTransitionTask != null) {
+                removeTaskBuilder.addDependency(completeTransitionTask);
+            }
+            completeTransitionTask = removeTaskBuilder.release();
             transitionCount ++;
             return completeTransitionTask;
         }
