@@ -106,8 +106,31 @@ final class StoppingServiceTasks {
      *                        conclusion of stopping transition.
      */
     @SuppressWarnings("unchecked")
-    static <T> TaskController<Void> create(ServiceController<T> serviceController, Transaction transaction, ServiceContext context) {
-        return create(serviceController, Collections.EMPTY_LIST, transaction, context);
+    static <T> TaskController<Void> create(ServiceController<T> service, Transaction transaction, ServiceContext context) {
+        return create(service, Collections.EMPTY_LIST, transaction, context);
+    }
+
+    /**
+     * Creates stopping service tasks. When all created tasks finish execution, {@code service} will enter {@code DOWN} state.
+     * @param service         failed service that is stopping
+     * @param transaction     the active transaction
+     * @param context         service context
+     * @return                the final task to be executed. Can be used for creating tasks that depend on the
+     *                        conclusion of stopping transition.
+     */
+    // TODO discuss: what if we just set the service down after it fails?
+    static <T> TaskController<Void> createForFailedService(ServiceController<T> service, Transaction transaction, ServiceContext context) {
+
+        // post stop task
+        final TaskBuilder<Void> setServiceDownBuilder = context.newTask(new SetServiceDownTask(service, transaction));
+
+        // undemand dependencies if needed
+        if (service.getDependencies().length > 0) {
+            TaskController<Void> undemandDependenciesTask = UndemandDependenciesTask.create(service, transaction, transaction);
+            setServiceDownBuilder.addDependency(undemandDependenciesTask);
+        }
+
+        return setServiceDownBuilder.release();
     }
 
     /**

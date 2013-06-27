@@ -510,7 +510,7 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
                 case STATE_FAILED:
                     if (unsatisfiedDependencies > 0 || shouldStop()) {
                         transactionalState = STATE_STOPPING;
-                        completeTransitionTask = StoppingServiceTasks.create(ServiceController.this, transaction, context);
+                        completeTransitionTask = StoppingServiceTasks.createForFailedService(ServiceController.this, transaction, context);
                         transitionCount ++;
                     }
                     break;
