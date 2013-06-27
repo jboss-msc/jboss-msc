@@ -172,7 +172,7 @@ final class  SimpleDependency<T> extends AbstractDependency<T> {
 
     @Override
     void validate(ReportableContext context) {
-        if (!dependencySatisfied) {
+        if (dependencyRegistration.getController() == null && !hasUnrequiredFlag()) {
             context.addProblem(Severity.ERROR, getRequirementProblem());
         }
     }
