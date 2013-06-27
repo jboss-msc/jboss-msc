@@ -134,8 +134,7 @@ public final class TransactionImpl extends Transaction implements ServiceContext
     private int unterminatedChildren;
 
     private Listener<? super Transaction> validationListener;
-    private Listener<? super Transaction> commitListener;
-    private Listener<? super Transaction> rollbackListener;
+    private Listener<? super Transaction> terminateListener;
 
     private volatile boolean isRollbackRequested;
 
@@ -367,13 +366,13 @@ public final class TransactionImpl extends Transaction implements ServiceContext
             }
         } else {
             if (allAreSet(state, FLAG_DO_COMMIT_LISTENER)) {
-                callCommitListener();
+                callTerminateListener();
             }
             if (allAreSet(state, FLAG_DO_PREPARE_LISTENER)) {
                 callValidationListener();
             }
             if (allAreSet(state, FLAG_DO_ROLLBACK_LISTENER)) {
-                callRollbackListener();
+                callTerminateListener();
             }
         }
     }
@@ -430,9 +429,9 @@ public final class TransactionImpl extends Transaction implements ServiceContext
                 throw new InvalidTransactionStateException("Transaction was committed");
             }
             if (completionListener == null) {
-                commitListener = NOTHING_LISTENER;
+                terminateListener = NOTHING_LISTENER;
             } else {
-                commitListener = completionListener;
+                terminateListener = completionListener;
             }
             state = transition(state);
             this.state = state & PERSISTENT_STATE;
@@ -457,9 +456,9 @@ public final class TransactionImpl extends Transaction implements ServiceContext
                 throw new InvalidTransactionStateException("Transaction was committed");
             }
             if (completionListener == null) {
-                rollbackListener = NOTHING_LISTENER;
+                terminateListener = NOTHING_LISTENER;
             } else {
-                rollbackListener = completionListener;
+                terminateListener = completionListener;
             }
             state = transition(state);
             this.state = state & PERSISTENT_STATE;
@@ -576,25 +575,14 @@ public final class TransactionImpl extends Transaction implements ServiceContext
         executeTasks(state);
     }
 
-    private void callCommitListener() {
+    private void callTerminateListener() {
         Listener<? super Transaction> listener;
         synchronized (this) {
             endTime = System.nanoTime();
-            listener = commitListener;
-            commitListener = null;
+            listener = terminateListener;
+            terminateListener = null;
         }
         safeCall(listener);
-    }
-
-    private void callRollbackListener() {
-        Listener<? super Transaction> listener;
-        synchronized (this) {
-            endTime = System.nanoTime();
-            listener = rollbackListener;
-            rollbackListener = null;
-        }
-        safeCall(listener);
-        callCommitListener();
     }
 
     private void callValidationListener() {
