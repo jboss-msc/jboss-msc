@@ -37,14 +37,14 @@ final class DependencyFactory {
      * @param context        the service context
      * @return the created dependency
      */
-    static <T> AbstractDependency<T> create(final ServiceRegistryImpl registry, final ServiceName name,
+    static <T> DependencyImpl<T> create(final ServiceRegistryImpl registry, final ServiceName name,
             final DependencyFlag[] flags, final ServiceBuilderImpl<?> serviceBuilder, final Transaction transaction) {
         final Registration dependencyRegistration = registry.getOrCreateRegistration(transaction, transaction, name);
-        final SimpleDependency<T> dependency = new SimpleDependency<T>(dependencyRegistration, transaction, flags);
+        final DependencyImpl<T> dependency = new DependencyImpl<T>(dependencyRegistration, transaction, flags);
         return decorate(dependency, serviceBuilder, transaction);
     }
 
-    private static <T> AbstractDependency<T> decorate(SimpleDependency<T> dependency, ServiceBuilderImpl<?> serviceBuilder, Transaction transaction) {
+    private static <T> DependencyImpl<T> decorate(DependencyImpl<T> dependency, ServiceBuilderImpl<?> serviceBuilder, Transaction transaction) {
         return dependency.hasParentFlag() ? new ParentDependency<T>(dependency, serviceBuilder, transaction) : dependency;  
     }
 }

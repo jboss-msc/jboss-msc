@@ -26,7 +26,7 @@ import org.jboss.msc.txn.Transaction;
  * Dependent service.
  * 
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
- * @see AbstractDependency#setDependent(Dependent, Transaction, ServiceContext)
+ * @see DependencyImpl#setDependent(Dependent, Transaction, ServiceContext)
  */
 public interface Dependent {
 

@@ -28,10 +28,11 @@ import org.jboss.msc.txn.Transaction;
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  *
  */
-abstract class DependencyDecorator<T> extends AbstractDependency<T> {
-    protected final AbstractDependency<T> dependency;
+class DependencyDecorator<T> extends DependencyImpl<T> {
+    protected final DependencyImpl<T> dependency;
 
-    DependencyDecorator(AbstractDependency<T> dependency) {
+    DependencyDecorator(DependencyImpl<T> dependency) {
+        super(null, null);
         this.dependency = dependency;
     }
 

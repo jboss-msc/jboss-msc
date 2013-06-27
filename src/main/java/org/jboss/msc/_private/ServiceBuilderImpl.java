@@ -53,7 +53,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     // service itself
     private Service<T> service;
     // dependencies
-    private final Map<ServiceName, AbstractDependency<?>> dependencies= new LinkedHashMap<ServiceName, AbstractDependency<?>>();
+    private final Map<ServiceName, DependencyImpl<?>> dependencies= new LinkedHashMap<ServiceName, DependencyImpl<?>>();
     // active transaction
     private final Transaction transaction;
     // service mode
@@ -161,12 +161,12 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         if (name == null) {
             MSCLogger.SERVICE.methodParameterIsNull("name");
         }
-        final AbstractDependency<D> dependency = DependencyFactory.create((ServiceRegistryImpl) registry, name, flags != null ? flags : noFlags, this, transaction);
+        final DependencyImpl<D> dependency = DependencyFactory.create((ServiceRegistryImpl) registry, name, flags != null ? flags : noFlags, this, transaction);
         addDependency(dependency, name, flags != null ? flags : noFlags);
         return dependency;
     }
 
-    private void addDependency(AbstractDependency<?> dependency, ServiceName name, DependencyFlag... flags) {
+    private void addDependency(DependencyImpl<?> dependency, ServiceName name, DependencyFlag... flags) {
         for (DependencyFlag flag: flags) {
             if (flag == DependencyFlag.PARENT) {
                 if (parentDependency != null) {
@@ -228,12 +228,12 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
         // create dependencies
         i = 0;
-        final AbstractDependency<?>[] dependenciesArray;
+        final DependencyImpl<?>[] dependenciesArray;
         if (parentDependency == null) {
-            dependenciesArray = new AbstractDependency<?>[dependencies.size()];
+            dependenciesArray = new DependencyImpl<?>[dependencies.size()];
             dependencies.values().toArray(dependenciesArray);
         } else {
-            dependenciesArray = new AbstractDependency<?>[dependencies.size() + 1];
+            dependenciesArray = new DependencyImpl<?>[dependencies.size() + 1];
             dependencies.values().toArray(dependenciesArray);
             dependenciesArray[dependencies.size()] = parentDependency;
         }

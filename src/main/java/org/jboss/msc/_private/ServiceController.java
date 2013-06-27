@@ -78,7 +78,7 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
     /**
      * The dependencies of this service.
      */
-    private final AbstractDependency<?>[] dependencies;
+    private final DependencyImpl<?>[] dependencies;
     /**
      * The service value, resulting of service start.
      */
@@ -120,7 +120,7 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
      * @param context             the service context
      */
     ServiceController(final Registration primaryRegistration, final Registration[] aliasRegistrations, final Service<T> service,
-            final org.jboss.msc.service.ServiceMode mode, final AbstractDependency<?>[] dependencies, final Transaction transaction,
+            final org.jboss.msc.service.ServiceMode mode, final DependencyImpl<?>[] dependencies, final Transaction transaction,
             final ServiceContext context) {
         this.service = service;
         setMode(mode);
@@ -129,7 +129,7 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
         this.primaryRegistration = primaryRegistration;
         lockWrite(transaction, context);
         unsatisfiedDependencies = dependencies.length;
-        for (AbstractDependency<?> dependency: dependencies) {
+        for (DependencyImpl<?> dependency: dependencies) {
             dependency.setDependent(this, transaction, context);
         }
     }
@@ -185,7 +185,7 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
     /**
      * Gets the dependencies.
      */
-    AbstractDependency<?>[] getDependencies() {
+    DependencyImpl<?>[] getDependencies() {
         return dependencies;
     }
 
@@ -465,7 +465,7 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
                         notifyServiceUp(transaction, context);
                         break;
                     case STATE_REMOVED:
-                        for (AbstractDependency<?> dependency: dependencies) {
+                        for (DependencyImpl<?> dependency: dependencies) {
                             dependency.clearDependent(transaction, context);
                         }
                         break;

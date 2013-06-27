@@ -50,7 +50,7 @@ final class Registration extends TransactionalObject {
     /**
      * Incoming dependencies, i.e., dependent services.
      */
-    private final Set<AbstractDependency<?>> incomingDependencies = new CopyOnWriteArraySet<AbstractDependency<?>>();
+    private final Set<DependencyImpl<?>> incomingDependencies = new CopyOnWriteArraySet<DependencyImpl<?>>();
     /**
      * The number of dependent instances which place a demand-to-start on this registration.  If this value is > 0,
      * propagate a demand to the instance, if any.
@@ -88,7 +88,7 @@ final class Registration extends TransactionalObject {
         }
     }
 
-    void addIncomingDependency(final Transaction transaction, final ServiceContext context, final AbstractDependency<?> dependency) {
+    void addIncomingDependency(final Transaction transaction, final ServiceContext context, final DependencyImpl<?> dependency) {
         lockWrite(transaction, context);
         final boolean dependencyUp;
         synchronized (this) {
@@ -100,20 +100,20 @@ final class Registration extends TransactionalObject {
         }
     }
 
-    void removeIncomingDependency(final Transaction transaction, final ServiceContext context, final AbstractDependency<?> dependency) {
+    void removeIncomingDependency(final Transaction transaction, final ServiceContext context, final DependencyImpl<?> dependency) {
         lockWrite(transaction, context);
         assert incomingDependencies.contains(dependency);
         incomingDependencies.remove(dependency);
     }
 
     void serviceUp(final Transaction transaction, final ServiceContext context) {
-        for (AbstractDependency<?> incomingDependency: incomingDependencies) {
+        for (DependencyImpl<?> incomingDependency: incomingDependencies) {
             incomingDependency.dependencyUp(transaction, context);
         }
     }
 
     void serviceDown(final Transaction transaction, final ServiceContext context, final List<TaskController<?>> tasks) {
-        for (AbstractDependency<?> incomingDependency: incomingDependencies) {
+        for (DependencyImpl<?> incomingDependency: incomingDependencies) {
             final TaskController<?> task = incomingDependency.dependencyDown(transaction, context);
             if (task != null) {
                 tasks.add(task);
@@ -157,7 +157,7 @@ final class Registration extends TransactionalObject {
 
     @Override
     protected synchronized void validate(ReportableContext context) {
-        for (AbstractDependency<?> incomingDependency: incomingDependencies) {
+        for (DependencyImpl<?> incomingDependency: incomingDependencies) {
             incomingDependency.validate(controller, context);
         }
     }
@@ -170,13 +170,13 @@ final class Registration extends TransactionalObject {
     private final class Snapshot {
 
         private final ServiceController<?> controller;
-        private final Collection<AbstractDependency<?>> incomingDependencies;
+        private final Collection<DependencyImpl<?>> incomingDependencies;
         private final int upDemandedByCount;
 
         // take snapshot
         public Snapshot() {
             controller = Registration.this.controller;
-            incomingDependencies = new ArrayList<AbstractDependency<?>>(Registration.this.incomingDependencies.size());
+            incomingDependencies = new ArrayList<DependencyImpl<?>>(Registration.this.incomingDependencies.size());
             incomingDependencies.addAll(Registration.this.incomingDependencies);
             upDemandedByCount = Registration.this.upDemandedByCount;
         }

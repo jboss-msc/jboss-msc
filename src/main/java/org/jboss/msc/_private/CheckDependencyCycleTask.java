@@ -90,7 +90,7 @@ final class CheckDependencyCycleTask implements Validatable {
     }
 
     private void verifyCycle(ServiceController<?> service, LinkedHashMap<ServiceName, ServiceController<?>> pathTrace, Set<ServiceController<?>> checkedServices, ValidateContext context) {
-        for (AbstractDependency<?> dependency: service.getDependencies()) {
+        for (DependencyImpl<?> dependency: service.getDependencies()) {
             final ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
             if (dependencyController != null && !checkedServices.contains(dependencyController)) {
                 if (pathTrace.containsValue(dependencyController)) {

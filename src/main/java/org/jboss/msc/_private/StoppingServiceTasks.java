@@ -276,7 +276,7 @@ final class StoppingServiceTasks {
                 serviceController.setValue(null);
 
                 // notify dependent is stopped
-                for (AbstractDependency<?> dependency: serviceController.getDependencies()) {
+                for (DependencyImpl<?> dependency: serviceController.getDependencies()) {
                     ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
                     if (dependencyController != null) {
                         dependencyController.dependentStopped(transaction, context);

@@ -126,7 +126,7 @@ final class StartingServiceTasks {
 
         @Override
         public void execute(ExecuteContext<Void> context) {
-            for (AbstractDependency<?> dependency: serviceController.getDependencies()) {
+            for (DependencyImpl<?> dependency: serviceController.getDependencies()) {
                 ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
                 if (dependencyController != null) {
                     dependencyController.dependentStarted(transaction, context);

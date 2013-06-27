@@ -35,7 +35,7 @@ final class ParentDependency<T> extends DependencyDecorator<T> implements Depend
     // child service builder, used to created child service whenever needed
     private final ServiceBuilderImpl<?> childServiceBuilder;
 
-    ParentDependency(SimpleDependency<T> dependency, ServiceBuilderImpl<?> childServiceBuilder, Transaction transaction) {
+    ParentDependency(DependencyImpl<T> dependency, ServiceBuilderImpl<?> childServiceBuilder, Transaction transaction) {
         super(dependency);
         this.childServiceBuilder = childServiceBuilder;
     }
