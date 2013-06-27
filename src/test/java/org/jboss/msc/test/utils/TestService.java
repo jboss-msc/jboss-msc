@@ -43,7 +43,7 @@ public final class TestService implements Service<Void> {
     public void start(final StartContext<Void> context) {
         if (failToStart) {
             failed.set(true);
-            context.addProblem(new UnsupportedOperationException());
+            //context.addProblem(new UnsupportedOperationException());
             context.fail();
         } else {
             up.set(true);
@@ -54,6 +54,7 @@ public final class TestService implements Service<Void> {
     @Override
     public void stop(final StopContext context) {
         up.set(false);
+        failed.set(false);
         context.complete();
     }
 

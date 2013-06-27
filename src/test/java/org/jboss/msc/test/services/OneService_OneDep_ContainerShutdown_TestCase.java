@@ -22,6 +22,7 @@ import static org.jboss.msc.service.ServiceMode.ACTIVE;
 import static org.jboss.msc.service.ServiceMode.LAZY;
 import static org.jboss.msc.service.ServiceMode.ON_DEMAND;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import org.jboss.msc.service.ServiceName;
@@ -211,6 +212,7 @@ public class OneService_OneDep_ContainerShutdown_TestCase extends AbstractServic
         assertTrue(firstService.isUp());
         final TestService secondService = addService(secondSN, ACTIVE, firstSN);
         assertTrue(firstService.isUp());
+        assertNotNull(secondService);
         assertTrue(secondService.isUp());
         shutdownContainer();
         assertFalse(firstService.isUp());

@@ -21,6 +21,7 @@ import static org.jboss.msc.service.ServiceMode.ACTIVE;
 import static org.jboss.msc.service.ServiceMode.LAZY;
 import static org.jboss.msc.service.ServiceMode.ON_DEMAND;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.test.utils.AbstractServiceTest;
@@ -39,28 +40,49 @@ public class OneService_MissingDeps_ContainerShutdown_TestCase extends AbstractS
     /**
      * Usecase:
      * <UL>
-     *   <LI>first service (ON_DEMAND mode), no dependencies</LI>
+     *   <LI>first service (ON_DEMAND mode), with a missing dependency on required second service </LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
     @Test
     public void usecase1() throws Exception {
-        final TestService firstService = addService(firstSN, ON_DEMAND, secondSN);
-        assertFalse(firstService.isUp());
-        shutdownContainer();
-        assertFalse(firstService.isUp());
+        assertNull(addService(firstSN, ON_DEMAND, requiredFlag, secondSN));
     }
 
     /**
      * Usecase:
      * <UL>
-     *   <LI>first service (LAZY mode), no dependencies</LI>
+     *   <LI>first service (LAZY mode), with a missing dependency on required second service</LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
     @Test
     public void usecase2() throws Exception {
-        final TestService firstService = addService(firstSN, LAZY, secondSN);
+        assertNull(addService(firstSN, LAZY, secondSN));
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI>first service (ACTIVE mode), with a missing dependency on required second service</LI>
+     *   <LI>container shutdown</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase3() throws Exception {
+        assertNull(addService(firstSN, ACTIVE, requiredFlag, secondSN));
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI>first service (ON_DEMAND mode), with an unrequired dependency on missing second service</LI>
+     *   <LI>container shutdown</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase4() throws Exception {
+        final TestService firstService = addService(firstSN, ON_DEMAND, unrequiredFlag, secondSN);
         assertFalse(firstService.isUp());
         shutdownContainer();
         assertFalse(firstService.isUp());
@@ -69,13 +91,28 @@ public class OneService_MissingDeps_ContainerShutdown_TestCase extends AbstractS
     /**
      * Usecase:
      * <UL>
-     *   <LI>first service (ACTIVE mode), no dependencies</LI>
+     *   <LI>first service (LAZY mode), with an unrequired dependency on missing second service</LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
     @Test
-    public void usecase3() throws Exception {
-        final TestService firstService = addService(firstSN, ACTIVE, secondSN);
+    public void usecase5() throws Exception {
+        final TestService firstService = addService(firstSN, LAZY, unrequiredFlag, secondSN);
+        assertFalse(firstService.isUp());
+        shutdownContainer();
+        assertFalse(firstService.isUp());
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI>first service (ACTIVE mode), with an unrequired missing dependency on second service</LI>
+     *   <LI>container shutdown</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase6() throws Exception {
+        final TestService firstService = addService(firstSN, ACTIVE, unrequiredFlag, secondSN);
         assertFalse(firstService.isUp());
         shutdownContainer();
         assertFalse(firstService.isUp());

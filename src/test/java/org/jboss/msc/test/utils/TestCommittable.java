@@ -29,11 +29,15 @@ import org.jboss.msc.txn.Committable;
 public final class TestCommittable extends TestTask implements Committable {
 
     public TestCommittable() {
-        this(null);
+        this((CountDownLatch) null);
+    }
+
+    public TestCommittable(final String name) {
+        super(name);
     }
 
     public TestCommittable(final CountDownLatch signal) {
-        super(signal);
+        super(null, signal);
     }
 
     @Override

@@ -20,25 +20,39 @@ package org.jboss.msc.test.utils;
 
 import java.util.concurrent.CountDownLatch;
 
+import org.jboss.msc.txn.Problem;
 import org.jboss.msc.txn.Validatable;
 import org.jboss.msc.txn.ValidateContext;
 
 /**
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
 public final class TestValidatable extends TestTask implements Validatable {
 
-    public TestValidatable() {
-        super();
+    private final Problem.Severity[] validationProblems;
+
+    public TestValidatable(Problem.Severity... validationProblems) {
+        super(null);
+        this.validationProblems = validationProblems;
     }
 
-    public TestValidatable(final CountDownLatch signal) {
-        super(signal);
+    public TestValidatable(String name, Problem.Severity... validationProblems) {
+        super(name);
+        this.validationProblems = validationProblems;
+    }
+
+    public TestValidatable(final CountDownLatch signal, Problem.Severity... validationProblems) {
+        super(null, signal);
+        this.validationProblems = validationProblems;
     }
 
     @Override
     public void validate(final ValidateContext ctx) {
         super.call();
+        for (Problem.Severity severity: validationProblems) {
+            ctx.addProblem(severity, "test validation problem");
+        }
         ctx.complete();
     }
 

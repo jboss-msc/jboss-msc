@@ -18,6 +18,7 @@
 
 package org.jboss.msc.test.utils;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
@@ -25,6 +26,7 @@ import static org.junit.Assert.fail;
 
 import java.util.List;
 
+import org.jboss.msc.service.DependencyFlag;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceContainerFactory;
@@ -34,6 +36,7 @@ import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.txn.Problem;
 import org.jboss.msc.txn.Problem.Severity;
 import org.jboss.msc.txn.Transaction;
+import org.jboss.msc.txn.TransactionRolledBackException;
 import org.junit.After;
 import org.junit.Before;
 
@@ -44,6 +47,9 @@ import org.junit.Before;
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class AbstractServiceTest extends AbstractTransactionTest {
+
+    protected static final DependencyFlag[] requiredFlag = new DependencyFlag[] {DependencyFlag.REQUIRED};
+    protected static final DependencyFlag[] unrequiredFlag = new DependencyFlag[] {DependencyFlag.UNREQUIRED};
 
     protected volatile ServiceContainer serviceContainer;
     protected volatile ServiceRegistry serviceRegistry;
@@ -117,9 +123,55 @@ public class AbstractServiceTest extends AbstractTransactionTest {
             serviceBuilder.addDependency(dependency);
         }
         serviceBuilder.install();
-        commit(txn);
-        assertSame(service, serviceRegistry.getRequiredService(serviceName));
-        return service;
+        if (attemptToCommit(txn)) {
+            assertSame(service, serviceRegistry.getRequiredService(serviceName));
+            return service;
+        } else {
+            assertNull(serviceRegistry.getService(serviceName));
+            assertFalse(service.isUp());
+            return null;
+        }
+    }
+
+    private static boolean attemptToCommit(final Transaction txn) throws InterruptedException {
+        try {
+            commit(txn);
+        } catch (TransactionRolledBackException e) {
+            System.out.println(e);
+            for (Problem problem: txn.getProblemReport().getProblems()) {
+                System.out.print(problem.getSeverity() + ": " + problem.getMessage());
+                if (problem.getLocation() != null) {
+                    System.out.println(" at " + problem.getLocation());
+                }
+                if (problem.getCause() != null) {
+                    problem.getCause().printStackTrace();
+                } else {
+                    System.out.println();
+                }
+            }
+            return false;
+        }
+        return true;
+    }
+
+    protected final TestService addService(final ServiceRegistry serviceRegistry, final ServiceName serviceName, final boolean failToStart, final ServiceMode serviceMode, final DependencyFlag[] dependencyFlags, final ServiceName... dependencies) throws InterruptedException {
+        final Transaction txn = newTransaction();
+        final TestService service = new TestService(failToStart);
+        final ServiceBuilder<Void> serviceBuilder = txn.addService(serviceRegistry, serviceName);
+        if (serviceMode != null) serviceBuilder.setMode(serviceMode);
+        serviceBuilder.setService(service);
+        for (ServiceName dependency: dependencies) {
+            serviceBuilder.addDependency(dependency, dependencyFlags);
+        }
+        serviceBuilder.install();
+        if (attemptToCommit(txn)) {
+            assertSame(service, serviceRegistry.getRequiredService(serviceName));
+            return service;
+        } else {
+            assertNull(serviceRegistry.getService(serviceName));
+            assertFalse(service.isUp());
+            return null;
+        }
     }
 
     protected final TestService addService(final ServiceRegistry serviceRegistry, final ServiceName serviceName, final ServiceMode serviceMode, final ServiceName... dependencies) throws InterruptedException {
@@ -138,8 +190,16 @@ public class AbstractServiceTest extends AbstractTransactionTest {
         return addService(serviceRegistry, serviceName, failToStart, serviceMode, dependencies);
     }
 
+    protected final TestService addService(final ServiceName serviceName, final boolean failToStart, final ServiceMode serviceMode, final DependencyFlag[] dependencyFlags, final ServiceName... dependencies) throws InterruptedException {
+        return addService(serviceRegistry, serviceName, failToStart, serviceMode, dependencyFlags, dependencies);
+    }
+
     protected final TestService addService(final ServiceName serviceName, final ServiceMode serviceMode, final ServiceName... dependencies) throws InterruptedException {
         return addService(serviceRegistry, serviceName, false, serviceMode, dependencies);
+    }
+
+    protected final TestService addService(final ServiceName serviceName, final ServiceMode serviceMode, final DependencyFlag[] dependencyFlags, final ServiceName... dependencies) throws InterruptedException {
+        return addService(serviceRegistry, serviceName, false, serviceMode, dependencyFlags, dependencies);
     }
 
     protected final TestService addService(final ServiceName serviceName, final ServiceName... dependencies) throws InterruptedException {
@@ -150,19 +210,24 @@ public class AbstractServiceTest extends AbstractTransactionTest {
         return addService(serviceRegistry, serviceName, failToStart, null, dependencies);
     }
 
-    protected final void removeService(final ServiceRegistry serviceRegistry, final ServiceName serviceName) throws InterruptedException {
+    protected final boolean removeService(final ServiceRegistry serviceRegistry, final ServiceName serviceName) throws InterruptedException {
         assertNotNull(serviceRegistry.getService(serviceName));
         final Transaction txn = newTransaction();
         txn.newTask(new RemoveServiceTask(serviceRegistry, serviceName)).release();
-        commit(txn);
-        assertNoCriticalProblems(txn);
-        assertNull(serviceRegistry.getService(serviceName));
+        if (attemptToCommit(txn)) {
+            assertNoCriticalProblems(txn);
+            assertNull(serviceRegistry.getService(serviceName));
+            return true;
+        } else {
+            assertNotNull(serviceRegistry.getRequiredService(serviceName));
+            return false;
+        }
     }
 
-    protected final void removeService(final ServiceName serviceName) throws InterruptedException {
-        removeService(serviceRegistry, serviceName);
+    protected final boolean removeService(final ServiceName serviceName) throws InterruptedException {
+        return removeService(serviceRegistry, serviceName);
     }
-    
+
     protected final void enableService(final ServiceRegistry serviceRegistry, final ServiceName serviceName) throws InterruptedException {
         assertNotNull(serviceRegistry.getService(serviceName));
         final Transaction txn = newTransaction();

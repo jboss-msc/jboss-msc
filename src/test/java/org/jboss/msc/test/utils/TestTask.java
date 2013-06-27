@@ -37,12 +37,14 @@ public abstract class TestTask {
     private final AtomicBoolean wasCalled = new AtomicBoolean();
     private final AtomicLong callTime = new AtomicLong();
     private final CountDownLatch signal;
+    private final String name;
 
-    TestTask() {
-        this(null);
+    TestTask(final String name) {
+        this(name, null);
     }
 
-    TestTask(final CountDownLatch signal) {
+    TestTask(final String name, final CountDownLatch signal) {
+        this.name = name;
         this.signal = signal;
     }
 
@@ -65,4 +67,7 @@ public abstract class TestTask {
         return callTime.get();
     }
 
+    public String toString() {
+        return name;
+    }
 }

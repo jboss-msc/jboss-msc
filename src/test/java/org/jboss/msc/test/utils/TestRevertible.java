@@ -29,11 +29,15 @@ import org.jboss.msc.txn.RollbackContext;
 public final class TestRevertible extends TestTask implements Revertible {
 
     public TestRevertible() {
-        this(null);
+        this((CountDownLatch) null);
+    }
+
+    public TestRevertible(final String name) {
+        super(name);
     }
 
     public TestRevertible(final CountDownLatch signal) {
-        super(signal);
+        super(null, signal);
     }
 
     @Override

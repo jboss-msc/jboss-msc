@@ -251,7 +251,11 @@ public final class TransactionImpl extends Transaction implements ServiceContext
                 if (allAreSet(state, FLAG_ROLLBACK_REQ)) {
                     return T_PREPARED_to_ROLLBACK;
                 } else if (allAreSet(state, FLAG_COMMIT_REQ)) {
-                    return T_PREPARED_to_COMMITTING;
+                    if (reportIsCommittable()) {
+                        return T_PREPARED_to_COMMITTING;
+                    } else {
+                        return T_PREPARED_to_ROLLBACK;
+                    }
                 } else {
                      return T_NONE;
                 }
@@ -415,7 +419,7 @@ public final class TransactionImpl extends Transaction implements ServiceContext
         int state;
         synchronized (this) {
             state = this.state | FLAG_USER_THREAD;
-            if (stateIsIn(state, STATE_ACTIVE, STATE_PREPARING, STATE_PREPARED) && reportIsCommittable()) {
+            if (stateIsIn(state, STATE_ACTIVE, STATE_PREPARING, STATE_PREPARED)) {
                 if (allAreSet(state, FLAG_COMMIT_REQ)) {
                     throw new InvalidTransactionStateException("Commit already called");
                 }
@@ -590,6 +594,7 @@ public final class TransactionImpl extends Transaction implements ServiceContext
             rollbackListener = null;
         }
         safeCall(listener);
+        callCommitListener();
     }
 
     private void callValidationListener() {

@@ -37,6 +37,7 @@ import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.test.utils.AbstractServiceTest;
 import org.jboss.msc.test.utils.TestService;
 import org.jboss.msc.txn.Transaction;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -73,17 +74,17 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
      * <UL>
      *   <LI><B>first service</B> (ON_DEMAND mode), no dependencies</LI>
      *   <LI><B>second service</B> (ON_DEMAND mode), depends on <B>first service</B></LI>
-     *   <LI>dependency removed before container is shut down</LI>
+     *   <LI>attempt to remove dependency before container is shut down</LI>
      * </UL>
      */
     @Test
     public void usecase1() throws Exception {
         final TestService firstService = addService(firstSN, ON_DEMAND);
         assertFalse(firstService.isUp());
-        final TestService secondService = addService(secondSN, ON_DEMAND, firstSN);
+        final TestService secondService = addService(secondSN, ON_DEMAND, requiredFlag, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
-        removeService(firstSN);
+        assertFalse(removeService(firstSN));
         assertFalse(firstService.isUp());
     }
 
@@ -92,6 +93,8 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
      * <UL>
      *   <LI><B>first service</B> (LAZY mode), no dependencies</LI>
      *   <LI><B>second service</B> (ON_DEMAND mode), depends on <B>first service</B></LI>
+     *   <LI>attempt to remove dependency before container is shut down</LI>
+     *   <LI>dependent removed before container is shut down</LI>
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
@@ -99,10 +102,19 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
     public void usecase2() throws Exception {
         final TestService firstService = addService(firstSN, LAZY);
         assertFalse(firstService.isUp());
-        final TestService secondService = addService(secondSN, ON_DEMAND, firstSN);
+        final TestService secondService = addService(secondSN, ON_DEMAND, requiredFlag, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
-        removeService(firstSN);
+        // first attempt: try to remove first service
+        assertFalse(removeService(firstSN));
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
+        // second attempt: remove second service
+        assertTrue(removeService(secondSN));
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
+        // third attempt: remove first service
+        assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
     }
@@ -112,17 +124,17 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
      * <UL>
      *   <LI><B>first service</B> (ACTIVE mode), no dependencies</LI>
      *   <LI><B>second service</B> (ON_DEMAND mode), depends on <B>first service</B></LI>
-     *   <LI>dependency removed before container is shut down</LI>
+     *   <LI>attempt to remove dependency before container is shut down</LI>
      * </UL>
      */
-    @Test
+    @Ignore @Test
     public void usecase3() throws Exception {
         final TestService firstService = addService(firstSN, ACTIVE);
         assertTrue(firstService.isUp());
         final TestService secondService = addService(secondSN, ON_DEMAND, firstSN);
         assertTrue(firstService.isUp());
         assertFalse(secondService.isUp());
-        removeService(firstSN);
+        assertFalse(removeService(firstSN));
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
     }
@@ -135,14 +147,14 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Test
+    @Ignore @Test
     public void usecase4() throws Exception {
         final TestService firstService = addService(firstSN, ON_DEMAND);
         assertFalse(firstService.isUp());
         final TestService secondService = addService(secondSN, LAZY, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
-        removeService(firstSN);
+        assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
     }
@@ -155,14 +167,14 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Test
+    @Ignore @Test
     public void usecase5() throws Exception {
         final TestService firstService = addService(firstSN, LAZY);
         assertFalse(firstService.isUp());
         final TestService secondService = addService(secondSN, LAZY, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
-        removeService(firstSN);
+        assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
     }
@@ -175,14 +187,14 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Test
+    @Ignore @Test
     public void usecase6() throws Exception {
         final TestService firstService = addService(firstSN, ACTIVE);
         assertTrue(firstService.isUp());
         final TestService secondService = addService(secondSN, LAZY, firstSN);
         assertTrue(firstService.isUp());
         assertFalse(secondService.isUp());
-        removeService(firstSN);
+        assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
     }
@@ -195,13 +207,13 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Test
+    @Ignore @Test
     public void usecase7() throws Exception {
         final TestService firstService = addService(firstSN, ON_DEMAND);
         final TestService secondService = addService(secondSN, ACTIVE, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
-        removeService(firstSN);
+        assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
     }
@@ -214,14 +226,14 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Test
+    @Ignore @Test
     public void usecase8() throws Exception {
         final TestService firstService = addService(firstSN, LAZY);
         assertFalse(firstService.isUp());
         final TestService secondService = addService(secondSN, ACTIVE, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
-        removeService(firstSN);
+        assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
     }
@@ -234,14 +246,192 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Test
+    @Ignore @Test
     public void usecase9() throws Exception {
         final TestService firstService = addService(firstSN, ACTIVE);
         assertTrue(firstService.isUp());
         final TestService secondService = addService(secondSN, ACTIVE, firstSN);
         assertTrue(firstService.isUp());
         assertTrue(secondService.isUp());
-        removeService(firstSN);
+        assertTrue(removeService(firstSN));
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI><B>first service</B> (ON_DEMAND mode), no dependencies</LI>
+     *   <LI><B>second service</B> (ON_DEMAND mode), depends on unrequired <B>first service</B></LI>
+     *   <LI>dependency removed before container is shut down</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase10() throws Exception {
+        final TestService firstService = addService(firstSN, ON_DEMAND);
+        assertFalse(firstService.isUp());
+        final TestService secondService = addService(secondSN, ON_DEMAND, unrequiredFlag, firstSN);
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
+        assertTrue(removeService(firstSN));
+        assertFalse(firstService.isUp());
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI><B>first service</B> (LAZY mode), no dependencies</LI>
+     *   <LI><B>second service</B> (ON_DEMAND mode), depends on unrequired <B>first service</B></LI>
+     *   <LI>dependency removed before container is shut down</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase11() throws Exception {
+        final TestService firstService = addService(firstSN, LAZY);
+        assertFalse(firstService.isUp());
+        final TestService secondService = addService(secondSN, ON_DEMAND, unrequiredFlag, firstSN);
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
+        assertTrue(removeService(firstSN));
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI><B>first service</B> (ACTIVE mode), no dependencies</LI>
+     *   <LI><B>second service</B> (ON_DEMAND mode), depends on unrequired <B>first service</B></LI>
+     *   <LI>dependency removed before container is shut down</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase12() throws Exception {
+        final TestService firstService = addService(firstSN, ACTIVE);
+        assertTrue(firstService.isUp());
+        final TestService secondService = addService(secondSN, ON_DEMAND, unrequiredFlag, firstSN);
+        assertTrue(firstService.isUp());
+        assertFalse(secondService.isUp());
+        assertTrue(removeService(firstSN));
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI><B>first service</B> (ON_DEMAND mode), no dependencies</LI>
+     *   <LI><B>second service</B> (LAZY mode), depends on unrequired <B>first service</B></LI>
+     *   <LI>dependency removed before container is shut down</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase13() throws Exception {
+        final TestService firstService = addService(firstSN, ON_DEMAND);
+        assertFalse(firstService.isUp());
+        final TestService secondService = addService(secondSN, LAZY, unrequiredFlag, firstSN);
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
+        assertTrue(removeService(firstSN));
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI><B>first service</B> (LAZY mode), no dependencies</LI>
+     *   <LI><B>second service</B> (LAZY mode), depends on unrequired <B>first service</B></LI>
+     *   <LI>dependency removed before container is shut down</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase14() throws Exception {
+        final TestService firstService = addService(firstSN, LAZY);
+        assertFalse(firstService.isUp());
+        final TestService secondService = addService(secondSN, LAZY, unrequiredFlag, firstSN);
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
+        assertTrue(removeService(firstSN));
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI><B>first service</B> (ACTIVE mode), no dependencies</LI>
+     *   <LI><B>second service</B> (LAZY mode), depends on unrequired <B>first service</B></LI>
+     *   <LI>dependency removed before container is shut down</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase15() throws Exception {
+        final TestService firstService = addService(firstSN, ACTIVE);
+        assertTrue(firstService.isUp());
+        final TestService secondService = addService(secondSN, LAZY, unrequiredFlag, firstSN);
+        assertTrue(firstService.isUp());
+        assertFalse(secondService.isUp());
+        assertTrue(removeService(firstSN));
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI><B>first service</B> (ON_DEMAND mode), no dependencies</LI>
+     *   <LI><B>second service</B> (ACTIVE mode), depends on unrequired <B>first service</B></LI>
+     *   <LI>dependency removed before container is shut down</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase16() throws Exception {
+        final TestService firstService = addService(firstSN, ON_DEMAND);
+        final TestService secondService = addService(secondSN, ACTIVE, unrequiredFlag, firstSN);
+        assertTrue(firstService.isUp());
+        assertTrue(secondService.isUp());
+        assertTrue(removeService(firstSN));
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI><B>first service</B> (LAZY mode), no dependencies</LI>
+     *   <LI><B>second service</B> (ACTIVE mode), depends on unrequired <B>first service</B></LI>
+     *   <LI>dependency removed before container is shut down</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase17() throws Exception {
+        final TestService firstService = addService(firstSN, LAZY);
+        assertFalse(firstService.isUp());
+        final TestService secondService = addService(secondSN, ACTIVE, unrequiredFlag, firstSN);
+        assertTrue(firstService.isUp());
+        assertTrue(secondService.isUp());
+        assertTrue(removeService(firstSN));
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
+    }
+
+    /**
+     * Usecase:
+     * <UL>
+     *   <LI><B>first service</B> (ACTIVE mode), no dependencies</LI>
+     *   <LI><B>second service</B> (ACTIVE mode), depends on unrequired <B>first service</B></LI>
+     *   <LI>dependency removed before container is shut down</LI>
+     * </UL>
+     */
+    @Test
+    public void usecase18() throws Exception {
+        final TestService firstService = addService(firstSN, ACTIVE);
+        assertTrue(firstService.isUp());
+        final TestService secondService = addService(secondSN, ACTIVE, unrequiredFlag, firstSN);
+        assertTrue(firstService.isUp());
+        assertTrue(secondService.isUp());
+        assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
     }

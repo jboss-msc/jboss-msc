@@ -18,6 +18,7 @@
 
 package org.jboss.msc.test.utils;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -121,12 +122,18 @@ public abstract class AbstractTransactionTest {
     }
 
     protected static void assertPrepared(final Transaction transaction) {
+        assertPrepared(transaction, true);
+    }
+
+    protected static void assertPrepared(final Transaction transaction, final boolean committable) {
         assertNotNull(transaction);
-        assertTrue(transaction.canCommit());
+        assertEquals(committable, transaction.canCommit());
         try {
             transaction.prepare(null);
             fail("Cannot call prepare() more than once on transaction");
         } catch (final InvalidTransactionStateException expected) {
+        } catch (final TransactionRolledBackException rolledbackException) {
+            assertFalse("Unexpected exception: " + rolledbackException, committable);
         }
     }
 
@@ -178,11 +185,15 @@ public abstract class AbstractTransactionTest {
     }
 
     protected static void prepare(final Transaction transaction) throws InterruptedException {
+        prepare(transaction, true);
+    }
+
+    protected static void prepare(final Transaction transaction, boolean committable) throws InterruptedException {
         assertNotNull(transaction);
         final CompletionListener prepareListener = new CompletionListener();
         transaction.prepare(prepareListener);
         prepareListener.awaitCompletion();
-        assertPrepared(transaction);
+        assertPrepared(transaction, committable);
     }
 
     protected static void commit(final Transaction transaction) throws InterruptedException {
