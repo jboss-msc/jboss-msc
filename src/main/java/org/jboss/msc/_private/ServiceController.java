@@ -206,7 +206,7 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
     void setValue(T value) {
         this.value = value;
     }
-    
+
     /**
      * Gets the current service controller state.
      */
@@ -604,7 +604,7 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
     }
 
     private synchronized boolean shouldStart() {
-        return isMode(MODE_ACTIVE) || (upDemandedByCount > 0 && allAreSet(state, SERVICE_ENABLED | REGISTRY_ENABLED));
+        return (isMode(MODE_ACTIVE) || upDemandedByCount > 0) && allAreSet(state, SERVICE_ENABLED | REGISTRY_ENABLED);
     }
 
     private synchronized boolean shouldStop() {
