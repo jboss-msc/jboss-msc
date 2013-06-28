@@ -63,6 +63,7 @@ abstract class TransactionalObject {
      */
     final void lockWrite(Transaction transaction, ServiceContext context) {
         assert !Thread.holdsLock(this);
+        final Object snapshot;
         while (true) {
             Transaction currentLock;
             synchronized (this) {
@@ -83,12 +84,15 @@ abstract class TransactionalObject {
                 synchronized (this) {
                     if (lock == null) {
                         lock = transaction;
+                        snapshot = takeSnapshot();
+                        // notice that write locked must be garanteed to have been invoked if/when
+                        // another thread checks that current lock is not null
+                        writeLocked(transaction);
                         break;
                     }
                 }
             }
         } 
-        final Object snapshot = takeSnapshot();
         final Map<TransactionalObject, Object> transactionalObjects;
         synchronized (TRANSACTIONAL_OBJECTS) {
             if (transaction.hasAttachment(TRANSACTIONAL_OBJECTS)) {
@@ -100,7 +104,6 @@ abstract class TransactionalObject {
             }
         }
         transactionalObjects.put(this, snapshot);
-        writeLocked(transaction);
     }
 
     /**
