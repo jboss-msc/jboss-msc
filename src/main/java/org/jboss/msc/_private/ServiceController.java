@@ -617,7 +617,7 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
 
     private boolean isMode(final byte mode) {
         assert holdsLock(this);
-        return allAreSet(mode, state & MODE_MASK);
+        return (state & MODE_MASK) == mode;
     }
 
     private byte currentState() {
