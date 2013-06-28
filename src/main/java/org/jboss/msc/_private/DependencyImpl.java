@@ -212,7 +212,7 @@ class DependencyImpl<T> implements Dependency<T> {
      * @param context              context where all validation problems found will be added
      */
     void validate(ServiceController<?> dependencyController, ReportableContext context) {
-        if (dependencyController == null && !hasUnrequiredFlag()) {
+        if (dependencyController == null && !hasUnrequiredFlag() && !hasParentFlag()) {
             context.addProblem(Severity.ERROR, MSCLogger.SERVICE.requiredDependency(dependent.getServiceName(), dependencyRegistration.getServiceName()));
         }
     }

@@ -51,7 +51,7 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
     private static final ServiceName firstSN = ServiceName.of("first");
     private static final ServiceName secondSN = ServiceName.of("second");
 
-    protected final TestService addService(final ServiceName serviceName, final ServiceMode serviceMode, final ServiceName parentDependency) throws InterruptedException {
+    protected final TestService addChildService(final ServiceName serviceName, final ServiceMode serviceMode, final ServiceName parentDependency) throws InterruptedException {
         final Transaction txn = newTransaction();
         final TestService service = new TestService(false);
         final ServiceBuilder<Void> serviceBuilder = txn.addService(serviceRegistry, serviceName);
@@ -127,14 +127,14 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
      *   <LI>attempt to remove dependency before container is shut down</LI>
      * </UL>
      */
-    @Ignore @Test
+    @Test
     public void usecase3() throws Exception {
         final TestService firstService = addService(firstSN, ACTIVE);
         assertTrue(firstService.isUp());
-        final TestService secondService = addService(secondSN, ON_DEMAND, firstSN);
+        final TestService secondService = addChildService(secondSN, ON_DEMAND, firstSN);
         assertTrue(firstService.isUp());
         assertFalse(secondService.isUp());
-        assertFalse(removeService(firstSN));
+        assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
     }
@@ -147,11 +147,11 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Ignore @Test
+    @Test
     public void usecase4() throws Exception {
         final TestService firstService = addService(firstSN, ON_DEMAND);
         assertFalse(firstService.isUp());
-        final TestService secondService = addService(secondSN, LAZY, firstSN);
+        final TestService secondService = addChildService(secondSN, LAZY, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
         assertTrue(removeService(firstSN));
@@ -167,11 +167,11 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Ignore @Test
+    @Test
     public void usecase5() throws Exception {
         final TestService firstService = addService(firstSN, LAZY);
         assertFalse(firstService.isUp());
-        final TestService secondService = addService(secondSN, LAZY, firstSN);
+        final TestService secondService = addChildService(secondSN, LAZY, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
         assertTrue(removeService(firstSN));
@@ -187,11 +187,11 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Ignore @Test
+    @Test
     public void usecase6() throws Exception {
         final TestService firstService = addService(firstSN, ACTIVE);
         assertTrue(firstService.isUp());
-        final TestService secondService = addService(secondSN, LAZY, firstSN);
+        final TestService secondService = addChildService(secondSN, LAZY, firstSN);
         assertTrue(firstService.isUp());
         assertFalse(secondService.isUp());
         assertTrue(removeService(firstSN));
@@ -207,10 +207,10 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Ignore @Test
+    @Test
     public void usecase7() throws Exception {
         final TestService firstService = addService(firstSN, ON_DEMAND);
-        final TestService secondService = addService(secondSN, ACTIVE, firstSN);
+        final TestService secondService = addChildService(secondSN, ACTIVE, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
         assertTrue(removeService(firstSN));
@@ -226,11 +226,11 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Ignore @Test
+    @Test
     public void usecase8() throws Exception {
         final TestService firstService = addService(firstSN, LAZY);
         assertFalse(firstService.isUp());
-        final TestService secondService = addService(secondSN, ACTIVE, firstSN);
+        final TestService secondService = addChildService(secondSN, ACTIVE, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
         assertTrue(removeService(firstSN));
@@ -246,11 +246,11 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Ignore @Test
+    @Test
     public void usecase9() throws Exception {
         final TestService firstService = addService(firstSN, ACTIVE);
         assertTrue(firstService.isUp());
-        final TestService secondService = addService(secondSN, ACTIVE, firstSN);
+        final TestService secondService = addChildService(secondSN, ACTIVE, firstSN);
         assertTrue(firstService.isUp());
         assertTrue(secondService.isUp());
         assertTrue(removeService(firstSN));
