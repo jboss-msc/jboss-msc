@@ -26,8 +26,16 @@ import java.util.Collection;
 import java.util.List;
 
 import org.jboss.msc.service.Service;
+import org.jboss.msc.service.ServiceBuilder;
+import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceMode;
 import org.jboss.msc.service.ServiceName;
+import org.jboss.msc.service.ServiceRegistry;
+import org.jboss.msc.service.StartContext;
+import org.jboss.msc.service.StopContext;
+import org.jboss.msc.txn.Executable;
+import org.jboss.msc.txn.Problem;
+import org.jboss.msc.txn.Problem.Severity;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
@@ -211,6 +219,10 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
      * Gets the current service controller state.
      */
     synchronized int getState() {
+        return getState(state);
+    }
+
+    private static int getState(byte state) {
         return (state & STATE_MASK);
     }
 
@@ -605,6 +617,218 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
         // revert ServiceController state to what it was when snapshot was taken; invoked on rollback
         public void apply() {
             assert holdsLock(ServiceController.this);
+            // TODO temporary fix to an issue that needs to be evaluated:
+            // as a result of a rollback, service must not think it is up when it is down, and vice-versa
+            if (getState() == STATE_UP && getState(state) == STATE_DOWN) {
+                service.stop(new StopContext() {
+
+                    @Override
+                    public void complete(Void result) {
+                        // ignore
+                    }
+
+                    @Override
+                    public void complete() {
+                        // ignore
+                    }
+
+                    @Override
+                    public void addProblem(Problem reason) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void addProblem(Severity severity, String message) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void addProblem(Severity severity, String message, Throwable cause) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void addProblem(String message, Throwable cause) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void addProblem(String message) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void addProblem(Throwable cause) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public boolean isCancelRequested() {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void cancelled() {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public <T> TaskBuilder<T> newTask(Executable<T> task) throws IllegalStateException {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public TaskBuilder<Void> newTask() throws IllegalStateException {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void disableService(ServiceRegistry registry, ServiceName name) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void enableService(ServiceRegistry registry, ServiceName name) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void removeService(ServiceRegistry registry, ServiceName name) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void enableRegistry(ServiceRegistry registry) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void disableRegistry(ServiceRegistry registry) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void removeRegistry(ServiceRegistry registry) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void shutdownContainer(ServiceContainer container) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }});
+            } else if ((getState() == STATE_DOWN || getState() == STATE_REMOVED) && getState(state) == STATE_UP) {
+                service.start(new StartContext<T>() {
+
+                    @Override
+                    public void complete(Object result) {
+                        // ignore
+                    }
+
+                    @Override
+                    public void complete() {
+                        // ignore
+                    }
+
+                    @Override
+                    public void addProblem(Problem reason) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void addProblem(Severity severity, String message) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void addProblem(Severity severity, String message, Throwable cause) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void addProblem(String message, Throwable cause) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void addProblem(String message) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void addProblem(Throwable cause) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public boolean isCancelRequested() {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void cancelled() {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public <T> TaskBuilder<T> newTask(Executable<T> task) throws IllegalStateException {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public TaskBuilder<Void> newTask() throws IllegalStateException {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void disableService(ServiceRegistry registry, ServiceName name) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void enableService(ServiceRegistry registry, ServiceName name) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void removeService(ServiceRegistry registry, ServiceName name) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void enableRegistry(ServiceRegistry registry) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void disableRegistry(ServiceRegistry registry) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void removeRegistry(ServiceRegistry registry) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void shutdownContainer(ServiceContainer container) {
+                        throw new UnsupportedOperationException("not implemented");
+                    }
+
+                    @Override
+                    public void fail() {
+                        throw new UnsupportedOperationException("not implemented");
+                    }});
+            }
             ServiceController.this.state = state;
             ServiceController.this.upDemandedByCount = upDemandedByCount;
             ServiceController.this.unsatisfiedDependencies = unsatisfiedDependencies;

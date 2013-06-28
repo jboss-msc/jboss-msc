@@ -17,6 +17,9 @@
  */
 package org.jboss.msc.test.utils;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jboss.msc.service.Service;
@@ -41,6 +44,7 @@ public final class TestService implements Service<Void> {
 
     @Override
     public void start(final StartContext<Void> context) {
+        assertFalse(up.get() || failed.get());
         if (failToStart) {
             failed.set(true);
             //context.addProblem(new UnsupportedOperationException());
@@ -53,6 +57,7 @@ public final class TestService implements Service<Void> {
 
     @Override
     public void stop(final StopContext context) {
+        assertTrue(up.get() || failed.get());
         up.set(false);
         failed.set(false);
         context.complete();
