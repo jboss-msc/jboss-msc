@@ -27,14 +27,12 @@ import static org.junit.Assert.assertTrue;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.test.utils.AbstractServiceTest;
 import org.jboss.msc.test.utils.TestService;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-@Ignore // FIXME
 public class OneService_OneDep_TestCase extends AbstractServiceTest {
 
     private static final ServiceName firstSN = ServiceName.of("first");
