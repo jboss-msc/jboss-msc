@@ -556,10 +556,19 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
         }
 
         private synchronized TaskController<Void> scheduleRemoval(Transaction transaction, ServiceContext context) {
+            // idempotent
+            if (getState() == STATE_REMOVED) {
+                return null;
+            }
+            // disable service
             synchronized (ServiceController.this) {
                 state &= ~SERVICE_ENABLED;
             }
+            // transition disabled service, guaranteeing that it is either at DOWN state or it will get to this state
+            // after complete transition task completes
             transition(transaction, context);
+            assert getState() == STATE_DOWN || completeTransitionTask!= null;// prevent hard to find bugs
+            // create remove task
             final TaskBuilder<Void> removeTaskBuilder = context.newTask(new ServiceRemoveTask(ServiceController.this, transaction));
             if (completeTransitionTask != null) {
                 removeTaskBuilder.addDependency(completeTransitionTask);
