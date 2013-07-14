@@ -475,8 +475,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     return Transition.REMOVING_to_DOWN;
                 }
             }
-            case CANCELLED:
-                // fall thru!
+            case CANCELLED: {
+                return Transition.CANCELLED_to_REMOVED;
+            }
             case REMOVED:
             {
                 // no possible actions
@@ -680,6 +681,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     tasks.add(new RemoveTask());
                     break;
                 }
+                case CANCELLED_to_REMOVED:
                 case REMOVING_to_REMOVED: {
                     getListenerTasks(transition, tasks);
                     listeners.clear();

@@ -482,7 +482,11 @@ public interface ServiceController<S> extends Value<S> {
         /**
          * Transition from {@link Substate#WONT_START WONT_START} to {@link Substate#DOWN DOWN}.
          */
-        WONT_START_to_DOWN(Substate.WONT_START, Substate.DOWN);
+        WONT_START_to_DOWN(Substate.WONT_START, Substate.DOWN),
+        /**
+         * Transition from {@link Substate#CANCELLED} to {@link Substate#REMOVED}.
+         */
+        CANCELLED_to_REMOVED(Substate.CANCELLED,Substate.REMOVED);
 
         private final Substate before;
         private final Substate after;
