@@ -18,6 +18,8 @@
 
 package org.jboss.msc._private;
 
+import static java.lang.Thread.holdsLock;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -155,23 +157,37 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     synchronized void revert(Object snapshot) {
-        registry.clear();
-        registry.putAll((Map<ServiceName, Registration>)snapshot);
+        ((Snapshot)snapshot).apply();
     }
 
     @Override
     synchronized Object takeSnapshot() {
-        final Map<ServiceName, Registration> snapshot = new HashMap<ServiceName, Registration>(registry.size());
-        snapshot.putAll(registry);
-        return snapshot;
+        return new Snapshot();
     }
 
     private synchronized void checkRemoved() {
         if (Bits.anyAreSet(state, REMOVED)) {
             throw new IllegalStateException("ServiceRegistry is removed");
+        }
+    }
+    
+    private final class Snapshot {
+        private final byte state;
+        private final Map<ServiceName, Registration> registry;
+        
+        private Snapshot() {
+            assert holdsLock(ServiceRegistryImpl.this);
+            state = ServiceRegistryImpl.this.state;
+            registry = new HashMap<ServiceName, Registration>(ServiceRegistryImpl.this.registry);
+        }
+        
+        private void apply() {
+            assert holdsLock(ServiceRegistryImpl.this);
+            ServiceRegistryImpl.this.state = state;
+            ServiceRegistryImpl.this.registry.clear();
+            ServiceRegistryImpl.this.registry.putAll(registry);
         }
     }
 }
