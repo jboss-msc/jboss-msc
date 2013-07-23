@@ -443,7 +443,7 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
     }
 
     @Override
-    public synchronized Object takeSnapshot() {
+    Object takeSnapshot() {
         // if service is new, no need to retrieve snapshot
         if ((state & STATE_MASK) == STATE_NEW) {
             return null;
@@ -453,7 +453,7 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
 
     @SuppressWarnings("unchecked")
     @Override
-    public synchronized void revert(Object snapshot) {
+    void revert(final Object snapshot) {
         if (snapshot != null) {
             ((Snapshot) snapshot).apply();
         }

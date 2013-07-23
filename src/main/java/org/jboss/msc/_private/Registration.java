@@ -151,8 +151,13 @@ final class Registration extends TransactionalObject {
     }
 
     @Override
-    protected synchronized Object takeSnapshot() {
+    Object takeSnapshot() {
         return new Snapshot();
+    }
+
+    @Override
+    void revert(final Object snapshot) {
+        ((Snapshot)snapshot).apply();
     }
 
     @Override
@@ -160,11 +165,6 @@ final class Registration extends TransactionalObject {
         for (DependencyImpl<?> incomingDependency: incomingDependencies) {
             incomingDependency.validate(controller, context);
         }
-    }
-
-    @Override
-    protected synchronized void revert(Object snapshot) {
-        ((Snapshot)snapshot).apply();
     }
 
     private final class Snapshot {

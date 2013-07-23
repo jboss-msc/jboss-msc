@@ -158,13 +158,13 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
     }
 
     @Override
-    synchronized void revert(Object snapshot) {
-        ((Snapshot)snapshot).apply();
+    Object takeSnapshot() {
+        return new Snapshot();
     }
 
     @Override
-    synchronized Object takeSnapshot() {
-        return new Snapshot();
+    void revert(final Object snapshot) {
+        ((Snapshot)snapshot).apply();
     }
 
     private synchronized void checkRemoved() {
