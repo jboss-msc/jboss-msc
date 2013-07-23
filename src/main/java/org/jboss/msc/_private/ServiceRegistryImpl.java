@@ -159,10 +159,6 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
         }
     }
 
-    void install(ServiceController<?> serviceController) {
-        checkRemoved();
-    }
-
     @SuppressWarnings("unchecked")
     @Override
     synchronized void revert(Object snapshot) {
