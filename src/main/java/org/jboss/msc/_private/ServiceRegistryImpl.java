@@ -102,7 +102,7 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
 
     void remove(Transaction transaction) {
         synchronized(this) {
-            if (isRemoved()) {
+            if (Bits.anyAreSet(state, REMOVED)) {
                 return;
             }
             state = (byte) (state | REMOVED);
@@ -114,10 +114,6 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
                 serviceInstance.remove(transaction, transaction);
             }
         }
-    }
-
-    synchronized boolean isRemoved() {
-        return Bits.anyAreSet(state, REMOVED);
     }
 
     synchronized void newServiceInstalled(ServiceController<?> service, Transaction transaction) {
