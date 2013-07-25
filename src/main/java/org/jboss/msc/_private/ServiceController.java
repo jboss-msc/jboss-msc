@@ -26,19 +26,16 @@ import java.util.Collection;
 import java.util.List;
 
 import org.jboss.msc.service.Service;
-import org.jboss.msc.service.ServiceBuilder;
-import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceMode;
 import org.jboss.msc.service.ServiceName;
-import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StopContext;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.Problem;
 import org.jboss.msc.txn.Problem.Severity;
-import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
+import org.jboss.msc.txn.TaskFactory;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -125,20 +122,20 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
      * @param mode                the service mode
      * @param dependencies        the service dependencies
      * @param transaction         the active transaction
-     * @param context             the service context
+     * @param taskFactory the task factory
      */
     ServiceController(final Registration primaryRegistration, final Registration[] aliasRegistrations, final Service<T> service,
             final org.jboss.msc.service.ServiceMode mode, final DependencyImpl<?>[] dependencies, final Transaction transaction,
-            final ServiceContext context) {
+            final TaskFactory taskFactory) {
         this.service = service;
         setMode(mode);
         this.dependencies = dependencies;
         this.aliasRegistrations = aliasRegistrations;
         this.primaryRegistration = primaryRegistration;
-        lockWrite(transaction, context);
+        lockWrite(transaction, taskFactory);
         unsatisfiedDependencies = dependencies.length;
         for (DependencyImpl<?> dependency: dependencies) {
-            dependency.setDependent(this, transaction, context);
+            dependency.setDependent(this, transaction, taskFactory);
         }
     }
 
@@ -154,15 +151,15 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
      * Completes service installation, enabling the service and installing it into registrations.
      *
      * @param transaction the active transaction
-     * @param context     the service context
+     * @param taskFactory the task factory
      */
-    void install(ServiceRegistryImpl registry, Transaction transaction, ServiceContext context) {
+    void install(ServiceRegistryImpl registry, Transaction transaction, TaskFactory taskFactory) {
         assert isWriteLocked(transaction);
         // if registry is removed, get an exception right away
         registry.newServiceInstalled(this, transaction);
-        primaryRegistration.setController(context, transaction,  this);
+        primaryRegistration.setController(transaction, taskFactory, this);
         for (Registration alias: aliasRegistrations) {
-            alias.setController(context, transaction, this);
+            alias.setController(transaction, taskFactory, this);
         }
         boolean demandDependencies;
         synchronized (this) {
@@ -171,9 +168,9 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
             demandDependencies = isMode(MODE_ACTIVE);
         }
         if (demandDependencies) {
-            DemandDependenciesTask.create(this, transaction, context);
+            DemandDependenciesTask.create(this, transaction, taskFactory);
         }
-        transactionalInfo.transition(transaction, context);
+        transactionalInfo.transition(transaction, taskFactory);
     }
 
     /**
@@ -299,23 +296,23 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
      * All dependent services will be automatically stopped as the result of this operation.
      * 
      * @param  transaction the active transaction
-     * @param  context     the service context
+     * @param  taskFactory the task factory
      * @return the task that completes removal. Once this task is executed, the service will be at the
      *         {@code REMOVED} state.
      */
-    TaskController<Void> remove(Transaction transaction, ServiceContext context) {
-        lockWrite(transaction, context);
-        return transactionalInfo.scheduleRemoval(transaction, context);
+    TaskController<Void> remove(Transaction transaction, TaskFactory taskFactory) {
+        lockWrite(transaction, taskFactory);
+        return transactionalInfo.scheduleRemoval(transaction, taskFactory);
     }
 
     /**
      * Notifies this service that it is up demanded (demanded to be UP) by one of its incoming dependencies.
      * 
      * @param transaction the active transaction
-     * @param context     the service context
+     * @param taskFactory the task factory
      */
-    void upDemanded(Transaction transaction, ServiceContext context) {
-        lockWrite(transaction, context);
+    void upDemanded(Transaction transaction, TaskFactory taskFactory) {
+        lockWrite(transaction, taskFactory);
         final boolean propagate;
         synchronized (this) {
             if (upDemandedByCount ++ > 0) {
@@ -324,9 +321,9 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
             propagate = !isMode(MODE_ACTIVE);
         }
         if (propagate) {
-            DemandDependenciesTask.create(this, transaction, context);
+            DemandDependenciesTask.create(this, transaction, taskFactory);
         }
-        transition(transaction, context);
+        transition(transaction, taskFactory);
     }
 
     /**
@@ -334,10 +331,10 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
      * dependency is being disabled or removed).
      * 
      * @param transaction the active transaction
-     * @param context     the service context
+     * @param taskFactory the task factory
      */
-    void upUndemanded(Transaction transaction, ServiceContext context) {
-        lockWrite(transaction, context);
+    void upUndemanded(Transaction transaction, TaskFactory taskFactory) {
+        lockWrite(transaction, taskFactory);
         final boolean propagate;
         synchronized (this) {
             if (-- upDemandedByCount > 0) {
@@ -346,9 +343,9 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
             propagate = !isMode(MODE_ACTIVE);
         }
         if (propagate) {
-            UndemandDependenciesTask.create(this, transaction, context);
+            UndemandDependenciesTask.create(this, transaction, taskFactory);
         }
-        transition(transaction, context);
+        transition(transaction, taskFactory);
     }
 
     /**
@@ -363,10 +360,10 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
      * Notifies that a incoming dependency has started.
      * 
      * @param transaction the active transaction
-     * @param context     the service context
+     * @param taskFactory the task factory
      */
-    void dependentStarted(Transaction transaction, ServiceContext context) {
-        lockWrite(transaction, context);
+    void dependentStarted(Transaction transaction, TaskFactory taskFactory) {
+        lockWrite(transaction, taskFactory);
         synchronized (this) {
             runningDependents++;
         }
@@ -376,16 +373,16 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
      * Notifies that a incoming dependency has stopped.
      * 
      * @param transaction the active transaction
-     * @param context     the service context
+     * @param taskFactory the task factory
      */
-    void dependentStopped(Transaction transaction, ServiceContext context) {
-        lockWrite(transaction, context);
+    void dependentStopped(Transaction transaction, TaskFactory taskFactory) {
+        lockWrite(transaction, taskFactory);
         synchronized (this) {
             if (--runningDependents > 0) {
                 return;
             }
         }
-        transition(transaction, context);
+        transition(transaction, taskFactory);
     }
 
     @Override
@@ -394,41 +391,41 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
     }
 
     @Override
-    public TaskController<?> dependencySatisfied(Transaction transaction, ServiceContext context) {
-        lockWrite(transaction, context);
+    public TaskController<?> dependencySatisfied(Transaction transaction, TaskFactory taskFactory) {
+        lockWrite(transaction, taskFactory);
         synchronized (this) {
             if (-- unsatisfiedDependencies > 0) {
                 return null;
             }
         }
-        return transition(transaction, context);
+        return transition(transaction, taskFactory);
     }
 
     @Override
-    public TaskController<?> dependencyUnsatisfied(Transaction transaction, ServiceContext context) {
-        lockWrite(transaction, context);
+    public TaskController<?> dependencyUnsatisfied(Transaction transaction, TaskFactory taskFactory) {
+        lockWrite(transaction, taskFactory);
         synchronized (this) {
            if (++ unsatisfiedDependencies > 1) {
                return null;
             }
         }
-        return transition(transaction, context);
+        return transition(transaction, taskFactory);
     }
 
     /**
      * Sets the new transactional state of this service.
      * 
      * @param transactionalState the transactional state
-     * @param context            the service context
+     * @param taskFactory        the task factory
      */
-    void setTransition(byte transactionalState, Transaction transaction, ServiceContext context) {
+    void setTransition(byte transactionalState, Transaction transaction, TaskFactory taskFactory) {
         assert isWriteLocked();
-        transactionalInfo.setTransition(transactionalState, transaction, context);
+        transactionalInfo.setTransition(transactionalState, transaction, taskFactory);
     }
 
-    private TaskController<?> transition(Transaction transaction, ServiceContext context) {
+    private TaskController<?> transition(Transaction transaction, TaskFactory taskFactory) {
         assert isWriteLocked();
-        return transactionalInfo.transition(transaction, context);
+        return transactionalInfo.transition(transaction, taskFactory);
     }
 
     @Override
@@ -467,18 +464,18 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
         // the total number of setTransition calls expected until completeTransitionTask is finished
         private int transitionCount;
 
-        synchronized void setTransition(byte transactionalState, Transaction transaction, ServiceContext context) {
+        synchronized void setTransition(byte transactionalState, Transaction transaction, TaskFactory taskFactory) {
             this.transactionalState = transactionalState;
             assert transitionCount > 0;
             // transition has finally come to an end, and calling task equals completeTransitionTask
             if (-- transitionCount == 0) {
                 switch(transactionalState) {
                     case STATE_UP:
-                        notifyServiceUp(transaction, context);
+                        notifyServiceUp(transaction, taskFactory);
                         break;
                     case STATE_REMOVED:
                         for (DependencyImpl<?> dependency: dependencies) {
-                            dependency.clearDependent(transaction, context);
+                            dependency.clearDependent(transaction, taskFactory);
                         }
                         break;
                     case STATE_DOWN:
@@ -500,13 +497,13 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
             completeTransitionTask = StartingServiceTasks.create(ServiceController.this, transaction, transaction);
         }
 
-        private synchronized TaskController<?> transition(Transaction transaction, ServiceContext context) {
+        private synchronized TaskController<?> transition(Transaction transaction, TaskFactory taskFactory) {
             assert !holdsLock(ServiceController.this);
             switch (transactionalState) {
                 case STATE_DOWN:
                     if (unsatisfiedDependencies == 0 && shouldStart()) {
                         transactionalState = STATE_STARTING;
-                        completeTransitionTask = StartingServiceTasks.create(ServiceController.this, transaction, context);
+                        completeTransitionTask = StartingServiceTasks.create(ServiceController.this, transaction, taskFactory);
                         transitionCount ++;
                     }
                     break;
@@ -515,22 +512,22 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
                         // ongoing transition from UP to DOWN, transition to UP just once service is DOWN
                         TaskController<?> setStartingState = transaction.newTask(new SetTransactionalStateTask(ServiceController.this, STATE_STARTING, transaction))
                             .addDependency(completeTransitionTask).release();
-                        completeTransitionTask = StartingServiceTasks.create(ServiceController.this, setStartingState, transaction, context);
+                        completeTransitionTask = StartingServiceTasks.create(ServiceController.this, setStartingState, transaction, taskFactory);
                         transitionCount += 2;
                     }
                     break;
                 case STATE_FAILED:
                     if (unsatisfiedDependencies > 0 || shouldStop()) {
                         transactionalState = STATE_STOPPING;
-                        completeTransitionTask = StoppingServiceTasks.createForFailedService(ServiceController.this, transaction, context);
+                        completeTransitionTask = StoppingServiceTasks.createForFailedService(ServiceController.this, transaction, taskFactory);
                         transitionCount ++;
                     }
                     break;
                 case STATE_UP:
                     if (unsatisfiedDependencies > 0 || shouldStop()) {
-                        final Collection<TaskController<?>> dependentTasks = notifyServiceDown(transaction, context);
+                        final Collection<TaskController<?>> dependentTasks = notifyServiceDown(transaction, taskFactory);
                         transactionalState = STATE_STOPPING;
-                        completeTransitionTask = StoppingServiceTasks.create(ServiceController.this, dependentTasks, transaction, context);
+                        completeTransitionTask = StoppingServiceTasks.create(ServiceController.this, dependentTasks, transaction, taskFactory);
                         transitionCount ++;
                     }
                     break;
@@ -540,7 +537,7 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
                         TaskController<?> setStoppingState = transaction.newTask(new SetTransactionalStateTask(
                                 ServiceController.this, STATE_STOPPING, transaction))
                                 .addDependency(completeTransitionTask).release();
-                        completeTransitionTask = StoppingServiceTasks.create(ServiceController.this, setStoppingState, transaction, context);
+                        completeTransitionTask = StoppingServiceTasks.create(ServiceController.this, setStoppingState, transaction, taskFactory);
                         transitionCount +=2;
                     }
                     break;
@@ -551,23 +548,23 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
             return completeTransitionTask;
         }
 
-        private void notifyServiceUp(Transaction transaction, ServiceContext context) {
-            primaryRegistration.serviceUp(transaction, context);
+        private void notifyServiceUp(Transaction transaction, TaskFactory taskFactory) {
+            primaryRegistration.serviceUp(transaction, taskFactory);
             for (Registration registration: aliasRegistrations) {
-                registration.serviceUp(transaction, context);
+                registration.serviceUp(transaction, taskFactory);
             }
         }
 
-        private Collection<TaskController<?>> notifyServiceDown(Transaction transaction, ServiceContext context) {
+        private Collection<TaskController<?>> notifyServiceDown(Transaction transaction, TaskFactory taskFactory) {
             final List<TaskController<?>> tasks = new ArrayList<TaskController<?>>();
-            primaryRegistration.serviceDown(transaction, context, tasks);
+            primaryRegistration.serviceDown(transaction, taskFactory, tasks);
             for (Registration registration: aliasRegistrations) {
-                registration.serviceDown(transaction, context, tasks);
+                registration.serviceDown(transaction, taskFactory, tasks);
             }
             return tasks;
         }
 
-        private synchronized TaskController<Void> scheduleRemoval(Transaction transaction, ServiceContext context) {
+        private synchronized TaskController<Void> scheduleRemoval(Transaction transaction, TaskFactory taskFactory) {
             // idempotent
             if (getState() == STATE_REMOVED) {
                 return null;
@@ -578,10 +575,10 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
             }
             // transition disabled service, guaranteeing that it is either at DOWN state or it will get to this state
             // after complete transition task completes
-            transition(transaction, context);
+            transition(transaction, taskFactory);
             assert getState() == STATE_DOWN || completeTransitionTask!= null;// prevent hard to find bugs
             // create remove task
-            final TaskBuilder<Void> removeTaskBuilder = context.newTask(new ServiceRemoveTask(ServiceController.this, transaction));
+            final TaskBuilder<Void> removeTaskBuilder = taskFactory.newTask(new ServiceRemoveTask(ServiceController.this, transaction));
             if (completeTransitionTask != null) {
                 removeTaskBuilder.addDependency(completeTransitionTask);
             }
@@ -680,46 +677,6 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
                     @Override
                     public TaskBuilder<Void> newTask() throws IllegalStateException {
                         throw new UnsupportedOperationException("not implemented");
-                    }
-
-                    @Override
-                    public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name) {
-                        throw new UnsupportedOperationException("not implemented");
-                    }
-
-                    @Override
-                    public void disableService(ServiceRegistry registry, ServiceName name) {
-                        throw new UnsupportedOperationException("not implemented");
-                    }
-
-                    @Override
-                    public void enableService(ServiceRegistry registry, ServiceName name) {
-                        throw new UnsupportedOperationException("not implemented");
-                    }
-
-                    @Override
-                    public void removeService(ServiceRegistry registry, ServiceName name) {
-                        throw new UnsupportedOperationException("not implemented");
-                    }
-
-                    @Override
-                    public void enableRegistry(ServiceRegistry registry) {
-                        throw new UnsupportedOperationException("not implemented");
-                    }
-
-                    @Override
-                    public void disableRegistry(ServiceRegistry registry) {
-                        throw new UnsupportedOperationException("not implemented");
-                    }
-
-                    @Override
-                    public void removeRegistry(ServiceRegistry registry) {
-                        throw new UnsupportedOperationException("not implemented");
-                    }
-
-                    @Override
-                    public void shutdownContainer(ServiceContainer container) {
-                        throw new UnsupportedOperationException("not implemented");
                     }});
             } else if ((getState() == STATE_DOWN || getState() == STATE_REMOVED) && getState(state) == STATE_UP) {
                 service.start(new StartContext<T>() {
@@ -781,46 +738,6 @@ final class ServiceController<T> extends TransactionalObject implements Dependen
 
                     @Override
                     public TaskBuilder<Void> newTask() throws IllegalStateException {
-                        throw new UnsupportedOperationException("not implemented");
-                    }
-
-                    @Override
-                    public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name) {
-                        throw new UnsupportedOperationException("not implemented");
-                    }
-
-                    @Override
-                    public void disableService(ServiceRegistry registry, ServiceName name) {
-                        throw new UnsupportedOperationException("not implemented");
-                    }
-
-                    @Override
-                    public void enableService(ServiceRegistry registry, ServiceName name) {
-                        throw new UnsupportedOperationException("not implemented");
-                    }
-
-                    @Override
-                    public void removeService(ServiceRegistry registry, ServiceName name) {
-                        throw new UnsupportedOperationException("not implemented");
-                    }
-
-                    @Override
-                    public void enableRegistry(ServiceRegistry registry) {
-                        throw new UnsupportedOperationException("not implemented");
-                    }
-
-                    @Override
-                    public void disableRegistry(ServiceRegistry registry) {
-                        throw new UnsupportedOperationException("not implemented");
-                    }
-
-                    @Override
-                    public void removeRegistry(ServiceRegistry registry) {
-                        throw new UnsupportedOperationException("not implemented");
-                    }
-
-                    @Override
-                    public void shutdownContainer(ServiceContainer container) {
                         throw new UnsupportedOperationException("not implemented");
                     }
 

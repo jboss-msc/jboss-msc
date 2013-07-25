@@ -31,6 +31,7 @@ import org.jboss.msc.service.ServiceMode;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.txn.ServiceContext;
+import org.jboss.msc.txn.TaskFactory;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -183,6 +184,11 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         dependencies.put(name, dependency);
     }
 
+    @Override
+    public ServiceContext getServiceContext() {
+        return new ParentServiceContext(name, registry);
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -214,16 +220,16 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * 
      * @return the installed service controller
      */
-    ServiceController<?> performInstallation(ParentDependency<?> parentDependency, Transaction transaction, ServiceContext context) {
+    ServiceController<?> performInstallation(ParentDependency<?> parentDependency, Transaction transaction, TaskFactory taskFactory) {
         // create primary registration
-        final Registration registration = registry.getOrCreateRegistration(context, transaction, name);
+        final Registration registration = registry.getOrCreateRegistration(transaction, taskFactory, name);
 
         // create alias registrations
         final ServiceName[] aliasArray = aliases.toArray(new ServiceName[aliases.size()]);
         final Registration[] aliasRegistrations = new Registration[aliasArray.length];
         int i = 0; 
         for (ServiceName alias: aliases) {
-            aliasRegistrations[i++] = registry.getOrCreateRegistration(context, transaction, alias);
+            aliasRegistrations[i++] = registry.getOrCreateRegistration(transaction, taskFactory, alias);
         }
 
         // create dependencies
@@ -238,9 +244,9 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
             dependenciesArray[dependencies.size()] = parentDependency;
         }
         // create and install service controller
-        final ServiceController<T> serviceController =  new ServiceController<T>(registration, aliasRegistrations, service, mode, dependenciesArray, transaction, context);
-        serviceController.install(registry, transaction, context);
-        CheckDependencyCycleTask.checkDependencyCycle(serviceController, transaction, context);
+        final ServiceController<T> serviceController =  new ServiceController<T>(registration, aliasRegistrations, service, mode, dependenciesArray, transaction, taskFactory);
+        serviceController.install(registry, transaction, taskFactory);
+        CheckDependencyCycleTask.checkDependencyCycle(serviceController, transaction, taskFactory);
         return serviceController;
     }
 }

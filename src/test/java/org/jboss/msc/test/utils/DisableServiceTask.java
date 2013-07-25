@@ -18,10 +18,13 @@
 
 package org.jboss.msc.test.utils;
 
+import org.jboss.msc.service.ManagementContext;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
+import org.jboss.msc.txn.Transaction;
+import org.jboss.msc.txn.TransactionController;
 
 /**
  * A task that disables the service.
@@ -32,15 +35,18 @@ final class DisableServiceTask implements Executable<Void> {
     
     private final ServiceRegistry registry;
     private final ServiceName serviceName;
-    
-    DisableServiceTask(final ServiceRegistry registry, final ServiceName serviceName) {
+    private final Transaction transaction;
+
+    DisableServiceTask(final ServiceRegistry registry, final ServiceName serviceName, final Transaction transaction) {
         this.registry = registry;
         this.serviceName = serviceName;
+        this.transaction = transaction;
     }
 
     @Override
     public void execute(final ExecuteContext<Void> context) {
-        context.disableService(registry, serviceName);
+        final ManagementContext managementContext = TransactionController.getInstance().getManagementContext();
+        managementContext.disableService(registry, serviceName, transaction);
         context.complete();
     }
     

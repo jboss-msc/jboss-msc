@@ -85,7 +85,7 @@ public final class OneParentTask_NoDeps_TwoChildTasks_NoDeps_TxnCommitted_TestCa
         assertNotNull(parentController);
         // preparing transaction - children validation is blocked
         final CompletionListener prepareListener = new CompletionListener();
-        transaction.prepare(prepareListener);
+        prepare(transaction, prepareListener);
         assertFalse(prepareListener.awaitCompletion(100, TimeUnit.MILLISECONDS));
         // let children to finish validate
         childValidateSignal.countDown();
@@ -107,9 +107,9 @@ public final class OneParentTask_NoDeps_TwoChildTasks_NoDeps_TxnCommitted_TestCa
         assertCallOrder(parent0e, child0e, parent0v, child0v);
         assertCallOrder(parent0e, child1e, parent0v, child1v);
         // committing transaction - children commit is blocked
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         final CompletionListener commitListener = new CompletionListener();
-        transaction.commit(commitListener);
+        commit(transaction, commitListener);
         assertFalse(commitListener.awaitCompletion(100, TimeUnit.MILLISECONDS));
         // let children to finish commit
         childCommitSignal.countDown();

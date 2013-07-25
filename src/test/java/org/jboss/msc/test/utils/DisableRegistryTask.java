@@ -18,9 +18,12 @@
 
 package org.jboss.msc.test.utils;
 
+import org.jboss.msc.service.ManagementContext;
 import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
+import org.jboss.msc.txn.Transaction;
+import org.jboss.msc.txn.TransactionController;
 
 /**
  * A task that disables the registry.
@@ -28,16 +31,18 @@ import org.jboss.msc.txn.ExecuteContext;
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 final class DisableRegistryTask implements Executable<Void> {
-    
     private final ServiceRegistry registry;
-    
-    DisableRegistryTask(final ServiceRegistry registry) {
+    private final Transaction transaction;
+
+    DisableRegistryTask(final ServiceRegistry registry, final Transaction transaction) {
         this.registry = registry;
+        this.transaction = transaction;
     }
 
     @Override
     public void execute(final ExecuteContext<Void> context) {
-        context.disableRegistry(registry);
+        final ManagementContext managementContext = TransactionController.getInstance().getManagementContext();
+        managementContext.disableRegistry(registry, transaction);
         context.complete();
     }
     

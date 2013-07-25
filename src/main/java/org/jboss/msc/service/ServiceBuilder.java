@@ -18,6 +18,8 @@
 
 package org.jboss.msc.service;
 
+import org.jboss.msc.txn.ServiceContext;
+
 
 /**
  * A service builder.
@@ -110,6 +112,14 @@ public interface ServiceBuilder<T> {
      * @throws IllegalStateException if {@link #install()} has been called.
      */
     <D> Dependency<D> addDependency(ServiceRegistry registry, ServiceName name, DependencyFlag... flags) throws IllegalStateException;
+
+    /**
+     * Returns a service context for creating and removing services.
+     * All services created by this context will be automatically children of the service being installed.
+     * 
+     * @return service context
+     */
+    ServiceContext getServiceContext();
 
     /**
      * Initiates installation of this configured service to the container.

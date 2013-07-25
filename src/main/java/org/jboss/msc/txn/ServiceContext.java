@@ -19,101 +19,67 @@
 package org.jboss.msc.txn;
 
 import org.jboss.msc.service.ServiceBuilder;
-import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceRegistry;
 
 /**
- * A service context, which can be used to add new tasks and manipulate services, containers and registries
- * until transaction is marked for prepare.
+ * A service context, which can be used to add new tasks, services and registries inside a transaction context. Can only
+ * be used with active transactions, that have not been prepared to commit nor rolled back.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  */
 public interface ServiceContext {
 
     /**
-     * Add a task with an executable component.  If the task implements any of the supplementary
+     * Adds a task with an executable component to {@code transaction}.  If the task implements any of the supplementary
      * interfaces {@link Revertible}, {@link Validatable}, or {@link Committable}, the corresponding
      * builder properties will be pre-initialized.
-     *
-     * @param task the task
+     * 
+     * @param task        the task
+     * @param transaction the transaction
      * @param <T> the result value type (may be {@link Void})
      * @return the builder for the task
      * @throws IllegalStateException if this context is not accepting new tasks
      */
-    <T> TaskBuilder<T> newTask(Executable<T> task) throws IllegalStateException;
+    <T> TaskBuilder<T> newTask(Executable<T> task, Transaction transaction) throws IllegalStateException;
 
     /**
-     * Add a task without an executable component.  All task components will be uninitialized.
-     *
+     * Adds a task without an executable component to {@code transaction}.  All task components will be uninitialized.
+     * 
+     * @param transaction  the transaction
      * @return the builder for the task
      * @throws IllegalStateException if this context is not accepting new tasks
      */
-    TaskBuilder<Void> newTask() throws IllegalStateException;
+    TaskBuilder<Void> newTask(Transaction transaction) throws IllegalStateException;
 
     /**
      * Gets a builder which can be used to add a service to {@code registry}.
      *
-     * @param registry the target service registry where new service will be installed
-     * @param name the service name
+     * @param registry    the target service registry where new service will be installed
+     * @param name        the service name
+     * @param transaction the transaction
      * @return the builder for the service
      */
-    <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name);
+    <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name, Transaction transaction);
 
-    /**
-     * Disables a service, causing this service to stop if it is {@code UP}.
-     *
-     * @param registry the service registry
-     * @param name the service name
-     */
-    void disableService(ServiceRegistry registry, ServiceName name);
-
-    /**
-     * Enables the service, which may start as a result, according to its {@link org.jboss.msc.service.ServiceMode mode} rules.
-     * <p> Services are enabled by default.
-     *
-     * @param registry the service registry
-     * @param name the service name
-     */
-    void enableService(ServiceRegistry registry, ServiceName name);
-
+    
     /**
      * Removes a service, causing this service to stop if it is {@code UP}.
      *
-     * @param registry the service registry
-     * @param name the service name
+     * @param registry    the service registry
+     * @param name        the service name
+     * @param transaction the transaction
      */
-    void removeService(ServiceRegistry registry, ServiceName name);
-
-    /**
-     * Enables registry. As a result, its services may start, depending on their
-     * {@link org.jboss.msc.service.ServiceMode mode} rules.
-     * <p> Services are enabled by default.
-     *
-     * @param registry the service registry
-     */
-    void enableRegistry(ServiceRegistry registry);
-
-    /**
-     * Disables registry and all its services, causing {@code UP} services to stop.
-     *
-     * @param registry the service registry
-     */
-    void disableRegistry(ServiceRegistry registry);
+    void removeService(ServiceRegistry registry, ServiceName name, Transaction transaction);
 
     /**
      * Removes registry and its services from the {@code container}, causing {@code UP} services to stop.
      *
-     * @param registry the service registry
+     * @param registry    the service registry
+     * @param transaction the transaction
      */
-    void removeRegistry(ServiceRegistry registry);
-
-    /**
-     * Shutdown the container, removing all registries and their services.
-     *
-     * @param container the service container
-     */
-    void shutdownContainer(ServiceContainer container);
+    void removeRegistry(ServiceRegistry registry, Transaction transaction);
 
 }

@@ -20,6 +20,7 @@ package org.jboss.msc.test.utils;
 
 import org.jboss.msc.txn.Listener;
 import org.jboss.msc.txn.Transaction;
+import org.jboss.msc.txn.TransactionController;
 
 /**
  * Listener that rolls back the transaction. It provides utility method {@link #awaitRollback()} to wait until transaction have
@@ -29,11 +30,12 @@ import org.jboss.msc.txn.Transaction;
  */
 public final class RevertingListener implements Listener<Transaction> {
 
+    private final TransactionController transactionController = TransactionController.getInstance();
     private final CompletionListener listener = new CompletionListener();
 
     @Override
     public void handleEvent(final Transaction subject) {
-        subject.rollback(listener);
+        transactionController.rollback(subject, listener);
     }
 
     public void awaitRollback() throws InterruptedException {

@@ -23,11 +23,12 @@ import static org.jboss.msc._private.MSCLogger.SERVICE;
 
 import org.jboss.msc.service.Dependency;
 import org.jboss.msc.service.DependencyFlag;
+import org.jboss.msc.txn.Problem.Severity;
 import org.jboss.msc.txn.ReportableContext;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskController;
+import org.jboss.msc.txn.TaskFactory;
 import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.txn.Problem.Severity;
 
 
 /**
@@ -128,15 +129,15 @@ class DependencyImpl<T> implements Dependency<T> {
      * 
      * @param dependent    dependent associated with this dependency
      * @param transaction  the active transaction
-     * @param context      the service context
+     * @param taskFactory  the task factory
      */
-    void setDependent(Dependent dependent, Transaction transaction, ServiceContext context) {
+    void setDependent(Dependent dependent, Transaction transaction, TaskFactory taskFactory) {
         synchronized (this) {
             this.dependent = dependent;
-            dependencyRegistration.addIncomingDependency(transaction, context, this);
+            dependencyRegistration.addIncomingDependency(transaction, taskFactory, this);
             if (!propagateDemand) {
                 if (hasDemandedFlag()) {
-                    dependencyRegistration.addDemand(transaction, transaction);
+                    dependencyRegistration.addDemand(transaction, taskFactory);
                 }
             }
         }
@@ -146,10 +147,10 @@ class DependencyImpl<T> implements Dependency<T> {
      * Clears the dependency dependent, invoked during {@link dependentController} removal.
      * 
      * @param transaction   the active transaction
-     * @param context       the service context
+     * @param taskFactory   the task factory
      */
-    void clearDependent(Transaction transaction, ServiceContext context) {
-        dependencyRegistration.removeIncomingDependency(transaction, context, this);
+    void clearDependent(Transaction transaction, TaskFactory taskFactory) {
+        dependencyRegistration.removeIncomingDependency(transaction, taskFactory, this);
     }
 
     /**
@@ -165,11 +166,11 @@ class DependencyImpl<T> implements Dependency<T> {
      * Demands this dependency to be satisfied.
      * 
      * @param transaction the active transaction
-     * @param context     the service context
+     * @param taskFactory the task factory
      */
-    void demand(Transaction transaction, ServiceContext context) {
+    void demand(Transaction transaction, TaskFactory taskFactory) {
         if (propagateDemand) {
-            dependencyRegistration.addDemand(transaction, context);
+            dependencyRegistration.addDemand(transaction, taskFactory);
         }
     }
 
@@ -177,11 +178,11 @@ class DependencyImpl<T> implements Dependency<T> {
      * Removes demand for this dependency to be satisfied.
      * 
      * @param transaction the active transaction
-     * @param context     the service context
+     * @param taskFactory the task factory
      */
-    void undemand(Transaction transaction, ServiceContext context) {
+    void undemand(Transaction transaction, TaskFactory taskFactory) {
         if (propagateDemand) {
-            dependencyRegistration.removeDemand(transaction, context);
+            dependencyRegistration.removeDemand(transaction, taskFactory);
         }
     }
 
@@ -191,18 +192,18 @@ class DependencyImpl<T> implements Dependency<T> {
      * @param transaction   the active transaction
      * @param context       the service context
      */
-    TaskController<?> dependencyUp(Transaction transaction, ServiceContext context) {
-        return dependent.dependencySatisfied(transaction, context);
+    TaskController<?> dependencyUp(Transaction transaction, TaskFactory taskFactory) {
+        return dependent.dependencySatisfied(transaction, taskFactory);
     }
 
     /**
      * Notifies that dependency is now {@code DOWN}).
      *  
      * @param transaction    the active transaction
-     * @param serviceContext the service context
+     * @param taskFactory    the task factory
      */
-    TaskController<?> dependencyDown(Transaction transaction, ServiceContext context) {
-        return dependent.dependencyUnsatisfied(transaction, context);
+    TaskController<?> dependencyDown(Transaction transaction, TaskFactory taskFactory) {
+        return dependent.dependencyUnsatisfied(transaction, taskFactory);
     }
 
     /**

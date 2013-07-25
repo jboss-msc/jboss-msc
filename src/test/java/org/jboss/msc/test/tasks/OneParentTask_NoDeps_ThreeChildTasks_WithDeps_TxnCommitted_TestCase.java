@@ -110,7 +110,7 @@ public final class OneParentTask_NoDeps_ThreeChildTasks_WithDeps_TxnCommitted_Te
         assertCallOrder(parent0e, child0e, parent0v, child0v);
         assertCallOrder(parent0e, child1e, child2e, parent0v, child1v, child2v);
         // committing transaction
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         commit(transaction);
         // assert parent0 calls
         assertCalled(parent0e);
@@ -212,7 +212,7 @@ public final class OneParentTask_NoDeps_ThreeChildTasks_WithDeps_TxnCommitted_Te
         assertCallOrder(parent0e, child0e, parent0v, child0v);
         assertCallOrder(parent0e, child1e, child2e, parent0v, child1v, child2v);
         // committing transaction
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         commit(transaction);
         // assert parent0 calls
         assertCalled(parent0e);
@@ -312,7 +312,7 @@ public final class OneParentTask_NoDeps_ThreeChildTasks_WithDeps_TxnCommitted_Te
         // assert tasks ordering
         assertCallOrder(parent0e, child0e, child1e, child2e, parent0v, child0v, child1v, child2v);
         // committing transaction
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         commit(transaction);
         // assert parent0 calls
         assertCalled(parent0e);
@@ -413,7 +413,7 @@ public final class OneParentTask_NoDeps_ThreeChildTasks_WithDeps_TxnCommitted_Te
         // assert tasks ordering
         assertCallOrder(parent0e, child0e, child1e, child2e, parent0v, child0v, child1v, child2v);
         // committing transaction
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         commit(transaction);
         // assert parent0 calls
         assertCalled(parent0e);

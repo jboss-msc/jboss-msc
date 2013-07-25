@@ -80,7 +80,7 @@ public final class OneParentTask_NoDeps_OneChildTask_NoDeps_TxnCommitted_TestCas
         assertNotCalled(c1);
         assertCallOrder(e0, e1, v0, v1);
         // committing transaction
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         commit(transaction);
         assertCalled(e0);
         assertCalled(v0);
@@ -136,7 +136,7 @@ public final class OneParentTask_NoDeps_OneChildTask_NoDeps_TxnCommitted_TestCas
         assertCallOrder(e0, e1, v0, v1);
         // TODO work in progress, make more tests like this and tidy up code
         final CompletionListener completionListener = new CompletionListener();
-        transaction.commit(completionListener);
+        commit(transaction, completionListener);
         completionListener.awaitCompletion();
         assertReverted(transaction);
         assertCallOrder(e0, e1, v0, v1, r1, r0);

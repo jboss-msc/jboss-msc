@@ -36,8 +36,8 @@ import org.jboss.msc.service.ServiceMode;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.test.utils.AbstractServiceTest;
 import org.jboss.msc.test.utils.TestService;
+import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.Transaction;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -54,7 +54,8 @@ public class ParentDependencyTestCase extends AbstractServiceTest {
     protected final TestService addChildService(final ServiceName serviceName, final ServiceMode serviceMode, final ServiceName parentDependency) throws InterruptedException {
         final Transaction txn = newTransaction();
         final TestService service = new TestService(false);
-        final ServiceBuilder<Void> serviceBuilder = txn.addService(serviceRegistry, serviceName);
+        final ServiceContext serviceContext = transactionController.getServiceContext();
+        final ServiceBuilder<Void> serviceBuilder = serviceContext.addService(serviceRegistry, serviceName, txn);
         if (serviceMode != null) serviceBuilder.setMode(serviceMode);
         serviceBuilder.setService(service);
         serviceBuilder.addDependency(parentDependency, DependencyFlag.PARENT);

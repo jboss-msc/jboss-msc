@@ -22,6 +22,9 @@ import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
+import org.jboss.msc.txn.ServiceContext;
+import org.jboss.msc.txn.Transaction;
+import org.jboss.msc.txn.TransactionController;
 
 /**
  * A task that removes the service.
@@ -32,15 +35,18 @@ final class RemoveServiceTask implements Executable<Void> {
     
     private final ServiceRegistry registry;
     private final ServiceName serviceName;
-    
-    RemoveServiceTask(final ServiceRegistry registry, final ServiceName serviceName) {
+    private final Transaction transaction;
+
+    RemoveServiceTask(final ServiceRegistry registry, final ServiceName serviceName, final Transaction transaction) {
         this.registry = registry;
         this.serviceName = serviceName;
+        this.transaction = transaction;
     }
 
     @Override
     public void execute(final ExecuteContext<Void> context) {
-        context.removeService(registry, serviceName);
+        final ServiceContext serviceContext = TransactionController.getInstance().getServiceContext();
+        serviceContext.removeService(registry, serviceName, transaction);
         context.complete();
     }
     

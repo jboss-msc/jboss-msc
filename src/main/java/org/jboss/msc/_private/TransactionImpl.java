@@ -27,17 +27,12 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.msc.service.ServiceBuilder;
-import org.jboss.msc.service.ServiceContainer;
-import org.jboss.msc.service.ServiceName;
-import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.txn.DeadlockException;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.InvalidTransactionStateException;
 import org.jboss.msc.txn.Listener;
 import org.jboss.msc.txn.Problem;
 import org.jboss.msc.txn.ProblemReport;
-import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.txn.TransactionRolledBackException;
@@ -46,7 +41,7 @@ import org.jboss.msc.txn.TransactionRolledBackException;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class TransactionImpl extends Transaction implements ServiceContext {
+public final class TransactionImpl extends Transaction {
 
     static {
         MSCLogger.ROOT.greeting(Version.getVersionString());
@@ -141,62 +136,6 @@ public final class TransactionImpl extends Transaction implements ServiceContext
     private TransactionImpl(final Executor taskExecutor, final Problem.Severity maxSeverity) {
         this.taskExecutor = taskExecutor;
         this.maxSeverity = maxSeverity;
-    }
-
-    @Override
-    public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name) {
-        if (registry == null) {
-            throw new IllegalArgumentException("registry is null");
-        }
-        if (name == null) {
-            throw new IllegalArgumentException("name is null");
-        }
-        return new ServiceBuilderImpl<T>(registry, name, this);
-    }
-
-    @Override
-    public void disableService(ServiceRegistry registry, ServiceName name) {
-        ((ServiceRegistryImpl) registry).getRequiredServiceController(name).disableService(this);
-    }
-
-    @Override
-    public void enableService(ServiceRegistry registry, ServiceName name) {
-        ((ServiceRegistryImpl) registry).getRequiredServiceController(name).enableService(this);
-    }
-
-    @Override
-    public void removeService(ServiceRegistry registry, ServiceName name) {
-        if (registry == null) {
-            throw new IllegalArgumentException("registry is null");
-        }
-        if (name == null) {
-            throw new IllegalArgumentException("name is null");
-        }
-        final Registration registration = ((ServiceRegistryImpl) registry).getRegistration(name);
-        if (registration == null) {
-            return;
-        }
-        final ServiceController<?> controller = registration.getController();
-        if (controller == null) {
-            return;
-        }
-        controller.remove(this, this);
-    }
-
-    public void disableRegistry(final ServiceRegistry registry) {
-        ((ServiceRegistryImpl)registry).disable(this);
-    }
-
-    public void enableRegistry(final ServiceRegistry registry) {
-        ((ServiceRegistryImpl)registry).enable(this);
-    }
-
-    public void removeRegistry(final ServiceRegistry registry) {
-        ((ServiceRegistryImpl)registry).remove(this);
-    }
-
-    public void shutdownContainer(final ServiceContainer container) {
-        ((ServiceContainerImpl)container).shutdown(this);
     }
 
     public Executor getExecutor() {

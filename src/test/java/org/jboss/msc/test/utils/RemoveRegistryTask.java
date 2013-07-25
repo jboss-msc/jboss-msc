@@ -21,6 +21,9 @@ package org.jboss.msc.test.utils;
 import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
+import org.jboss.msc.txn.ServiceContext;
+import org.jboss.msc.txn.Transaction;
+import org.jboss.msc.txn.TransactionController;
 
 /**
  * A task that removes the registry.
@@ -30,14 +33,17 @@ import org.jboss.msc.txn.ExecuteContext;
 final class RemoveRegistryTask implements Executable<Void> {
     
     private final ServiceRegistry registry;
-    
-    RemoveRegistryTask(final ServiceRegistry registry) {
+    private final Transaction transaction;
+
+    RemoveRegistryTask(final ServiceRegistry registry, final Transaction transaction) {
         this.registry = registry;
+        this.transaction = transaction;
     }
 
     @Override
     public void execute(final ExecuteContext<Void> context) {
-        context.removeRegistry(registry);
+        final ServiceContext serviceContext = TransactionController.getInstance().getServiceContext();
+        serviceContext.removeRegistry(registry, transaction);
         context.complete();
     }
     

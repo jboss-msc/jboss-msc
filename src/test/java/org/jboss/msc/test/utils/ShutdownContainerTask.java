@@ -18,9 +18,12 @@
 
 package org.jboss.msc.test.utils;
 
+import org.jboss.msc.service.ManagementContext;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
+import org.jboss.msc.txn.Transaction;
+import org.jboss.msc.txn.TransactionController;
 
 /**
  * A task that shuts down the container.
@@ -30,14 +33,17 @@ import org.jboss.msc.txn.ExecuteContext;
 final class ShutdownContainerTask implements Executable<Void> {
     
     private final ServiceContainer container;
-    
-    ShutdownContainerTask(final ServiceContainer container) {
+    private final Transaction transaction;
+
+    ShutdownContainerTask(final ServiceContainer container, final Transaction transaction) {
         this.container = container;
+        this.transaction = transaction;
     }
 
     @Override
     public void execute(final ExecuteContext<Void> context) {
-        context.shutdownContainer(container);
+        final ManagementContext managementContext = TransactionController.getInstance().getManagementContext();
+        managementContext.shutdownContainer(container, transaction);
         context.complete();
     }
     

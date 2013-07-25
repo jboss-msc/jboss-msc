@@ -81,7 +81,7 @@ public final class OneParentTask_NoDeps_OneChildTask_NoDeps_TxnReverted_TestCase
         assertNotCalled(c1);
         assertCallOrder(e0, e1, v0, v1);
         // reverting transaction
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
@@ -129,7 +129,7 @@ public final class OneParentTask_NoDeps_OneChildTask_NoDeps_TxnReverted_TestCase
         assertNotNull(parentController);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         assertCalled(e0);
@@ -176,7 +176,7 @@ public final class OneParentTask_NoDeps_OneChildTask_NoDeps_TxnReverted_TestCase
         assertNotNull(parentController);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         assertCalled(e0);
@@ -225,7 +225,7 @@ public final class OneParentTask_NoDeps_OneChildTask_NoDeps_TxnReverted_TestCase
         assertNotNull(parentController);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         assertCalled(e0);

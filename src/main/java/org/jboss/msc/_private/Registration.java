@@ -28,8 +28,8 @@ import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.txn.ReportableContext;
-import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskController;
+import org.jboss.msc.txn.TaskFactory;
 import org.jboss.msc.txn.Transaction;
 
 
@@ -69,8 +69,8 @@ final class Registration extends TransactionalObject {
         return controller;
     }
 
-    void setController(final ServiceContext context, final Transaction transaction, final ServiceController<?> serviceController) {
-        lockWrite(transaction, context);
+    void setController(final Transaction transaction, final TaskFactory taskFactory, final ServiceController<?> serviceController) {
+        lockWrite(transaction, taskFactory);
         final boolean upDemanded;
         synchronized (this) {
             this.controller = serviceController;
@@ -81,49 +81,49 @@ final class Registration extends TransactionalObject {
         }
     }
 
-    void clearController(final Transaction transaction, final ServiceContext context) {
-        lockWrite(transaction, context);
+    void clearController(final Transaction transaction, final TaskFactory taskFactory) {
+        lockWrite(transaction, taskFactory);
         synchronized (this) {
             this.controller = null;
         }
     }
 
-    void addIncomingDependency(final Transaction transaction, final ServiceContext context, final DependencyImpl<?> dependency) {
-        lockWrite(transaction, context);
+    void addIncomingDependency(final Transaction transaction, final TaskFactory taskFactory, final DependencyImpl<?> dependency) {
+        lockWrite(transaction, taskFactory);
         final boolean dependencyUp;
         synchronized (this) {
             incomingDependencies.add(dependency);
             dependencyUp = controller != null && controller.getState() == STATE_UP;
         }
         if (dependencyUp) {
-            dependency.dependencyUp(transaction, context);
+            dependency.dependencyUp(transaction, taskFactory);
         }
     }
 
-    void removeIncomingDependency(final Transaction transaction, final ServiceContext context, final DependencyImpl<?> dependency) {
-        lockWrite(transaction, context);
+    void removeIncomingDependency(final Transaction transaction, final TaskFactory taskFactory, final DependencyImpl<?> dependency) {
+        lockWrite(transaction, taskFactory);
         assert incomingDependencies.contains(dependency);
         incomingDependencies.remove(dependency);
     }
 
-    void serviceUp(final Transaction transaction, final ServiceContext context) {
+    void serviceUp(final Transaction transaction, final TaskFactory taskFactory) {
         for (DependencyImpl<?> incomingDependency: incomingDependencies) {
-            incomingDependency.dependencyUp(transaction, context);
+            incomingDependency.dependencyUp(transaction, taskFactory);
         }
     }
 
-    void serviceDown(final Transaction transaction, final ServiceContext context, final List<TaskController<?>> tasks) {
+    void serviceDown(final Transaction transaction, final TaskFactory taskFactory, final List<TaskController<?>> tasks) {
         for (DependencyImpl<?> incomingDependency: incomingDependencies) {
-            final TaskController<?> task = incomingDependency.dependencyDown(transaction, context);
+            final TaskController<?> task = incomingDependency.dependencyDown(transaction, taskFactory);
             if (task != null) {
                 tasks.add(task);
             }
         }
     }
 
-    void addDemand(Transaction transaction, ServiceContext context) {
+    void addDemand(Transaction transaction, TaskFactory taskFactory) {
         assert ! Thread.holdsLock(this);
-        lockWrite(transaction, context);
+        lockWrite(transaction, taskFactory);
         final ServiceController<?> controller;
         synchronized (this) {
             controller = this.controller;
@@ -132,13 +132,13 @@ final class Registration extends TransactionalObject {
             }
         }
         if (controller != null) {
-            controller.upDemanded(transaction, context);
+            controller.upDemanded(transaction, taskFactory);
         }
     }
 
-    void removeDemand(Transaction transaction, ServiceContext context) {
+    void removeDemand(Transaction transaction, TaskFactory taskFactory) {
         assert ! Thread.holdsLock(this);
-        lockWrite(transaction, context);
+        lockWrite(transaction, taskFactory);
         synchronized (this) {
             controller = this.controller;
             if (upDemandedByCount-- > 0) {
@@ -146,7 +146,7 @@ final class Registration extends TransactionalObject {
             }
         }
         if (controller != null) {
-            controller.upUndemanded(transaction, context);
+            controller.upUndemanded(transaction, taskFactory);
         }
     }
 
