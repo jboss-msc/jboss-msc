@@ -44,11 +44,6 @@ public enum DependencyFlag {
      * Do not place a demand on this dependency. Overrides default mode behavior.
      */
     UNDEMANDED,
-    /**
-     * Treat the dependency as a parent. That is when the dependency is stopped this service should be removed.
-     * Implies {@link #REQUIRED}.
-     */
-    PARENT,
     ;
 
     /**

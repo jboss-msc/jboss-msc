@@ -119,6 +119,7 @@ public class AbstractServiceTest extends AbstractTransactionTest {
         final TestService service = new TestService(failToStart);
         final ServiceContext serviceContext = transactionController.getServiceContext();
         final ServiceBuilder<Void> serviceBuilder = serviceContext.addService(serviceRegistry, serviceName, txn);
+        service.setServiceContext(serviceBuilder.getServiceContext());
         if (serviceMode != null) serviceBuilder.setMode(serviceMode);
         serviceBuilder.setService(service);
         for (ServiceName dependency: dependencies) {

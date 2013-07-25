@@ -46,8 +46,7 @@ class DependencyImpl<T> implements Dependency<T> {
     private static final byte UNREQUIRED_FLAG = (byte)(1 << DependencyFlag.UNREQUIRED.ordinal());
     private static final byte DEMANDED_FLAG   = (byte)(1 << DependencyFlag.DEMANDED.ordinal());
     private static final byte UNDEMANDED_FLAG = (byte)(1 << DependencyFlag.UNDEMANDED.ordinal());
-    private static final byte PARENT_FLAG     = (byte)(1 << DependencyFlag.PARENT.ordinal());
-    
+
     /**
      * Dependency flags.
      */
@@ -89,9 +88,6 @@ class DependencyImpl<T> implements Dependency<T> {
         if (allAreSet(translatedFlags, REQUIRED_FLAG | UNREQUIRED_FLAG)) {
             throw SERVICE.mutuallyExclusiveFlags(DependencyFlag.REQUIRED.toString(), DependencyFlag.UNREQUIRED.toString());
         }
-        if (allAreSet(translatedFlags, PARENT_FLAG | UNREQUIRED_FLAG)) {
-            throw SERVICE.mutuallyExclusiveFlags(DependencyFlag.PARENT.toString(), DependencyFlag.UNREQUIRED.toString());
-        }
         this.flags = translatedFlags;
         this.dependencyRegistration = dependencyRegistration;
         this.propagateDemand = !hasDemandedFlag() && !hasUndemandedFlag();
@@ -111,10 +107,6 @@ class DependencyImpl<T> implements Dependency<T> {
 
     final boolean hasUndemandedFlag() {
         return allAreSet(flags, UNDEMANDED_FLAG);
-    }
-
-    final boolean hasParentFlag() {
-        return allAreSet(flags, PARENT_FLAG);
     }
 
     public T get() {
@@ -213,7 +205,7 @@ class DependencyImpl<T> implements Dependency<T> {
      * @param context              context where all validation problems found will be added
      */
     void validate(ServiceController<?> dependencyController, ReportableContext context) {
-        if (dependencyController == null && !hasUnrequiredFlag() && !hasParentFlag()) {
+        if (dependencyController == null && !hasUnrequiredFlag()) {
             context.addProblem(Severity.ERROR, MSCLogger.SERVICE.requiredDependency(dependent.getServiceName(), dependencyRegistration.getServiceName()));
         }
     }

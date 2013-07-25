@@ -17,7 +17,6 @@
  */
 package org.jboss.msc._private;
 
-import org.jboss.msc.service.DependencyFlag;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceRegistry;
@@ -31,21 +30,16 @@ import org.jboss.msc.txn.Transaction;
  *
  */
 public class ParentServiceContext extends ServiceContextImpl {
-    //private final Registration parentRegistration;
-    private final ServiceName serviceName;
-    private final ServiceRegistry registry;
+    private final Registration parentRegistration;
 
-    // TODO refactor this, make it parent registration
-    public ParentServiceContext(ServiceName serviceName, ServiceRegistry registry) {
-        //this.parentRegistration = parentRegistration;
-        this.serviceName = serviceName;
-        this.registry = registry;
+    public ParentServiceContext(Registration parentRegistration) {
+        this.parentRegistration = parentRegistration;
     }
 
     @Override
     public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name, Transaction transaction) {
         final ServiceBuilder<T> serviceBuilder = super.addService(registry, name, transaction);
-        serviceBuilder.addDependency(this.registry, this.serviceName, DependencyFlag.PARENT);
+        ((ServiceBuilderImpl<T>) serviceBuilder).setParentDependency(parentRegistration);
         return serviceBuilder;
     }
 }

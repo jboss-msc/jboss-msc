@@ -162,31 +162,22 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         if (name == null) {
             MSCLogger.SERVICE.methodParameterIsNull("name");
         }
-        final DependencyImpl<D> dependency = DependencyFactory.create((ServiceRegistryImpl) registry, name, flags != null ? flags : noFlags, this, transaction);
-        addDependency(dependency, name, flags != null ? flags : noFlags);
+        final Registration dependencyRegistration = ((ServiceRegistryImpl) registry).getOrCreateRegistration(transaction, transaction, name);
+        final DependencyImpl<D> dependency = new DependencyImpl<D>(dependencyRegistration, transaction, flags != null ? flags : noFlags);
+        dependencies.put(name, dependency);
         return dependency;
     }
 
-    private void addDependency(DependencyImpl<?> dependency, ServiceName name, DependencyFlag... flags) {
-        for (DependencyFlag flag: flags) {
-            if (flag == DependencyFlag.PARENT) {
-                if (parentDependency != null) {
-                    throw new IllegalStateException("Service cannot have more than one parent dependency");
-                }
-                parentDependency = (ParentDependency<?>) dependency;
-                dependencies.remove(name);
-                return;
-            }
-        }
-        if (parentDependency != null && name.equals(parentDependency.getDependencyRegistration().getServiceName())) {
-            parentDependency = null;
-        }
-        dependencies.put(name, dependency);
+    void setParentDependency(Registration parentRegistration) {
+        final DependencyImpl<Void> dependency = new DependencyImpl<Void>(parentRegistration, transaction, noFlags);
+        parentDependency = new ParentDependency<Void>(dependency, this, transaction);
+        dependencies.put(name, parentDependency);
     }
 
     @Override
     public ServiceContext getServiceContext() {
-        return new ParentServiceContext(name, registry);
+        // TODO review this method, we need to discuss when is the parent service context supposed to be provided
+        return new ParentServiceContext(registry.getOrCreateRegistration(transaction, transaction, name));
     }
 
     /**
