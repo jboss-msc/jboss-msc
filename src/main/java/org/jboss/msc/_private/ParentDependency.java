@@ -18,8 +18,8 @@
 package org.jboss.msc._private;
 
 import org.jboss.msc.service.ServiceName;
-import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskController;
+import org.jboss.msc.txn.TaskFactory;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -35,7 +35,7 @@ final class ParentDependency<T> extends DependencyDecorator<T> implements Depend
     // child service builder, used to created child service whenever needed
     private final ServiceBuilderImpl<?> childServiceBuilder;
 
-    ParentDependency(SimpleDependency<T> dependency, ServiceBuilderImpl<?> childServiceBuilder, Transaction transaction) {
+    ParentDependency(DependencyImpl<T> dependency, ServiceBuilderImpl<?> childServiceBuilder, Transaction transaction) {
         super(dependency);
         this.childServiceBuilder = childServiceBuilder;
     }
@@ -47,27 +47,29 @@ final class ParentDependency<T> extends DependencyDecorator<T> implements Depend
     }
 
     @Override
-    public TaskController<?> dependencySatisfied(Transaction transaction, ServiceContext context) {
-        childService = childServiceBuilder.performInstallation(this, transaction, context);
+    public void setDependent(Dependent dependent, Transaction transaction, TaskFactory taskFactory) {
+        // do nothing
+    }
+
+    @Override
+    public void clearDependent(Transaction transaction, TaskFactory taskFactory) {
+        // do nothing
+    }
+
+    @Override
+    public TaskController<?> dependencySatisfied(Transaction transaction, TaskFactory taskFactory) {
+        childService = childServiceBuilder.performInstallation(this, transaction, taskFactory);
+        childService.dependencySatisfied(transaction, taskFactory);
         return null;
     }
 
     @Override
-    public TaskController<?> dependencyUnsatisfied(Transaction transaction, ServiceContext context) {
-        return childService.remove(transaction, context);
+    public TaskController<?> dependencyUnsatisfied(Transaction transaction, TaskFactory taskFactory) {
+        return childService.remove(transaction, taskFactory);
     }
 
     @Override
     public ServiceName getServiceName() {
         return childServiceBuilder.getServiceName();
     }
-
-    @Override
-    Object takeSnapshot() {
-        return null;
-    }
-
-    @Override
-    void revert(Object snapshot) {}
-
 }

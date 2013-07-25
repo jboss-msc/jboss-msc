@@ -27,18 +27,12 @@ import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.msc.Version;
-import org.jboss.msc.service.ServiceBuilder;
-import org.jboss.msc.service.ServiceContainer;
-import org.jboss.msc.service.ServiceName;
-import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.txn.DeadlockException;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.InvalidTransactionStateException;
 import org.jboss.msc.txn.Listener;
 import org.jboss.msc.txn.Problem;
 import org.jboss.msc.txn.ProblemReport;
-import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.txn.TransactionRolledBackException;
@@ -47,7 +41,7 @@ import org.jboss.msc.txn.TransactionRolledBackException;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class TransactionImpl extends Transaction implements ServiceContext {
+public final class TransactionImpl extends Transaction {
 
     static {
         MSCLogger.ROOT.greeting(Version.getVersionString());
@@ -135,70 +129,13 @@ public final class TransactionImpl extends Transaction implements ServiceContext
     private int unterminatedChildren;
 
     private Listener<? super Transaction> validationListener;
-    private Listener<? super Transaction> commitListener;
-    private Listener<? super Transaction> rollbackListener;
+    private Listener<? super Transaction> terminateListener;
 
     private volatile boolean isRollbackRequested;
 
     private TransactionImpl(final Executor taskExecutor, final Problem.Severity maxSeverity) {
         this.taskExecutor = taskExecutor;
         this.maxSeverity = maxSeverity;
-    }
-
-    @Override
-    public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name) {
-        if (registry == null) {
-            throw new IllegalArgumentException("registry is null");
-        }
-        if (name == null) {
-            throw new IllegalArgumentException("name is null");
-        }
-        return new ServiceBuilderImpl<T>(registry, name, this);
-    }
-
-    @Override
-    public void disableService(ServiceRegistry registry, ServiceName name) {
-        ((ServiceRegistryImpl) registry).getRequiredServiceController(name).disableService(this);
-    }
-
-    @Override
-    public void enableService(ServiceRegistry registry, ServiceName name) {
-        ((ServiceRegistryImpl) registry).getRequiredServiceController(name).enableService(this);
-    }
-
-    @Override
-    public void removeService(ServiceRegistry registry, ServiceName name) {
-        if (registry == null) {
-            throw new IllegalArgumentException("registry is null");
-        }
-        if (name == null) {
-            throw new IllegalArgumentException("name is null");
-        }
-        final Registration registration = ((ServiceRegistryImpl) registry).getRegistration(name);
-        if (registration == null) {
-            return;
-        }
-        final ServiceController<?> controller = registration.getController();
-        if (controller == null) {
-            return;
-        }
-        controller.remove(this, this);
-    }
-
-    public void disableRegistry(final ServiceRegistry registry) {
-        ((ServiceRegistryImpl)registry).disable(this);
-    }
-
-    public void enableRegistry(final ServiceRegistry registry) {
-        ((ServiceRegistryImpl)registry).enable(this);
-    }
-
-    public void removeRegistry(final ServiceRegistry registry) {
-        ((ServiceRegistryImpl)registry).remove(this);
-    }
-
-    public void shutdownContainer(final ServiceContainer container) {
-        ((ServiceContainerImpl)container).shutdown(this);
     }
 
     public Executor getExecutor() {
@@ -252,7 +189,11 @@ public final class TransactionImpl extends Transaction implements ServiceContext
                 if (allAreSet(state, FLAG_ROLLBACK_REQ)) {
                     return T_PREPARED_to_ROLLBACK;
                 } else if (allAreSet(state, FLAG_COMMIT_REQ)) {
-                    return T_PREPARED_to_COMMITTING;
+                    if (reportIsCommittable()) {
+                        return T_PREPARED_to_COMMITTING;
+                    } else {
+                        return T_PREPARED_to_ROLLBACK;
+                    }
                 } else {
                      return T_NONE;
                 }
@@ -364,13 +305,13 @@ public final class TransactionImpl extends Transaction implements ServiceContext
             }
         } else {
             if (allAreSet(state, FLAG_DO_COMMIT_LISTENER)) {
-                callCommitListener();
+                callTerminateListener();
             }
             if (allAreSet(state, FLAG_DO_PREPARE_LISTENER)) {
                 callValidationListener();
             }
             if (allAreSet(state, FLAG_DO_ROLLBACK_LISTENER)) {
-                callRollbackListener();
+                callTerminateListener();
             }
         }
     }
@@ -416,7 +357,7 @@ public final class TransactionImpl extends Transaction implements ServiceContext
         int state;
         synchronized (this) {
             state = this.state | FLAG_USER_THREAD;
-            if (stateIsIn(state, STATE_ACTIVE, STATE_PREPARING, STATE_PREPARED) && reportIsCommittable()) {
+            if (stateIsIn(state, STATE_ACTIVE, STATE_PREPARING, STATE_PREPARED)) {
                 if (allAreSet(state, FLAG_COMMIT_REQ)) {
                     throw new InvalidTransactionStateException("Commit already called");
                 }
@@ -427,9 +368,9 @@ public final class TransactionImpl extends Transaction implements ServiceContext
                 throw new InvalidTransactionStateException("Transaction was committed");
             }
             if (completionListener == null) {
-                commitListener = NOTHING_LISTENER;
+                terminateListener = NOTHING_LISTENER;
             } else {
-                commitListener = completionListener;
+                terminateListener = completionListener;
             }
             state = transition(state);
             this.state = state & PERSISTENT_STATE;
@@ -454,9 +395,9 @@ public final class TransactionImpl extends Transaction implements ServiceContext
                 throw new InvalidTransactionStateException("Transaction was committed");
             }
             if (completionListener == null) {
-                rollbackListener = NOTHING_LISTENER;
+                terminateListener = NOTHING_LISTENER;
             } else {
-                rollbackListener = completionListener;
+                terminateListener = completionListener;
             }
             state = transition(state);
             this.state = state & PERSISTENT_STATE;
@@ -573,22 +514,12 @@ public final class TransactionImpl extends Transaction implements ServiceContext
         executeTasks(state);
     }
 
-    private void callCommitListener() {
+    private void callTerminateListener() {
         Listener<? super Transaction> listener;
         synchronized (this) {
             endTime = System.nanoTime();
-            listener = commitListener;
-            commitListener = null;
-        }
-        safeCall(listener);
-    }
-
-    private void callRollbackListener() {
-        Listener<? super Transaction> listener;
-        synchronized (this) {
-            endTime = System.nanoTime();
-            listener = rollbackListener;
-            rollbackListener = null;
+            listener = terminateListener;
+            terminateListener = null;
         }
         safeCall(listener);
     }

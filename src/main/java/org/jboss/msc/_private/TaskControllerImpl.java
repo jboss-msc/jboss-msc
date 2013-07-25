@@ -822,82 +822,61 @@ final class TaskControllerImpl<T> implements TaskController<T>, TaskParent, Task
             setClassLoader();
             exec.execute(new ExecuteContext<T>() {
                 @Override
-                public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name) {
-                    return getTransaction().addService(registry, name);
-                }
-
-                public void disableService(ServiceRegistry registry, ServiceName name) {
-                    getTransaction().disableService(registry, name);
-                }
-
-                public void enableService(ServiceRegistry registry, ServiceName name) {
-                    getTransaction().enableService(registry, name);
-                }
-
-                public void removeService(ServiceRegistry registry, ServiceName name) {
-                    getTransaction().removeService(registry, name);
-                }
-
-                public void disableRegistry(ServiceRegistry registry) {
-                    getTransaction().disableRegistry(registry);
-                }
-
-                public void enableRegistry(ServiceRegistry registry) {
-                    getTransaction().enableRegistry(registry);
-                }
-
-                public void removeRegistry(ServiceRegistry registry) {
-                    getTransaction().removeRegistry(registry);
-                }
-
-                public void shutdownContainer(ServiceContainer container) {
-                    getTransaction().shutdownContainer(container);
-                }
-
                 public void complete(final T result) {
                     execComplete(result);
                 }
 
+                @Override
                 public void complete() {
                     complete(null);
                 }
 
+                @Override
                 public boolean isCancelRequested() {
                     return getTransaction().isRollbackRequested();
                 }
 
+                @Override
                 public void cancelled() {
                     execCancelled();
                 }
 
+                @Override
                 public void addProblem(final Problem reason) {
                     problemReport.addProblem(reason);
                 }
 
+                @Override
                 public void addProblem(final Problem.Severity severity, final String message) {
                     addProblem(new Problem(TaskControllerImpl.this, message, severity));
                 }
 
+                @Override
                 public void addProblem(final Problem.Severity severity, final String message, final Throwable cause) {
                     addProblem(new Problem(TaskControllerImpl.this, message, cause, severity));
                 }
 
+                @Override
                 public void addProblem(final String message, final Throwable cause) {
                     addProblem(new Problem(TaskControllerImpl.this, message, cause));
                 }
 
+                @Override
                 public void addProblem(final String message) {
                     addProblem(new Problem(TaskControllerImpl.this, message));
                 }
 
+                @Override
                 public void addProblem(final Throwable cause) {
                     addProblem(new Problem(TaskControllerImpl.this, cause));
                 }
 
+                @Override
                 public <N> TaskBuilder<N> newTask(final Executable<N> task) throws IllegalStateException {
                     return new TaskBuilderImpl<N>(getTransaction(), TaskControllerImpl.this, task);
                 }
 
+                @Override
                 public TaskBuilder<Void> newTask() throws IllegalStateException {
                     return new TaskBuilderImpl<Void>(getTransaction(), TaskControllerImpl.this);
                 }

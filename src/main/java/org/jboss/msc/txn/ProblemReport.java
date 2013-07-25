@@ -39,7 +39,7 @@ public final class ProblemReport implements Iterable<Problem> {
     public void addProblem(Problem problem) {
         synchronized (problems) {
             final Problem.Severity severity = problem.getSeverity();
-            if (maxSeverity == null || severity.compareTo(maxSeverity) < 0) {
+            if (maxSeverity == null || severity.compareTo(maxSeverity) > 0) {
                 maxSeverity = severity;
             }
             problems.add(problem);

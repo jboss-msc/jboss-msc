@@ -21,7 +21,6 @@ package org.jboss.msc._private;
 import static org.jboss.logging.Logger.Level.ERROR;
 import static org.jboss.logging.Logger.Level.FATAL;
 import static org.jboss.logging.Logger.Level.INFO;
-import static org.jboss.logging.Logger.Level.WARN;
 
 import org.jboss.logging.Logger;
 import org.jboss.logging.annotations.Cause;
@@ -60,7 +59,6 @@ public interface MSCLogger {
     MSCLogger FAIL = Logger.getMessageLogger(MSCLogger.class, "org.jboss.msc.service.fail");
     MSCLogger TASK = Logger.getMessageLogger(MSCLogger.class, "org.jboss.msc.task");
     MSCLogger TXN = Logger.getMessageLogger(MSCLogger.class, "org.jboss.msc.txn");
-    MSCLogger INJECT = Logger.getMessageLogger(MSCLogger.class, "org.jboss.msc.inject");
 
     @LogMessage(level = INFO)
     @Message(value = "JBoss MSC version %s")
@@ -68,27 +66,19 @@ public interface MSCLogger {
 
     @LogMessage(level = ERROR)
     @Message(id = 1, value = "Failed to start %s")
-    void startFailed(@Cause Throwable cause, ServiceName serviceName);
+    void startFailed(ServiceName serviceName);
 
     @LogMessage(level = ERROR)
     @Message(id = 2, value = "Invocation of listener \"%s\" failed")
     void listenerFailed(@Cause Throwable cause, Listener<?> listener);
 
-    @LogMessage(level = WARN)
-    @Message(id = 3, value = "Exception thrown after start was already completed in %s")
-    void exceptionAfterComplete(@Cause Throwable cause, ServiceName serviceName);
+    // id = 3: exception after start completed (N/A)
 
-    @LogMessage(level = WARN)
-    @Message(id = 4, value = "Failure during stop of %s")
-    void stopFailed(@Cause Throwable cause, ServiceName serviceName);
+    // id = 4: service stop failed (N/A)
 
-    @LogMessage(level = WARN)
-    @Message(id = 5, value = "Unexpected disappearance of %s during stop")
-    void stopServiceMissing(ServiceName serviceName);
+    // id = 5: stop service missing (N/A)
 
-    @LogMessage(level = WARN)
-    @Message(id = 7, value = "An internal service error has occurred while processing an operation on %s")
-    void internalServiceError(@Cause Throwable cause, ServiceName serviceName);
+    // id = 6: internal service error (N/A)
 
     // id = 8: unexpected worker thread exception (N/A)
 
@@ -119,8 +109,8 @@ public interface MSCLogger {
     @Message(id = 16, value = "Internal task \"%s\" execution failed (transaction is likely permanently jammed)")
     void runnableExecuteFailed(@Cause Throwable cause, Runnable command);
 
-    @Message(id = 17, value ="Service %s has a required dependency on service %s that %s")
-    String requiredDependency(ServiceName dependentName, ServiceName dependencyName, String dependencyStateDescription);
+    @Message(id = 17, value ="Service %s has a required dependency on service %s that is missing")
+    String requiredDependency(ServiceName dependentName, ServiceName dependencyName);
 
     @Message(id = 18, value="Dependency cycle found: %s")
     String dependencyCycle(ServiceName[] cycle);
@@ -142,6 +132,9 @@ public interface MSCLogger {
 
     @Message(id = 103, value = "Too many active transactions")
     IllegalStateException tooManyActiveTransactions();
+
+    @Message(id = 104, value = "%s and %s flags are mutually exclusive")
+    IllegalStateException mutuallyExclusiveFlags(final String flag1, final String flag2);
 
     /*
      * Location nesting types.

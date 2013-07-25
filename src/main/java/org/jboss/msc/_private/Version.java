@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.jboss.msc;
+package org.jboss.msc._private;
 
 import java.io.IOException;
 import java.io.InputStream;

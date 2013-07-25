@@ -31,6 +31,10 @@ public class TestExecutable<T> extends TestTask implements Executable<T> {
     private final boolean cancel;
     private final T result;
 
+    public TestExecutable(final String name) {
+        this(name, false, null, null);
+    }
+
     public TestExecutable() {
         this(false, null, null);
     }
@@ -60,7 +64,11 @@ public class TestExecutable<T> extends TestTask implements Executable<T> {
     }
 
     public TestExecutable(final boolean cancel, final T result, final CountDownLatch signal) {
-        super(signal);
+        this(null, cancel, result, signal);
+    }
+
+    public TestExecutable(final String name, final boolean cancel, final T result, final CountDownLatch signal) {
+        super(name, signal);
         this.cancel = cancel;
         this.result = result;
     }

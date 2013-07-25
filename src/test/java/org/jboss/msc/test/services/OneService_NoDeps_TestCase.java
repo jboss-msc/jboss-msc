@@ -47,7 +47,7 @@ public class OneService_NoDeps_TestCase extends AbstractServiceTest {
     public void usecase1() throws Exception {
         final TestService firstService = addService(firstSN, ON_DEMAND);
         assertFalse(firstService.isUp());
-        removeService(firstSN);
+        assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
     }
 
@@ -62,7 +62,7 @@ public class OneService_NoDeps_TestCase extends AbstractServiceTest {
     public void usecase2() throws Exception {
         final TestService firstService = addService(firstSN, LAZY);
         assertFalse(firstService.isUp());
-        removeService(firstSN);
+        assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
     }
 
@@ -77,7 +77,7 @@ public class OneService_NoDeps_TestCase extends AbstractServiceTest {
     public void usecase3() throws Exception {
         final TestService firstService = addService(firstSN, ACTIVE);
         assertTrue(firstService.isUp());
-        removeService(firstSN);
+        assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
     }
 

@@ -18,6 +18,8 @@
 
 package org.jboss.msc._private;
 
+import static java.lang.Thread.holdsLock;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -28,7 +30,7 @@ import org.jboss.msc.service.Service;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceNotFoundException;
 import org.jboss.msc.service.ServiceRegistry;
-import org.jboss.msc.txn.ServiceContext;
+import org.jboss.msc.txn.TaskFactory;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -74,11 +76,11 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
         return registration.getController() == null? null: registration.getController().getService();
     }
 
-    Registration getOrCreateRegistration(ServiceContext context, Transaction transaction, ServiceName name) {
+    Registration getOrCreateRegistration(Transaction transaction, TaskFactory taskFactory, ServiceName name) {
         Registration registration = registry.get(name);
         if (registration == null) {
             checkRemoved();
-            lockWrite(transaction, context);
+            lockWrite(transaction, taskFactory);
             registration = new Registration(name);
             Registration appearing = registry.putIfAbsent(name, registration);
             if (appearing != null) {
@@ -102,7 +104,7 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
 
     void remove(Transaction transaction) {
         synchronized(this) {
-            if (isRemoved()) {
+            if (Bits.anyAreSet(state, REMOVED)) {
                 return;
             }
             state = (byte) (state | REMOVED);
@@ -114,10 +116,6 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
                 serviceInstance.remove(transaction, transaction);
             }
         }
-    }
-
-    synchronized boolean isRemoved() {
-        return Bits.anyAreSet(state, REMOVED);
     }
 
     synchronized void newServiceInstalled(ServiceController<?> service, Transaction transaction) {
@@ -159,27 +157,37 @@ final class ServiceRegistryImpl extends TransactionalObject implements ServiceRe
         }
     }
 
-    void install(ServiceController<?> serviceController) {
-        checkRemoved();
-    }
-
-    @SuppressWarnings("unchecked")
     @Override
-    synchronized void revert(Object snapshot) {
-        registry.clear();
-        registry.putAll((Map<ServiceName, Registration>)snapshot);
+    Object takeSnapshot() {
+        return new Snapshot();
     }
 
     @Override
-    synchronized Object takeSnapshot() {
-        final Map<ServiceName, Registration> snapshot = new HashMap<ServiceName, Registration>(registry.size());
-        snapshot.putAll(registry);
-        return snapshot;
+    void revert(final Object snapshot) {
+        ((Snapshot)snapshot).apply();
     }
 
     private synchronized void checkRemoved() {
         if (Bits.anyAreSet(state, REMOVED)) {
             throw new IllegalStateException("ServiceRegistry is removed");
+        }
+    }
+    
+    private final class Snapshot {
+        private final byte state;
+        private final Map<ServiceName, Registration> registry;
+        
+        private Snapshot() {
+            assert holdsLock(ServiceRegistryImpl.this);
+            state = ServiceRegistryImpl.this.state;
+            registry = new HashMap<ServiceName, Registration>(ServiceRegistryImpl.this.registry);
+        }
+        
+        private void apply() {
+            assert holdsLock(ServiceRegistryImpl.this);
+            ServiceRegistryImpl.this.state = state;
+            ServiceRegistryImpl.this.registry.clear();
+            ServiceRegistryImpl.this.registry.putAll(registry);
         }
     }
 }

@@ -17,16 +17,15 @@
  */
 package org.jboss.msc._private;
 
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.jboss.msc.service.CircularDependencyException;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.txn.AttachmentKey;
+import org.jboss.msc.txn.TaskFactory;
 import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.txn.Validatable;
 import org.jboss.msc.txn.ValidateContext;
@@ -45,16 +44,17 @@ final class CheckDependencyCycleTask implements Validatable {
      * Schedule a check for dependency cycles involving {@code service}. The check is performed during transaction
      * validation.
      * 
-     * @param transaction the active transaction
      * @param service     the service to be verified
+     * @param transaction the active transaction
+     * @param taskFactory the task factory
      */
-    static void checkDependencyCycle(ServiceController<?> service, Transaction transaction) {
+    static void checkDependencyCycle(ServiceController<?> service, Transaction transaction, TaskFactory taskFactory) {
         final CheckDependencyCycleTask task;
         if (transaction.hasAttachment(key)) {
             task = transaction.getAttachment(key);
         } else {
             task = new CheckDependencyCycleTask();
-            transaction.newTask().setValidatable(task).release();
+            taskFactory.newTask().setValidatable(task).release();
         }
         task.checkService(service);
     }
@@ -80,28 +80,27 @@ final class CheckDependencyCycleTask implements Validatable {
                 }
                 final ServiceName serviceName = service.getPrimaryRegistration().getServiceName();
                 pathTrace.put(serviceName, service);
-                verifyCycle(service, pathTrace, checkedServices);
+                verifyCycle(service, pathTrace, checkedServices, context);
                 checkedServices.add(service);
                 pathTrace.remove(serviceName);
             }
-        } catch (CircularDependencyException e) {
-            context.addProblem(e);
         } finally {
             context.complete();
         }
     }
 
-    private void verifyCycle(ServiceController<?> service, LinkedHashMap<ServiceName, ServiceController<?>> pathTrace, Set<ServiceController<?>> checkedServices) throws CircularDependencyException {
-        for (AbstractDependency<?> dependency: service.getDependencies()) {
+    private void verifyCycle(ServiceController<?> service, LinkedHashMap<ServiceName, ServiceController<?>> pathTrace, Set<ServiceController<?>> checkedServices, ValidateContext context) {
+        for (DependencyImpl<?> dependency: service.getDependencies()) {
             final ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
             if (dependencyController != null && !checkedServices.contains(dependencyController)) {
                 if (pathTrace.containsValue(dependencyController)) {
                     final ServiceName[] cycle = pathTrace.keySet().toArray(new ServiceName[pathTrace.size()]);
-                    throw new CircularDependencyException("Dependency cycle found: " + Arrays.toString(cycle), cycle);
-                } // TODO add a problem and log
+                    context.addProblem(MSCLogger.SERVICE.dependencyCycle(cycle));
+                    return;
+                }
                 final ServiceName dependencyName = dependency.getDependencyRegistration().getServiceName();
                 pathTrace.put(dependencyName, dependencyController);
-                verifyCycle(dependencyController, pathTrace, checkedServices);
+                verifyCycle(dependencyController, pathTrace, checkedServices, context);
                 checkedServices.add(dependencyController);
                 pathTrace.remove(dependencyName);
             }

@@ -17,11 +17,15 @@
  */
 package org.jboss.msc.test.utils;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jboss.msc.service.Service;
 import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StopContext;
+import org.jboss.msc.txn.ServiceContext;
 
 /**
  * Basic service for tests.
@@ -34,6 +38,7 @@ public final class TestService implements Service<Void> {
     private final boolean failToStart; 
     private AtomicBoolean up = new AtomicBoolean();
     private AtomicBoolean failed = new AtomicBoolean();
+    private ServiceContext serviceContext;
 
     public TestService(final boolean failToStart) {
         this.failToStart = failToStart;
@@ -41,9 +46,10 @@ public final class TestService implements Service<Void> {
 
     @Override
     public void start(final StartContext<Void> context) {
+        assertFalse(up.get() || failed.get());
         if (failToStart) {
             failed.set(true);
-            context.addProblem(new UnsupportedOperationException());
+            //context.addProblem(new UnsupportedOperationException());
             context.fail();
         } else {
             up.set(true);
@@ -53,7 +59,9 @@ public final class TestService implements Service<Void> {
 
     @Override
     public void stop(final StopContext context) {
+        assertTrue(up.get() || failed.get());
         up.set(false);
+        failed.set(false);
         context.complete();
     }
 
@@ -63,5 +71,13 @@ public final class TestService implements Service<Void> {
 
     public boolean isUp() {
         return up.get();
+    }
+
+    public ServiceContext getServiceContext() {
+        return serviceContext;
+    }
+
+    public void setServiceContext(ServiceContext serviceContext) {
+        this.serviceContext = serviceContext;
     }
 }

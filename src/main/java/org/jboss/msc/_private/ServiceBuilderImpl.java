@@ -31,6 +31,7 @@ import org.jboss.msc.service.ServiceMode;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.txn.ServiceContext;
+import org.jboss.msc.txn.TaskFactory;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -53,7 +54,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     // service itself
     private Service<T> service;
     // dependencies
-    private final Map<ServiceName, AbstractDependency<?>> dependencies= new LinkedHashMap<ServiceName, AbstractDependency<?>>();
+    private final Map<ServiceName, DependencyImpl<?>> dependencies= new LinkedHashMap<ServiceName, DependencyImpl<?>>();
     // active transaction
     private final Transaction transaction;
     // service mode
@@ -161,26 +162,22 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         if (name == null) {
             MSCLogger.SERVICE.methodParameterIsNull("name");
         }
-        final AbstractDependency<D> dependency = DependencyFactory.create((ServiceRegistryImpl) registry, name, flags != null ? flags : noFlags, this, transaction);
-        addDependency(dependency, name, flags != null ? flags : noFlags);
+        final Registration dependencyRegistration = ((ServiceRegistryImpl) registry).getOrCreateRegistration(transaction, transaction, name);
+        final DependencyImpl<D> dependency = new DependencyImpl<D>(dependencyRegistration, transaction, flags != null ? flags : noFlags);
+        dependencies.put(name, dependency);
         return dependency;
     }
 
-    private void addDependency(AbstractDependency<?> dependency, ServiceName name, DependencyFlag... flags) {
-        for (DependencyFlag flag: flags) {
-            if (flag == DependencyFlag.PARENT) {
-                if (parentDependency != null) {
-                    throw new IllegalStateException("Service cannot have more than one parent dependency");
-                }
-                parentDependency = (ParentDependency<?>) dependency;
-                dependencies.remove(name);
-                return;
-            }
-        }
-        if (parentDependency != null && name.equals(parentDependency.getDependencyRegistration().getServiceName())) {
-            parentDependency = null;
-        }
-        dependencies.put(name, dependency);
+    void setParentDependency(Registration parentRegistration) {
+        final DependencyImpl<Void> dependency = new DependencyImpl<Void>(parentRegistration, transaction, noFlags);
+        parentDependency = new ParentDependency<Void>(dependency, this, transaction);
+        dependencies.put(name, parentDependency);
+    }
+
+    @Override
+    public ServiceContext getServiceContext() {
+        // TODO review this method, we need to discuss when is the parent service context supposed to be provided
+        return new ParentServiceContext(registry.getOrCreateRegistration(transaction, transaction, name));
     }
 
     /**
@@ -214,32 +211,33 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
      * 
      * @return the installed service controller
      */
-    ServiceController<?> performInstallation(ParentDependency<?> parentDependency, Transaction transaction, ServiceContext context) {
+    ServiceController<?> performInstallation(ParentDependency<?> parentDependency, Transaction transaction, TaskFactory taskFactory) {
         // create primary registration
-        final Registration registration = registry.getOrCreateRegistration(context, transaction, name);
+        final Registration registration = registry.getOrCreateRegistration(transaction, taskFactory, name);
 
         // create alias registrations
         final ServiceName[] aliasArray = aliases.toArray(new ServiceName[aliases.size()]);
         final Registration[] aliasRegistrations = new Registration[aliasArray.length];
         int i = 0; 
         for (ServiceName alias: aliases) {
-            aliasRegistrations[i++] = registry.getOrCreateRegistration(context, transaction, alias);
+            aliasRegistrations[i++] = registry.getOrCreateRegistration(transaction, taskFactory, alias);
         }
 
         // create dependencies
         i = 0;
-        final AbstractDependency<?>[] dependenciesArray;
+        final DependencyImpl<?>[] dependenciesArray;
         if (parentDependency == null) {
-            dependenciesArray = new AbstractDependency<?>[dependencies.size()];
+            dependenciesArray = new DependencyImpl<?>[dependencies.size()];
+            dependencies.values().toArray(dependenciesArray);
         } else {
-            dependenciesArray = new AbstractDependency<?>[dependencies.size() + 1];
+            dependenciesArray = new DependencyImpl<?>[dependencies.size() + 1];
+            dependencies.values().toArray(dependenciesArray);
             dependenciesArray[dependencies.size()] = parentDependency;
         }
-        dependencies.values().toArray(dependenciesArray);
         // create and install service controller
-        final ServiceController<T> serviceController =  new ServiceController<T>(registration, aliasRegistrations, service, mode, dependenciesArray, transaction, context);
-        serviceController.install(registry, transaction, context);
-        CheckDependencyCycleTask.checkDependencyCycle(serviceController, transaction);
+        final ServiceController<T> serviceController =  new ServiceController<T>(registration, aliasRegistrations, service, mode, dependenciesArray, transaction, taskFactory);
+        serviceController.install(registry, transaction, taskFactory);
+        CheckDependencyCycleTask.checkDependencyCycle(serviceController, transaction, taskFactory);
         return serviceController;
     }
 }

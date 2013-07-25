@@ -29,7 +29,7 @@ import org.jboss.msc.txn.Problem;
 import org.jboss.msc.txn.ReportableContext;
 import org.jboss.msc.txn.Revertible;
 import org.jboss.msc.txn.RollbackContext;
-import org.jboss.msc.txn.ServiceContext;
+import org.jboss.msc.txn.TaskFactory;
 import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.txn.Validatable;
 import org.jboss.msc.txn.ValidateContext;
@@ -59,10 +59,11 @@ abstract class TransactionalObject {
      * <p> This operation is idempotent. Unlocking occurs automatically when the transaction is finished.
      *  
      * @param transaction the transaction that is attempting to modify current's object state
-     * @param context     the service context, used for creating new tasks
+     * @param taskFactory the  task factory
      */
-    final void lockWrite(Transaction transaction, ServiceContext context) {
+    final void lockWrite(Transaction transaction, TaskFactory taskFactory) {
         assert !Thread.holdsLock(this);
+        final Object snapshot;
         while (true) {
             Transaction currentLock;
             synchronized (this) {
@@ -83,12 +84,15 @@ abstract class TransactionalObject {
                 synchronized (this) {
                     if (lock == null) {
                         lock = transaction;
+                        snapshot = takeSnapshot();
+                        // notice that write locked must be garanteed to have been invoked if/when
+                        // another thread checks that current lock is not null
+                        writeLocked(transaction);
                         break;
                     }
                 }
             }
         } 
-        final Object snapshot = takeSnapshot();
         final Map<TransactionalObject, Object> transactionalObjects;
         synchronized (TRANSACTIONAL_OBJECTS) {
             if (transaction.hasAttachment(TRANSACTIONAL_OBJECTS)) {
@@ -96,11 +100,10 @@ abstract class TransactionalObject {
             } else {
                 transactionalObjects = new HashMap<TransactionalObject, Object>();
                 transaction.putAttachment(TRANSACTIONAL_OBJECTS, transactionalObjects);
-                context.newTask().setTraits(new UnlockWriteTask(transactionalObjects)).release();
+                taskFactory.newTask().setTraits(new UnlockWriteTask(transactionalObjects)).release();
             }
         }
         transactionalObjects.put(this, snapshot);
-        writeLocked(transaction);
     }
 
     /**

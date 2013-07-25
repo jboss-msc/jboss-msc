@@ -1,23 +1,19 @@
 /*
- * JBoss, Home of Professional Open Source.
- * Copyright 2010, Red Hat, Inc., and individual contributors
- * as indicated by the @author tags. See the copyright.txt file in the
- * distribution for a full listing of individual contributors.
+ * JBoss, Home of Professional Open Source
  *
- * This is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 2.1 of
- * the License, or (at your option) any later version.
+ * Copyright 2013 Red Hat, Inc. and/or its affiliates.
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * Lesser General Public License for more details.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this software; if not, write to the Free
- * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
- * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package org.jboss.msc.test.services;
@@ -46,7 +42,7 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
      * Usecase:
      * <UL>
      *   <LI><B>first failing service</B> (ON_DEMAND mode), no dependencies</LI>
-     *   <LI><B>second service</B> (ON_DEMAND mode), depends on <B>first service</B></LI>
+     *   <LI><B>second service</B> (ON_DEMAND mode), depends on required <B>first service</B></LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
@@ -71,7 +67,7 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
      * Usecase:
      * <UL>
      *   <LI><B>first failing service</B> (LAZY mode), no dependencies</LI>
-     *   <LI><B>second service</B> (ON_DEMAND mode), depends on <B>first service</B></LI>
+     *   <LI><B>second service</B> (ON_DEMAND mode), depends on required <B>first service</B></LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
@@ -80,7 +76,7 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
         final TestService firstService = addService(firstSN, true, LAZY);
         assertFalse(firstService.isUp());
         assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, ON_DEMAND, firstSN);
+        final TestService secondService = addService(secondSN, ON_DEMAND, requiredFlag, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(firstService.isFailed());
         assertFalse(secondService.isUp());
@@ -96,7 +92,7 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
      * Usecase:
      * <UL>
      *   <LI><B>first failing service</B> (ACTIVE mode), no dependencies</LI>
-     *   <LI><B>second service</B> (ON_DEMAND mode), depends on <B>first service</B></LI>
+     *   <LI><B>second service</B> (ON_DEMAND mode), depends on unrequired <B>first service</B></LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
@@ -105,7 +101,7 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
         final TestService firstService = addService(firstSN, true, ACTIVE);
         assertFalse(firstService.isUp());
         assertTrue(firstService.isFailed());
-        final TestService secondService = addService(secondSN, ON_DEMAND, firstSN);
+        final TestService secondService = addService(secondSN, ON_DEMAND, unrequiredFlag, firstSN);
         assertFalse(firstService.isUp());
         assertTrue(firstService.isFailed());
         assertFalse(secondService.isUp());
@@ -121,7 +117,7 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
      * Usecase:
      * <UL>
      *   <LI><B>first failing service</B> (ON_DEMAND mode), no dependencies</LI>
-     *   <LI><B>second service</B> (LAZY mode), depends on <B>first service</B></LI>
+     *   <LI><B>second service</B> (LAZY mode), depends on required <B>first service</B></LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
@@ -146,7 +142,7 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
      * Usecase:
      * <UL>
      *   <LI><B>first failing service</B> (LAZY mode), no dependencies</LI>
-     *   <LI><B>second service</B> (LAZY mode), depends on <B>first service</B></LI>
+     *   <LI><B>second service</B> (LAZY mode), depends on required <B>first service</B></LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
@@ -155,7 +151,7 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
         final TestService firstService = addService(firstSN, true, LAZY);
         assertFalse(firstService.isUp());
         assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, LAZY, firstSN);
+        final TestService secondService = addService(secondSN, LAZY, requiredFlag, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(firstService.isFailed());
         assertFalse(secondService.isUp());
@@ -171,7 +167,7 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
      * Usecase:
      * <UL>
      *   <LI><B>first failing service</B> (ACTIVE mode), no dependencies</LI>
-     *   <LI><B>second service</B> (LAZY mode), depends on <B>first service</B></LI>
+     *   <LI><B>second service</B> (LAZY mode), depends on unrequired <B>first service</B></LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
@@ -180,7 +176,7 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
         final TestService firstService = addService(firstSN, true, ACTIVE);
         assertFalse(firstService.isUp());
         assertTrue(firstService.isFailed());
-        final TestService secondService = addService(secondSN, LAZY, firstSN);
+        final TestService secondService = addService(secondSN, LAZY, unrequiredFlag, firstSN);
         assertFalse(firstService.isUp());
         assertTrue(firstService.isFailed());
         assertFalse(secondService.isUp());
@@ -196,7 +192,7 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
      * Usecase:
      * <UL>
      *   <LI><B>first failing service</B> (ON_DEMAND mode), no dependencies</LI>
-     *   <LI><B>second service</B> (ACTIVE mode), depends on <B>first service</B></LI>
+     *   <LI><B>second service</B> (ACTIVE mode), depends on required <B>first service</B></LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
@@ -221,7 +217,7 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
      * Usecase:
      * <UL>
      *   <LI><B>first failing service</B> (LAZY mode), no dependencies</LI>
-     *   <LI><B>second service</B> (ACTIVE mode), depends on <B>first service</B></LI>
+     *   <LI><B>second service</B> (ACTIVE mode), depends on required <B>first service</B></LI>
      *   <LI>container shutdown</LI>
      * </UL>
      */
@@ -230,7 +226,7 @@ public class OneFailingService_OneDep_ContainerShutdown_TestCase extends Abstrac
         final TestService firstService = addService(firstSN, true, LAZY);
         assertFalse(firstService.isUp());
         assertFalse(firstService.isFailed());
-        final TestService secondService = addService(secondSN, ACTIVE, firstSN);
+        final TestService secondService = addService(secondSN, ACTIVE, requiredFlag, firstSN);
         assertFalse(firstService.isUp());
         assertTrue(firstService.isFailed());
         assertFalse(secondService.isUp());

@@ -85,7 +85,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnCommitted_Te
         assertNotCalled(c2);
         assertCallOrder(e1, e2, v1, v2);
         // committing transaction
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         commit(transaction);
         assertCalled(e0);
         assertCalled(v0);
@@ -153,7 +153,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnCommitted_Te
         assertCallOrder(e0, e2, v0, v2);
         assertCallOrder(e1, e2, v1, v2);
         // committing transaction
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         commit(transaction);
         assertCalled(e0);
         assertCalled(v0);
@@ -221,7 +221,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnCommitted_Te
         assertNotCalled(c2);
         assertCallOrder(e0, e1, e2, v0, v1, v2);
         // committing transaction
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         commit(transaction);
         assertCalled(e0);
         assertCalled(v0);
@@ -288,7 +288,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnCommitted_Te
         assertNotCalled(c2);
         assertCallOrder(e0, e1, e2, v0, v1, v2);
         // committing transaction
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         commit(transaction);
         assertCalled(e0);
         assertCalled(v0);

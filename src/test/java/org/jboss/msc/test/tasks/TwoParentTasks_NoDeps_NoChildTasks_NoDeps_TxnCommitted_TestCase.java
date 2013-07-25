@@ -75,7 +75,7 @@ public final class TwoParentTasks_NoDeps_NoChildTasks_NoDeps_TxnCommitted_TestCa
         assertCallOrder(e0, v0);
         assertCallOrder(e1, v1);
         // committing transaction
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         commit(transaction);
         assertCalled(e0);
         assertCalled(v0);

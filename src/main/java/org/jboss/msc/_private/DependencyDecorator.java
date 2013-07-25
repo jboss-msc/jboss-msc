@@ -17,8 +17,9 @@
  */
 package org.jboss.msc._private;
 
-import org.jboss.msc.txn.ServiceContext;
+import org.jboss.msc.txn.ReportableContext;
 import org.jboss.msc.txn.TaskController;
+import org.jboss.msc.txn.TaskFactory;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -27,21 +28,22 @@ import org.jboss.msc.txn.Transaction;
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  *
  */
-abstract class DependencyDecorator<T> extends AbstractDependency<T> {
-    protected final AbstractDependency<T> dependency;
+class DependencyDecorator<T> extends DependencyImpl<T> {
+    protected final DependencyImpl<T> dependency;
 
-    DependencyDecorator(AbstractDependency<T> dependency) {
+    DependencyDecorator(DependencyImpl<T> dependency) {
+        super(null, null);
         this.dependency = dependency;
     }
 
     @Override
-    public void setDependent(Dependent dependent, Transaction transaction, ServiceContext context) {
-        dependency.setDependent(dependent, transaction, context);
+    public void setDependent(Dependent dependent, Transaction transaction, TaskFactory taskFactory) {
+        dependency.setDependent(dependent, transaction, taskFactory);
     }
 
     @Override
-    public void clearDependent(Transaction transaction, ServiceContext context) {
-        dependency.clearDependent(transaction, context);
+    public void clearDependent(Transaction transaction, TaskFactory taskFactory) {
+        dependency.clearDependent(transaction, taskFactory);
     }
 
     @Override
@@ -50,23 +52,28 @@ abstract class DependencyDecorator<T> extends AbstractDependency<T> {
     }
 
     @Override
-    public void demand(Transaction transaction, ServiceContext context) {
-        dependency.demand(transaction, context);
+    public void demand(Transaction transaction, TaskFactory taskFactory) {
+        dependency.demand(transaction, taskFactory);
     }
 
     @Override
-    public void undemand(Transaction transaction, ServiceContext context) {
-        dependency.undemand(transaction, context);
+    public void undemand(Transaction transaction, TaskFactory taskFactory) {
+        dependency.undemand(transaction, taskFactory);
     }
 
     @Override
-    public TaskController<?> dependencyAvailable(boolean dependencyUp, Transaction transaction, ServiceContext context) {
-        return dependency.dependencyAvailable(dependencyUp, transaction, context);
+    public TaskController<?> dependencyUp(Transaction transaction, TaskFactory taskFactory) {
+        return dependency.dependencyUp(transaction, taskFactory);
     }
 
     @Override
-    public TaskController<?> dependencyUnavailable(Transaction transaction, ServiceContext context) {
-        return dependency.dependencyUnavailable(transaction, context);
+    public TaskController<?> dependencyDown(Transaction transaction, TaskFactory taskFactory) {
+        return dependency.dependencyDown(transaction, taskFactory);
+    }
+
+    @Override
+    void validate(ServiceController<?> controllerDependency, ReportableContext context) {
+        dependency.validate(controllerDependency, context);
     }
 
     @Override

@@ -19,9 +19,9 @@ package org.jboss.msc._private;
 
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
-import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
+import org.jboss.msc.txn.TaskFactory;
 import org.jboss.msc.txn.Transaction;
 
 /**
@@ -39,11 +39,11 @@ class DemandDependenciesTask implements Executable<Void> {
      * 
      * @param service      the service whose dependencies will be demanded by the task
      * @param transaction  the active transaction
-     * @param context      the service context
+     * @param taskFactory  the task factory
      * @return the task controller
      */
-    static TaskController<Void> create(ServiceController<?> service, Transaction transaction, ServiceContext context) {
-        return create(service, null, transaction, context);
+    static TaskController<Void> create(ServiceController<?> service, Transaction transaction, TaskFactory taskFactory) {
+        return create(service, null, transaction, taskFactory);
     }
 
     /**
@@ -54,14 +54,14 @@ class DemandDependenciesTask implements Executable<Void> {
      * @param service        the service whose dependencies will be demanded by the task
      * @param taskDependency the dependency of the demand dependencies task
      * @param transaction    the active transaction
-     * @param context        the service context
+     * @param taskFactory    the task factory
      * @return the task controller
      */
-    static TaskController<Void> create(ServiceController<?> service, TaskController<?> taskDependency, Transaction transaction, ServiceContext context) {
+    static TaskController<Void> create(ServiceController<?> service, TaskController<?> taskDependency, Transaction transaction, TaskFactory taskFactory) {
         if (service.getDependencies().length == 0) {
             return null;
         }
-        TaskBuilder<Void> taskBuilder = context.newTask(new DemandDependenciesTask(transaction, service));
+        TaskBuilder<Void> taskBuilder = taskFactory.newTask(new DemandDependenciesTask(transaction, service));
         if(taskDependency != null) {
             taskBuilder.addDependency(taskDependency);
         }
@@ -76,7 +76,7 @@ class DemandDependenciesTask implements Executable<Void> {
     @Override
     public void execute(ExecuteContext<Void> context) {
         try {
-            for (AbstractDependency<?> dependency: service.getDependencies()) {
+            for (DependencyImpl<?> dependency: service.getDependencies()) {
                 dependency.demand(transaction, context);
             }
         } finally {

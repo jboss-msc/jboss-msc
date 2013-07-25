@@ -1,19 +1,23 @@
 /*
- * JBoss, Home of Professional Open Source
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2010, Red Hat, Inc., and individual contributors
+ * as indicated by the @author tags. See the copyright.txt file in the
+ * distribution for a full listing of individual contributors.
  *
- * Copyright 2013 Red Hat, Inc. and/or its affiliates.
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
 package org.jboss.msc.test.services;
@@ -22,21 +26,47 @@ import static org.jboss.msc.service.ServiceMode.ACTIVE;
 import static org.jboss.msc.service.ServiceMode.LAZY;
 import static org.jboss.msc.service.ServiceMode.ON_DEMAND;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import org.jboss.msc.service.ServiceBuilder;
+import org.jboss.msc.service.ServiceMode;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.test.utils.AbstractServiceTest;
 import org.jboss.msc.test.utils.TestService;
+import org.jboss.msc.txn.ServiceContext;
+import org.jboss.msc.txn.Transaction;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
+ * Parent dependencies test case
+ * 
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public class OneService_OneDep_TestCase extends AbstractServiceTest {
+public class ParentDependencyTestCase extends AbstractServiceTest {
 
     private static final ServiceName firstSN = ServiceName.of("first");
     private static final ServiceName secondSN = ServiceName.of("second");
+
+    protected final TestService addChildService(final ServiceContext parentServiceContext, final ServiceName serviceName, final ServiceMode serviceMode, final ServiceName parentDependency) throws InterruptedException {
+        final Transaction txn = newTransaction();
+        final TestService service = new TestService(false);
+        final ServiceBuilder<Void> serviceBuilder = parentServiceContext.addService(serviceRegistry, serviceName, txn);
+        if (serviceMode != null) serviceBuilder.setMode(serviceMode);
+        serviceBuilder.setService(service);
+        serviceBuilder.install();
+        commit(txn);
+        final TestService parentService = (TestService) serviceRegistry.getService(parentDependency);
+        if (service.isUp() || (parentService != null && parentService.isUp())) {
+            assertSame(service, serviceRegistry.getRequiredService(serviceName));
+        } else {
+            assertNull(serviceRegistry.getService(serviceName));
+        }
+        return service;
+    }
 
     /**
      * Usecase:
@@ -50,12 +80,11 @@ public class OneService_OneDep_TestCase extends AbstractServiceTest {
     public void usecase1() throws Exception {
         final TestService firstService = addService(firstSN, ON_DEMAND);
         assertFalse(firstService.isUp());
-        final TestService secondService = addService(secondSN, ON_DEMAND, firstSN);
+        final TestService secondService = addService(secondSN, ON_DEMAND, requiredFlag, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
         assertFalse(removeService(firstSN));
         assertFalse(firstService.isUp());
-        assertFalse(secondService.isUp());
     }
 
     /**
@@ -64,15 +93,15 @@ public class OneService_OneDep_TestCase extends AbstractServiceTest {
      *   <LI><B>first service</B> (LAZY mode), no dependencies</LI>
      *   <LI><B>second service</B> (ON_DEMAND mode), depends on <B>first service</B></LI>
      *   <LI>attempt to remove dependency before container is shut down</LI>
-     *   <LI>remove dependent before container is shut down</LI>
-     *   <LI>remove dependency before container is shut down</LI>
+     *   <LI>dependent removed before container is shut down</LI>
+     *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
     @Test
     public void usecase2() throws Exception {
         final TestService firstService = addService(firstSN, LAZY);
         assertFalse(firstService.isUp());
-        final TestService secondService = addService(secondSN, ON_DEMAND, firstSN);
+        final TestService secondService = addService(secondSN, ON_DEMAND, requiredFlag, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
         // first attempt: try to remove first service
@@ -83,7 +112,7 @@ public class OneService_OneDep_TestCase extends AbstractServiceTest {
         assertTrue(removeService(secondSN));
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
-        //third attempt, finally remove first service
+        // third attempt: remove first service
         assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
@@ -93,19 +122,19 @@ public class OneService_OneDep_TestCase extends AbstractServiceTest {
      * Usecase:
      * <UL>
      *   <LI><B>first service</B> (ACTIVE mode), no dependencies</LI>
-     *   <LI><B>second service</B> (ON_DEMAND mode), depends on required <B>first service</B></LI>
+     *   <LI><B>second service</B> (ON_DEMAND mode), depends on <B>first service</B></LI>
      *   <LI>attempt to remove dependency before container is shut down</LI>
      * </UL>
      */
-    @Test
+    @Ignore @Test // reenable this test after parent service refactoring (when parent is no longer a dependency)
     public void usecase3() throws Exception {
         final TestService firstService = addService(firstSN, ACTIVE);
         assertTrue(firstService.isUp());
-        final TestService secondService = addService(secondSN, ON_DEMAND, firstSN);
+        final TestService secondService = addChildService(firstService.getServiceContext(), secondSN, ON_DEMAND, firstSN);
         assertTrue(firstService.isUp());
         assertFalse(secondService.isUp());
-        assertFalse(removeService(firstSN));
-        assertTrue(firstService.isUp());
+        assertTrue(removeService(firstSN));
+        assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
     }
 
@@ -114,27 +143,16 @@ public class OneService_OneDep_TestCase extends AbstractServiceTest {
      * <UL>
      *   <LI><B>first service</B> (ON_DEMAND mode), no dependencies</LI>
      *   <LI><B>second service</B> (LAZY mode), depends on <B>first service</B></LI>
-     *   <LI>attempt to remove dependency before container is shut down</LI>
-     *   <LI>dependent removed before container is shut down</LI>
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Test
+    @Ignore @Test // reenable this test after parent service refactoring (when parent is no longer a dependency)
     public void usecase4() throws Exception {
         final TestService firstService = addService(firstSN, ON_DEMAND);
         assertFalse(firstService.isUp());
-        final TestService secondService = addService(secondSN, LAZY, requiredFlag, firstSN);
+        final TestService secondService = addChildService(firstService.getServiceContext(), secondSN, LAZY, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
-        // first attempt: try to remove first service
-        assertFalse(removeService(firstSN));
-        assertFalse(firstService.isUp());
-        assertFalse(secondService.isUp());
-        // second attempt: remove second service
-        assertTrue(removeService(secondSN));
-        assertFalse(firstService.isUp());
-        assertFalse(secondService.isUp());
-        // third attempt: remove first service
         assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
@@ -145,17 +163,17 @@ public class OneService_OneDep_TestCase extends AbstractServiceTest {
      * <UL>
      *   <LI><B>first service</B> (LAZY mode), no dependencies</LI>
      *   <LI><B>second service</B> (LAZY mode), depends on <B>first service</B></LI>
-     *   <LI>attempt to remove dependency removed before container is shut down</LI>
+     *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Test
+    @Ignore @Test // reenable this test after parent service refactoring (when parent is no longer a dependency)
     public void usecase5() throws Exception {
         final TestService firstService = addService(firstSN, LAZY);
         assertFalse(firstService.isUp());
-        final TestService secondService = addService(secondSN, LAZY, requiredFlag, firstSN);
+        final TestService secondService = addChildService(firstService.getServiceContext(), secondSN, LAZY, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
-        assertFalse(removeService(firstSN));
+        assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
     }
@@ -168,43 +186,35 @@ public class OneService_OneDep_TestCase extends AbstractServiceTest {
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Test
+    @Ignore @Test // reenable this test after parent service refactoring (when parent is no longer a dependency)
     public void usecase6() throws Exception {
         final TestService firstService = addService(firstSN, ACTIVE);
         assertTrue(firstService.isUp());
-        final TestService secondService = addService(secondSN, LAZY, firstSN);
+        final TestService secondService = addChildService(firstService.getServiceContext(), secondSN, LAZY, firstSN);
         assertTrue(firstService.isUp());
         assertFalse(secondService.isUp());
-        // first attempt: try to remove first service
-        assertFalse(removeService(firstSN));
-        assertTrue(firstService.isUp());
-        assertFalse(secondService.isUp());
-        // second attempt: remove second service
-        assertTrue(removeService(secondSN));
-        assertTrue(firstService.isUp());
-        assertFalse(secondService.isUp());
-        // third attempt: remove first service
         assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
-        assertFalse(secondService.isUp());}
+        assertFalse(secondService.isUp());
+    }
 
     /**
      * Usecase:
      * <UL>
      *   <LI><B>first service</B> (ON_DEMAND mode), no dependencies</LI>
      *   <LI><B>second service</B> (ACTIVE mode), depends on <B>first service</B></LI>
-     *   <LI>attempt to remove dependency before container is shut down</LI>
+     *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Test
+    @Ignore @Test // reenable this test after parent service refactoring (when parent is no longer a dependency)
     public void usecase7() throws Exception {
         final TestService firstService = addService(firstSN, ON_DEMAND);
-        final TestService secondService = addService(secondSN, ACTIVE, firstSN);
-        assertTrue(firstService.isUp());
-        assertTrue(secondService.isUp());
-        assertFalse(removeService(firstSN));
-        assertTrue(firstService.isUp());
-        assertTrue(secondService.isUp());
+        final TestService secondService = addChildService(firstService.getServiceContext(), secondSN, ACTIVE, firstSN);
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
+        assertTrue(removeService(firstSN));
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
     }
 
     /**
@@ -212,27 +222,16 @@ public class OneService_OneDep_TestCase extends AbstractServiceTest {
      * <UL>
      *   <LI><B>first service</B> (LAZY mode), no dependencies</LI>
      *   <LI><B>second service</B> (ACTIVE mode), depends on <B>first service</B></LI>
-     *   <LI>atttempt to remove dependency before container is shut down</LI>
-     *   <LI>dependent removed before container is shut down</LI>
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Test
+    @Ignore @Test // reenable this test after parent service refactoring (when parent is no longer a dependency)
     public void usecase8() throws Exception {
         final TestService firstService = addService(firstSN, LAZY);
         assertFalse(firstService.isUp());
-        final TestService secondService = addService(secondSN, ACTIVE, requiredFlag, firstSN);
-        assertTrue(firstService.isUp());
-        assertTrue(secondService.isUp());
-        // first attempt: try to remove first service
-        assertFalse(removeService(firstSN));
-        assertTrue(firstService.isUp());
-        assertTrue(secondService.isUp());
-        // second attempt: remove second service
-        assertTrue(removeService(secondSN));
-        assertTrue(firstService.isUp());
+        final TestService secondService = addChildService(firstService.getServiceContext(), secondSN, ACTIVE, firstSN);
+        assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
-        // third attempt: remove first service
         assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
@@ -243,19 +242,19 @@ public class OneService_OneDep_TestCase extends AbstractServiceTest {
      * <UL>
      *   <LI><B>first service</B> (ACTIVE mode), no dependencies</LI>
      *   <LI><B>second service</B> (ACTIVE mode), depends on <B>first service</B></LI>
-     *   <LI>attempt to remove dependency before container is shut down</LI>
+     *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
-    @Test
+    @Ignore @Test // reenable this test after parent service refactoring (when parent is no longer a dependency)
     public void usecase9() throws Exception {
         final TestService firstService = addService(firstSN, ACTIVE);
         assertTrue(firstService.isUp());
-        final TestService secondService = addService(secondSN, ACTIVE, requiredFlag, firstSN);
+        final TestService secondService = addChildService(firstService.getServiceContext(), secondSN, ACTIVE, firstSN);
         assertTrue(firstService.isUp());
         assertTrue(secondService.isUp());
-        assertFalse(removeService(firstSN));
-        assertTrue(firstService.isUp());
-        assertTrue(secondService.isUp());
+        assertTrue(removeService(firstSN));
+        assertFalse(firstService.isUp());
+        assertFalse(secondService.isUp());
     }
 
     /**
@@ -275,7 +274,6 @@ public class OneService_OneDep_TestCase extends AbstractServiceTest {
         assertFalse(secondService.isUp());
         assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
-        assertFalse(secondService.isUp());
     }
 
     /**
@@ -283,7 +281,7 @@ public class OneService_OneDep_TestCase extends AbstractServiceTest {
      * <UL>
      *   <LI><B>first service</B> (LAZY mode), no dependencies</LI>
      *   <LI><B>second service</B> (ON_DEMAND mode), depends on unrequired <B>first service</B></LI>
-     *   <LI>remove dependency before container is shut down</LI>
+     *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
     @Test
@@ -293,7 +291,6 @@ public class OneService_OneDep_TestCase extends AbstractServiceTest {
         final TestService secondService = addService(secondSN, ON_DEMAND, unrequiredFlag, firstSN);
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
-        // first attempt: try to remove first service
         assertTrue(removeService(firstSN));
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
@@ -323,7 +320,7 @@ public class OneService_OneDep_TestCase extends AbstractServiceTest {
      * Usecase:
      * <UL>
      *   <LI><B>first service</B> (ON_DEMAND mode), no dependencies</LI>
-     *   <LI><B>second service</B> (LAZY mode), depends on <B>first service</B></LI>
+     *   <LI><B>second service</B> (LAZY mode), depends on unrequired <B>first service</B></LI>
      *   <LI>dependency removed before container is shut down</LI>
      * </UL>
      */
@@ -378,7 +375,7 @@ public class OneService_OneDep_TestCase extends AbstractServiceTest {
         assertFalse(firstService.isUp());
         assertFalse(secondService.isUp());
     }
-    
+
     /**
      * Usecase:
      * <UL>

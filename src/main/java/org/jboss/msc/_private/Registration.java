@@ -18,14 +18,18 @@
 
 package org.jboss.msc._private;
 
+import static org.jboss.msc._private.ServiceController.STATE_UP;
+
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.jboss.msc.service.ServiceName;
-import org.jboss.msc.txn.ServiceContext;
+import org.jboss.msc.txn.ReportableContext;
+import org.jboss.msc.txn.TaskController;
+import org.jboss.msc.txn.TaskFactory;
 import org.jboss.msc.txn.Transaction;
 
 
@@ -46,7 +50,7 @@ final class Registration extends TransactionalObject {
     /**
      * Incoming dependencies, i.e., dependent services.
      */
-    private final Set<AbstractDependency<?>> incomingDependencies = new CopyOnWriteArraySet<AbstractDependency<?>>();
+    private final Set<DependencyImpl<?>> incomingDependencies = new CopyOnWriteArraySet<DependencyImpl<?>>();
     /**
      * The number of dependent instances which place a demand-to-start on this registration.  If this value is > 0,
      * propagate a demand to the instance, if any.
@@ -65,8 +69,8 @@ final class Registration extends TransactionalObject {
         return controller;
     }
 
-    void setController(final ServiceContext context, final Transaction transaction, final ServiceController<?> serviceController) {
-        lockWrite(transaction, context);
+    void setController(final Transaction transaction, final TaskFactory taskFactory, final ServiceController<?> serviceController) {
+        lockWrite(transaction, taskFactory);
         final boolean upDemanded;
         synchronized (this) {
             this.controller = serviceController;
@@ -77,33 +81,49 @@ final class Registration extends TransactionalObject {
         }
     }
 
-    void clearController(final Transaction transaction, final ServiceContext context) {
-        lockWrite(transaction, context);
+    void clearController(final Transaction transaction, final TaskFactory taskFactory) {
+        lockWrite(transaction, taskFactory);
         synchronized (this) {
             this.controller = null;
         }
     }
 
-    void addIncomingDependency(final Transaction transaction, final ServiceContext context, final AbstractDependency<?> dependency) {
-        lockWrite(transaction, context);
+    void addIncomingDependency(final Transaction transaction, final TaskFactory taskFactory, final DependencyImpl<?> dependency) {
+        lockWrite(transaction, taskFactory);
+        final boolean dependencyUp;
         synchronized (this) {
             incomingDependencies.add(dependency);
+            dependencyUp = controller != null && controller.getState() == STATE_UP;
+        }
+        if (dependencyUp) {
+            dependency.dependencyUp(transaction, taskFactory);
         }
     }
 
-    void removeIncomingDependency(final Transaction transaction, final ServiceContext context, final AbstractDependency<?> dependency) {
-        lockWrite(transaction, context);
+    void removeIncomingDependency(final Transaction transaction, final TaskFactory taskFactory, final DependencyImpl<?> dependency) {
+        lockWrite(transaction, taskFactory);
         assert incomingDependencies.contains(dependency);
         incomingDependencies.remove(dependency);
     }
 
-    Set<AbstractDependency<?>> getIncomingDependencies() {
-        return Collections.unmodifiableSet(incomingDependencies);
+    void serviceUp(final Transaction transaction, final TaskFactory taskFactory) {
+        for (DependencyImpl<?> incomingDependency: incomingDependencies) {
+            incomingDependency.dependencyUp(transaction, taskFactory);
+        }
     }
 
-    void addDemand(Transaction transaction, ServiceContext context) {
+    void serviceDown(final Transaction transaction, final TaskFactory taskFactory, final List<TaskController<?>> tasks) {
+        for (DependencyImpl<?> incomingDependency: incomingDependencies) {
+            final TaskController<?> task = incomingDependency.dependencyDown(transaction, taskFactory);
+            if (task != null) {
+                tasks.add(task);
+            }
+        }
+    }
+
+    void addDemand(Transaction transaction, TaskFactory taskFactory) {
         assert ! Thread.holdsLock(this);
-        lockWrite(transaction, context);
+        lockWrite(transaction, taskFactory);
         final ServiceController<?> controller;
         synchronized (this) {
             controller = this.controller;
@@ -112,13 +132,13 @@ final class Registration extends TransactionalObject {
             }
         }
         if (controller != null) {
-            controller.upDemanded(transaction, context);
+            controller.upDemanded(transaction, taskFactory);
         }
     }
 
-    void removeDemand(Transaction transaction, ServiceContext context) {
+    void removeDemand(Transaction transaction, TaskFactory taskFactory) {
         assert ! Thread.holdsLock(this);
-        lockWrite(transaction, context);
+        lockWrite(transaction, taskFactory);
         synchronized (this) {
             controller = this.controller;
             if (upDemandedByCount-- > 0) {
@@ -126,30 +146,37 @@ final class Registration extends TransactionalObject {
             }
         }
         if (controller != null) {
-            controller.upUndemanded(transaction, context);
+            controller.upUndemanded(transaction, taskFactory);
         }
     }
 
     @Override
-    protected synchronized Object takeSnapshot() {
+    Object takeSnapshot() {
         return new Snapshot();
     }
 
     @Override
-    protected synchronized void revert(Object snapshot) {
+    void revert(final Object snapshot) {
         ((Snapshot)snapshot).apply();
+    }
+
+    @Override
+    protected synchronized void validate(ReportableContext context) {
+        for (DependencyImpl<?> incomingDependency: incomingDependencies) {
+            incomingDependency.validate(controller, context);
+        }
     }
 
     private final class Snapshot {
 
         private final ServiceController<?> controller;
-        private final Collection<AbstractDependency<?>> incomingDependencies;
+        private final Collection<DependencyImpl<?>> incomingDependencies;
         private final int upDemandedByCount;
 
         // take snapshot
         public Snapshot() {
             controller = Registration.this.controller;
-            incomingDependencies = new ArrayList<AbstractDependency<?>>(Registration.this.incomingDependencies.size());
+            incomingDependencies = new ArrayList<DependencyImpl<?>>(Registration.this.incomingDependencies.size());
             incomingDependencies.addAll(Registration.this.incomingDependencies);
             upDemandedByCount = Registration.this.upDemandedByCount;
         }

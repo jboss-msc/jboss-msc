@@ -29,8 +29,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.jboss.msc.test.utils.AbstractTransactionTest;
 import org.jboss.msc.txn.DeadlockException;
-import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.txn.Listener;
+import org.jboss.msc.txn.Transaction;
 import org.junit.Test;
 
 /**
@@ -370,7 +370,7 @@ public final class TransactionsTestCase extends AbstractTransactionTest {
                     out.append(" started").append(id);
                 }
                 if (prepare) {
-                    dependent.prepare(new Listener<Transaction>() {
+                    prepare(dependent, new Listener<Transaction>() {
                         @Override
                         public void handleEvent(final Transaction subject) {
                             synchronized (out) {
@@ -383,7 +383,7 @@ public final class TransactionsTestCase extends AbstractTransactionTest {
                     });
                 }
                 if (!rollback) {
-                    dependent.commit(new Listener<Transaction>() {
+                    commit(dependent, new Listener<Transaction>() {
                         @Override
                         public void handleEvent(final Transaction subject) {
                             synchronized (out) {
@@ -395,7 +395,7 @@ public final class TransactionsTestCase extends AbstractTransactionTest {
                         }
                     });
                 } else {
-                    dependent.rollback(new Listener<Transaction>() {
+                    rollback(dependent, new Listener<Transaction>() {
                         @Override
                         public void handleEvent(final Transaction subject) {
                             synchronized (out) {

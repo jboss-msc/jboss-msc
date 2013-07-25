@@ -20,13 +20,14 @@ package org.jboss.msc._private;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.txn.ServiceContext;
 import org.jboss.msc.txn.TaskController;
+import org.jboss.msc.txn.TaskFactory;
 import org.jboss.msc.txn.Transaction;
 
 /**
  * Dependent service.
  * 
  * @author <a href="mailto:frainone@redhat.com">Flavia Rainone</a>
- * @see AbstractDependency#setDependent(Dependent, Transaction, ServiceContext)
+ * @see DependencyImpl#setDependent(Dependent, Transaction, ServiceContext)
  */
 public interface Dependent {
 
@@ -40,18 +41,18 @@ public interface Dependent {
      * considered unsatisfied until a dependencySatisfied notification is received).
      * 
      * @param transaction the active transaction
-     * @param context     the service context
+     * @param taskFactory the task factory
      * @return the transition task resulting of this notification, if any
      */
-    public TaskController<?> dependencySatisfied(Transaction transaction, ServiceContext context);
+    public TaskController<?> dependencySatisfied(Transaction transaction, TaskFactory taskFactory);
 
     /**
      * Notifies that a dependency no longer satisfied.
      * 
      * @param transaction the active transaction
-     * @param context     the service context
+     * @param taskFactory the task factory
      * @return the transition task resulting of this notification, if any
      */
-    public TaskController<?> dependencyUnsatisfied(Transaction transaction, ServiceContext context);
+    public TaskController<?> dependencyUnsatisfied(Transaction transaction, TaskFactory taskFactory);
 
 }

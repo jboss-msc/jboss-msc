@@ -75,7 +75,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_Tes
         assertNotNull(task2Controller);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         assertCalled(e0);
@@ -132,7 +132,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_Tes
         assertNotNull(task2Controller);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         assertCalled(e0);
@@ -194,7 +194,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_Tes
         assertNotNull(task2Controller);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         assertCalled(e0);
@@ -262,7 +262,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_Tes
         assertNotCalled(c2);
         assertCallOrder(e1, e2, v1, v2);
         // reverting transaction
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
@@ -316,7 +316,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_Tes
         assertNotNull(task2Controller);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         assertCalled(e0);
@@ -375,7 +375,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_Tes
         assertNotNull(task2Controller);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         assertCalled(e0);
@@ -436,7 +436,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_Tes
         assertNotNull(task2Controller);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         assertCalled(e0);
@@ -506,7 +506,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_Tes
         assertCallOrder(e0, e2, v0, v2);
         assertCallOrder(e1, e2, v1, v2);
         // reverting transaction
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
@@ -561,7 +561,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_Tes
         assertNotNull(task2Controller);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         assertCalled(e0);
@@ -619,7 +619,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_Tes
         assertNotNull(task2Controller);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         assertCalled(e0);
@@ -679,7 +679,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_Tes
         assertNotNull(task2Controller);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         assertCalled(e0);
@@ -747,7 +747,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_Tes
         assertNotCalled(c2);
         assertCallOrder(e0, e1, e2, v0, v1, v2);
         // reverting transaction
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);
@@ -801,7 +801,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_Tes
         assertNotNull(task2Controller);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         assertCalled(e0);
@@ -859,7 +859,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_Tes
         assertNotNull(task2Controller);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         assertCalled(e0);
@@ -919,7 +919,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_Tes
         assertNotNull(task2Controller);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         assertCalled(e0);
@@ -987,7 +987,7 @@ public final class ThreeParentTasks_WithDeps_NoChildTasks_NoDeps_TxnReverted_Tes
         assertNotCalled(c2);
         assertCallOrder(e0, e1, e2, v0, v1, v2);
         // reverting transaction
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         rollback(transaction);
         assertCalled(e0);
         assertCalled(v0);

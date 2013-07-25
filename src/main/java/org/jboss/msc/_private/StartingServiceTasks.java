@@ -20,28 +20,21 @@ package org.jboss.msc._private;
 import static org.jboss.msc._private.ServiceController.STATE_FAILED;
 import static org.jboss.msc._private.ServiceController.STATE_UP;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.jboss.msc.service.Service;
-import org.jboss.msc.service.ServiceBuilder;
-import org.jboss.msc.service.ServiceContainer;
-import org.jboss.msc.service.ServiceName;
-import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.service.StartContext;
 import org.jboss.msc.txn.AttachmentKey;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.Factory;
 import org.jboss.msc.txn.Problem;
-import org.jboss.msc.txn.ServiceContext;
+import org.jboss.msc.txn.Problem.Severity;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
+import org.jboss.msc.txn.TaskFactory;
 import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.txn.Problem.Severity;
 
 /**
  * Tasks executed when a service is starting.
@@ -64,32 +57,36 @@ final class StartingServiceTasks {
      * state.
      * 
      * @param serviceController  starting service
-     * @param taskDependencies   the tasks that must be first concluded before service can start
+     * @param taskDependency     the task that must be first concluded before service can start
      * @param transaction        the active transaction
-     * @param context            the service context
+     * @param taskFactory        the task factory
      * @return                   the final task to be executed. Can be used for creating tasks that depend on the
      *                           conclusion of starting transition.
      */
     static <T> TaskController<Void> create(ServiceController<T> serviceController,
-            Collection<TaskController<?>> taskDependencies, Transaction transaction, ServiceContext context) {
+            TaskController<?> taskDependency, Transaction transaction, TaskFactory taskFactory) {
 
         final Service<T> serviceValue = serviceController.getService();
 
         // start service task builder
-        final TaskBuilder<T> startBuilder = context.newTask(new StartServiceTask<T>(serviceValue, transaction)).setTraits(serviceValue);
+        final TaskBuilder<T> startBuilder = taskFactory.newTask(new StartServiceTask<T>(serviceValue, transaction)).setTraits(serviceValue);
 
         if (hasDependencies(serviceController)) {
             // notify dependent is starting to dependencies
-            final TaskController<Void> notifyDependentStart = context.newTask(new NotifyDependentStartTask(transaction, serviceController)).release();
+            final TaskBuilder<Void> notifyDependentStartBuilder = taskFactory.newTask(new NotifyDependentStartTask(transaction, serviceController));
+            if (taskDependency != null) {
+                notifyDependentStartBuilder.addDependency(taskDependency);
+            }
+            final TaskController<Void> notifyDependentStart = notifyDependentStartBuilder.release();
             startBuilder.addDependency(notifyDependentStart);
-        } else {
-            startBuilder.addDependencies(taskDependencies);
+        } else if (taskDependency != null) {
+            startBuilder.addDependency(taskDependency);
         }
 
         // start service
         final TaskController<T> start = startBuilder.release();
 
-        return context.newTask(new SetServiceUpTask<T>(serviceController, start, transaction)).addDependency(start).release();
+        return taskFactory.newTask(new SetServiceUpTask<T>(serviceController, start, transaction)).addDependency(start).release();
     }
 
     /**
@@ -97,19 +94,13 @@ final class StartingServiceTasks {
      * state.
      * 
      * @param serviceController  starting service
-     * @param taskDependency     the task that must be first concluded before service can start
      * @param transaction        the active transaction
-     * @param context            the service context
+     * @param taskFactory        the task factory
      * @return                   the final task to be executed. Can be used for creating tasks that depend on the
      *                           conclusion of starting transition.
      */
-    static <T> TaskController<Void> create(ServiceController<T> serviceController,
-            TaskController<?> taskDependency, Transaction transaction, ServiceContext context) {
-
-        assert taskDependency != null;
-        final List<TaskController<?>> taskDependencies = new ArrayList<TaskController<?>>(1);
-        taskDependencies.add(taskDependency);
-        return create(serviceController, taskDependencies, transaction, context);
+    static <T> TaskController<Void> create(ServiceController<T> serviceController, Transaction transaction, TaskFactory taskFactory) {
+        return create(serviceController, null, transaction, taskFactory);
     }
 
     private static boolean hasDependencies(ServiceController<?> service) {
@@ -131,7 +122,7 @@ final class StartingServiceTasks {
 
         @Override
         public void execute(ExecuteContext<Void> context) {
-            for (AbstractDependency<?> dependency: serviceController.getDependencies()) {
+            for (DependencyImpl<?> dependency: serviceController.getDependencies()) {
                 ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
                 if (dependencyController != null) {
                     dependencyController.dependentStarted(transaction, context);
@@ -224,45 +215,6 @@ final class StartingServiceTasks {
                 public TaskBuilder<Void> newTask() throws IllegalStateException {
                     return context.newTask();
                 }
-                
-                public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name) {
-                    return context.addService(registry, name);
-                }
-
-                @Override
-                public void enableService(ServiceRegistry registry, ServiceName name) throws IllegalStateException {
-                    context.enableService(registry, name);
-                }
-
-                @Override
-                public void disableService(ServiceRegistry registry, ServiceName name) throws IllegalStateException {
-                    context.disableService(registry, name);
-                }
-
-                @Override
-                public void removeService(ServiceRegistry registry, ServiceName name) throws IllegalStateException {
-                    context.removeService(registry, name);
-                }
-
-                @Override
-                public void enableRegistry(ServiceRegistry registry) {
-                    context.enableRegistry(registry);
-                }
-
-                @Override
-                public void disableRegistry(ServiceRegistry registry) {
-                    context.disableRegistry(registry);
-                }
-
-                @Override
-                public void removeRegistry(ServiceRegistry registry) {
-                    context.removeRegistry(registry);
-                }
-
-                @Override
-                public void shutdownContainer(ServiceContainer container) {
-                    context.shutdownContainer(container);
-                }
 
                 @Override
                 public void fail() {
@@ -296,6 +248,7 @@ final class StartingServiceTasks {
                 T result = serviceStartTask.getResult();
                 // service failed
                 if (result == null && transaction.getAttachment(FAILED_SERVICES).contains(service.getService())) {
+                    MSCLogger.FAIL.startFailed(service.getServiceName());
                     service.setTransition(STATE_FAILED, transaction, context);
                 } else {
                     service.setValue(result);

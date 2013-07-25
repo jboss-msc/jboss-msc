@@ -21,8 +21,8 @@ package org.jboss.msc.test.utils;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.msc.txn.Transaction;
 import org.jboss.msc.txn.Listener;
+import org.jboss.msc.txn.Transaction;
 
 /**
  * Transaction event listener. It provides utility methods {@link #awaitCompletion()} to wait for transaction phase to be

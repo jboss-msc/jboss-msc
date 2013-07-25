@@ -25,19 +25,15 @@ import java.util.Collections;
 import java.util.List;
 
 import org.jboss.msc.service.Service;
-import org.jboss.msc.service.ServiceBuilder;
-import org.jboss.msc.service.ServiceContainer;
-import org.jboss.msc.service.ServiceName;
-import org.jboss.msc.service.ServiceRegistry;
 import org.jboss.msc.service.StopContext;
 import org.jboss.msc.txn.Executable;
 import org.jboss.msc.txn.ExecuteContext;
 import org.jboss.msc.txn.Problem;
-import org.jboss.msc.txn.ServiceContext;
+import org.jboss.msc.txn.Problem.Severity;
 import org.jboss.msc.txn.TaskBuilder;
 import org.jboss.msc.txn.TaskController;
+import org.jboss.msc.txn.TaskFactory;
 import org.jboss.msc.txn.Transaction;
-import org.jboss.msc.txn.Problem.Severity;
 
 /**
  * Tasks executed when a service is stopping.
@@ -53,17 +49,17 @@ final class StoppingServiceTasks {
      * @param service          stopping service
      * @param taskDependencies the tasks that must be first concluded before service can stop
      * @param transaction      the active transaction
-     * @param context          the service context
+     * @param taskFactory      the task factory
      * @return                 the final task to be executed. Can be used for creating tasks that depend on the
      *                         conclusion of stopping transition.
      */
     static <T> TaskController<Void> create(ServiceController<T> service, Collection<TaskController<?>> taskDependencies,
-            Transaction transaction, ServiceContext context) {
+            Transaction transaction, TaskFactory taskFactory) {
 
         final Service<T> serviceValue = service.getService();
 
         // stop service
-        final TaskBuilder<Void> stopTaskBuilder = context.newTask(new StopServiceTask(serviceValue));
+        final TaskBuilder<Void> stopTaskBuilder = taskFactory.newTask(new StopServiceTask(serviceValue));
 
         // undemand dependencies if needed
         if (service.getDependencies().length > 0) {
@@ -76,7 +72,7 @@ final class StoppingServiceTasks {
         final TaskController<Void> stop = stopTaskBuilder.release();
 
         // post stop task
-        return context.newTask(new SetServiceDownTask(service, transaction)).addDependency(stop).release();
+        return taskFactory.newTask(new SetServiceDownTask(service, transaction)).addDependency(stop).release();
     }
 
     /**
@@ -85,29 +81,52 @@ final class StoppingServiceTasks {
      * @param service          stopping service
      * @param taskDependency   the task that must be first concluded before service can stop
      * @param transaction      the active transaction
-     * @param context          the service context
+     * @param taskFactory      the task factory
      * @return                 the final task to be executed. Can be used for creating tasks that depend on the
      *                         conclusion of stopping transition.
      */
     static <T> TaskController<Void> create(ServiceController<T> service, TaskController<?> taskDependency,
-            Transaction transaction, ServiceContext context) {
+            Transaction transaction, TaskFactory taskFactory) {
 
         final List<TaskController<?>> taskDependencies = new ArrayList<TaskController<?>>(1);
         taskDependencies.add(taskDependency);
-        return create(service, taskDependencies, transaction, context);
+        return create(service, taskDependencies, transaction, taskFactory);
     }
 
     /**
      * Creates stopping service tasks. When all created tasks finish execution, {@code service} will enter {@code DOWN} state.
      * @param service         stopping service
      * @param transaction     the active transaction
-     * @param context         service context
+     * @param taskFactory     the task factory
      * @return                the final task to be executed. Can be used for creating tasks that depend on the
      *                        conclusion of stopping transition.
      */
     @SuppressWarnings("unchecked")
-    static <T> TaskController<Void> create(ServiceController<T> serviceController, Transaction transaction, ServiceContext context) {
-        return create(serviceController, Collections.EMPTY_LIST, transaction, context);
+    static <T> TaskController<Void> create(ServiceController<T> service, Transaction transaction, TaskFactory taskFactory) {
+        return create(service, Collections.EMPTY_LIST, transaction, taskFactory);
+    }
+
+    /**
+     * Creates stopping service tasks. When all created tasks finish execution, {@code service} will enter {@code DOWN} state.
+     * @param service         failed service that is stopping
+     * @param transaction     the active transaction
+     * @param taskFactory      the task factory
+     * @return                the final task to be executed. Can be used for creating tasks that depend on the
+     *                        conclusion of stopping transition.
+     */
+    // TODO discuss: what if we just set the service down after it fails?
+    static <T> TaskController<Void> createForFailedService(ServiceController<T> service, Transaction transaction, TaskFactory taskFactory) {
+
+        // post stop task
+        final TaskBuilder<Void> setServiceDownBuilder = taskFactory.newTask(new SetServiceDownTask(service, transaction));
+
+        // undemand dependencies if needed
+        if (service.getDependencies().length > 0) {
+            TaskController<Void> undemandDependenciesTask = UndemandDependenciesTask.create(service, transaction, transaction);
+            setServiceDownBuilder.addDependency(undemandDependenciesTask);
+        }
+
+        return setServiceDownBuilder.release();
     }
 
     /**
@@ -185,44 +204,6 @@ final class StoppingServiceTasks {
                 public TaskBuilder<Void> newTask() throws IllegalStateException {
                     return context.newTask();
                 }
-
-                public <T> ServiceBuilder<T> addService(ServiceRegistry registry, ServiceName name) {
-                    return context.addService(registry, name);
-                }
-
-                @Override
-                public void enableService(ServiceRegistry registry, ServiceName name) throws IllegalStateException {
-                    context.enableService(registry, name);
-                }
-
-                @Override
-                public void disableService(ServiceRegistry registry, ServiceName name) throws IllegalStateException {
-                    context.disableService(registry, name);
-                }
-
-                @Override
-                public void removeService(ServiceRegistry registry, ServiceName name) throws IllegalStateException {
-                    context.removeService(registry, name);
-                }
-
-                @Override
-                public void enableRegistry(ServiceRegistry registry) {
-                    context.enableRegistry(registry);
-                }
-
-                @Override
-                public void disableRegistry(ServiceRegistry registry) {
-                    context.disableRegistry(registry);
-                }
-
-                @Override
-                public void removeRegistry(ServiceRegistry registry) {
-                    context.removeRegistry(registry);
-                }
-
-                public void shutdownContainer(ServiceContainer container) {
-                    context.shutdownContainer(container);
-                }
             });
         }
     }
@@ -253,7 +234,7 @@ final class StoppingServiceTasks {
                 serviceController.setValue(null);
 
                 // notify dependent is stopped
-                for (AbstractDependency<?> dependency: serviceController.getDependencies()) {
+                for (DependencyImpl<?> dependency: serviceController.getDependencies()) {
                     ServiceController<?> dependencyController = dependency.getDependencyRegistration().getController();
                     if (dependencyController != null) {
                         dependencyController.dependentStopped(transaction, context);

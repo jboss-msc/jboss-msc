@@ -85,7 +85,7 @@ public final class OneParentTask_NoDeps_TwoChildTasks_NoDeps_TxnReverted_TestCas
         assertNotNull(parentController);
         // preparing transaction - children validation is blocked
         final CompletionListener prepareListener = new CompletionListener();
-        transaction.prepare(prepareListener);
+        prepare(transaction, prepareListener);
         assertFalse(prepareListener.awaitCompletion(100, TimeUnit.MILLISECONDS));
         // let children to finish validate
         childValidateSignal.countDown();
@@ -107,9 +107,9 @@ public final class OneParentTask_NoDeps_TwoChildTasks_NoDeps_TxnReverted_TestCas
         assertCallOrder(parent0e, child0e, parent0v, child0v);
         assertCallOrder(parent0e, child1e, parent0v, child1v);
         // reverting transaction - children rollback is blocked
-        assertTrue(transaction.canCommit());
+        assertTrue(canCommit(transaction));
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         assertFalse(rollbackListener.awaitCompletion(100, TimeUnit.MILLISECONDS));
         // let children to finish commit
         childRollbackSignal.countDown();
@@ -175,7 +175,7 @@ public final class OneParentTask_NoDeps_TwoChildTasks_NoDeps_TxnReverted_TestCas
         assertNotNull(parentController);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         // assert parent0 calls
@@ -240,7 +240,7 @@ public final class OneParentTask_NoDeps_TwoChildTasks_NoDeps_TxnReverted_TestCas
         assertNotNull(parentController);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         // assert parent0 calls
@@ -305,7 +305,7 @@ public final class OneParentTask_NoDeps_TwoChildTasks_NoDeps_TxnReverted_TestCas
         assertNotNull(parentController);
         // reverting transaction
         final CompletionListener rollbackListener = new CompletionListener();
-        transaction.rollback(rollbackListener);
+        rollback(transaction, rollbackListener);
         signal.countDown();
         rollbackListener.awaitCompletion();
         // assert parent0 calls

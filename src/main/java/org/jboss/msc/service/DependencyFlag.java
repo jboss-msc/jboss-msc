@@ -29,23 +29,21 @@ import java.util.Collection;
  */
 public enum DependencyFlag {
     /**
-     * A missing dependency will cause a transaction error.
+     * A missing dependency will cause a transaction error. This is implied by default.
      */
     REQUIRED,
     /**
-     * Do not place a demand on this dependency. Overrides default mode behavior.
+     * A missing dependency will not cause a transaction error.
      */
-    UNDEMANDED,
+    UNREQUIRED,
     /**
      * Always place a demand on this dependency. Overrides default mode behavior.
      */
     DEMANDED,
     /**
-     * Treat the dependency as a parent; that is, when the dependency is stopped, this service should be removed.  Be
-     * sure to consider what happens if the parent re-starts however - this flag should only be used when the parent
-     * adds the service as part of its start process.  Implies {@link #REQUIRED}.
+     * Do not place a demand on this dependency. Overrides default mode behavior.
      */
-    PARENT,
+    UNDEMANDED,
     ;
 
     /**
@@ -102,3 +100,4 @@ public enum DependencyFlag {
     }
 
 }
+
