@@ -1690,6 +1690,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     enum ContextState {
+        // mid transition states
+        SYNC_ASYNC_COMPLETE,
+        SYNC_ASYNC_FAILED,
+        // final transition states
         SYNC,
         ASYNC,
         COMPLETE,
@@ -2317,13 +2321,18 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
             synchronized (ServiceControllerImpl.this) {
                 final boolean leavingRestState = isStableRestState();
-                if (state != ContextState.ASYNC) {
-                    throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
-                }
                 if (reason == null) {
                     reason = new StartException("Start failed, and additionally, a null cause was supplied");
                 }
-                state = ContextState.FAILED;
+                if (state == ContextState.COMPLETE || state == ContextState.FAILED || state == ContextState.SYNC_ASYNC_FAILED) {
+                    throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
+                }
+                if (state == ContextState.ASYNC) {
+                    state = ContextState.FAILED;
+                }
+                if (state == ContextState.SYNC) {
+                    state = ContextState.SYNC_ASYNC_FAILED;
+                }
                 final ServiceName serviceName = getName();
                 reason.setServiceName(serviceName);
                 ServiceLogger.FAIL.startFailed(reason, serviceName);
@@ -2357,7 +2366,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             synchronized (ServiceControllerImpl.this) {
                 if (state == ContextState.SYNC) {
                     state = ContextState.ASYNC;
-                } else {
+                } else if (state == ContextState.SYNC_ASYNC_COMPLETE) {
+                    state = ContextState.COMPLETE;
+                } else if (state == ContextState.SYNC_ASYNC_FAILED) {
+                    state = ContextState.FAILED;
+                } else if (state == ContextState.ASYNC) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
             }
@@ -2367,18 +2380,22 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
             synchronized (ServiceControllerImpl.this) {
                 final boolean leavingRestState = isStableRestState();
-                if (state != ContextState.ASYNC) {
+                if (state == ContextState.COMPLETE || state == ContextState.FAILED || state == ContextState.SYNC_ASYNC_COMPLETE) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
-                } else {
-                    state = ContextState.COMPLETE;
-                    if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
-                        writeProfileInfo('S', startNanos, System.nanoTime());
-                    }
-                    // Subtract one for this task
-                    asyncTasks --;
-                    transition(tasks);
-                    asyncTasks += tasks.size();
                 }
+                if (state == ContextState.ASYNC) {
+                    state = ContextState.COMPLETE;
+                }
+                if (state == ContextState.SYNC) {
+                    state = ContextState.SYNC_ASYNC_COMPLETE;
+                }
+                if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
+                    writeProfileInfo('S', startNanos, System.nanoTime());
+                }
+                // Subtract one for this task
+                asyncTasks --;
+                transition(tasks);
+                asyncTasks += tasks.size();
                 updateStabilityState(leavingRestState);
             }
             doExecute(tasks);
@@ -2458,7 +2475,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             synchronized (ServiceControllerImpl.this) {
                 if (state == ContextState.SYNC) {
                     state = ContextState.ASYNC;
-                } else {
+                } else if (state == ContextState.SYNC_ASYNC_COMPLETE) {
+                    state = ContextState.COMPLETE;
+                } else if (state == ContextState.SYNC_ASYNC_FAILED) {
+                    state = ContextState.FAILED;
+                } else if (state == ContextState.ASYNC) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
             }
@@ -2466,10 +2487,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
         public void complete() throws IllegalStateException {
             synchronized (ServiceControllerImpl.this) {
-                if (state != ContextState.ASYNC) {
+                if (state == ContextState.COMPLETE || state == ContextState.SYNC_ASYNC_COMPLETE) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
-                state = ContextState.COMPLETE;
+                if (state == ContextState.ASYNC) {
+                    state = ContextState.COMPLETE;
+                }
+                if (state == ContextState.SYNC) {
+                    state = ContextState.SYNC_ASYNC_COMPLETE;
+                }
             }
             for (ValueInjection<?> injection : injections) {
                 injection.getTarget().uninject();
