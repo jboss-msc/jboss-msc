@@ -26,17 +26,31 @@ package org.jboss.msc.service;
  * The start lifecycle context.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public interface StartContext extends LifecycleContext {
 
     /**
-     * Call when an <em>asynchronous</em> start lifecycle action has failed for some reason.
+     * Call within the service lifecycle method to trigger an <em>asynchronous</em> lifecycle action.
+     * This action will not be considered complete until indicated so by calling 
+     * either {@link #complete()} or {@link #failed(StartException)} method on this interface.
+     */
+    void asynchronous();
+
+    /**
+     * Call when start lifecycle action has failed for some reason.
      *
      * @param reason the reason for the failure
-     * @throws IllegalStateException if called before {@link #asynchronous()} is called, or if the action was already
-     * completed
+     * @throws IllegalStateException if called after {@link #complete()} was called
      */
     void failed(StartException reason) throws IllegalStateException;
+
+    /**
+     * Call when either <em>synchronous</em> or <em>asynchronous</em> lifecycle action is complete.
+     *
+     * @throws IllegalStateException if called after {@link #failed(StartException)} was called or if called twice in a row
+     */
+    void complete() throws IllegalStateException;
 
     /**
      * Get a service target which may be used to add child services.  Child services have an implicit dependency on
