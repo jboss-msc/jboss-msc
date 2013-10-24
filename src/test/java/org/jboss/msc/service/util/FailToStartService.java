@@ -61,12 +61,8 @@ public class FailToStartService implements Service<Void> {
             } finally {
                 logger.setLevel(level);
             }
-            // a second attempt to mark a context as asynchronous should result in
-            // an IllegalStateException
-            try {
-                context.asynchronous();
-                logger.info("IllegalStateException expected");
-            } catch (IllegalStateException e) {}
+            // a second attempt to mark a context as asynchronous should be noop
+            context.asynchronous();
         }
         else {
             context.complete();

@@ -28,22 +28,22 @@ import java.util.concurrent.Executor;
  * A context object for lifecycle events.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public interface LifecycleContext extends Executor {
 
     /**
      * Call within the service lifecycle method to trigger an <em>asynchronous</em> lifecycle action.  This action
-     * will not be considered complete until indicated so by calling a method on this interface.
+     * will not be considered complete until indicated so by calling a {@link #complete()} method on this interface.
      *
-     * @throws IllegalStateException if called outside of the main service lifecycle method
+     * @throws IllegalStateException if called twice in a row
      */
     void asynchronous() throws IllegalStateException;
 
     /**
-     * Call when an <em>asynchronous</em> lifecycle action is complete.
+     * Call when either <em>synchronous</em> or <em>asynchronous</em> lifecycle action is complete.
      *
-     * @throws IllegalStateException if called before {@link #asynchronous()} is called, or if the action was already
-     * completed
+     * @throws IllegalStateException if called twice in a row
      */
     void complete() throws IllegalStateException;
 

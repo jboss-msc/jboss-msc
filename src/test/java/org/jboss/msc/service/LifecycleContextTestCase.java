@@ -201,11 +201,7 @@ public class LifecycleContextTestCase extends AbstractServiceTest{
         assertEquals(Integer.valueOf(30), contextService.getValue());
 
         final StartContext startContext = contextService.getStartContext();
-        try {
-            startContext.asynchronous();
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
-
+        startContext.asynchronous();
         try {
             startContext.complete();
             fail ("IllegalStateException expected");
@@ -240,11 +236,8 @@ public class LifecycleContextTestCase extends AbstractServiceTest{
         assertNull(contextService.getValue());
 
         final StopContext stopContext = contextService.getStopContext();
-        try {
-            stopContext.asynchronous();
-            fail ("IllegalStateException expected");
-        } catch (IllegalStateException e) {}
 
+        stopContext.asynchronous();
         try {
             stopContext.complete();
             fail ("IllegalStateException expected");
