@@ -94,8 +94,12 @@ public final class InjectedSetValue<T> implements Value<Set<T>> {
 
             @Override
             public void uninject() {
-                removeItem(getStoredValue().getValue());
-                super.uninject();
+                try {
+                    final Value<T> storedValue = getStoredValue();
+                    if (storedValue != null) removeItem(storedValue.getValue());
+                } finally {
+                    super.uninject();
+                }
             }
         };
     }

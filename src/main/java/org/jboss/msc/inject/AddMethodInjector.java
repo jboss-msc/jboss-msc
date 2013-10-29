@@ -67,7 +67,8 @@ public final class AddMethodInjector<T> extends RetainingInjector<T> implements 
     /** {@inheritDoc} */
     public void uninject() {
         try {
-            removeMethod.invoke(target.getValue(), getStoredValue().getValue());
+            final Value<T> storedValue = getStoredValue();
+            if (storedValue != null) removeMethod.invoke(target.getValue(), storedValue.getValue());
         } catch (InvocationTargetException e) {
             InjectorLogger.INSTANCE.uninjectFailed(e.getCause(), removeMethod);
         } catch (IllegalAccessException e) {
