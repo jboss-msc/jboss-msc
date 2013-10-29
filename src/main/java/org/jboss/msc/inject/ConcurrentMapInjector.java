@@ -24,6 +24,8 @@ package org.jboss.msc.inject;
 
 import java.util.concurrent.ConcurrentMap;
 
+import org.jboss.msc.value.Value;
+
 /**
  * An injector which applies a value to a concurrent map entry.
  *
@@ -57,7 +59,8 @@ public final class ConcurrentMapInjector<K, T> extends RetainingInjector<T> impl
     /** {@inheritDoc} */
     public void uninject() {
         try {
-            map.remove(key, getStoredValue().getValue());
+            final Value<T> storedValue = getStoredValue();
+            if (storedValue != null) map.remove(key, storedValue.getValue());
         } finally {
             super.uninject();
         }
