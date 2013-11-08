@@ -31,7 +31,10 @@ package org.jboss.msc.service;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ *
+ * @deprecated Service listeners are not encouraged for general user use.
  */
+@Deprecated
 public interface ServiceListener<S> {
 
     /**
