@@ -278,7 +278,10 @@ public interface ServiceBuilder<T> {
         REQUIRED,
         /**
          * An optional dependency.
+         *
+         * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
          */
+        @Deprecated
         OPTIONAL,
         ;
     }
