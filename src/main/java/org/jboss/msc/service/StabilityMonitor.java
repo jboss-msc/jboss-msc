@@ -28,12 +28,10 @@ import static org.jboss.msc.service.ServiceController.Mode.LAZY;
 import static org.jboss.msc.service.ServiceController.Mode.NEVER;
 import static org.jboss.msc.service.ServiceController.Mode.ON_DEMAND;
 import static org.jboss.msc.service.ServiceController.Mode.PASSIVE;
-import static org.jboss.msc.service.ServiceController.Mode.REMOVE;
 import static org.jboss.msc.service.ServiceController.State.UP;
 
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A stability detection utility. It can be used to detect
@@ -92,7 +90,7 @@ public final class StabilityMonitor {
     private final Object controllersLock = new Object();
     private final Set<ServiceController<?>> problems = new IdentityHashSet<ServiceController<?>>();
     private final Set<ServiceController<?>> failed = new IdentityHashSet<ServiceController<?>>();
-    private final AtomicBoolean cleanupInProgress = new AtomicBoolean();
+    private boolean cleanupInProgress;
     private IdentityHashSet<ServiceControllerImpl<?>> controllers = new IdentityHashSet<ServiceControllerImpl<?>>();
     private int unstableServices;
 
@@ -105,6 +103,9 @@ public final class StabilityMonitor {
         if (controller == null) return;
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
         synchronized (controllersLock) {
+            while (cleanupInProgress) {
+                try { controllersLock.wait(); } catch (final InterruptedException ignored) {}
+            }
             if (controllers.add(serviceController)) {
                 // It is safe to call controller.addMonitor() under controllersLock because
                 // controller.addMonitor() may callback only stabilityLock protected methods.
@@ -120,6 +121,9 @@ public final class StabilityMonitor {
      */
     void addControllerNoCallback(final ServiceControllerImpl<?> controller) {
         synchronized (controllersLock) {
+            while (cleanupInProgress) {
+                try { controllersLock.wait(); } catch (final InterruptedException ignored) {}
+            }
             controllers.add(controller);
         }
     }
@@ -133,6 +137,9 @@ public final class StabilityMonitor {
         if (controller == null) return;
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
         synchronized (controllersLock) {
+            while (cleanupInProgress) {
+                try { controllersLock.wait(); } catch (final InterruptedException ignored) {}
+            }
             if (controllers.remove(serviceController)) {
                 // It is safe to call controller.removeMonitor() under controllersLock because
                 // controller.removeMonitor() may callback only stabilityLock protected methods.
@@ -148,6 +155,9 @@ public final class StabilityMonitor {
      */
     void removeControllerNoCallback(final ServiceControllerImpl<?> controller) {
         synchronized (controllersLock) {
+            while (cleanupInProgress) {
+                try { controllersLock.wait(); } catch (final InterruptedException ignored) {}
+            }
             controllers.remove(controller);
         }
     }
@@ -157,25 +167,33 @@ public final class StabilityMonitor {
      * The monitor can be later reused for stability detection again.
      */
     public void clear() {
-        if (cleanupInProgress.compareAndSet(false, true)) {
+        final Set<ServiceControllerImpl<?>> controllers;
+        synchronized (controllersLock) {
+            synchronized (stabilityLock) {
+                if (cleanupInProgress) return;
+                cleanupInProgress = true;
+                controllers = this.controllers;
+                this.controllers = new IdentityHashSet<ServiceControllerImpl<?>>();
+                failed.clear();
+                problems.clear();
+                unstableServices = 0;
+            }
+        }
+        try {
+            // We cannot call removeMonitorNoCallback neither under stabilityLock nor controllersLock
+            // because of deadlock possibility. In order for removing controllers
+            // to don't break stability invariants we're setting cleanupInProgress flag
+            // until all the controllers are removed.
+            for (final ServiceControllerImpl<?> controller : controllers) {
+                controller.removeMonitorNoCallback(this);
+            }
+        } finally {
             synchronized (controllersLock) {
-                final Set<ServiceControllerImpl<?>> controllers;
                 synchronized (stabilityLock) {
-                    controllers = this.controllers;
-                    this.controllers = new IdentityHashSet<ServiceControllerImpl<?>>();
-                    failed.clear();
-                    problems.clear();
-                    unstableServices = 0;
-                }
-                // We cannot call removeMonitorNoCallback under stabilityLock
-                // because of deadlock possibility. In order for removing controllers
-                // to don't break stability invariants we're setting cleanupInProgress flag
-                // until all the controllers are removed.
-                for (final ServiceControllerImpl<?> controller : controllers) {
-                    controller.removeMonitorNoCallback(this);
+                    cleanupInProgress = false;
+                    controllersLock.notifyAll();
                 }
             }
-            cleanupInProgress.set(false);
         }
     }
 
@@ -332,46 +350,46 @@ public final class StabilityMonitor {
 
     void addProblem(final ServiceController<?> controller) {
         assert holdsLock(controller);
-        if (cleanupInProgress.get()) return;
         synchronized (stabilityLock) {
+            if (cleanupInProgress) return;
             problems.add(controller);
         }
     }
 
     void removeProblem(final ServiceController<?> controller) {
         assert holdsLock(controller);
-        if (cleanupInProgress.get()) return;
         synchronized (stabilityLock) {
+            if (cleanupInProgress) return;
             problems.remove(controller);
         }
     }
 
     void addFailed(final ServiceController<?> controller) {
         assert holdsLock(controller);
-        if (cleanupInProgress.get()) return;
         synchronized (stabilityLock) {
+            if (cleanupInProgress) return;
             failed.add(controller);
         }
     }
 
     void removeFailed(final ServiceController<?> controller) {
         assert holdsLock(controller);
-        if (cleanupInProgress.get()) return;
         synchronized (stabilityLock) {
+            if (cleanupInProgress) return;
             failed.remove(controller);
         }
     }
 
     void incrementUnstableServices() {
-        if (cleanupInProgress.get()) return;
         synchronized (stabilityLock) {
+            if (cleanupInProgress) return;
             unstableServices++;
         }
     }
 
     void decrementUnstableServices() {
-        if (cleanupInProgress.get()) return;
         synchronized (stabilityLock) {
+            if (cleanupInProgress) return;
             if (--unstableServices == 0) {
                 stabilityLock.notifyAll();
             }
