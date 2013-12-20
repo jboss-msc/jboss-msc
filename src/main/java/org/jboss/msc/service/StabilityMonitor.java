@@ -104,9 +104,7 @@ public final class StabilityMonitor {
         if (controller == null) return;
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
         synchronized (controllersLock) {
-            while (cleanupInProgress) {
-                try { controllersLock.wait(); } catch (final InterruptedException ignored) {}
-            }
+            awaitCleanupCompletion();
             if (controllers.add(serviceController)) {
                 // It is safe to call controller.addMonitor() under controllersLock because
                 // controller.addMonitor() may callback only stabilityLock protected methods.
@@ -122,9 +120,7 @@ public final class StabilityMonitor {
      */
     void addControllerNoCallback(final ServiceControllerImpl<?> controller) {
         synchronized (controllersLock) {
-            while (cleanupInProgress) {
-                try { controllersLock.wait(); } catch (final InterruptedException ignored) {}
-            }
+            awaitCleanupCompletion();
             controllers.add(controller);
         }
     }
@@ -138,9 +134,7 @@ public final class StabilityMonitor {
         if (controller == null) return;
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
         synchronized (controllersLock) {
-            while (cleanupInProgress) {
-                try { controllersLock.wait(); } catch (final InterruptedException ignored) {}
-            }
+            awaitCleanupCompletion();
             if (controllers.remove(serviceController)) {
                 // It is safe to call controller.removeMonitor() under controllersLock because
                 // controller.removeMonitor() may callback only stabilityLock protected methods.
@@ -156,9 +150,7 @@ public final class StabilityMonitor {
      */
     void removeControllerNoCallback(final ServiceControllerImpl<?> controller) {
         synchronized (controllersLock) {
-            while (cleanupInProgress) {
-                try { controllersLock.wait(); } catch (final InterruptedException ignored) {}
-            }
+            awaitCleanupCompletion();
             controllers.remove(controller);
         }
     }
@@ -431,5 +423,23 @@ public final class StabilityMonitor {
         statistics.setProblemsCount(problemsCount);
         statistics.setStartedCount(started);
         statistics.setRemovedCount(remove);
+    }
+
+    private void awaitCleanupCompletion() {
+        assert holdsLock(controllersLock);
+        boolean interrupted = false;
+        try {
+            while (cleanupInProgress) {
+                try {
+                    controllersLock.wait();
+                } catch (final InterruptedException e) {
+                    interrupted = true;
+                }
+            }
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 }
