@@ -397,8 +397,9 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         assertNull(serviceD.service);
 
         serviceD.setInjectionException(null);
+        final Future<ServiceController<?>> serviceWontStart = testListener.expectServiceWontStart(serviceNameD);
         serviceDController.setMode(Mode.NEVER);
-        Thread.sleep(30);
+        assertController(serviceDController, serviceWontStart);
 
         final Future<ServiceController<?>> serviceStart = testListener.expectServiceStart(serviceNameD); 
         serviceDController.setMode(Mode.ACTIVE);
