@@ -39,6 +39,7 @@ import java.util.concurrent.TimeUnit;
  * The following controller substates are considered to be in REST state:
  * 
  * <ul>
+ *   <li>{@link ServiceController.Substate#NEW}</li>
  *   <li>{@link ServiceController.Substate#CANCELLED}</li>
  *   <li>{@link ServiceController.Substate#WAITING}</li>
  *   <li>{@link ServiceController.Substate#WONT_START}</li>
@@ -98,9 +99,16 @@ public final class StabilityMonitor {
      * Register controller with this monitor.
      *
      * @param controller to be registered for stability detection.
+     * @throws java.lang.IllegalArgumentException if {@code controller} is null
+     * @throws java.lang.IllegalStateException if {@code controller}s lock is held by current thread
      */
-    public void addController(final ServiceController<?> controller) {
-        if (controller == null) return;
+    public void addController(final ServiceController<?> controller) throws IllegalArgumentException, IllegalStateException {
+        if (controller == null) {
+            throw new IllegalArgumentException("Controller is null");
+        }
+        if (holdsLock(controller)) {
+            throw new IllegalStateException("Controller lock is held");
+        }
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
         synchronized (controllersLock) {
             awaitCleanupCompletion();
@@ -128,16 +136,27 @@ public final class StabilityMonitor {
      * Unregister controller with this monitor.
      *
      * @param controller to be unregistered from stability detection.
+     * @throws java.lang.IllegalArgumentException if {@code controller} is null
+     * @throws java.lang.IllegalStateException if {@code controller}s lock is held by current thread
      */
-    public void removeController(final ServiceController<?> controller) {
-        if (controller == null) return;
+    public void removeController(final ServiceController<?> controller) throws IllegalArgumentException, IllegalStateException {
+        if (controller == null) {
+            throw new IllegalArgumentException("Controller is null");
+        }
+        if (holdsLock(controller)) {
+            throw new IllegalStateException("Controller lock is held");
+        }
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
         synchronized (controllersLock) {
-            awaitCleanupCompletion();
-            if (controllers.remove(serviceController)) {
-                // It is safe to call controller.removeMonitor() under controllersLock because
-                // controller.removeMonitor() may callback only stabilityLock protected methods.
-                serviceController.removeMonitor(this);
+            if (!cleanupInProgress) {
+                if (controllers.remove(serviceController)) {
+                    // It is safe to call controller.removeMonitor() under controllersLock because
+                    // controller.removeMonitor() may callback only stabilityLock protected methods.
+                    serviceController.removeMonitor(this);
+                }
+            } else {
+                // currently running cleanup process will remove this controller from controllers set
+                serviceController.removeMonitorNoCallback(this);
             }
         }
     }
@@ -149,8 +168,11 @@ public final class StabilityMonitor {
      */
     void removeControllerNoCallback(final ServiceControllerImpl<?> controller) {
         synchronized (controllersLock) {
-            awaitCleanupCompletion();
-            controllers.remove(controller);
+            if (!cleanupInProgress) {
+                controllers.remove(controller);
+            } else {
+                // currently running cleanup process will remove this controller from controllers set
+            }
         }
     }
 
