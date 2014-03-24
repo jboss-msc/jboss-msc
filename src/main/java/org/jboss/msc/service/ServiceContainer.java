@@ -23,6 +23,8 @@
 package org.jboss.msc.service;
 
 import java.io.PrintStream;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -94,7 +96,17 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
      */
     class Factory {
 
+        private static final int MAX_THREADS_COUNT;
+
         private Factory() {
+        }
+
+        static {
+            MAX_THREADS_COUNT = AccessController.doPrivileged(new PrivilegedAction<Integer>() {
+                public Integer run() {
+                    return Integer.getInteger("jboss.msc.max.container.threads", 8);
+                }
+            });
         }
 
         /**
@@ -104,7 +116,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          */
         public static ServiceContainer create() {
             int cpuCount = Runtime.getRuntime().availableProcessors();
-            int coreSize = Math.max(cpuCount << 1, 2);
+            int coreSize = Math.min(Math.max(cpuCount << 1, 2), MAX_THREADS_COUNT);
             return new ServiceContainerImpl(null, coreSize, 30L, TimeUnit.SECONDS);
         }
 
@@ -116,7 +128,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          */
         public static ServiceContainer create(String name) {
             int cpuCount = Runtime.getRuntime().availableProcessors();
-            int coreSize = Math.max(cpuCount << 1, 2);
+            int coreSize = Math.min(Math.max(cpuCount << 1, 2), MAX_THREADS_COUNT);
             return new ServiceContainerImpl(name, coreSize, 30L, TimeUnit.SECONDS);
         }
 
