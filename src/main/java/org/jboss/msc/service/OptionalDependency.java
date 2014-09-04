@@ -398,7 +398,7 @@ class OptionalDependency implements Dependency, Dependent {
         synchronized (this) {
             dependent = this.dependent;
         }
-        return dependent.getController();
+        return dependent != null ? dependent.getController() : null; // [MSC-145] optional dependencies may return null
     }
 
     @Override
