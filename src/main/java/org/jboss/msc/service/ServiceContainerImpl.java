@@ -786,6 +786,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     private void detectCircularity(IdentityHashSet<? extends Dependent> dependents, ServiceControllerImpl<?> instance, Set<ServiceControllerImpl<?>> visited,  Deque<ServiceName> visitStack) {
         for (Dependent dependent: dependents) {
             final ServiceControllerImpl<?> controller = dependent.getController();
+            if (controller == null) continue; // [MSC-145] optional dependencies may return null
             if (controller == instance) {
                 // change cycle from dependent order to dependency order
                 ServiceName[] cycle = new ServiceName[visitStack.size()];
