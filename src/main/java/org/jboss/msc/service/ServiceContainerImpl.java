@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import static java.security.AccessController.doPrivileged;
 import static org.jboss.modules.management.ObjectProperties.property;
 
 import java.io.ByteArrayOutputStream;
@@ -84,7 +85,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     static final String PROFILE_OUTPUT;
 
     static {
-        PROFILE_OUTPUT = AccessController.doPrivileged(new PrivilegedAction<String>() {
+        PROFILE_OUTPUT = doPrivileged(new PrivilegedAction<String>() {
             public String run() {
                 return System.getProperty("jboss.msc.profile.output");
             }
@@ -111,7 +112,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
         static {
             containers = new HashSet<Reference<ServiceContainerImpl, Void>>();
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            doPrivileged(new PrivilegedAction<Void>() {
                 public Void run() {
                     final Thread hook = new Thread(new Runnable() {
                         public void run() {
@@ -123,7 +124,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                                 listener = new LatchListener(set.size());
                                 for (Reference<ServiceContainerImpl, Void> containerRef : set) {
                                     final ServiceContainerImpl container = containerRef.get();
-                                    if (container == null || ! container.isAutoShutdown()) {
+                                    if (container == null || !container.isAutoShutdown()) {
                                         listener.countDown();
                                         continue;
                                     }
@@ -879,6 +880,27 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
     }
 
+    final class ThreadAction implements PrivilegedAction<ServiceThread> {
+
+        private final Runnable r;
+        private final int id;
+        private final AtomicInteger threadSeq;
+
+        ThreadAction(final Runnable r, final int id, final AtomicInteger threadSeq) {
+            this.r = r;
+            this.id = id;
+            this.threadSeq = threadSeq;
+        }
+
+        public ServiceThread run() {
+            ServiceThread thread = new ServiceThread(r, ServiceContainerImpl.this);
+            thread.setName(String.format("MSC service thread %d-%d", Integer.valueOf(id), Integer.valueOf(threadSeq.getAndIncrement())));
+            thread.setUncaughtExceptionHandler(HANDLER);
+            return thread;
+        }
+    }
+
+
     final class ContainerExecutor extends ThreadPoolExecutor {
 
         ContainerExecutor(final int corePoolSize, final int maximumPoolSize, final long keepAliveTime, final TimeUnit unit) {
@@ -886,10 +908,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 private final int id = executorSeq.getAndIncrement();
                 private final AtomicInteger threadSeq = new AtomicInteger(1);
                 public Thread newThread(final Runnable r) {
-                    Thread thread = new ServiceThread(r, ServiceContainerImpl.this);
-                    thread.setName(String.format("MSC service thread %d-%d", Integer.valueOf(id), Integer.valueOf(threadSeq.getAndIncrement())));
-                    thread.setUncaughtExceptionHandler(HANDLER);
-                    return thread;
+                    return doPrivileged(new ThreadAction(r, id, threadSeq));
                 }
             }, POLICY);
         }
