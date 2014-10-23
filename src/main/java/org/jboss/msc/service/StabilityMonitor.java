@@ -212,8 +212,9 @@ public final class StabilityMonitor {
             synchronized (controllersLock) {
                 synchronized (stabilityLock) {
                     cleanupInProgress = false;
-                    controllersLock.notifyAll();
+                    stabilityLock.notifyAll();
                 }
+                controllersLock.notifyAll();
             }
         }
     }
