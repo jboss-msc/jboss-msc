@@ -92,7 +92,9 @@ public final class StabilityMonitor {
     private final Object controllersLock = new Object();
     private final Set<ServiceController<?>> problems = new IdentityHashSet<ServiceController<?>>();
     private final Set<ServiceController<?>> failed = new IdentityHashSet<ServiceController<?>>();
+    private boolean addInProgress;
     private boolean cleanupInProgress;
+    private boolean removeInProgress;
     private IdentityHashSet<ServiceControllerImpl<?>> controllers = new IdentityHashSet<ServiceControllerImpl<?>>();
     private int unstableServices;
 
@@ -111,13 +113,17 @@ public final class StabilityMonitor {
             throw new IllegalStateException("Controller lock is held");
         }
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
+        final boolean addMonitorToController;
         synchronized (controllersLock) {
             awaitCleanupCompletion();
-            if (controllers.add(serviceController)) {
-                // It is safe to call controller.addMonitor() under controllersLock because
-                // controller.addMonitor() may callback only stabilityLock protected methods.
-                serviceController.addMonitor(this);
-            }
+            awaitAddCompletion();
+            addInProgress = addMonitorToController = controllers.add(serviceController);
+        }
+        if (!addMonitorToController) return;
+        serviceController.addMonitor(this);
+        synchronized (controllersLock) {
+            addInProgress = false;
+            controllersLock.notifyAll();
         }
     }
 
@@ -148,17 +154,17 @@ public final class StabilityMonitor {
             throw new IllegalStateException("Controller lock is held");
         }
         final ServiceControllerImpl<?> serviceController = (ServiceControllerImpl<?>) controller;
+        final boolean removeMonitorFromController;
         synchronized (controllersLock) {
-            if (!cleanupInProgress) {
-                if (controllers.remove(serviceController)) {
-                    // It is safe to call controller.removeMonitor() under controllersLock because
-                    // controller.removeMonitor() may callback only stabilityLock protected methods.
-                    serviceController.removeMonitor(this);
-                }
-            } else {
-                // currently running cleanup process will remove this controller from controllers set
-                serviceController.removeMonitorNoCallback(this);
-            }
+            if (cleanupInProgress) return;
+            awaitRemoveCompletion();
+            removeInProgress = removeMonitorFromController = controllers.remove(serviceController);
+        }
+        if (!removeMonitorFromController) return;
+        serviceController.removeMonitor(this);
+        synchronized (controllersLock) {
+            removeInProgress = false;
+            controllersLock.notifyAll();
         }
     }
 
@@ -447,11 +453,49 @@ public final class StabilityMonitor {
         statistics.setRemovedCount(remove);
     }
 
+
+    private void awaitAddCompletion() {
+        assert holdsLock(controllersLock);
+        boolean interrupted = false;
+        try {
+            while (addInProgress) {
+                try {
+                    controllersLock.wait();
+                } catch (final InterruptedException e) {
+                    interrupted = true;
+                }
+            }
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+
     private void awaitCleanupCompletion() {
         assert holdsLock(controllersLock);
         boolean interrupted = false;
         try {
             while (cleanupInProgress) {
+                try {
+                    controllersLock.wait();
+                } catch (final InterruptedException e) {
+                    interrupted = true;
+                }
+            }
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    private void awaitRemoveCompletion() {
+        assert holdsLock(controllersLock);
+        boolean interrupted = false;
+        try {
+            while (removeInProgress) {
                 try {
                     controllersLock.wait();
                 } catch (final InterruptedException e) {
