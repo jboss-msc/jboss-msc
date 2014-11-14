@@ -168,9 +168,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create() {
-            int cpuCount = Runtime.getRuntime().availableProcessors();
-            int coreSize = Math.min(Math.max(cpuCount << 1, 2), MAX_THREADS_COUNT);
-            return new ServiceContainerImpl(null, coreSize, 30L, TimeUnit.SECONDS, true);
+            return new ServiceContainerImpl(null, calculateCoreSize(), 30L, TimeUnit.SECONDS, true);
         }
 
         /**
@@ -180,9 +178,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(String name) {
-            int cpuCount = Runtime.getRuntime().availableProcessors();
-            int coreSize = Math.min(Math.max(cpuCount << 1, 2), MAX_THREADS_COUNT);
-            return new ServiceContainerImpl(name, coreSize, 30L, TimeUnit.SECONDS, true);
+            return new ServiceContainerImpl(name, calculateCoreSize(), 30L, TimeUnit.SECONDS, true);
         }
 
         /**
@@ -195,7 +191,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(int coreSize, long keepAliveTime, TimeUnit keepAliveTimeUnit) {
-            return new ServiceContainerImpl(null, coreSize, keepAliveTime, keepAliveTimeUnit, true);
+            return new ServiceContainerImpl(null, calculateCoreSize(coreSize), keepAliveTime, keepAliveTimeUnit, true);
         }
 
         /**
@@ -209,7 +205,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(String name, int coreSize, long keepAliveTime, TimeUnit keepAliveTimeUnit) {
-            return new ServiceContainerImpl(name, coreSize, keepAliveTime, keepAliveTimeUnit, true);
+            return new ServiceContainerImpl(name, calculateCoreSize(coreSize), keepAliveTime, keepAliveTimeUnit, true);
         }
 
         /**
@@ -219,9 +215,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(boolean autoShutdown) {
-            int cpuCount = Runtime.getRuntime().availableProcessors();
-            int coreSize = Math.min(Math.max(cpuCount << 1, 2), MAX_THREADS_COUNT);
-            return new ServiceContainerImpl(null, coreSize, 30L, TimeUnit.SECONDS, autoShutdown);
+            return new ServiceContainerImpl(null, calculateCoreSize(), 30L, TimeUnit.SECONDS, autoShutdown);
         }
 
         /**
@@ -232,9 +226,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(String name, boolean autoShutdown) {
-            int cpuCount = Runtime.getRuntime().availableProcessors();
-            int coreSize = Math.min(Math.max(cpuCount << 1, 2), MAX_THREADS_COUNT);
-            return new ServiceContainerImpl(name, coreSize, 30L, TimeUnit.SECONDS, autoShutdown);
+            return new ServiceContainerImpl(name, calculateCoreSize(), 30L, TimeUnit.SECONDS, autoShutdown);
         }
 
         /**
@@ -248,7 +240,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(int coreSize, long keepAliveTime, TimeUnit keepAliveTimeUnit, boolean autoShutdown) {
-            return new ServiceContainerImpl(null, coreSize, keepAliveTime, keepAliveTimeUnit, autoShutdown);
+            return new ServiceContainerImpl(null, calculateCoreSize(coreSize), keepAliveTime, keepAliveTimeUnit, autoShutdown);
         }
 
         /**
@@ -263,7 +255,16 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(String name, int coreSize, long keepAliveTime, TimeUnit keepAliveTimeUnit, boolean autoShutdown) {
-            return new ServiceContainerImpl(name, coreSize, keepAliveTime, keepAliveTimeUnit, autoShutdown);
+            return new ServiceContainerImpl(name, calculateCoreSize(coreSize), keepAliveTime, keepAliveTimeUnit, autoShutdown);
+        }
+
+        private static int calculateCoreSize() {
+            int cpuCount = Runtime.getRuntime().availableProcessors();
+            return calculateCoreSize(Math.max(cpuCount << 1, 2));
+        }
+
+        private static int calculateCoreSize(int coreSize) {
+            return Math.min(coreSize, MAX_THREADS_COUNT);
         }
     }
 
