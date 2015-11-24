@@ -27,6 +27,7 @@ import static java.lang.Thread.holdsLock;
 import java.io.IOException;
 import java.io.Writer;
 import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -1526,7 +1527,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private void invokeListener(final ServiceListener<? super S> listener, final ListenerNotification notification, final Transition transition) {
         assert !holdsLock(this);
         // first set the TCCL
-        final ClassLoader contextClassLoader = setTCCL(listener.getClass().getClassLoader());
+        final ClassLoader contextClassLoader = setTCCL(getCL(listener.getClass()));
         try {
             switch (notification) {
                 case TRANSITION: {
@@ -1679,6 +1680,20 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             return AccessController.doPrivileged(setTCCLAction);
         } else {
             return setTCCLAction.run();
+        }
+    }
+
+    private static ClassLoader getCL(final Class<?> clazz) {
+        final SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                @Override
+                public ClassLoader run() {
+                    return clazz.getClassLoader();
+                }
+            });
+        } else {
+            return clazz.getClassLoader();
         }
     }
 
