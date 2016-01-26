@@ -99,13 +99,13 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
         <plugins>
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <compilerArgument>-AloggingVersion=3.0</compilerArgument>
-                </configuration>
-            </plugin>
             <plugin>
                 <artifactId>maven-source-plugin</artifactId>
             </plugin>
@@ -114,6 +114,7 @@
                 <configuration>
                     <!--  uncomment this to enable byteman rule debug messages
                     <argLine>-Dorg.jboss.byteman.debug</argLine> -->
+                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     <includes>
                         <include>**/*TestCase.java</include>
                     </includes>

@@ -24,10 +24,8 @@ package org.jboss.msc;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
-import java.util.Enumeration;
-import java.util.jar.Attributes;
-import java.util.jar.Manifest;
+import java.io.InputStreamReader;
+import java.util.Properties;
 
 /**
  * The current version of this module.
@@ -35,40 +33,44 @@ import java.util.jar.Manifest;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class Version {
+
     private Version() {}
 
     private static final String JAR_NAME;
     private static final String VERSION_STRING;
 
     static {
-        final Enumeration<URL> resources;
-        String jarName = "(unknown)";
-        String versionString = "(unknown)";
+        String version = "(Unknown)";
+        String jarName = "(Unknown)";
         try {
-            final ClassLoader classLoader = Version.class.getClassLoader();
-            resources = classLoader == null ? ClassLoader.getSystemResources("META-INF/MANIFEST.MF") : classLoader.getResources("META-INF/MANIFEST.MF");
-            while (resources.hasMoreElements()) {
-                final URL url = resources.nextElement();
-                final InputStream stream = url.openStream();
-                if (stream != null) try {
-                    final Manifest manifest = new Manifest(stream);
-                    final Attributes mainAttributes = manifest.getMainAttributes();
-                    if (mainAttributes != null && "JBoss Modular Service Container".equals(mainAttributes.getValue("Specification-Title"))) {
-                        jarName = mainAttributes.getValue("Jar-Name");
-                        versionString = mainAttributes.getValue("Jar-Version");
-                    }
+            final InputStream stream = Version.class.getResourceAsStream("Version.properties");
+            try {
+                final InputStreamReader reader = new InputStreamReader(stream, "UTF-8");
+                try {
+                    Properties versionProps = new Properties();
+                    versionProps.load(reader);
+                    jarName = versionProps.getProperty("jarName", jarName);
+                    version = versionProps.getProperty("version", version);
                 } finally {
-                    try { stream.close(); } catch (Throwable ignored) {}
+                    try {
+                        reader.close();
+                    } catch (Throwable ignored) {
+                    }
+                }
+            } finally {
+                try {
+                    stream.close();
+                } catch (Throwable ignored) {
                 }
             }
         } catch (IOException ignored) {
         }
+        VERSION_STRING = version;
         JAR_NAME = jarName;
-        VERSION_STRING = versionString;
     }
 
     /**
-     * Get the name of the JBoss Modules JAR.
+     * Get the name of the Jboss MSC JAR.
      *
      * @return the name
      */
@@ -76,8 +78,9 @@ public final class Version {
         return JAR_NAME;
     }
 
+
     /**
-     * Get the version string of JBoss Modules.
+     * Get the version string of MSC.
      *
      * @return the version string
      */
