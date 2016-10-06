@@ -48,6 +48,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -92,7 +93,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         ServiceLogger.ROOT.greeting(Version.getVersionString());
     }
 
-    private final ConcurrentMap<ServiceName, ServiceRegistrationImpl> registry = new UnlockedReadHashMap<ServiceName, ServiceRegistrationImpl>(512);
+    private final ConcurrentMap<ServiceName, ServiceRegistrationImpl> registry = new ConcurrentHashMap<ServiceName, ServiceRegistrationImpl>(512);
     private final long start = System.nanoTime();
 
     private final Set<ServiceController<?>> problems = new IdentityHashSet<ServiceController<?>>();
