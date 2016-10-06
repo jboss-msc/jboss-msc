@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -95,7 +96,7 @@ public final class ServiceNameMapper<V> {
         @SuppressWarnings("unchecked")
         private static final AtomicReferenceFieldUpdater<Node, Object> valueUpdater = AtomicReferenceFieldUpdater.newUpdater(Node.class, Object.class, "value");
 
-        private final ConcurrentMap<Object, Node<V>> childMap = new UnlockedReadHashMap<Object, Node<V>>();
+        private final ConcurrentMap<Object, Node<V>> childMap = new ConcurrentHashMap<Object, Node<V>>();
         @SuppressWarnings("unused")
         private volatile V value;
 
