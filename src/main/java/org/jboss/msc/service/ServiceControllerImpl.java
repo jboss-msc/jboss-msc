@@ -117,11 +117,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private int demandedByCount;
     /**
-     * The number of dependencies which are not yet started.  This service cannot start until
-     * this count reaches zero.
-     */
-    private int unstartedDependencies;
-    /**
      * Count for dependencies that are trying to stop.  If this count is greater than zero then
      * dependents will be notified that a stop is necessary.
      */
@@ -202,7 +197,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
         this.parent = parent;
         int depCount = dependencies.length;
-        unstartedDependencies = 0;
         stoppingDependencies = parent == null? depCount : depCount + 1;
         children = new IdentityHashSet<ServiceControllerImpl<?>>();
         immediateUnavailableDependencies = new IdentityHashSet<ServiceName>();
@@ -321,7 +315,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private boolean shouldStart() {
         assert holdsLock(this);
-        return unstartedDependencies == 0 && (mode == Mode.ACTIVE || mode == Mode.PASSIVE || demandedByCount > 0 && (mode == Mode.ON_DEMAND || mode == Mode.LAZY));
+        return mode == Mode.ACTIVE || mode == Mode.PASSIVE || demandedByCount > 0 && (mode == Mode.ON_DEMAND || mode == Mode.LAZY);
     }
 
     /**
@@ -331,7 +325,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private boolean shouldStop() {
         assert holdsLock(this);
-        return unstartedDependencies > 0 || (mode == Mode.NEVER || mode == Mode.REMOVE || demandedByCount == 0 && mode == Mode.ON_DEMAND);
+        return mode == Mode.NEVER || mode == Mode.REMOVE || demandedByCount == 0 && mode == Mode.ON_DEMAND;
     }
 
     /**
@@ -1446,7 +1440,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             b.append("Service Object: ").append(serviceObjectString).append('\n');
             b.append("Service Object Class: ").append(serviceObjectClass).append('\n');
             b.append("Demanded By: ").append(demandedByCount).append('\n');
-            b.append("Unstarted Dependencies: ").append(unstartedDependencies).append('\n');
             b.append("Stopping Dependencies: ").append(stoppingDependencies).append('\n');
             b.append("Running Dependents: ").append(runningDependents).append('\n');
             b.append("Fail Count: ").append(failCount).append('\n');
