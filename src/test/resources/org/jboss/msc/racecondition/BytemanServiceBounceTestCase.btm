@@ -1,6 +1,6 @@
 #
 # JBoss, Home of Professional Open Source.
-# Copyright 2011, Red Hat, Inc., and individual contributors
+# Copyright 2016, Red Hat, Inc., and individual contributors
 # as indicated by the @author tags. See the copyright.txt file in the
 # distribution for a full listing of individual contributors.
 #
@@ -20,22 +20,13 @@
 # 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 #
 
-RULE throw exception from execute under doExecute
-CLASS org.jboss.msc.service.MSCExecutor
-METHOD execute
-IF callerEquals("ServiceControllerImpl.doExecute", true)
-DO debug("rejecting execution"),
-   incrementCounter("thrown"),
-   throw new java.util.concurrent.RejectedExecutionException();
-ENDRULE
-
-RULE exception thrown
-CLASS ^org.jboss.msc.service.AbstractServiceTest
-METHOD checkExecutionRejected
+RULE delay remove task
+CLASS org.jboss.msc.service.ServiceControllerImpl$RemoveTask
+METHOD run
 AT ENTRY
 BIND NOTHING
-IF TRUE
+IF $0.this$0.primaryRegistration.name.toString().contains("s2.module")
 DO
-debug("checking if execution is rejected"),
-$0.executionRejected = readCounter("thrown", true) > 0;
+   debug("sleeping in remove task for s2.module"),
+   Thread.sleep(200);
 ENDRULE
