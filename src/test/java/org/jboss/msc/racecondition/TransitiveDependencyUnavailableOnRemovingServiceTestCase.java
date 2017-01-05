@@ -23,6 +23,7 @@ package org.jboss.msc.racecondition;
 
 import org.jboss.byteman.contrib.bmunit.BMScript;
 import org.jboss.byteman.contrib.bmunit.BMUnitRunner;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 
 /**
@@ -33,6 +34,7 @@ import org.junit.runner.RunWith;
  */
 @RunWith(BMUnitRunner.class)
 @BMScript(dir="src/test/resources")
+@Ignore
 public class TransitiveDependencyUnavailableOnRemovingServiceTestCase extends TransitiveDependencyUnavailableDuringServiceRemovalTest {
 
 }

@@ -402,98 +402,100 @@ public interface ServiceController<S> extends Value<S> {
         /**
          * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#DOWN DOWN}.
          */
-        START_REQUESTED_to_DOWN(Substate.START_REQUESTED, Substate.DOWN),
+        START_REQUESTED_to_DOWN(Substate.START_REQUESTED, Substate.DOWN, true),
         /**
          * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#PROBLEM PROBLEM}.
          */
-        START_REQUESTED_to_PROBLEM(Substate.START_REQUESTED, Substate.PROBLEM),
+        START_REQUESTED_to_PROBLEM(Substate.START_REQUESTED, Substate.PROBLEM, true),
         /**
          * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#START_INITIATING START_INITIATING}.
          */
-        START_REQUESTED_to_START_INITIATING(Substate.START_REQUESTED, Substate.START_INITIATING),
+        START_REQUESTED_to_START_INITIATING(Substate.START_REQUESTED, Substate.START_INITIATING, true),
         /**
          * Transition from {@link Substate#PROBLEM PROBLEM} to {@link Substate#START_REQUESTED START_REQUESTED}.
          */
-        PROBLEM_to_START_REQUESTED(Substate.PROBLEM, Substate.START_REQUESTED),
+        PROBLEM_to_START_REQUESTED(Substate.PROBLEM, Substate.START_REQUESTED, true),
         /**
          * Transition from {@link Substate#START_INITIATING START_INITIATING} to {@link Substate#STARTING STARTING}.
          */
-        START_INITIATING_to_STARTING (Substate.START_INITIATING, Substate.STARTING),
+        START_INITIATING_to_STARTING (Substate.START_INITIATING, Substate.STARTING, true),
         /**
          * Transition from {@link Substate#STARTING STARTING} to {@link Substate#UP UP}.
          */
-        STARTING_to_UP(Substate.STARTING, Substate.UP),
+        STARTING_to_UP(Substate.STARTING, Substate.UP, true),
         /**
          * Transition from {@link Substate#STARTING STARTING} to {@link Substate#START_FAILED START_FAILED}.
          */
-        STARTING_to_START_FAILED(Substate.STARTING, Substate.START_FAILED),
+        STARTING_to_START_FAILED(Substate.STARTING, Substate.START_FAILED, true),
         /**
          * Transition from {@link Substate#START_FAILED START_FAILED} to {@link Substate#START_INITIATING START_INITIATING}.
          */
-        START_FAILED_to_STARTING(Substate.START_FAILED, Substate.START_INITIATING),
+        START_FAILED_to_STARTING(Substate.START_FAILED, Substate.START_INITIATING, true),
         /**
          * Transition from {@link Substate#START_FAILED START_FAILED} to {@link Substate#DOWN DOWN}.
          */
-        START_FAILED_to_DOWN(Substate.START_FAILED, Substate.DOWN),
+        START_FAILED_to_DOWN(Substate.START_FAILED, Substate.DOWN, false),
         /**
          * Transition from {@link Substate#UP UP} to {@link Substate#STOP_REQUESTED STOP_REQUESTED}.
          */
-        UP_to_STOP_REQUESTED(Substate.UP, Substate.STOP_REQUESTED),
+        UP_to_STOP_REQUESTED(Substate.UP, Substate.STOP_REQUESTED, false),
         /**
          * Transition from {@link Substate#STOP_REQUESTED STOP_REQUESTED} to {@link Substate#UP UP}.
          */
-        STOP_REQUESTED_to_UP(Substate.STOP_REQUESTED, Substate.UP),
+        STOP_REQUESTED_to_UP(Substate.STOP_REQUESTED, Substate.UP, true),
         /**
          * Transition from {@link Substate#STOP_REQUESTED STOP_REQUESTED} to {@link Substate#STOPPING STOPPING}.
          */
-        STOP_REQUESTED_to_STOPPING(Substate.STOP_REQUESTED, Substate.STOPPING),
+        STOP_REQUESTED_to_STOPPING(Substate.STOP_REQUESTED, Substate.STOPPING, false),
         /**
          * Transition from {@link Substate#STOPPING STOPPING} to {@link Substate#DOWN DOWN}.
          */
-        STOPPING_to_DOWN(Substate.STOPPING, Substate.DOWN),
+        STOPPING_to_DOWN(Substate.STOPPING, Substate.DOWN, false),
         /**
          * Transition from {@link Substate#REMOVING REMOVING} to {@link Substate#REMOVED REMOVED}.
          */
-        REMOVING_to_REMOVED(Substate.REMOVING, Substate.REMOVED),
+        REMOVING_to_REMOVED(Substate.REMOVING, Substate.REMOVED, false),
         /**
          * Transition from {@link Substate#REMOVING REMOVING} to {@link Substate#DOWN DOWN}.
          */
-        REMOVING_to_DOWN(Substate.REMOVING, Substate.DOWN),
+        REMOVING_to_DOWN(Substate.REMOVING, Substate.DOWN, false),
         /**
          * Transition from {@link Substate#DOWN DOWN} to {@link Substate#REMOVING REMOVING}.
          */
-        DOWN_to_REMOVING(Substate.DOWN, Substate.REMOVING),
+        DOWN_to_REMOVING(Substate.DOWN, Substate.REMOVING, false),
         /**
          * Transition from {@link Substate#DOWN DOWN} to {@link Substate#START_REQUESTED START_REQUESTED}.
          */
-        DOWN_to_START_REQUESTED(Substate.DOWN, Substate.START_REQUESTED),
+        DOWN_to_START_REQUESTED(Substate.DOWN, Substate.START_REQUESTED, true),
         /**
          * Transition from {@link Substate#DOWN DOWN} to {@link Substate#WAITING WAITING}.
          */
-        DOWN_to_WAITING(Substate.DOWN, Substate.WAITING),
+        DOWN_to_WAITING(Substate.DOWN, Substate.WAITING, true),
         /**
          * Transition from {@link Substate#DOWN DOWN} to {@link Substate#WONT_START WONT_START}.
          */
-        DOWN_to_WONT_START(Substate.DOWN, Substate.WONT_START),
+        DOWN_to_WONT_START(Substate.DOWN, Substate.WONT_START, true),
         /**
          * Transition from {@link Substate#WAITING WAITING} to {@link Substate#DOWN DOWN}.
          */
-        WAITING_to_DOWN(Substate.WAITING, Substate.DOWN),
+        WAITING_to_DOWN(Substate.WAITING, Substate.DOWN, true),
         /**
          * Transition from {@link Substate#WONT_START WONT_START} to {@link Substate#DOWN DOWN}.
          */
-        WONT_START_to_DOWN(Substate.WONT_START, Substate.DOWN),
+        WONT_START_to_DOWN(Substate.WONT_START, Substate.DOWN, true),
         /**
          * Transition from {@link Substate#CANCELLED} to {@link Substate#REMOVED}.
          */
-        CANCELLED_to_REMOVED(Substate.CANCELLED,Substate.REMOVED);
+        CANCELLED_to_REMOVED(Substate.CANCELLED,Substate.REMOVED, false);
 
         private final Substate before;
         private final Substate after;
+        private final boolean forward;
 
-        Transition(final Substate before, final Substate after) {
+        Transition(final Substate before, final Substate after, boolean forward) {
             this.before = before;
             this.after = after;
+            this.forward = forward;
         }
 
         /**
@@ -584,6 +586,10 @@ public interface ServiceController<S> extends Value<S> {
          */
         public String toString() {
             return "transition from " + before.name() + " to " + after.name();
+        }
+
+        public boolean isForward() {
+            return forward;
         }
     }
 }
