@@ -33,7 +33,6 @@ import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.lang.management.ManagementFactory;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -50,7 +49,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -158,6 +156,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     private volatile boolean down = false;
 
     private final ContainerExecutor executor;
+    private final MSCExecutor mscExecutor;
 
     private final String name;
     private final MBeanServer mBeanServer;
@@ -367,6 +366,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 }
             });
         }
+        this.mscExecutor = new MSCExecutor(executor);
     }
 
     void removeProblem(ServiceController<?> controller) {
@@ -592,8 +592,8 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
     }
 
-    Executor getExecutor() {
-        return executor;
+    MSCExecutor getExecutor() {
+        return mscExecutor;
     }
 
     /**

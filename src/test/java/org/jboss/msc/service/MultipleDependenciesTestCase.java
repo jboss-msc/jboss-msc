@@ -34,7 +34,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Future;
-
 import org.jboss.msc.util.TestServiceListener;
 import org.jboss.msc.value.Values;
 import org.junit.Before;

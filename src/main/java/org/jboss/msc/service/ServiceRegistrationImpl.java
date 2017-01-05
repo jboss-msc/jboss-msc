@@ -83,7 +83,7 @@ final class ServiceRegistrationImpl implements Dependency {
         assert !holdsLock(this);
         assert !holdsLock(dependent);
         final ServiceControllerImpl<?> instance;
-        final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
+        final ArrayList<MSCRunnable> tasks = new ArrayList<MSCRunnable>();
         synchronized (this) {
             synchronized (dependents) {
                 if (dependents.contains(dependent)) {
