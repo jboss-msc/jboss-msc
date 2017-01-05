@@ -22,12 +22,15 @@
 
 package org.jboss.msc.service;
 
+import static org.jboss.modules.management.ObjectProperties.property;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -40,6 +43,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanException;
+import javax.management.MBeanServerConnection;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.management.ReflectionException;
+
+import org.jboss.modules.management.ObjectProperties;
 import org.jboss.msc.util.TestServiceListener;
 import org.jboss.msc.value.Values;
 import org.junit.Assert;
@@ -102,17 +113,33 @@ public class MultipleDependenciesTestCase extends AbstractServiceTest {
             c1 = serviceContainer.addService(s1, new RootService(s1))
                     .install();
             if(!serviceContainer.awaitStability(2, TimeUnit.SECONDS)) {
-                serviceContainer.dumpServices();
+                dumpDetails();
                 Assert.fail();
             }
             c1.setMode(ServiceController.Mode.REMOVE);
             c2.setMode(ServiceController.Mode.REMOVE);
             c3.setMode(ServiceController.Mode.REMOVE);
             if(!serviceContainer.awaitStability(2, TimeUnit.SECONDS)) {
-                serviceContainer.dumpServices();
+                dumpDetails();
                 Assert.fail();
             }
         }
+    }
+
+    private void dumpDetails() throws Exception {
+        MBeanServerConnection mbs = ManagementFactory.getPlatformMBeanServer();
+        ObjectName on = new ObjectName("jboss.msc", ObjectProperties.properties(property("type", "container"), property("name", serviceContainer.getName())));
+        String[] names = (String[]) mbs.invoke(on, "queryServiceNames", new Object[]{}, new String[]{});
+        StringBuilder sb = new StringBuilder("Services for ");
+        sb.append(serviceContainer.getName());
+        sb.append("\n");
+        for (String name : names) {
+            sb.append(mbs.invoke(on, "dumpServiceDetails", new Object[]{name}, new String[]{String.class.getName()}));
+            sb.append("\n");
+        }
+        sb.append(names.length);
+        sb.append(" services displayed");
+        System.out.println(sb);
     }
 
     private class RootService extends AbstractService<Void> {
