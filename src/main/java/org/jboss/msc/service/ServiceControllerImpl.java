@@ -474,12 +474,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     void transition(final ArrayList<Runnable> tasks) {
         assert holdsLock(this);
+        if (asyncTasks != 0 || state == Substate.NEW) {
+            // no movement possible
+            return;
+        }
         Transition transition;
         do {
-            if (asyncTasks != 0) {
-                // no movement possible
-                return;
-            }
             // first of all, check if parents should be demanded/undemanded
             switch (mode) {
                 case NEVER:
