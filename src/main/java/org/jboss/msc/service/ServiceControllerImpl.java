@@ -606,7 +606,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                     getListenerTasks(transition, tasks);
                     tasks.add(new DependencyRetryingTask(getDependents()));
-                    tasks.add(new DependentStartedTask());
                     break;
                 }
                 case START_INITIATING_to_STARTING: {
