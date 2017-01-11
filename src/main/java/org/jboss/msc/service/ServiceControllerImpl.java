@@ -620,7 +620,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case START_INITIATING_to_STARTING: {
                     getListenerTasks(transition, tasks);
-                    tasks.add(new StartTask(true));
+                    tasks.add(new StartTask());
                     break;
                 }
                 case START_FAILED_to_DOWN: {
@@ -1893,12 +1893,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private class StartTask implements Runnable {
 
-        private final boolean doInjection;
-
-        StartTask(final boolean doInjection) {
-            this.doInjection = doInjection;
-        }
-
         public void run() {
             assert !holdsLock(ServiceControllerImpl.this);
             final ServiceName serviceName = primaryRegistration.getName();
@@ -1939,37 +1933,33 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         private void performInjections() {
-            if (doInjection) {
-                final int injectionsLength = injections.length;
-                boolean ok = false;
-                int i = 0;
-                try {
-                    for (; i < injectionsLength; i++) {
-                        final ValueInjection<?> injection = injections[i];
-                        doInject(injection);
-                    }
-                    ok = true;
-                } finally {
-                    if (! ok) {
-                        for (; i >= 0; i--) {
-                            injections[i].getTarget().uninject();
-                        }
+            final int injectionsLength = injections.length;
+            boolean ok = false;
+            int i = 0;
+            try {
+                for (; i < injectionsLength; i++) {
+                    final ValueInjection<?> injection = injections[i];
+                    doInject(injection);
+                }
+                ok = true;
+            } finally {
+                if (! ok) {
+                    for (; i >= 0; i--) {
+                        injections[i].getTarget().uninject();
                     }
                 }
             }
         }
 
         private void performOutInjections(final ServiceName serviceName) {
-            if (doInjection) {
-                final int injectionsLength = outInjections.length;
-                int i = 0;
-                for (; i < injectionsLength; i++) {
-                    final ValueInjection<?> injection = outInjections[i];
-                    try {
-                        doInject(injection);
-                    } catch (Throwable t) {
-                        ServiceLogger.SERVICE.exceptionAfterComplete(t, serviceName);
-                    }
+            final int injectionsLength = outInjections.length;
+            int i = 0;
+            for (; i < injectionsLength; i++) {
+                final ValueInjection<?> injection = outInjections[i];
+                try {
+                    doInject(injection);
+                } catch (Throwable t) {
+                    ServiceLogger.SERVICE.exceptionAfterComplete(t, serviceName);
                 }
             }
         }
