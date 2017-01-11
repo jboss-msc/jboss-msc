@@ -2305,7 +2305,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 if (reason == null) {
                     reason = new StartException("Start failed, and additionally, a null cause was supplied");
                 }
-                if (state == ContextState.COMPLETE || state == ContextState.FAILED || state == ContextState.SYNC_ASYNC_FAILED) {
+                if (state == ContextState.COMPLETE || state == ContextState.FAILED
+                        || state == ContextState.SYNC_ASYNC_COMPLETE || state == ContextState.SYNC_ASYNC_FAILED) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
                 if (state == ContextState.ASYNC) {
@@ -2361,7 +2362,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
             synchronized (ServiceControllerImpl.this) {
                 final boolean leavingRestState = isStableRestState();
-                if (state == ContextState.COMPLETE || state == ContextState.FAILED || state == ContextState.SYNC_ASYNC_COMPLETE) {
+                if (state == ContextState.COMPLETE || state == ContextState.FAILED
+                        || state == ContextState.SYNC_ASYNC_COMPLETE || state == ContextState.SYNC_ASYNC_FAILED) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
                 if (state == ContextState.ASYNC) {
