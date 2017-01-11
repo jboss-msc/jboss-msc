@@ -2458,8 +2458,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     state = ContextState.ASYNC;
                 } else if (state == ContextState.SYNC_ASYNC_COMPLETE) {
                     state = ContextState.COMPLETE;
-                } else if (state == ContextState.SYNC_ASYNC_FAILED) {
-                    state = ContextState.FAILED;
                 } else if (state == ContextState.ASYNC) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
