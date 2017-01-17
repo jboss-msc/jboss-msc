@@ -27,6 +27,7 @@ import static org.jboss.msc.service.AbstractServiceTest.assertContextClassLoader
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -61,7 +62,7 @@ public class TestServiceListener implements ServiceListener<Object> {
 
     public TestServiceListener() {
         for (ServiceController.Transition transition : ServiceController.Transition.values()) {
-            expectedTransitions.put(transition, new HashMap<ServiceName, ServiceFuture>());
+            expectedTransitions.put(transition, new ConcurrentHashMap<ServiceName, ServiceFuture>());
         }
     }
 
