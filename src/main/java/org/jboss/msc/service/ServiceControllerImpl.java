@@ -24,8 +24,6 @@ package org.jboss.msc.service;
 
 import static java.lang.Thread.holdsLock;
 
-import java.io.IOException;
-import java.io.Writer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -1855,8 +1853,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         public void run() {
             assert !holdsLock(ServiceControllerImpl.this);
             final ServiceName serviceName = primaryRegistration.getName();
-            final long startNanos = System.nanoTime();
-            final StartContextImpl context = new StartContextImpl(startNanos);
+            final StartContextImpl context = new StartContextImpl();
             try {
                 performInjections();
                 final Service<? extends S> service = serviceValue.getValue();
@@ -1871,9 +1868,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         return;
                     }
                     context.state = ContextState.COMPLETE;
-                    if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
-                        writeProfileInfo('S', startNanos, System.nanoTime());
-                    }
                     // Subtract one for this task
                     decrementAsyncTasks();
                     transition(tasks);
@@ -1884,10 +1878,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 doExecute(tasks);
             } catch (StartException e) {
                 e.setServiceName(serviceName);
-                startFailed(e, serviceName, context, startNanos);
+                startFailed(e, serviceName, context);
             } catch (Throwable t) {
                 StartException e = new StartException("Failed to start service", t, serviceName);
-                startFailed(e, serviceName, context, startNanos);
+                startFailed(e, serviceName, context);
             }
         }
 
@@ -1932,7 +1926,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
         }
 
-        private void startFailed(StartException e, ServiceName serviceName, StartContextImpl context, long startNanos) {
+        private void startFailed(StartException e, ServiceName serviceName, StartContextImpl context) {
             ServiceLogger.FAIL.startFailed(e, serviceName);
             final ArrayList<Runnable> tasks;
             synchronized (ServiceControllerImpl.this) {
@@ -1944,9 +1938,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 context.state = ContextState.FAILED;
                 startException = e;
-                if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
-                    writeProfileInfo('F', startNanos, System.nanoTime());
-                }
                 failCount++;
                 // Subtract one for this task
                 decrementAsyncTasks();
@@ -1982,8 +1973,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         public void run() {
             assert !holdsLock(ServiceControllerImpl.this);
             final ServiceName serviceName = primaryRegistration.getName();
-            final long startNanos = System.nanoTime();
-            final StopContextImpl context = new StopContextImpl(startNanos);
+            final StopContextImpl context = new StopContextImpl();
             boolean ok = false;
             try {
                 if (! onlyUninject) {
@@ -2018,9 +2008,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 uninject(serviceName, outInjections);
                 synchronized (ServiceControllerImpl.this) {
                     final boolean leavingRestState = isStableRestState();
-                    if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
-                        writeProfileInfo('X', startNanos, System.nanoTime());
-                    }
                     // Subtract one for this task
                     decrementAsyncTasks();
                     transition(tasks = new ArrayList<Runnable>());
@@ -2069,16 +2056,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
         public void run() {
             assert !holdsLock(ServiceControllerImpl.this);
-            if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
-                final long start = System.nanoTime();
-                try {
-                    invokeListener(listener, notification, transition);
-                } finally {
-                    writeProfileInfo('L', start, System.nanoTime());
-                }
-            } else {
-                invokeListener(listener, notification, transition);
-            }
+            invokeListener(listener, notification, transition);
         }
     }
 
@@ -2260,12 +2238,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
         private ContextState state = ContextState.SYNC;
 
-        private final long startNanos;
-
-        private StartContextImpl(final long startNanos) {
-            this.startNanos = startNanos;
-        }
-
         public void failed(StartException reason) throws IllegalStateException {
             final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
             synchronized (ServiceControllerImpl.this) {
@@ -2288,9 +2260,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 ServiceLogger.FAIL.startFailed(reason, serviceName);
                 startException = reason;
                 failCount ++;
-                if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
-                    writeProfileInfo('F', startNanos, System.nanoTime());
-                }
                 // Subtract one for this task
                 decrementAsyncTasks();
                 transition(tasks);
@@ -2339,9 +2308,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 if (state == ContextState.SYNC) {
                     state = ContextState.SYNC_ASYNC_COMPLETE;
-                }
-                if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
-                    writeProfileInfo('S', startNanos, System.nanoTime());
                 }
                 // Subtract one for this task
                 decrementAsyncTasks();
@@ -2394,33 +2360,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private void writeProfileInfo(final char statusChar, final long startNanos, final long endNanos) {
-        final ServiceRegistrationImpl primaryRegistration = this.primaryRegistration;
-        final ServiceName name = primaryRegistration.getName();
-        final ServiceContainerImpl container = primaryRegistration.getContainer();
-        final Writer profileOutput = container.getProfileOutput();
-        if (profileOutput != null) {
-            synchronized (profileOutput) {
-                try {
-                    final long startOffset = startNanos - container.getStart();
-                    final long duration = endNanos - startNanos;
-                    profileOutput.write(String.format("%s\t%s\t%d\t%d\n", name.getCanonicalName(), Character.valueOf(statusChar), Long.valueOf(startOffset), Long.valueOf(duration)));
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
-        }
-    }
-
     private class StopContextImpl implements StopContext {
 
         private ContextState state = ContextState.SYNC;
-
-        private final long startNanos;
-
-        private StopContextImpl(final long startNanos) {
-            this.startNanos = startNanos;
-        }
 
         public void asynchronous() throws IllegalStateException {
             synchronized (ServiceControllerImpl.this) {
@@ -2452,9 +2394,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
             synchronized (ServiceControllerImpl.this) {
                 final boolean leavingRestState = isStableRestState();
-                if (ServiceContainerImpl.PROFILE_OUTPUT != null) {
-                    writeProfileInfo('X', startNanos, System.nanoTime());
-                }
                 // Subtract one for this task
                 decrementAsyncTasks();
                 transition(tasks);
