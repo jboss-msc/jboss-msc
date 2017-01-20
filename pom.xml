@@ -126,10 +126,6 @@
                             <value>${project.build.directory}/surefire-reports</value>
                         </property>
                         <property>
-                            <name>jboss.msc.profile.output</name>
-                            <value>${project.build.testOutputDirectory}/prof.txt</value>
-                        </property>
-                        <property>
                             <name>java.util.logging.manager</name>
                             <value>org.jboss.logmanager.LogManager</value>
                         </property>
