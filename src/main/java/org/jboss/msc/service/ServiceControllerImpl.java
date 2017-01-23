@@ -1186,7 +1186,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     public void addListener(final ServiceListener<? super S> listener) {
         assert !holdsLock(this);
-        final Substate state;
+        ListenerTask listenerAddedTask, listenerRemovedTask = null;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
             if (listeners.containsKey(listener)) {
@@ -1194,22 +1194,20 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + primaryRegistration.getName());
             }
             listeners.put(listener, ServiceListener.Inheritance.NONE);
+            listenerAddedTask = new ListenerTask(listener, ListenerNotification.LISTENER_ADDED);
             incrementAsyncTasks();
-            state = this.state;
             if (state == Substate.REMOVED) {
+                listenerRemovedTask = new ListenerTask(listener, Transition.REMOVING_to_REMOVED);
                 incrementAsyncTasks();
             }
             updateStabilityState(leavingRestState);
         }
-        invokeListener(listener, ListenerNotification.LISTENER_ADDED, null);
-        if (state == Substate.REMOVED) {
-            invokeListener(listener, ListenerNotification.TRANSITION, Transition.REMOVING_to_REMOVED);
-        }
+        try { listenerAddedTask.run(); } finally { if (listenerRemovedTask != null) listenerRemovedTask.run(); }
     }
 
     public void addListener(final ServiceListener.Inheritance inheritance, final ServiceListener<Object> listener) {
         assert !holdsLock(this);
-        final Substate state;
+        ListenerTask listenerAddedTask, listenerRemovedTask = null;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
             if (listeners.containsKey(listener)) {
@@ -1217,17 +1215,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + primaryRegistration.getName());
             }
             listeners.put(listener, inheritance);
+            listenerAddedTask = new ListenerTask(listener, ListenerNotification.LISTENER_ADDED);
             incrementAsyncTasks();
-            state = this.state;
             if (state == Substate.REMOVED) {
+                listenerRemovedTask = new ListenerTask(listener, Transition.REMOVING_to_REMOVED);
                 incrementAsyncTasks();
             }
             updateStabilityState(leavingRestState);
         }
-        invokeListener(listener, ListenerNotification.LISTENER_ADDED, null);
-        if (state == Substate.REMOVED) {
-            invokeListener(listener, ListenerNotification.TRANSITION, Transition.REMOVING_to_REMOVED);
-        }
+        try { listenerAddedTask.run(); } finally { if (listenerRemovedTask != null) listenerRemovedTask.run(); }
     }
 
     public void removeListener(final ServiceListener<? super S> listener) {
@@ -1489,81 +1485,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         REMOVE_REQUESTED,
         /** Notify the listener that the service is no longer going to be removed. */
         REMOVE_REQUEST_CLEARED
-    }
-
-    /**
-     * Invokes the listener, performing the notification specified.
-     *
-     * @param listener      listener to be invoked
-     * @param notification  specified notification
-     * @param transition    the transition to be notified, only relevant if {@code notification} is
-     *                      {@link ListenerNotification#TRANSITION}
-     */
-    private void invokeListener(final ServiceListener<? super S> listener, final ListenerNotification notification, final Transition transition) {
-        assert !holdsLock(this);
-        // first set the TCCL
-        final ClassLoader contextClassLoader = setTCCL(getCL(listener.getClass()));
-        try {
-            switch (notification) {
-                case TRANSITION: {
-                    listener.transition(this, transition);
-                    break;
-                }
-                case LISTENER_ADDED: {
-                    listener.listenerAdded(this);
-                    break;
-                }
-                case IMMEDIATE_DEPENDENCY_UNAVAILABLE: {
-                    listener.immediateDependencyUnavailable(this);
-                    break;
-                }
-                case IMMEDIATE_DEPENDENCY_AVAILABLE: {
-                    listener.immediateDependencyAvailable(this);
-                    break;
-                }
-                case TRANSITIVE_DEPENDENCY_UNAVAILABLE: {
-                    listener.transitiveDependencyUnavailable(this);
-                    break;
-                }
-                case TRANSITIVE_DEPENDENCY_AVAILABLE: {
-                    listener.transitiveDependencyAvailable(this);
-                    break;
-                }
-                case DEPENDENCY_FAILURE: {
-                    listener.dependencyFailed(this);
-                    break;
-                }
-                case DEPENDENCY_FAILURE_CLEAR: {
-                    listener.dependencyFailureCleared(this);
-                    break;
-                }
-                case REMOVE_REQUESTED: {
-                    listener.serviceRemoveRequested(this);
-                    break;
-                }
-                case REMOVE_REQUEST_CLEARED: {
-                    listener.serviceRemoveRequestCleared(this);
-                    break;
-                }
-                default: throw new IllegalStateException();
-            }
-        } catch (Throwable t) {
-            ServiceLogger.SERVICE.listenerFailed(t, listener);
-        } finally {
-            // reset TCCL
-            setTCCL(contextClassLoader);
-            // perform transition tasks
-            final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
-            synchronized (this) {
-                final boolean leavingRestState = isStableRestState();
-                // Subtract one for this executing listener
-                decrementAsyncTasks();
-                transition(tasks);
-                addAsyncTasks(tasks.size());
-                updateStabilityState(leavingRestState);
-            }
-            doExecute(tasks);
-        }
     }
 
     public Substate getSubstate() {
@@ -2006,6 +1927,74 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             assert !holdsLock(ServiceControllerImpl.this);
             invokeListener(listener, notification, transition);
         }
+
+        private void invokeListener(final ServiceListener<? super S> listener, final ListenerNotification notification, final Transition transition) {
+            assert !holdsLock(ServiceControllerImpl.this);
+            // first set the TCCL
+            final ClassLoader contextClassLoader = setTCCL(getCL(listener.getClass()));
+            try {
+                switch (notification) {
+                    case TRANSITION: {
+                        listener.transition(ServiceControllerImpl.this, transition);
+                        break;
+                    }
+                    case LISTENER_ADDED: {
+                        listener.listenerAdded(ServiceControllerImpl.this);
+                        break;
+                    }
+                    case IMMEDIATE_DEPENDENCY_UNAVAILABLE: {
+                        listener.immediateDependencyUnavailable(ServiceControllerImpl.this);
+                        break;
+                    }
+                    case IMMEDIATE_DEPENDENCY_AVAILABLE: {
+                        listener.immediateDependencyAvailable(ServiceControllerImpl.this);
+                        break;
+                    }
+                    case TRANSITIVE_DEPENDENCY_UNAVAILABLE: {
+                        listener.transitiveDependencyUnavailable(ServiceControllerImpl.this);
+                        break;
+                    }
+                    case TRANSITIVE_DEPENDENCY_AVAILABLE: {
+                        listener.transitiveDependencyAvailable(ServiceControllerImpl.this);
+                        break;
+                    }
+                    case DEPENDENCY_FAILURE: {
+                        listener.dependencyFailed(ServiceControllerImpl.this);
+                        break;
+                    }
+                    case DEPENDENCY_FAILURE_CLEAR: {
+                        listener.dependencyFailureCleared(ServiceControllerImpl.this);
+                        break;
+                    }
+                    case REMOVE_REQUESTED: {
+                        listener.serviceRemoveRequested(ServiceControllerImpl.this);
+                        break;
+                    }
+                    case REMOVE_REQUEST_CLEARED: {
+                        listener.serviceRemoveRequestCleared(ServiceControllerImpl.this);
+                        break;
+                    }
+                    default: throw new IllegalStateException();
+                }
+            } catch (Throwable t) {
+                ServiceLogger.SERVICE.listenerFailed(t, listener);
+            } finally {
+                // reset TCCL
+                setTCCL(contextClassLoader);
+                // perform transition tasks
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
+                synchronized (ServiceControllerImpl.this) {
+                    final boolean leavingRestState = isStableRestState();
+                    // Subtract one for this executing listener
+                    decrementAsyncTasks();
+                    transition(tasks);
+                    addAsyncTasks(tasks.size());
+                    updateStabilityState(leavingRestState);
+                }
+                doExecute(tasks);
+            }
+        }
+
     }
 
     private class DependencyStartedTask implements Runnable {

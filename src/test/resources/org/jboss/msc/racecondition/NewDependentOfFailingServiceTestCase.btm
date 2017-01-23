@@ -43,7 +43,7 @@ ENDRULE
 # hold listenerTask just to make sure asyncTasks is > 0 and transition won't
 # occur inside StartContextImpl.failed/StartTask.startFailed
 RULE ListenerTask
-CLASS org.jboss.msc.service.ServiceControllerImpl
+CLASS org.jboss.msc.service.ServiceControllerImpl$ListenerTask
 METHOD invokeListener
 HELPER org.jboss.msc.racecondition.NullHelper
 AT ENTRY
