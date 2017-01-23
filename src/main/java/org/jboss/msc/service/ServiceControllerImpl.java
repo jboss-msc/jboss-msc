@@ -1861,13 +1861,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     throw new IllegalArgumentException("Service is null");
                 }
                 startService(service, context);
-                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
-                synchronized (ServiceControllerImpl.this) {
-                    final boolean leavingRestState = isStableRestState();
+                synchronized (context.lock) {
                     if (context.state != ContextState.SYNC) {
                         return;
                     }
                     context.state = ContextState.COMPLETE;
+                }
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
+                synchronized (ServiceControllerImpl.this) {
+                    final boolean leavingRestState = isStableRestState();
                     // Subtract one for this task
                     decrementAsyncTasks();
                     transition(tasks);
@@ -1928,15 +1930,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
         private void startFailed(StartException e, ServiceName serviceName, StartContextImpl context) {
             ServiceLogger.FAIL.startFailed(e, serviceName);
-            final ArrayList<Runnable> tasks;
-            synchronized (ServiceControllerImpl.this) {
-                final boolean leavingRestState = isStableRestState();
+            synchronized (context.lock) {
                 final ContextState oldState = context.state;
                 if (oldState != ContextState.SYNC && oldState != ContextState.ASYNC) {
                     ServiceLogger.FAIL.exceptionAfterComplete(e, serviceName);
                     return;
                 }
                 context.state = ContextState.FAILED;
+            }
+            final ArrayList<Runnable> tasks;
+            synchronized (ServiceControllerImpl.this) {
+                final boolean leavingRestState = isStableRestState();
                 startException = e;
                 failCount++;
                 // Subtract one for this task
@@ -1996,7 +2000,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
             } finally {
                 final ArrayList<Runnable> tasks;
-                synchronized (ServiceControllerImpl.this) {
+                synchronized (context.lock) {
                     if (ok && context.state != ContextState.SYNC) {
                         // We want to discard the exception anyway, if there was one.  Which there can't be.
                         //noinspection ReturnInsideFinallyBlock
@@ -2237,14 +2241,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private class StartContextImpl implements StartContext {
 
         private ContextState state = ContextState.SYNC;
+        private final Object lock = new Object();
 
         public void failed(StartException reason) throws IllegalStateException {
-            final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
-            synchronized (ServiceControllerImpl.this) {
-                final boolean leavingRestState = isStableRestState();
-                if (reason == null) {
-                    reason = new StartException("Start failed, and additionally, a null cause was supplied");
-                }
+            synchronized (lock) {
                 if (state == ContextState.COMPLETE || state == ContextState.FAILED
                         || state == ContextState.SYNC_ASYNC_COMPLETE || state == ContextState.SYNC_ASYNC_FAILED) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
@@ -2255,9 +2255,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 if (state == ContextState.SYNC) {
                     state = ContextState.SYNC_ASYNC_FAILED;
                 }
-                final ServiceName serviceName = getName();
-                reason.setServiceName(serviceName);
-                ServiceLogger.FAIL.startFailed(reason, serviceName);
+            }
+            if (reason == null) {
+                reason = new StartException("Start failed, and additionally, a null cause was supplied");
+            }
+            final ServiceName serviceName = getName();
+            reason.setServiceName(serviceName);
+            ServiceLogger.FAIL.startFailed(reason, serviceName);
+            final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
+            synchronized (ServiceControllerImpl.this) {
+                final boolean leavingRestState = isStableRestState();
                 startException = reason;
                 failCount ++;
                 // Subtract one for this task
@@ -2270,19 +2277,21 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public ServiceTarget getChildTarget() {
-            synchronized (ServiceControllerImpl.this) {
+            synchronized (lock) {
                 if (state == ContextState.COMPLETE || state == ContextState.FAILED) {
                     throw new IllegalStateException("Lifecycle context is no longer valid");
                 }
-                if (childTarget == null) {
-                    childTarget = new ChildServiceTarget(getServiceContainer());
+                synchronized (ServiceControllerImpl.this) {
+                    if (childTarget == null) {
+                        childTarget = new ChildServiceTarget(getServiceContainer());
+                    }
+                    return childTarget;
                 }
-                return childTarget;
             }
         }
 
         public void asynchronous() throws IllegalStateException {
-            synchronized (ServiceControllerImpl.this) {
+            synchronized (lock) {
                 if (state == ContextState.SYNC) {
                     state = ContextState.ASYNC;
                 } else if (state == ContextState.SYNC_ASYNC_COMPLETE) {
@@ -2296,9 +2305,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public void complete() throws IllegalStateException {
-            final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
-            synchronized (ServiceControllerImpl.this) {
-                final boolean leavingRestState = isStableRestState();
+            synchronized (lock) {
                 if (state == ContextState.COMPLETE || state == ContextState.FAILED
                         || state == ContextState.SYNC_ASYNC_COMPLETE || state == ContextState.SYNC_ASYNC_FAILED) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
@@ -2309,6 +2316,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 if (state == ContextState.SYNC) {
                     state = ContextState.SYNC_ASYNC_COMPLETE;
                 }
+            }
+            final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
+            synchronized (ServiceControllerImpl.this) {
+                final boolean leavingRestState = isStableRestState();
                 // Subtract one for this task
                 decrementAsyncTasks();
                 transition(tasks);
@@ -2363,9 +2374,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private class StopContextImpl implements StopContext {
 
         private ContextState state = ContextState.SYNC;
+        private final Object lock = new Object();
 
         public void asynchronous() throws IllegalStateException {
-            synchronized (ServiceControllerImpl.this) {
+            synchronized (lock) {
                 if (state == ContextState.SYNC) {
                     state = ContextState.ASYNC;
                 } else if (state == ContextState.SYNC_ASYNC_COMPLETE) {
@@ -2377,7 +2389,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public void complete() throws IllegalStateException {
-            synchronized (ServiceControllerImpl.this) {
+            synchronized (lock) {
                 if (state == ContextState.COMPLETE || state == ContextState.SYNC_ASYNC_COMPLETE) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
