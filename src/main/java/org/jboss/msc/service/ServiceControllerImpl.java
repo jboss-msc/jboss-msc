@@ -2017,53 +2017,36 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class DependencyFailedTask implements Runnable {
-
+    private class DependencyFailedTask extends ControllerTask {
         private final Dependent[][] dependents;
         private final ServiceControllerImpl<?>[] children;
 
         DependencyFailedTask(final Dependent[][] dependents, final boolean removeChildren) {
             this.dependents = dependents;
             if (removeChildren && !ServiceControllerImpl.this.children.isEmpty()) {
-                synchronized (ServiceControllerImpl.this) {
-                    final boolean leavingRestState = isStableRestState();
-                    this.children = ServiceControllerImpl.this.children.toScatteredArray(NO_CONTROLLERS);
-                    // placeholder async task for child removal; last removed child will decrement this count
-                    // see removeChild method to verify when this count is decremented
-                    incrementAsyncTasks();
-                    updateStabilityState(leavingRestState);
-                }
-            }
-            else {
+                final boolean leavingRestState = isStableRestState();
+                this.children = ServiceControllerImpl.this.children.toScatteredArray(NO_CONTROLLERS);
+                // placeholder async task for child removal; last removed child will decrement this count
+                // see removeChild method to verify when this count is decremented
+                incrementAsyncTasks();
+                updateStabilityState(leavingRestState);
+            } else {
                 this.children = null;
             }
         }
 
-        public void run() {
-            try {
-                if (children != null) {
-                    for (ServiceControllerImpl<?> child: children) {
-                        if (child != null) child.setMode(Mode.REMOVE);
-                    }
+        boolean execute() {
+            if (children != null) {
+                for (ServiceControllerImpl<?> child : children) {
+                    if (child != null) child.setMode(Mode.REMOVE);
                 }
-                for (Dependent[] dependentArray : dependents) {
-                    for (Dependent dependent : dependentArray) {
-                        if (dependent != null) dependent.dependencyFailed();
-                    }
-                }
-                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
-                synchronized (ServiceControllerImpl.this) {
-                    final boolean leavingRestState = isStableRestState();
-                    // Subtract one for this task
-                    decrementAsyncTasks();
-                    transition(tasks);
-                    addAsyncTasks(tasks.size());
-                    updateStabilityState(leavingRestState);
-                }
-                doExecute(tasks);
-            } catch (Throwable t) {
-                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
             }
+            for (Dependent[] dependentArray : dependents) {
+                for (Dependent dependent : dependentArray) {
+                    if (dependent != null) dependent.dependencyFailed();
+                }
+            }
+            return true;
         }
     }
 
