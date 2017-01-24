@@ -1717,10 +1717,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class StartTask implements Runnable {
-
-        public void run() {
-            assert !holdsLock(ServiceControllerImpl.this);
+    private class StartTask extends ControllerTask {
+        boolean execute() {
             final ServiceName serviceName = primaryRegistration.getName();
             final StartContextImpl context = new StartContextImpl();
             try {
@@ -1732,27 +1730,18 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 startService(service, context);
                 synchronized (context.lock) {
                     if (context.state != ContextState.SYNC) {
-                        return;
+                        return false;
                     }
                     context.state = ContextState.COMPLETE;
                 }
                 performOutInjections();
-                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
-                synchronized (ServiceControllerImpl.this) {
-                    final boolean leavingRestState = isStableRestState();
-                    // Subtract one for this task
-                    decrementAsyncTasks();
-                    transition(tasks);
-                    addAsyncTasks(tasks.size());
-                    updateStabilityState(leavingRestState);
-                }
-                doExecute(tasks);
+                return true;
             } catch (StartException e) {
                 e.setServiceName(serviceName);
-                startFailed(e, serviceName, context);
+                return startFailed(e, serviceName, context);
             } catch (Throwable t) {
                 StartException e = new StartException("Failed to start service", t, serviceName);
-                startFailed(e, serviceName, context);
+                return startFailed(e, serviceName, context);
             }
         }
 
@@ -1765,13 +1754,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
         }
 
-        private void startFailed(StartException e, ServiceName serviceName, StartContextImpl context) {
+        private boolean startFailed(StartException e, ServiceName serviceName, StartContextImpl context) {
             ServiceLogger.FAIL.startFailed(e, serviceName);
             synchronized (context.lock) {
                 final ContextState oldState = context.state;
                 if (oldState != ContextState.SYNC && oldState != ContextState.ASYNC) {
                     ServiceLogger.FAIL.exceptionAfterComplete(e, serviceName);
-                    return;
+                    return false;
                 }
                 context.state = ContextState.FAILED;
             }
@@ -1779,16 +1768,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 startException = e;
                 failCount++;
             }
-            final ArrayList<Runnable> tasks;
-            synchronized (ServiceControllerImpl.this) {
-                final boolean leavingRestState = isStableRestState();
-                // Subtract one for this task
-                decrementAsyncTasks();
-                transition(tasks = new ArrayList<Runnable>());
-                addAsyncTasks(tasks.size());
-                updateStabilityState(leavingRestState);
-            }
-            doExecute(tasks);
+            return true;
         }
     }
 
