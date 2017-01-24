@@ -1766,30 +1766,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class DependentStartedTask implements Runnable {
-
-        public void run() {
-            try {
-                for (Dependency dependency : dependencies) {
-                    dependency.dependentStarted();
-                }
-                final ServiceControllerImpl<?> parent = ServiceControllerImpl.this.parent;
-                if (parent != null) {
-                    parent.dependentStarted();
-                }
-                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
-                synchronized (ServiceControllerImpl.this) {
-                    final boolean leavingRestState = isStableRestState();
-                    // Subtract one for this task
-                    decrementAsyncTasks();
-                    transition(tasks);
-                    addAsyncTasks(tasks.size());
-                    updateStabilityState(leavingRestState);
-                }
-                doExecute(tasks);
-            } catch (Throwable t) {
-                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
+    private class DependentStartedTask extends ControllerTask {
+        boolean execute() {
+            for (Dependency dependency : dependencies) {
+                dependency.dependentStarted();
             }
+            if (parent != null) parent.dependentStarted();
+            return true;
         }
     }
 
