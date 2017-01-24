@@ -1002,15 +1002,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private void doDemandDependencies() {
-        assert !holdsLock(this);
-        for (Dependency dependency : dependencies) {
-            dependency.addDemand();
-        }
-        final ServiceControllerImpl<?> parent = this.parent;
-        if (parent != null) parent.addDemand();
-    }
-
     private void doUndemandDependencies() {
         assert !holdsLock(this);
         for (Dependency dependency : dependencies) {
@@ -1724,24 +1715,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         abstract boolean execute();
     }
 
-    private class DemandDependenciesTask implements Runnable {
-
-        public void run() {
-            try {
-                doDemandDependencies();
-                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
-                synchronized (ServiceControllerImpl.this) {
-                    final boolean leavingRestState = isStableRestState();
-                    // Subtract one for this task
-                    decrementAsyncTasks();
-                    transition(tasks);
-                    addAsyncTasks(tasks.size());
-                    updateStabilityState(leavingRestState);
-                }
-                doExecute(tasks);
-            } catch (Throwable t) {
-                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
+    private class DemandDependenciesTask extends ControllerTask {
+        boolean execute() {
+            for (Dependency dependency : dependencies) {
+                dependency.addDemand();
             }
+            if (parent != null) parent.addDemand();
+            return true;
         }
     }
 
