@@ -22,7 +22,7 @@
 
 RULE service on CANCELLED state
 CLASS org.jboss.msc.service.ServiceControllerImpl$RemoveTask
-METHOD run
+METHOD execute
 AT ENTRY
 IF incrementCounter("run rule service on CANCELLED state only once") == 1
 DO

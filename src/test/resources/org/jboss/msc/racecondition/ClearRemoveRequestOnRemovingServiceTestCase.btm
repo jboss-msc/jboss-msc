@@ -59,7 +59,7 @@ ENDRULE
 
 RULE service RemoveTask
 CLASS org.jboss.msc.service.ServiceControllerImpl$RemoveTask
-METHOD run
+METHOD execute
 AT ENTRY
 IF TRUE
 DO

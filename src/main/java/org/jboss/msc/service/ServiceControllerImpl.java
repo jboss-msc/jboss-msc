@@ -2036,34 +2036,19 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class RemoveTask implements Runnable {
-
-        public void run() {
-            try {
-                assert getMode() == ServiceController.Mode.REMOVE;
-                assert getSubstate() == Substate.REMOVING || getSubstate() == Substate.CANCELLED;
-                primaryRegistration.clearInstance(ServiceControllerImpl.this);
-                for (ServiceRegistrationImpl registration : aliasRegistrations) {
-                    registration.clearInstance(ServiceControllerImpl.this);
-                }
-                for (Dependency dependency : dependencies) {
-                    dependency.removeDependent(ServiceControllerImpl.this);
-                }
-                final ServiceControllerImpl<?> parent = ServiceControllerImpl.this.parent;
-                if (parent != null) parent.removeChild(ServiceControllerImpl.this);
-                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
-                synchronized (ServiceControllerImpl.this) {
-                    final boolean leavingRestState = isStableRestState();
-                    // Subtract one for this task
-                    decrementAsyncTasks();
-                    transition(tasks);
-                    addAsyncTasks(tasks.size());
-                    updateStabilityState(leavingRestState);
-                }
-                doExecute(tasks);
-            } catch (Throwable t) {
-                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
+    private class RemoveTask extends ControllerTask {
+        boolean execute() {
+            assert getMode() == ServiceController.Mode.REMOVE;
+            assert getSubstate() == Substate.REMOVING || getSubstate() == Substate.CANCELLED;
+            primaryRegistration.clearInstance(ServiceControllerImpl.this);
+            for (ServiceRegistrationImpl registration : aliasRegistrations) {
+                registration.clearInstance(ServiceControllerImpl.this);
             }
+            for (Dependency dependency : dependencies) {
+                dependency.removeDependent(ServiceControllerImpl.this);
+            }
+            if (parent != null) parent.removeChild(ServiceControllerImpl.this);
+            return true;
         }
     }
 
