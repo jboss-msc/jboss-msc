@@ -1696,6 +1696,34 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return String.format("Controller for %s@%x", getName(), Integer.valueOf(hashCode()));
     }
 
+    private abstract class ControllerTask implements Runnable {
+
+        private ControllerTask() {
+            assert holdsLock(ServiceControllerImpl.this);
+        }
+
+        public final void run() {
+            assert !holdsLock(ServiceControllerImpl.this);
+            try {
+                if (!execute()) return;
+                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
+                synchronized (ServiceControllerImpl.this) {
+                    final boolean leavingRestState = isStableRestState();
+                    // Subtract one for this task
+                    decrementAsyncTasks();
+                    transition(tasks);
+                    addAsyncTasks(tasks.size());
+                    updateStabilityState(leavingRestState);
+                }
+                doExecute(tasks);
+            } catch (Throwable t) {
+                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
+            }
+        }
+
+        abstract boolean execute();
+    }
+
     private class DemandDependenciesTask implements Runnable {
 
         public void run() {
