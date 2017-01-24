@@ -1790,29 +1790,25 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class StopTask implements Runnable {
+    private class StopTask extends ControllerTask {
         private final boolean onlyUninject;
         private final ServiceControllerImpl<?>[] children;
 
         StopTask(final boolean onlyUninject) {
             this.onlyUninject = onlyUninject;
             if (!onlyUninject && !ServiceControllerImpl.this.children.isEmpty()) {
-                synchronized (ServiceControllerImpl.this) {
-                    final boolean leavingRestState = isStableRestState();
-                    this.children = ServiceControllerImpl.this.children.toScatteredArray(NO_CONTROLLERS);
-                    // placeholder async task for child removal; last removed child will decrement this count
-                    // see removeChild method to verify when this count is decremented
-                    incrementAsyncTasks();
-                    updateStabilityState(leavingRestState);
-                }
-            }
-            else {
+                final boolean leavingRestState = isStableRestState();
+                this.children = ServiceControllerImpl.this.children.toScatteredArray(NO_CONTROLLERS);
+                // placeholder async task for child removal; last removed child will decrement this count
+                // see removeChild method to verify when this count is decremented
+                incrementAsyncTasks();
+                updateStabilityState(leavingRestState);
+            } else {
                 this.children = null;
             }
         }
 
-        public void run() {
-            assert !holdsLock(ServiceControllerImpl.this);
+        boolean execute() {
             final ServiceName serviceName = primaryRegistration.getName();
             final StopContextImpl context = new StopContextImpl();
             boolean ok = false;
@@ -1836,26 +1832,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                 }
             } finally {
-                final ArrayList<Runnable> tasks;
                 synchronized (context.lock) {
                     if (ok && context.state != ContextState.SYNC) {
                         // We want to discard the exception anyway, if there was one.  Which there can't be.
                         //noinspection ReturnInsideFinallyBlock
-                        return;
+                        return false;
                     }
                     context.state = ContextState.COMPLETE;
                 }
                 uninject(serviceName, injections);
                 uninject(serviceName, outInjections);
-                synchronized (ServiceControllerImpl.this) {
-                    final boolean leavingRestState = isStableRestState();
-                    // Subtract one for this task
-                    decrementAsyncTasks();
-                    transition(tasks = new ArrayList<Runnable>());
-                    addAsyncTasks(tasks.size());
-                    updateStabilityState(leavingRestState);
-                }
-                doExecute(tasks);
+                return true;
             }
         }
 
