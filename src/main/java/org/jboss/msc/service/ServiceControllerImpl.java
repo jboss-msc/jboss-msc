@@ -1983,34 +1983,20 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class DependencyStartedTask implements Runnable {
-
+    private class DependencyStartedTask extends ControllerTask {
         private final Dependent[][] dependents;
 
         DependencyStartedTask(final Dependent[][] dependents) {
             this.dependents = dependents;
         }
 
-        public void run() {
-            try {
-                for (Dependent[] dependentArray : dependents) {
-                    for (Dependent dependent : dependentArray) {
-                        if (dependent != null) dependent.immediateDependencyUp();
-                    }
+        boolean execute() {
+            for (Dependent[] dependentArray : dependents) {
+                for (Dependent dependent : dependentArray) {
+                    if (dependent != null) dependent.immediateDependencyUp();
                 }
-                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
-                synchronized (ServiceControllerImpl.this) {
-                    final boolean leavingRestState = isStableRestState();
-                    // Subtract one for this task
-                    decrementAsyncTasks();
-                    transition(tasks);
-                    addAsyncTasks(tasks.size());
-                    updateStabilityState(leavingRestState);
-                }
-                doExecute(tasks);
-            } catch (Throwable t) {
-                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
             }
+            return true;
         }
     }
 
