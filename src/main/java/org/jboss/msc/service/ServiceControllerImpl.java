@@ -1877,8 +1877,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class ListenerTask implements Runnable {
-
+    private class ListenerTask extends ControllerTask {
         private final ListenerNotification notification;
         private final ServiceListener<? super S> listener;
         private final Transition transition;
@@ -1895,13 +1894,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             this.notification = notification;
         }
 
-        public void run() {
-            assert !holdsLock(ServiceControllerImpl.this);
+        boolean execute() {
             invokeListener(listener, notification, transition);
+            return true;
         }
 
         private void invokeListener(final ServiceListener<? super S> listener, final ListenerNotification notification, final Transition transition) {
-            assert !holdsLock(ServiceControllerImpl.this);
             // first set the TCCL
             final ClassLoader contextClassLoader = setTCCL(getCL(listener.getClass()));
             try {
@@ -1953,20 +1951,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             } finally {
                 // reset TCCL
                 setTCCL(contextClassLoader);
-                // perform transition tasks
-                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
-                synchronized (ServiceControllerImpl.this) {
-                    final boolean leavingRestState = isStableRestState();
-                    // Subtract one for this executing listener
-                    decrementAsyncTasks();
-                    transition(tasks);
-                    addAsyncTasks(tasks.size());
-                    updateStabilityState(leavingRestState);
-                }
-                doExecute(tasks);
             }
         }
-
     }
 
     private class DependencyStartedTask implements Runnable {
