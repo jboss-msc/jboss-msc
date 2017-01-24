@@ -1930,6 +1930,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                     context.state = ContextState.COMPLETE;
                 }
+                performOutInjections();
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
                     final boolean leavingRestState = isStableRestState();
@@ -1939,7 +1940,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     addAsyncTasks(tasks.size());
                     updateStabilityState(leavingRestState);
                 }
-                performOutInjections();
                 doExecute(tasks);
             } catch (StartException e) {
                 e.setServiceName(serviceName);
@@ -2348,6 +2348,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     state = ContextState.SYNC_ASYNC_COMPLETE;
                 }
             }
+            performOutInjections();
             final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
             synchronized (ServiceControllerImpl.this) {
                 final boolean leavingRestState = isStableRestState();
