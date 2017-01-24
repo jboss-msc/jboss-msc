@@ -1803,11 +1803,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 context.state = ContextState.FAILED;
             }
+            synchronized (ServiceControllerImpl.this) {
+                startException = e;
+                failCount++;
+            }
             final ArrayList<Runnable> tasks;
             synchronized (ServiceControllerImpl.this) {
                 final boolean leavingRestState = isStableRestState();
-                startException = e;
-                failCount++;
                 // Subtract one for this task
                 decrementAsyncTasks();
                 transition(tasks = new ArrayList<Runnable>());
