@@ -1632,6 +1632,37 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
+    private void performInjections() {
+        final int injectionsLength = injections.length;
+        boolean ok = false;
+        int i = 0;
+        try {
+            for (; i < injectionsLength; i++) {
+                final ValueInjection<?> injection = injections[i];
+                doInject(injection);
+            }
+            ok = true;
+        } finally {
+            if (! ok) {
+                for (; i >= 0; i--) {
+                    injections[i].getTarget().uninject();
+                }
+            }
+        }
+    }
+
+    private void performOutInjections() {
+        final int injectionsLength = outInjections.length;
+        for (int i = 0; i < injectionsLength; i++) {
+            final ValueInjection<?> injection = outInjections[i];
+            try {
+                doInject(injection);
+            } catch (Throwable t) {
+                ServiceLogger.SERVICE.exceptionAfterComplete(t, primaryRegistration.getName());
+            }
+        }
+    }
+
     enum ContextState {
         // mid transition states
         SYNC_ASYNC_COMPLETE,
@@ -1876,7 +1907,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     addAsyncTasks(tasks.size());
                     updateStabilityState(leavingRestState);
                 }
-                performOutInjections(serviceName);
+                performOutInjections();
                 doExecute(tasks);
             } catch (StartException e) {
                 e.setServiceName(serviceName);
@@ -1884,38 +1915,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             } catch (Throwable t) {
                 StartException e = new StartException("Failed to start service", t, serviceName);
                 startFailed(e, serviceName, context);
-            }
-        }
-
-        private void performInjections() {
-            final int injectionsLength = injections.length;
-            boolean ok = false;
-            int i = 0;
-            try {
-                for (; i < injectionsLength; i++) {
-                    final ValueInjection<?> injection = injections[i];
-                    doInject(injection);
-                }
-                ok = true;
-            } finally {
-                if (! ok) {
-                    for (; i >= 0; i--) {
-                        injections[i].getTarget().uninject();
-                    }
-                }
-            }
-        }
-
-        private void performOutInjections(final ServiceName serviceName) {
-            final int injectionsLength = outInjections.length;
-            int i = 0;
-            for (; i < injectionsLength; i++) {
-                final ValueInjection<?> injection = outInjections[i];
-                try {
-                    doInject(injection);
-                } catch (Throwable t) {
-                    ServiceLogger.SERVICE.exceptionAfterComplete(t, serviceName);
-                }
             }
         }
 
