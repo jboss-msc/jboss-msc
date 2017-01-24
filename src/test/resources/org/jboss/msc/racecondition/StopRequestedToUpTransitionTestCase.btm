@@ -22,7 +22,7 @@
 
 RULE service on STOP_REQUESTED
 CLASS org.jboss.msc.service.ServiceControllerImpl$DependencyStoppedTask
-METHOD run
+METHOD execute
 AT ENTRY
 BIND NOTHING
 IF incrementCounter("run rule only once") == 1
