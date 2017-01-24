@@ -1776,8 +1776,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class ServiceUnavailableTask implements Runnable {
-
+    private class ServiceUnavailableTask extends ControllerTask {
         private final Map<ServiceName, Dependent[]> dependents;
         private final Dependent[] children;
 
@@ -1786,31 +1785,18 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             children = ServiceControllerImpl.this.children.toScatteredArray(NO_DEPENDENTS);
         }
 
-        public void run() {
-            try {
-                for (Map.Entry<ServiceName, Dependent[]> dependentEntry: dependents.entrySet()) {
-                    ServiceName serviceName = dependentEntry.getKey();
-                    for (Dependent dependent: dependentEntry.getValue()) {
-                        if (dependent != null) dependent.immediateDependencyUnavailable(serviceName);
-                    }
+        boolean execute() {
+            for (Map.Entry<ServiceName, Dependent[]> dependentEntry : dependents.entrySet()) {
+                ServiceName serviceName = dependentEntry.getKey();
+                for (Dependent dependent : dependentEntry.getValue()) {
+                    if (dependent != null) dependent.immediateDependencyUnavailable(serviceName);
                 }
-                final ServiceName primaryRegistrationName = primaryRegistration.getName();
-                for (Dependent child: children) {
-                    if (child != null) child.immediateDependencyUnavailable(primaryRegistrationName);
-                }
-                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
-                synchronized (ServiceControllerImpl.this) {
-                    final boolean leavingRestState = isStableRestState();
-                    // Subtract one for this task
-                    decrementAsyncTasks();
-                    transition(tasks);
-                    addAsyncTasks(tasks.size());
-                    updateStabilityState(leavingRestState);
-                }
-                doExecute(tasks);
-            } catch (Throwable t) {
-                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
             }
+            final ServiceName primaryRegistrationName = primaryRegistration.getName();
+            for (Dependent child : children) {
+                if (child != null) child.immediateDependencyUnavailable(primaryRegistrationName);
+            }
+            return true;
         }
     }
 
