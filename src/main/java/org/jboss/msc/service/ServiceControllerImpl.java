@@ -448,11 +448,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case REMOVING: {
-                if (mode == Mode.REMOVE) {
-                    return Transition.REMOVING_to_REMOVED;
-                } else {
-                    return Transition.REMOVING_to_DOWN;
-                }
+                return Transition.REMOVING_to_REMOVED;
             }
             case CANCELLED: {
                 return Transition.CANCELLED_to_REMOVED;
@@ -662,9 +658,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     for (final StabilityMonitor monitor : monitors) {
                         monitor.removeControllerNoCallback(this);
                     }
-                    break;
-                }
-                case REMOVING_to_DOWN: {
                     break;
                 }
                 case DOWN_to_START_REQUESTED: {
