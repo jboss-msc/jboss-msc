@@ -546,6 +546,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case START_REQUESTED_to_START_INITIATING: {
+                    getListenerTasks(transition, tasks);
                     tasks.add(new DependentStartedTask());
                     break;
                 }
@@ -639,6 +640,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case DOWN_to_REMOVING: {
+                    getListenerTasks(transition, tasks);
                     tasks.add(new ServiceUnavailableTask());
                     Dependent[][] dependents = getDependents();
                     // Clear all dependency uninstalled flags from dependents
