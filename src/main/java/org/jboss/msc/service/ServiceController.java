@@ -449,7 +449,9 @@ public interface ServiceController<S> extends Value<S> {
         REMOVING_to_REMOVED(Substate.REMOVING, Substate.REMOVED),
         /**
          * Transition from {@link Substate#REMOVING REMOVING} to {@link Substate#DOWN DOWN}.
+         * @deprecated was never supposed to work
          */
+        @Deprecated
         REMOVING_to_DOWN(Substate.REMOVING, Substate.DOWN),
         /**
          * Transition from {@link Substate#DOWN DOWN} to {@link Substate#REMOVING REMOVING}.
