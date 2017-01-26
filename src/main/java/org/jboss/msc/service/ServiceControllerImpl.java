@@ -257,7 +257,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 propagateTransitiveUnavailability(dependents);
             }
             if (failCount > 0) {
-                tasks.add(new DependencyFailedTask(dependents, false));
+                tasks.add(new DependencyFailedTask(dependents));
             }
             state = Substate.DOWN;
             // subtract one to compensate for +1 above
@@ -590,7 +590,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         this.childTarget = null;
                     }
                     getListenerTasks(transition, tasks);
-                    tasks.add(new DependencyFailedTask(getDependents(), true));
+                    tasks.add(new DependencyFailedTask(getDependents()));
+                    tasks.add(new RemoveChildrenTask());
                     break;
                 }
                 case START_FAILED_to_STARTING: {
@@ -931,7 +932,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (state == Substate.PROBLEM) {
                 getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
             }
-            tasks.add(new DependencyFailedTask(getDependents(), false));
+            tasks.add(new DependencyFailedTask(getDependents()));
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
         }
@@ -1956,11 +1957,26 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private class DependencyFailedTask extends ControllerTask {
         private final Dependent[][] dependents;
+
+        DependencyFailedTask(final Dependent[][] dependents) {
+            this.dependents = dependents;
+        }
+
+        boolean execute() {
+            for (Dependent[] dependentArray : dependents) {
+                for (Dependent dependent : dependentArray) {
+                    if (dependent != null) dependent.dependencyFailed();
+                }
+            }
+            return true;
+        }
+    }
+
+    private class RemoveChildrenTask extends ControllerTask {
         private final ServiceControllerImpl<?>[] children;
 
-        DependencyFailedTask(final Dependent[][] dependents, final boolean removeChildren) {
-            this.dependents = dependents;
-            if (removeChildren && !ServiceControllerImpl.this.children.isEmpty()) {
+        RemoveChildrenTask() {
+            if (!ServiceControllerImpl.this.children.isEmpty()) {
                 final boolean leavingRestState = isStableRestState();
                 this.children = ServiceControllerImpl.this.children.toScatteredArray(NO_CONTROLLERS);
                 // placeholder async task for child removal; last removed child will decrement this count
@@ -1976,11 +1992,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (children != null) {
                 for (ServiceControllerImpl<?> child : children) {
                     if (child != null) child.setMode(Mode.REMOVE);
-                }
-            }
-            for (Dependent[] dependentArray : dependents) {
-                for (Dependent dependent : dependentArray) {
-                    if (dependent != null) dependent.dependencyFailed();
                 }
             }
             return true;
