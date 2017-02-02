@@ -547,6 +547,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case START_REQUESTED_to_START_INITIATING: {
+                    lifecycleTime = System.nanoTime();
                     getListenerTasks(transition, tasks);
                     tasks.add(new DependentStartedTask());
                     break;
@@ -569,13 +570,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case UP_to_STOP_REQUESTED: {
+                    lifecycleTime = System.nanoTime();
                     if (mode == Mode.LAZY && demandedByCount == 0) {
                         assert dependenciesDemanded;
                         tasks.add(new UndemandDependenciesTask());
                         dependenciesDemanded = false;
                     }
                     getListenerTasks(transition, tasks);
-                    lifecycleTime = System.nanoTime();
                     tasks.add(new DependencyStoppedTask(getDependents()));
                     break;
                 }
@@ -682,7 +683,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
                     }
                     getListenerTasks(transition, tasks);
-                    lifecycleTime = System.nanoTime();
                     break;
                 }
                 default: {
