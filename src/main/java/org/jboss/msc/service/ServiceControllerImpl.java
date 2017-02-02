@@ -254,7 +254,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             tasks.add(new ServiceAvailableTask());
             Dependent[][] dependents = getDependents();
             if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
-                propagateTransitiveUnavailability(dependents);
+                tasks.add(new TransitiveDependencyUnavailableTask(dependents));
             }
             if (failCount > 0) {
                 tasks.add(new DependencyFailedTask(dependents));
@@ -643,7 +643,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     Dependent[][] dependents = getDependents();
                     // Clear all dependency uninstalled flags from dependents
                     if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
-                        propagateTransitiveAvailability(dependents);
+                        tasks.add(new TransitiveDependencyAvailableTask(dependents));
                     }
                     if (failCount > 0) {
                         tasks.add(new DependencyRetryingTask(dependents));
@@ -780,7 +780,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             // both unavailable dep counts are 0
             if (transitiveUnavailableDepCount == 0) {
                 transition(tasks);
-                propagateTransitiveAvailability(getDependents());
+                tasks.add(new TransitiveDependencyAvailableTask(getDependents()));
             }
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
@@ -806,30 +806,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             // otherwise, they have already been notified
             if (transitiveUnavailableDepCount == 0) {
                 transition(tasks);
-                propagateTransitiveUnavailability(getDependents());
+                tasks.add(new TransitiveDependencyUnavailableTask(getDependents()));
             }
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
         }
         doExecute(tasks);
-    }
-
-    private void propagateTransitiveUnavailability(final Dependent[][] dependentsSnapshot) {
-        assert Thread.holdsLock(this);
-        for (Dependent[] dependentArray : dependentsSnapshot) {
-            for (Dependent dependent : dependentArray) {
-                if (dependent != null) dependent.transitiveDependencyUnavailable();
-            }
-        }
-    }
-
-    private void propagateTransitiveAvailability(final Dependent[][] dependentsSnapshot) {
-        assert Thread.holdsLock(this);
-        for (Dependent[] dependentArray : dependentsSnapshot) {
-            for (Dependent dependent : dependentArray) {
-                if (dependent != null) dependent.transitiveDependencyAvailable();
-            }
-        }
     }
 
     @Override
@@ -848,7 +830,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             // there are no immediate nor transitive unavailable dependencies
             if (immediateUnavailableDependencies.isEmpty()) {
                 transition(tasks);
-                propagateTransitiveAvailability(getDependents());
+                tasks.add(new TransitiveDependencyAvailableTask(getDependents()));
             }
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
@@ -873,7 +855,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             // otherwise, they have already been notified
             if (immediateUnavailableDependencies.isEmpty()) {
                 transition(tasks);
-                propagateTransitiveUnavailability(getDependents());
+                tasks.add(new TransitiveDependencyUnavailableTask(getDependents()));
             }
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
@@ -1977,6 +1959,40 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (children != null) {
                 for (ServiceControllerImpl<?> child : children) {
                     if (child != null) child.setMode(Mode.REMOVE);
+                }
+            }
+            return true;
+        }
+    }
+
+    private class TransitiveDependencyAvailableTask extends ControllerTask {
+        private final Dependent[][] dependents;
+
+        TransitiveDependencyAvailableTask(final Dependent[][] dependents) {
+            this.dependents = dependents;
+        }
+
+        boolean execute() {
+            for (Dependent[] dependentArray : dependents) {
+                for (Dependent dependent : dependentArray) {
+                    if (dependent != null) dependent.transitiveDependencyAvailable();
+                }
+            }
+            return true;
+        }
+    }
+
+    private class TransitiveDependencyUnavailableTask extends ControllerTask {
+        private final Dependent[][] dependents;
+
+        TransitiveDependencyUnavailableTask(final Dependent[][] dependents) {
+            this.dependents = dependents;
+        }
+
+        boolean execute() {
+            for (Dependent[] dependentArray : dependents) {
+                for (Dependent dependent : dependentArray) {
+                    if (dependent != null) dependent.transitiveDependencyUnavailable();
                 }
             }
             return true;
