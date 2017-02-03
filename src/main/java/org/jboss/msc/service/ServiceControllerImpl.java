@@ -1207,14 +1207,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final Substate state;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
+            if (listeners.containsKey(listener)) {
+                // Duplicates not allowed
+                throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + primaryRegistration.getName());
+            }
+            listeners.put(listener, ServiceListener.Inheritance.NONE);
             state = this.state;
-            // Always run listener if removed.
             if (state != Substate.REMOVED) {
-                if (listeners.containsKey(listener)) {
-                    // Duplicates not allowed
-                    throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + primaryRegistration.getName());
-                }
-                listeners.put(listener, ServiceListener.Inheritance.NONE);
                 incrementAsyncTasks();
             } else {
                 addAsyncTasks(2);
@@ -1232,14 +1231,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final Substate state;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
+            if (listeners.containsKey(listener)) {
+                // Duplicates not allowed
+                throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + primaryRegistration.getName());
+            }
+            listeners.put(listener, inheritance);
             state = this.state;
-            // Always run listener if removed.
             if (state != Substate.REMOVED) {
-                if (listeners.containsKey(listener)) {
-                    // Duplicates not allowed
-                    throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + primaryRegistration.getName());
-                }
-                listeners.put(listener, inheritance);
                 incrementAsyncTasks();
             } else {
                 addAsyncTasks(2);
