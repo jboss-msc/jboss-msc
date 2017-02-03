@@ -1204,14 +1204,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final Substate state;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
+            if (listeners.contains(listener)) {
+                // Duplicates not allowed
+                throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + primaryRegistration.getName());
+            }
+            listeners.add(listener);
             state = this.state;
-            // Always run listener if removed.
             if (state != Substate.REMOVED) {
-                if (listeners.contains(listener)) {
-                    // Duplicates not allowed
-                    throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + primaryRegistration.getName());
-                }
-                listeners.add(listener);
                 incrementAsyncTasks();
             } else {
                 addAsyncTasks(2);
