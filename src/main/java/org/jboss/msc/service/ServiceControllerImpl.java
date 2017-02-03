@@ -1209,11 +1209,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + primaryRegistration.getName());
             }
             listeners.add(listener);
+            incrementAsyncTasks();
             state = this.state;
-            if (state != Substate.REMOVED) {
+            if (state == Substate.REMOVED) {
                 incrementAsyncTasks();
-            } else {
-                addAsyncTasks(2);
             }
             updateStabilityState(leavingRestState);
         }
