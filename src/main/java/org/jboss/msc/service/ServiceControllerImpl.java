@@ -251,12 +251,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            for (Map.Entry<ServiceName, Dependent[]> dependentEntry : getDependentsByDependencyName().entrySet()) {
-                ServiceName serviceName = dependentEntry.getKey();
-                for (Dependent dependent : dependentEntry.getValue()) {
-                    if (dependent != null) dependent.immediateDependencyAvailable(serviceName);
-                }
-            }
+            tasks.add(new ServiceAvailableTask());
             Dependent[][] dependents = getDependents();
             if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
                 propagateTransitiveUnavailability(dependents);
@@ -267,7 +262,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             state = Substate.DOWN;
             // subtract one to compensate for +1 above
             decrementAsyncTasks();
-            transition(tasks);
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
         }
