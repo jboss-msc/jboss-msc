@@ -744,10 +744,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 return true;
             }
             internalSetMode(newMode, tasks);
-            if (tasks.isEmpty()) {
-                // if not empty, don't bother since transition should do nothing until tasks are done
-                transition(tasks);
-            }
+            transition(tasks);
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
         }
