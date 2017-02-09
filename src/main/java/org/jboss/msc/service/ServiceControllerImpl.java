@@ -159,6 +159,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private int asyncTasks;
     /**
+     * Tasks executed last on transition outside the lock.
+     */
+    private final ArrayList<Runnable> listenerTransitionTasks = new ArrayList<Runnable>();
+    /**
      * The service target for adding child services (can be {@code null} if none
      * were added).
      */
@@ -459,6 +463,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return null;
     }
 
+    private boolean postTransitionTasks(final ArrayList<Runnable> tasks) {
+        assert holdsLock(this);
+        // Listener transition tasks are executed last for ongoing transition and outside of intrinsic lock
+        if (listenerTransitionTasks.size() > 0) {
+            tasks.addAll(listenerTransitionTasks);
+            listenerTransitionTasks.clear();
+            return true;
+        }
+        return false;
+    }
+
     /**
      * Run the locked portion of a transition.  Call under lock.
      *
@@ -467,6 +482,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private void transition(final ArrayList<Runnable> tasks) {
         assert holdsLock(this);
         if (asyncTasks != 0 || state == Substate.NEW) {
+            // no movement possible
+            return;
+        }
+        if (postTransitionTasks(tasks)) {
             // no movement possible
             return;
         }
@@ -516,35 +535,35 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             switch (transition) {
                 case DOWN_to_WAITING: {
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     break;
                 }
                 case WAITING_to_DOWN: {
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     break;
                 }
                 case DOWN_to_WONT_START: {
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyUnavailableTask());
                     break;
                 }
                 case WONT_START_to_DOWN: {
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyAvailableTask());
                     break;
                 }
                 case STOPPING_to_DOWN: {
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
                 case START_REQUESTED_to_DOWN: {
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     break;
                 }
                 case START_REQUESTED_to_START_INITIATING: {
                     lifecycleTime = System.nanoTime();
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependentStartedTask());
                     break;
                 }
@@ -562,7 +581,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (failCount > 0) {
                         getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
                     }
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     break;
                 }
                 case UP_to_STOP_REQUESTED: {
@@ -572,12 +591,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         tasks.add(new UndemandDependenciesTask());
                         dependenciesDemanded = false;
                     }
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyStoppedTask());
                     break;
                 }
                 case STARTING_to_UP: {
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyStartedTask());
                     break;
                 }
@@ -591,7 +610,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         childTarget.valid = false;
                         this.childTarget = null;
                     }
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyFailedTask());
                     tasks.add(new RemoveChildrenTask());
                     break;
@@ -601,17 +620,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     for (StabilityMonitor monitor : monitors) {
                         monitor.removeFailed(this);
                     }
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyRetryingTask());
                     break;
                 }
                 case START_INITIATING_to_STARTING: {
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new StartTask());
                     break;
                 }
                 case START_INITIATING_to_START_REQUESTED: {
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
@@ -622,14 +641,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                     startException = null;
                     failCount--;
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyRetryingTask());
                     tasks.add(new StopTask(true));
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
                 case STOP_REQUESTED_to_UP: {
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyStartedTask());
                     break;
                 }
@@ -639,13 +658,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         childTarget.valid = false;
                         this.childTarget = null;
                     }
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new StopTask(false));
                     tasks.add(new RemoveChildrenTask());
                     break;
                 }
                 case DOWN_to_REMOVING: {
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyUnavailableTask());
                     // Clear all dependency uninstalled flags from dependents
                     if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
@@ -657,23 +676,23 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case CANCELLED_to_REMOVED:
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     listeners.clear();
-                    for (final StabilityMonitor monitor : monitors) {
+                    for (StabilityMonitor monitor : monitors) {
                         monitor.removeControllerNoCallback(this);
                     }
                     break;
                 case REMOVING_to_REMOVED: {
                     tasks.add(new RemoveTask());
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     listeners.clear();
-                    for (final StabilityMonitor monitor : monitors) {
+                    for (StabilityMonitor monitor : monitors) {
                         monitor.removeControllerNoCallback(this);
                     }
                     break;
                 }
                 case DOWN_to_START_REQUESTED: {
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     break;
                 }
                 case PROBLEM_to_START_REQUESTED: {
@@ -690,7 +709,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (failCount > 0) {
                         getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
                     }
-                    getListenerTasks(transition, tasks);
+                    getListenerTasks(transition, listenerTransitionTasks);
                     break;
                 }
                 default: {
@@ -698,9 +717,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
             }
             state = transition.getAfter();
-        } while (tasks.isEmpty());
+        } while (tasks.isEmpty() && listenerTransitionTasks.isEmpty());
         // Notify waiters that a transition occurred
         notifyAll();
+        if (tasks.size() > 0) {
+            // Postponing listener transition tasks
+        } else {
+            postTransitionTasks(tasks);
+        }
     }
 
     private void getListenerTasks(final Transition transition, final ArrayList<Runnable> tasks) {
