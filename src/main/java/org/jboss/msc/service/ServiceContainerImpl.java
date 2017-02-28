@@ -543,7 +543,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         final HashSet<ServiceControllerImpl<?>> done = new HashSet<ServiceControllerImpl<?>>();
         for (ServiceRegistrationImpl registration : registry.values()) {
             ServiceControllerImpl<?> serviceInstance = registration.getInstance();
-            if (serviceInstance != null && serviceInstance.getSubstate() != Substate.CANCELLED && done.add(serviceInstance)) {
+            if (serviceInstance != null && serviceInstance.getSubstate() != Substate.CANCELLED && serviceInstance.getSubstate() != Substate.REMOVED && done.add(serviceInstance)) {
                 try {
                     serviceInstance.addListener(shutdownListener);
                 } catch (IllegalArgumentException e) {
@@ -806,7 +806,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             }
             if (visited.add(controller)) {
                 synchronized (controller) {
-                    if (controller.getSubstateLocked() == Substate.CANCELLED) {
+                    if (controller.getSubstateLocked() == Substate.CANCELLED || controller.getSubstateLocked() == Substate.REMOVED) {
                         continue;
                     }
                 }
