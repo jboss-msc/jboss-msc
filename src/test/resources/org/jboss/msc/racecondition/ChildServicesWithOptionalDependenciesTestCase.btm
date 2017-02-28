@@ -46,31 +46,6 @@ DO
    debug("signalled child2.setMode(REMOVE) was called");
 ENDRULE
 
-RULE before OptionalDependency.removeDemand()
-CLASS org.jboss.msc.service.OptionalDependency
-METHOD removeDemand
-AT ENTRY
-IF TRUE
-DO
-   # block optional dependency at the beginning of removeDemand method
-   debug("blocking optional dependency - waiting for removeDependent() to be called first"),
-   waitFor("removeDependent() finished"),
-   debug("unblocking optional dependency");
-ENDRULE
-
-RULE after OptionalDependency.removeDependent()
-CLASS org.jboss.msc.service.OptionalDependency
-METHOD removeDependent
-AT EXIT
-BIND NOTHING
-IF TRUE
-DO
-   # signal OptionalDependency.removeDependent() call is finished
-   debug("signalling optionalDependency.removeDependent() have finished"),
-   signalWake("removeDependent() finished", true),
-   debug("signalled optionalDependency.removeDependent() have finished");
-ENDRULE
-
 RULE before OptionalDependency.immediateDependencyUnavailable()
 CLASS org.jboss.msc.service.OptionalDependency
 METHOD immediateDependencyUnavailable

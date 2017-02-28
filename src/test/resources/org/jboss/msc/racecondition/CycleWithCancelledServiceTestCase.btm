@@ -23,7 +23,7 @@
 RULE service A on CANCELLED
 CLASS org.jboss.msc.service.ServiceControllerImpl
 METHOD rollbackInstallation
-AT INVOKE org.jboss.msc.service.ServiceControllerImpl$RemoveTask.run
+AT EXIT
 BIND NOTHING
 IF incrementCounter("run rule only once for service A on CANCELLED") == 1
 DO

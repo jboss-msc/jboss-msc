@@ -29,7 +29,6 @@ DO
    # RemoveTask won't run before the canceled service is notified of dependencyFailureCleared
    debug("wait for dependencyFailureCleared()"),
    signalWake("dependency.setMode_NEVER", true),
-   waitFor("dependencyFailureCleared", 100000),
    debug("go CANCELLED service removal")
 ENDRULE
 
@@ -44,17 +43,4 @@ DO
    debug("hold dependency.setMode(Mode.NEVER)"),
    waitFor("dependency.setMode_NEVER", 100000),
    debug("go dependency.setMode(Mode.NEVER)")
-ENDRULE
-
-RULE after dependencyFailureCleared()
-CLASS org.jboss.msc.service.ServiceControllerImpl 
-METHOD dependencyFailureCleared
-AT EXIT
-BIND NOTHING
-IF  $0.state.toString().equals("CANCELLED") AND incrementCounter("_run rule only once") == 1
-DO
-    # signal dependencyFailureCleared to resume removal of canceled service
-    debug("signaling dependencyFailureCleared " + $0),
-    signalWake("dependencyFailureCleared", true),
-    debug("signaled dependencyFailureCleared " + $0)
 ENDRULE

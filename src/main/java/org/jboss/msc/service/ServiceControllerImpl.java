@@ -279,14 +279,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * Roll back the service install.
      */
     void rollbackInstallation() {
-        synchronized(this) {
+        final ArrayList<Runnable> tasks = new ArrayList<Runnable>(16);
+        synchronized (this) {
             final boolean leavingRestState = isStableRestState();
             mode = Mode.REMOVE;
-            incrementAsyncTasks();
             state = Substate.CANCELLED;
+            transition(tasks);
+            addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
         }
-        (new RemoveTask()).run();
+        doExecute(tasks);
     }
 
     /**
@@ -650,11 +652,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (failCount > 0) {
                         tasks.add(new DependencyRetryingTask(dependents));
                     }
-                    tasks.add(new RemoveTask());
                     break;
                 }
                 case CANCELLED_to_REMOVED:
                 case REMOVING_to_REMOVED: {
+                    tasks.add(new RemoveTask());
                     getListenerTasks(transition, tasks);
                     listeners.clear();
                     for (final StabilityMonitor monitor : monitors) {
@@ -950,7 +952,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            if (--failCount != 0 || state == Substate.CANCELLED) {
+            if (--failCount != 0 || state == Substate.CANCELLED || state == Substate.REMOVED) {
                 return;
             }
             // we dropped it to 0
@@ -2039,7 +2041,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private class RemoveTask extends ControllerTask {
         boolean execute() {
             assert getMode() == ServiceController.Mode.REMOVE;
-            assert getSubstate() == Substate.REMOVING || getSubstate() == Substate.CANCELLED;
+            assert getSubstate() == Substate.REMOVED;
             primaryRegistration.clearInstance(ServiceControllerImpl.this);
             for (ServiceRegistrationImpl registration : aliasRegistrations) {
                 registration.clearInstance(ServiceControllerImpl.this);
