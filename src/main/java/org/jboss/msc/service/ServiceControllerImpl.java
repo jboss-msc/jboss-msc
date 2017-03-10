@@ -449,11 +449,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case REMOVING: {
-                if (mode == Mode.REMOVE) {
-                    return Transition.REMOVING_to_REMOVED;
-                } else {
-                    return Transition.REMOVING_to_DOWN;
-                }
+                return Transition.REMOVING_to_REMOVED;
             }
             case CANCELLED: {
                 return Transition.CANCELLED_to_REMOVED;
@@ -551,6 +547,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case START_REQUESTED_to_START_INITIATING: {
+                    getListenerTasks(transition, tasks);
                     tasks.add(new DependentStartedTask());
                     break;
                 }
@@ -608,7 +605,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                     getListenerTasks(transition, tasks);
                     tasks.add(new DependencyRetryingTask(getDependents()));
-                    tasks.add(new DependentStartedTask());
                     break;
                 }
                 case START_INITIATING_to_STARTING: {
@@ -645,6 +641,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case DOWN_to_REMOVING: {
+                    getListenerTasks(transition, tasks);
                     tasks.add(new ServiceUnavailableTask());
                     Dependent[][] dependents = getDependents();
                     // Clear all dependency uninstalled flags from dependents
@@ -664,9 +661,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     for (final StabilityMonitor monitor : monitors) {
                         monitor.removeControllerNoCallback(this);
                     }
-                    break;
-                }
-                case REMOVING_to_DOWN: {
                     break;
                 }
                 case DOWN_to_START_REQUESTED: {
@@ -2279,7 +2273,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 if (reason == null) {
                     reason = new StartException("Start failed, and additionally, a null cause was supplied");
                 }
-                if (state == ContextState.COMPLETE || state == ContextState.FAILED || state == ContextState.SYNC_ASYNC_FAILED) {
+                if (state == ContextState.COMPLETE || state == ContextState.FAILED
+                        || state == ContextState.SYNC_ASYNC_COMPLETE || state == ContextState.SYNC_ASYNC_FAILED) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
                 if (state == ContextState.ASYNC) {
@@ -2335,7 +2330,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
             synchronized (ServiceControllerImpl.this) {
                 final boolean leavingRestState = isStableRestState();
-                if (state == ContextState.COMPLETE || state == ContextState.FAILED || state == ContextState.SYNC_ASYNC_COMPLETE) {
+                if (state == ContextState.COMPLETE || state == ContextState.FAILED
+                        || state == ContextState.SYNC_ASYNC_COMPLETE || state == ContextState.SYNC_ASYNC_FAILED) {
                     throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
                 }
                 if (state == ContextState.ASYNC) {
