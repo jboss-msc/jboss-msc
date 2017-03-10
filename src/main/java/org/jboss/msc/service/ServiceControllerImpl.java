@@ -980,20 +980,20 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    void dependentStopped() {
-        assert !holdsLock(this);
+    ArrayList<Runnable> dependentStopped() {
+        assert holdsLock(this);
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
             if (--runningDependents != 0) {
-                return;
+                return new ArrayList<Runnable>();
             }
             tasks = new ArrayList<Runnable>();
             transition(tasks);
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
         }
-        doExecute(tasks);
+        return tasks;
     }
 
     void newDependent(final ServiceName dependencyName, final Dependent dependent) {
@@ -1728,10 +1728,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     dependency.dependentStopped();
                 }
                 final ServiceControllerImpl<?> parent = ServiceControllerImpl.this.parent;
+                ArrayList<Runnable> tasks;
                 if (parent != null) {
-                    parent.dependentStopped();
+                    synchronized (parent) {
+                        tasks = parent.dependentStopped();
+                    }
+                    doExecute(tasks);
+                    tasks.clear();
+                } else {
+                    tasks = new ArrayList<Runnable>();
                 }
-                final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
                     final boolean leavingRestState = isStableRestState();
                     // Subtract one for this task
