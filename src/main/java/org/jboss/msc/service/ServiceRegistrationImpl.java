@@ -120,7 +120,7 @@ final class ServiceRegistrationImpl implements Dependency {
         synchronized(this) {
             synchronized (instance) {
                 final boolean leavingRestState = instance.isStableRestState();
-                instance.removeAsyncTask();
+                instance.decrementAsyncTasks();
                 instance.transition(tasks);
                 instance.addAsyncTasks(tasks.size());
                 instance.updateStabilityState(leavingRestState);
