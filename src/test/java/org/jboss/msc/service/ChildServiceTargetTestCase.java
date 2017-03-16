@@ -143,10 +143,8 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
         parentService.addChild(secondServiceName);
 
         // install parent as first service, with a dependency on its child secondService
-        final Future<ServiceController<?>> firstServiceDepMissing = testListener.expectImmediateDependencyUnavailable(firstServiceName);
         serviceContainer.addService(firstServiceName, parentService).addDependency(secondServiceName)
             .addListener(testListener).install();
-        assertController(firstServiceName, firstServiceDepMissing);
 
         // install secondService as a normal, non-child, service...
         // this will cause firstService to attempt to start, but it will fail, as it will try to
@@ -166,10 +164,8 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
         parentService.addChild(thirdServiceName);
 
         // install parent as first service, with a dependency on secondService
-        final Future<ServiceController<?>> firstServiceDepMissing = testListener.expectImmediateDependencyUnavailable(firstServiceName);
         serviceContainer.addService(firstServiceName, parentService).addDependency(secondServiceName)
             .addListener(testListener).install();
-        assertController(firstServiceName, firstServiceDepMissing);
 
         // install thirdService as a normal, non-child, service, with secondService alias
         // this will cause firstService to attempt to start, but it will fail, as it will try to
@@ -231,79 +227,6 @@ public class ChildServiceTargetTestCase extends AbstractServiceTargetTest {
         thirdController.setMode(Mode.REMOVE);
         assertController(thirdController, thirdServiceRemoval);
         assertController(firstController, firstServiceStop);
-    }
-
-    @Test
-    public void parentStartFailed() throws Exception {
-        // install first service, that depends on missing second service
-        final ServiceController<?> firstController = serviceContainer.addService(firstServiceName, Service.NULL)
-            .addListener(testListener).addDependency(secondServiceName).install();
-        assertController(firstServiceName, firstController);
-
-        // create parent, mark to fail on start
-        final ParentService parent = new ParentService(true);
-        // add third, fourth, and fifth services as children, and add testListener to childTarget
-        parent.addChild(thirdServiceName).addChild(fourthServiceName).addChild(fifthServiceName);
-        parent.addListener(testListener);
-
-        // install parent as second service, firstService is supposed to send a dep failed notification
-        final Future<ServiceController<?>> firstServiceDependencyFailed = testListener.expectDependencyFailure(firstServiceName);
-        final Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
-        final Future<ServiceController<?>> thirdServiceListenerAdded = testListener.expectListenerAdded(thirdServiceName);
-        Future<ServiceController<?>> thirdServiceRemoval = testListener.expectServiceRemoval(thirdServiceName);
-        final Future<ServiceController<?>> fourthServiceListenerAdded = testListener.expectListenerAdded(fourthServiceName);
-        Future<ServiceController<?>> fourthServiceRemoval = testListener.expectServiceRemoval(fourthServiceName);
-        final Future<ServiceController<?>> fifthServiceListenerAdded = testListener.expectListenerAdded(fifthServiceName);
-        Future<ServiceController<?>> fifthServiceRemoval = testListener.expectServiceRemoval(fifthServiceName);
-        serviceContainer.addService(secondServiceName, parent).addListener(testListener).install();
-        final ServiceController<?> secondController = assertFailure(secondServiceName, secondServiceFailure);
-        assertController(firstController, firstServiceDependencyFailed);
-        // despite second service failures, third, fourth, and fifth services should have started
-        assertController(thirdServiceListenerAdded.get(), thirdServiceRemoval);
-        assertController(fourthServiceListenerAdded.get(), fourthServiceRemoval);
-        assertController(fifthServiceListenerAdded.get(), fifthServiceRemoval);
-
-        // move parent to NEVER mode, and expect the process to finish by waiting for firstServiceDepFailureCleared notification
-        final Future<ServiceController<?>> firstServiceDepFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
-        secondController.setMode(Mode.NEVER);
-        assertController(firstController, firstServiceDepFailureCleared);
-
-        // reactivate parent, this time it won't fail to start
-        // this will trigger the start of children third, fourth, and fifth services
-        final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
-        final Future<ServiceController<?>> thirdServiceStart = testListener.expectServiceStart(thirdServiceName);
-        final Future<ServiceController<?>> fourthServiceStart = testListener.expectServiceStart(fourthServiceName);
-        final Future<ServiceController<?>> fifthServiceStart = testListener.expectServiceStart(fifthServiceName);
-        secondController.setMode(Mode.ACTIVE);
-        assertController(secondController, secondServiceStart);
-        final ServiceController<?> thirdController = assertController(thirdServiceName, thirdServiceStart);
-        final ServiceController<?> fourthController = assertController(fourthServiceName, fourthServiceStart);
-        final ServiceController<?> fifthController = assertController(fifthServiceName, fifthServiceStart);
-
-        // move third service to NEVER mode, thus causing it to stop
-        final Future<ServiceController<?>> thirdServiceStop = testListener.expectServiceStop(thirdServiceName);
-        thirdController.setMode(Mode.NEVER);
-        assertController(thirdController, thirdServiceStop);
-
-        // remove fourth service
-        fourthServiceRemoval = testListener.expectServiceRemoval(fourthServiceName);
-        fourthController.setMode(Mode.REMOVE);
-        assertController(fourthController, fourthServiceRemoval);
-
-        // move parent to ON_DEMAND mode
-        secondController.setMode(Mode.ON_DEMAND);
-        // it won't stop because the only dependent, its child fifth service, is UP
-        assertSame(State.UP, secondController.getState());
-        assertSame(State.UP, fifthController.getState());
-
-        // remove parent, causing children third and fifth to be removed as well
-        final Future<ServiceController<?>> secondServiceRemoval = testListener.expectServiceRemoval(secondServiceName);
-        thirdServiceRemoval = testListener.expectServiceRemoval(thirdServiceName);
-        fifthServiceRemoval = testListener.expectServiceRemoval(fifthServiceName);
-        secondController.setMode(Mode.REMOVE);
-        assertController(secondController, secondServiceRemoval);
-        assertController(thirdController, thirdServiceRemoval);
-        assertController(fifthController, fifthServiceRemoval);
     }
 
     @Test

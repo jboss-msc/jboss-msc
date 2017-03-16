@@ -46,15 +46,7 @@ import org.jboss.msc.service.StartException;
  */
 public class TestServiceListener implements ServiceListener<Object> {
     private final Map<ServiceName, ServiceFutureWithValidation> expectedStopsOnly = new HashMap<ServiceName, ServiceFutureWithValidation>();
-    private final Map<ServiceName, ServiceFuture> expectedRemovalRequests = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedRemovalRequestClears = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFailureFuture> expectedFailures = new HashMap<ServiceName, ServiceFailureFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedDependencyFailures = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedDependencyRetryings = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedImmediateDepUnavailabilities = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedImmediateDepAvailabilities = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedTransitiveDepUnavailabilities = new HashMap<ServiceName, ServiceFuture>();
-    private final Map<ServiceName, ServiceFuture> expectedTransitiveDepAvailabilities = new HashMap<ServiceName, ServiceFuture>();
     private final Map<ServiceName, ServiceFuture> expectedListenerAddeds = new HashMap<ServiceName, ServiceFuture>();
 
     private final EnumMap<ServiceController.Transition, Map<ServiceName, ServiceFuture>> expectedTransitions = new EnumMap<ServiceController.Transition, Map<ServiceName, ServiceFuture>>(ServiceController.Transition.class);
@@ -113,67 +105,35 @@ public class TestServiceListener implements ServiceListener<Object> {
     }
 
     public void serviceRemoveRequested(final ServiceController<? extends Object> serviceController) {
-        assertContextClassLoader(this.getClass().getClassLoader());
-        final ServiceFuture future = expectedRemovalRequests.remove(serviceController.getName());
-        if(future != null) {
-            future.setServiceController(serviceController);
-        }
+        // NOOP
     }
 
     public void serviceRemoveRequestCleared(final ServiceController<? extends Object> serviceController) {
-        assertContextClassLoader(this.getClass().getClassLoader());
-        final ServiceFuture future = expectedRemovalRequestClears.remove(serviceController.getName());
-        if(future != null) {
-            future.setServiceController(serviceController);
-        }
+        // NOOP
     }
 
     public void dependencyFailed(final ServiceController<? extends Object> serviceController) {
-        assertContextClassLoader(this.getClass().getClassLoader());
-        final ServiceFuture future = expectedDependencyFailures.remove(serviceController.getName());
-        if(future != null) {
-            future.setServiceController(serviceController);
-        }
+        // NOOP
     }
 
     public void dependencyFailureCleared(final ServiceController<? extends Object> serviceController) {
-        assertContextClassLoader(this.getClass().getClassLoader());
-        final ServiceFuture future = expectedDependencyRetryings.remove(serviceController.getName());
-        if(future != null) {
-            future.setServiceController(serviceController);
-        }
+        // NOOP
     }
 
     public void immediateDependencyAvailable(ServiceController<? extends Object> serviceController) {
-        assertContextClassLoader(this.getClass().getClassLoader());
-        final ServiceFuture future = expectedImmediateDepAvailabilities.remove(serviceController.getName());
-        if(future != null) {
-            future.setServiceController(serviceController);
-        }
+        // NOOP
     }
 
     public void immediateDependencyUnavailable(ServiceController<? extends Object> serviceController) {
-        assertContextClassLoader(this.getClass().getClassLoader());
-        final ServiceFuture future = expectedImmediateDepUnavailabilities.remove(serviceController.getName());
-        if(future != null) {
-            future.setServiceController(serviceController);
-        }
+        // NOOP
     }
 
     public void transitiveDependencyAvailable(ServiceController<? extends Object> serviceController) {
-        assertContextClassLoader(this.getClass().getClassLoader());
-        final ServiceFuture future = expectedTransitiveDepAvailabilities.remove(serviceController.getName());
-        if(future != null) {
-            future.setServiceController(serviceController);
-        }
+        // NOOP
     }
 
     public void transitiveDependencyUnavailable(ServiceController<? extends Object> serviceController) {
-        assertContextClassLoader(this.getClass().getClassLoader());
-        final ServiceFuture future = expectedTransitiveDepUnavailabilities.remove(serviceController.getName());
-        if(future != null) {
-            future.setServiceController(serviceController);
-        }
+        // NOOP
     }
 
     // ----
@@ -275,24 +235,6 @@ public class TestServiceListener implements ServiceListener<Object> {
         return future;
     }
 
-    public Future<ServiceController<?>> expectServiceRemovalRequest(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture();
-        expectedRemovalRequests.put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectNoServiceRemovalRequest(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(100);
-        expectedRemovalRequests.put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectServiceRemovalRequestCleared(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture();
-        expectedRemovalRequestClears.put(serviceName, future);
-        return future;
-    }
-
     public Future<ServiceController<?>> expectServiceRemoval(final ServiceName serviceName) {
         final ServiceFuture future = new ServiceFuture();
         expectedTransitions.get(ServiceController.Transition.REMOVING_to_REMOVED).put(serviceName, future);
@@ -311,104 +253,8 @@ public class TestServiceListener implements ServiceListener<Object> {
         return future;
     }
 
-    public Future<ServiceController<?>> expectDependencyFailure(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture();
-        expectedDependencyFailures.put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectNoDependencyFailure(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(100);
-        expectedDependencyFailures.put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectDependencyFailureCleared(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture();
-        expectedDependencyRetryings.put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectNoDependencyFailureCleared(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(100);
-        expectedDependencyRetryings.put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectImmediateDependencyAvailable(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture();
-        expectedImmediateDepAvailabilities.put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectNoImmediateDependencyAvailable(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(100);
-        expectedImmediateDepAvailabilities.put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectImmediateDependencyUnavailable(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture();
-        expectedImmediateDepUnavailabilities.put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectNoImmediateDependencyUnavailable(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(100);
-        expectedImmediateDepUnavailabilities.put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectTransitiveDependencyAvailable(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture();
-        expectedTransitiveDepAvailabilities.put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectNoTransitiveDependencyAvailable(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(100);
-        expectedTransitiveDepAvailabilities.put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectTransitiveDependencyUnavailable(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture();
-        expectedTransitiveDepUnavailabilities.put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectNoTransitiveDependencyUnavailable(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(100);
-        expectedTransitiveDepUnavailabilities.put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectDependencyProblem(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture();
-        expectedTransitions.get(ServiceController.Transition.START_REQUESTED_to_PROBLEM).put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectNoDependencyProblem(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(100);
-        expectedTransitions.get(ServiceController.Transition.START_REQUESTED_to_PROBLEM).put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectDependencyProblemCleared(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture();
-        expectedTransitions.get(ServiceController.Transition.PROBLEM_to_START_REQUESTED).put(serviceName, future);
-        return future;
-    }
-
-    public Future<ServiceController<?>> expectNoDependencyProblemCleared(final ServiceName serviceName) {
-        final ServiceFuture future = new ServiceFuture(100);
-        expectedTransitions.get(ServiceController.Transition.PROBLEM_to_START_REQUESTED).put(serviceName, future);
-        return future;
-    }
-
     private static class ServiceFuture implements Future<ServiceController<?>> {
-        private ServiceController<?> serviceController;
+        private volatile ServiceController<?> serviceController;
         private final CountDownLatch countDownLatch = new CountDownLatch(1);
         private final long delay;
         private final TimeUnit delayTimeUnit;

@@ -104,18 +104,6 @@ final class OptionalDependencyImpl implements Dependency, Dependent {
     }
 
     @Override
-    public void transitiveDependencyAvailable() {
-        final Dependent dependent = this.dependent;
-        if (dependent != null) dependent.transitiveDependencyAvailable();
-    }
-
-    @Override
-    public void transitiveDependencyUnavailable() {
-        final Dependent dependent = this.dependent;
-        if (dependent != null) dependent.transitiveDependencyUnavailable();
-    }
-
-    @Override
     public void immediateDependencyUp() {
         final Dependent dependent = this.dependent;
         if (dependent != null) dependent.immediateDependencyUp();
@@ -149,5 +137,4 @@ final class OptionalDependencyImpl implements Dependency, Dependent {
     public Lockable getLock() {
         return dependency.getLock();
     }
-
 }

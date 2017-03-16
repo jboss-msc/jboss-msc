@@ -56,8 +56,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private static final int DEPENDENCY_STOPPED_TASK = 1 << 3;
     private static final int DEPENDENCY_FAILED_TASK = 1 << 4;
     private static final int DEPENDENCY_RETRYING_TASK = 1 << 5;
-    private static final int TRANSITIVE_DEPENDENCY_AVAILABLE_TASK = 1 << 6;
-    private static final int TRANSITIVE_DEPENDENCY_UNAVAILABLE_TASK = 1 << 7;
 
     /**
      * The service itself.
@@ -150,18 +148,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * multiple notifications.
      */
     private int failCount;
-    /**
-     * Indicates if this service has one or more transitive dependencies that
-     * are not available. Count for notification of unavailable dependencies.
-     * Its value indicates how many transitive dependencies are unavailable.
-     * When incremented from 0 to 1, dependents are notified of the unavailable
-     * dependency unless immediateUnavailableDependencies is not empty. When
-     * decremented from 1 to 0, a notification that the unavailable dependencies
-     * are now available is sent to dependents, unless immediateUnavailableDependencies
-     * is not empty. Values larger than 1 are ignored to avoid multiple
-     * notifications.
-     */
-    private int transitiveUnavailableDepCount;
     /**
      * Indicates whether dependencies have been demanded.
      */
@@ -305,12 +291,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
             tasks.add(new DependencyAvailableTask());
-            if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
-                tasks.add(new TransitiveDependencyUnavailableTask());
-            }
-            if (failCount > 0) {
-                tasks.add(new DependencyFailedTask());
-            }
             state = Substate.DOWN;
             // subtract one to compensate for +1 above
             decrementAsyncTasks();
@@ -492,7 +472,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (mode == Mode.PASSIVE && stoppingDependencies > 0) {
                         return Transition.START_REQUESTED_to_DOWN;
                     }
-                    if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0 || failCount > 0) {
+                    if (!immediateUnavailableDependencies.isEmpty() || failCount > 0) {
                         return Transition.START_REQUESTED_to_PROBLEM;
                     }
                     if (stoppingDependencies == 0 && runningDependents == 0) {
@@ -505,7 +485,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case PROBLEM: {
-                if (! shouldStart() || (immediateUnavailableDependencies.isEmpty() && transitiveUnavailableDepCount == 0 && failCount == 0) || mode == Mode.PASSIVE) {
+                if (! shouldStart() || (immediateUnavailableDependencies.isEmpty() && failCount == 0) || mode == Mode.PASSIVE) {
                     return Transition.PROBLEM_to_START_REQUESTED;
                 }
                 break;
@@ -634,18 +614,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case START_REQUESTED_to_PROBLEM: {
+                    tasks.add(new DependencyUnavailableTask());
                     getPrimaryRegistration().getContainer().addProblem(this);
                     for (StabilityMonitor monitor : monitors) {
                         monitor.addProblem(this);
-                    }
-                    if (!immediateUnavailableDependencies.isEmpty()) {
-                        getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_UNAVAILABLE, tasks);
-                    }
-                    if (transitiveUnavailableDepCount > 0) {
-                        getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_UNAVAILABLE, tasks);
-                    }
-                    if (failCount > 0) {
-                        getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
                     }
                     getListenerTasks(transition, listenerTransitionTasks);
                     break;
@@ -706,8 +678,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         monitor.removeFailed(this);
                     }
                     startException = null;
-                    assert failCount > 0;
-                    failCount--;
                     getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyRetryingTask());
                     tasks.add(new StopTask(true));
@@ -733,13 +703,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 case DOWN_to_REMOVING: {
                     getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyUnavailableTask());
-                    // Clear all dependency uninstalled flags from dependents
-                    if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
-                        tasks.add(new TransitiveDependencyAvailableTask());
-                    }
-                    if (failCount > 0) {
-                        tasks.add(new DependencyRetryingTask());
-                    }
                     break;
                 }
                 case CANCELLED_to_REMOVED:
@@ -763,18 +726,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case PROBLEM_to_START_REQUESTED: {
+                    tasks.add(new DependencyAvailableTask());
                     getPrimaryRegistration().getContainer().removeProblem(this);
                     for (StabilityMonitor monitor : monitors) {
                         monitor.removeProblem(this);
-                    }
-                    if (!immediateUnavailableDependencies.isEmpty()) {
-                        getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_AVAILABLE, tasks);
-                    }
-                    if (transitiveUnavailableDepCount > 0) {
-                        getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_AVAILABLE, tasks);
-                    }
-                    if (failCount > 0) {
-                        getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
                     }
                     getListenerTasks(transition, listenerTransitionTasks);
                     break;
@@ -857,10 +812,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (state.compareTo(Substate.REMOVING) >= 0) {
                 throw new IllegalStateException("Service already removed");
             }
-            getListenerTasks(ListenerNotification.REMOVE_REQUEST_CLEARED, taskList);
-        }
-        if (newMode == Mode.REMOVE) {
-            getListenerTasks(ListenerNotification.REMOVE_REQUESTED, taskList);
         }
         mode = newMode;
     }
@@ -875,14 +826,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (ignoreNotification() || !immediateUnavailableDependencies.isEmpty()) return;
             // we dropped it to 0
             tasks = new ArrayList<Runnable>(16);
-            if (state == Substate.PROBLEM) {
-                getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_AVAILABLE, tasks);
-            }
-            // both unavailable dep counts are 0
-            if (transitiveUnavailableDepCount == 0) {
-                transition(tasks);
-                tasks.add(new TransitiveDependencyAvailableTask());
-            }
+            transition(tasks);
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
         }
@@ -899,62 +843,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (ignoreNotification() || immediateUnavailableDependencies.size() != 1) return;
             // we raised it to 1
             tasks = new ArrayList<Runnable>(16);
-            if (state == Substate.PROBLEM) {
-                getListenerTasks(ListenerNotification.IMMEDIATE_DEPENDENCY_UNAVAILABLE, tasks);
-            }
-            // if this is the first unavailable dependency, we need to notify dependents;
-            // otherwise, they have already been notified
-            if (transitiveUnavailableDepCount == 0) {
-                transition(tasks);
-                tasks.add(new TransitiveDependencyUnavailableTask());
-            }
-            addAsyncTasks(tasks.size());
-            updateStabilityState(leavingRestState);
-        }
-        doExecute(tasks);
-    }
-
-    @Override
-    public void transitiveDependencyAvailable() {
-        final ArrayList<Runnable> tasks;
-        synchronized (this) {
-            final boolean leavingRestState = isStableRestState();
-            --transitiveUnavailableDepCount;
-            if (ignoreNotification() || transitiveUnavailableDepCount != 0) return;
-            // we dropped it to 0
-            tasks = new ArrayList<Runnable>(16);
-            if (state == Substate.PROBLEM) {
-                getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_AVAILABLE, tasks);
-            }
-            // there are no immediate nor transitive unavailable dependencies
-            if (immediateUnavailableDependencies.isEmpty()) {
-                transition(tasks);
-                tasks.add(new TransitiveDependencyAvailableTask());
-            }
-            addAsyncTasks(tasks.size());
-            updateStabilityState(leavingRestState);
-        }
-        doExecute(tasks);
-    }
-
-    @Override
-    public void transitiveDependencyUnavailable() {
-        final ArrayList<Runnable> tasks;
-        synchronized (this) {
-            final boolean leavingRestState = isStableRestState();
-            ++transitiveUnavailableDepCount;
-            if (ignoreNotification() || transitiveUnavailableDepCount != 1) return;
-            // we raised it to 1
-            tasks = new ArrayList<Runnable>(16);
-            if (state == Substate.PROBLEM) {
-                getListenerTasks(ListenerNotification.TRANSITIVE_DEPENDENCY_UNAVAILABLE, tasks);
-            }
-            //if this is the first unavailable dependency, we need to notify dependents;
-            // otherwise, they have already been notified
-            if (immediateUnavailableDependencies.isEmpty()) {
-                transition(tasks);
-                tasks.add(new TransitiveDependencyUnavailableTask());
-            }
+            transition(tasks);
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
         }
@@ -1008,10 +897,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (ignoreNotification() || failCount != 1) return;
             // we raised it to 1
             tasks = new ArrayList<Runnable>();
-            if (state == Substate.PROBLEM) {
-                getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE, tasks);
-            }
-            tasks.add(new DependencyFailedTask());
+            transition(tasks);
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
         }
@@ -1028,10 +914,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (ignoreNotification() || failCount != 0) return;
             // we dropped it to 0
             tasks = new ArrayList<Runnable>();
-            if (state == Substate.PROBLEM) {
-                getListenerTasks(ListenerNotification.DEPENDENCY_FAILURE_CLEAR, tasks);
-            }
-            tasks.add(new DependencyRetryingTask());
+            transition(tasks);
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
         }
@@ -1068,16 +951,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     void newDependent(final ServiceName dependencyName, final Dependent dependent) {
         assert holdsLock(this);
-        if (failCount > 0) {
-            if ((state == Substate.DOWN || state == Substate.START_FAILED) && finishedTask(DEPENDENCY_FAILED_TASK)) {
-                dependent.dependencyFailed();
-            } else if (state != Substate.STARTING && finishedTask(DEPENDENCY_FAILED_TASK)) {
-                dependent.dependencyFailed();
-            }
+        if (state == Substate.START_FAILED && finishedTask(DEPENDENCY_FAILED_TASK)) {
+            dependent.dependencyFailed();
+        } else if ((state == Substate.STARTING || state == Substate.DOWN) && unfinishedTask(DEPENDENCY_RETRYING_TASK)) {
+            dependent.dependencyFailed();
         }
-        if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
-            dependent.transitiveDependencyUnavailable();
-        }
+
         if ((state == Substate.WAITING || state == Substate.WONT_START || state == Substate.REMOVING || state == Substate.PROBLEM) && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) {
             dependent.immediateDependencyUnavailable(dependencyName);
         } else if ((state == Substate.DOWN || state == Substate.START_REQUESTED) && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) {
@@ -1327,11 +1206,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            if (failCount > 1 || state.getState() != ServiceController.State.START_FAILED) {
-                return;
-            }
-            assert failCount == 1;
-            failCount--;
+            if (failCount > 0 || state.getState() != ServiceController.State.START_FAILED) return;
             startException = null;
             transition(tasks = new ArrayList<Runnable>());
             addAsyncTasks(tasks.size());
@@ -1404,7 +1279,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     dependencyNames,
                     failCount != 0,
                     startException != null ? startException.toString() : null,
-                    !immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount != 0
+                    !immediateUnavailableDependencies.isEmpty()
             );
         }
     }
@@ -1473,7 +1348,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             for (ServiceName name : immediateUnavailableDependencies) {
                 b.append("    ").append(name.toString()).append('\n');
             }
-            b.append("Transitive Unavailable Dep Count: ").append(transitiveUnavailableDepCount).append('\n');
             b.append("Dependencies Demanded: ").append(dependenciesDemanded ? "yes" : "no").append('\n');
             b.append("Async Tasks: ").append(asyncTasks).append('\n');
             if (lifecycleTime != 0L) {
@@ -1541,22 +1415,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         LISTENER_ADDED,
         /** Notifications related to the current state.  */
         TRANSITION,
-        /** Notify the listener that a dependency failure occurred. */
-        DEPENDENCY_FAILURE,
-        /** Notify the listener that all dependency failures are cleared. */
-        DEPENDENCY_FAILURE_CLEAR,
-        /** Notify the listener that an immediate dependency is unavailable. */
-        IMMEDIATE_DEPENDENCY_UNAVAILABLE,
-        /** Notify the listener that all previously unavailable immediate dependencies are now available. */
-        IMMEDIATE_DEPENDENCY_AVAILABLE,
-        /** Notify the listener a transitive dependency is unavailable. */
-        TRANSITIVE_DEPENDENCY_UNAVAILABLE,
-        /** Notify the listener that all previously unavailable transitive dependencies are now available. */
-        TRANSITIVE_DEPENDENCY_AVAILABLE,
-        /** Notify the listener that the service is going to be removed. */
-        REMOVE_REQUESTED,
-        /** Notify the listener that the service is no longer going to be removed. */
-        REMOVE_REQUEST_CLEARED
     }
 
     public Substate getSubstate() {
@@ -1800,16 +1658,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         void inform(final Dependent dependent) { dependent.dependencyFailureCleared(); }
     }
 
-    private final class TransitiveDependencyAvailableTask extends DependentsControllerTask {
-        private TransitiveDependencyAvailableTask() { super(TRANSITIVE_DEPENDENCY_AVAILABLE_TASK); }
-        void inform(final Dependent dependent) { dependent.transitiveDependencyAvailable(); }
-    }
-
-    private final class TransitiveDependencyUnavailableTask extends DependentsControllerTask {
-        private TransitiveDependencyUnavailableTask() { super(TRANSITIVE_DEPENDENCY_UNAVAILABLE_TASK); }
-        void inform(final Dependent dependent) { dependent.transitiveDependencyUnavailable(); }
-    }
-
     private final class StartTask extends ControllerTask {
         boolean execute() {
             final ServiceName serviceName = primaryRegistration.getName();
@@ -1859,7 +1707,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             synchronized (ServiceControllerImpl.this) {
                 startException = e;
-                failCount++;
             }
             return true;
         }
@@ -1958,38 +1805,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         listener.listenerAdded(ServiceControllerImpl.this);
                         break;
                     }
-                    case IMMEDIATE_DEPENDENCY_UNAVAILABLE: {
-                        listener.immediateDependencyUnavailable(ServiceControllerImpl.this);
-                        break;
-                    }
-                    case IMMEDIATE_DEPENDENCY_AVAILABLE: {
-                        listener.immediateDependencyAvailable(ServiceControllerImpl.this);
-                        break;
-                    }
-                    case TRANSITIVE_DEPENDENCY_UNAVAILABLE: {
-                        listener.transitiveDependencyUnavailable(ServiceControllerImpl.this);
-                        break;
-                    }
-                    case TRANSITIVE_DEPENDENCY_AVAILABLE: {
-                        listener.transitiveDependencyAvailable(ServiceControllerImpl.this);
-                        break;
-                    }
-                    case DEPENDENCY_FAILURE: {
-                        listener.dependencyFailed(ServiceControllerImpl.this);
-                        break;
-                    }
-                    case DEPENDENCY_FAILURE_CLEAR: {
-                        listener.dependencyFailureCleared(ServiceControllerImpl.this);
-                        break;
-                    }
-                    case REMOVE_REQUESTED: {
-                        listener.serviceRemoveRequested(ServiceControllerImpl.this);
-                        break;
-                    }
-                    case REMOVE_REQUEST_CLEARED: {
-                        listener.serviceRemoveRequestCleared(ServiceControllerImpl.this);
-                        break;
-                    }
                     default: throw new IllegalStateException();
                 }
             } catch (Throwable t) {
@@ -2019,7 +1834,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                     updateStabilityState(leavingRestState);
                 }
-
             }
             return true;
         }
@@ -2103,7 +1917,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             synchronized (ServiceControllerImpl.this) {
                 final boolean leavingRestState = isStableRestState();
                 startException = reason;
-                failCount++;
                 // Subtract one for this task
                 decrementAsyncTasks();
                 transition(tasks);
