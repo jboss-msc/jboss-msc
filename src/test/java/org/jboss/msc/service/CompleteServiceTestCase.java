@@ -205,12 +205,10 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         // remove service E, thus triggering the listener above
         final Future<ServiceController<?>> serviceERemoval = testListener.expectServiceRemoval(fooServiceName);
         final Future<ServiceController<?>> serviceAInstalledAsServiceE = testListener.expectListenerAdded(fooServiceName);
-        final Future<ServiceController<?>> serviceADependencyMissing = testListener.expectImmediateDependencyUnavailable(fooServiceName);
         serviceEController.setMode(Mode.REMOVE);
         assertController(serviceEController, serviceERemoval);
         assertNull(serviceE.serviceD);
         final ServiceController<?> serviceAController = assertController(fooServiceName, serviceAInstalledAsServiceE);
-        assertController(serviceAController, serviceADependencyMissing);
 
         // install service B, which will allow service A to start
         final Future<ServiceController<?>> serviceBStart = testListener.expectServiceStart(serviceNameB);

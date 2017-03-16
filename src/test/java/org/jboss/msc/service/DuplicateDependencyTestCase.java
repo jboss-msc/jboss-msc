@@ -88,7 +88,6 @@ public class DuplicateDependencyTestCase extends AbstractServiceTest {
         assertController(secondController, secondServiceStart);
 
         final Future<ServiceController<?>> firstServiceListenerAdded = testListener.expectListenerAdded(firstServiceName);
-        final Future<ServiceController<?>> firstServiceDependencyMissing = testListener.expectImmediateDependencyUnavailable(firstServiceName);
         final ServiceController<?> firstController = serviceContainer.addService(firstServiceName, Service.NULL)
             .addAliases(firstServiceAlias)
             .addDependencies(secondServiceName, secondServiceAlias2, thirdServiceName)
@@ -96,52 +95,7 @@ public class DuplicateDependencyTestCase extends AbstractServiceTest {
             .install();
         assertController(firstServiceAlias, firstController);
         assertController(firstController, firstServiceListenerAdded);
-        assertController(firstController, firstServiceDependencyMissing);
         assertEquals(State.DOWN, firstController.getState());
     }
 
-    @Test
-    public void duplicateDependencyFailsToStart() throws Exception {
-        Future<StartException> secondServiceFailure = testListener.expectServiceFailure(secondServiceName);
-        ServiceController<?> secondController = serviceContainer.addService(secondServiceName, new FailToStartService(true))
-            .addAliases(secondServiceAlias1, secondServiceAlias2, secondServiceAlias3, secondServiceAlias4, secondServiceAlias5)
-            .addListener(testListener)
-            .install();
-        assertController(secondServiceName, secondController);
-        assertController(secondServiceAlias3, secondController);
-        assertFailure(secondServiceAlias4, secondServiceFailure);
-
-        Future<ServiceController<?>> firstServiceListenerAdded = testListener.expectListenerAdded(firstServiceName);
-        Future<ServiceController<?>> firstServiceDependencyFailure = testListener.expectDependencyFailure(firstServiceName);
-        Future<ServiceController<?>> thirdServiceListenerAdded = testListener.expectListenerAdded(thirdServiceName);
-        Future<ServiceController<?>> thirdServiceDependencyFailure = testListener.expectDependencyFailure(thirdServiceName);
-        serviceContainer.addService(firstServiceName, Service.NULL)
-            .addDependencies(secondServiceName, secondServiceAlias2, secondServiceAlias5, thirdServiceName)
-            .addListener(testListener)
-            .install();
-        serviceContainer.addService(thirdServiceName, Service.NULL)
-            .addDependencies(secondServiceAlias1, secondServiceAlias2, secondServiceAlias3, secondServiceAlias4, secondServiceAlias5)
-            .addListener(testListener)
-            .install();
-        ServiceController<?> firstController = assertController(firstServiceName, firstServiceListenerAdded);
-        assertController(firstController, firstServiceDependencyFailure);
-        assertEquals(State.DOWN, firstController.getState());
-        ServiceController<?> thirdController = assertController(thirdServiceName, thirdServiceListenerAdded);
-        assertController(thirdController, thirdServiceDependencyFailure);
-        assertEquals(State.DOWN, thirdController.getState());
-
-        Future<ServiceController<?>> firstServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(firstServiceName);
-        Future<ServiceController<?>> thirdServiceDependencyFailureCleared = testListener.expectDependencyFailureCleared(thirdServiceName);
-        secondController.setMode(Mode.NEVER);
-        assertController(firstController, firstServiceDependencyFailureCleared);
-        assertController(thirdController, thirdServiceDependencyFailureCleared);
-
-        Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
-        Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
-        Future<ServiceController<?>> thirdServiceStart = testListener.expectServiceStart(thirdServiceName);
-        secondController.setMode(Mode.ON_DEMAND);
-        assertController(secondController, secondServiceStart);
-        assertController(firstController, firstServiceStart);
-        assertController(thirdController, thirdServiceStart);
-    }
 }

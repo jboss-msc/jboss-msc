@@ -83,26 +83,6 @@ interface Dependent {
     void dependencyFailureCleared();
 
     /**
-     * Notify this dependent that one of its transitive dependencies is unavailable (either uninstalled, or in
-     * {@link ServiceController.Mode#NEVER NEVER mode}).
-     * <p>
-     * New transitive dependencies that become unavailable after the notified one do not result in new {@code
-     * dependencyUnavailable} notifications, as the dependent will never receive two or more dependencyUnavailable calls
-     * in a row. A {@code dependencyUnavailable} notification is only invoked again to notify of newly found unavailable
-     * dependencies if all the previously unavailable dependencies have become {@link #transitiveDependencyAvailable()
-     * available}.
-     * <p> This method must not be called under a lock.
-     */
-    void transitiveDependencyUnavailable();
-
-    /**
-     * Notify this dependent that all {@link #transitiveDependencyUnavailable() unavailable} transitive dependencies are
-     * now available (i.e., they are installed and will perform an attempt to start shortly).
-     * <p> This method must not be called under a lock.
-     */
-    void transitiveDependencyAvailable();
-
-    /**
      * Get the controller of this dependent.
      *
      * @return the controller
