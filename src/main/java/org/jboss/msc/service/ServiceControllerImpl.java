@@ -706,6 +706,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         monitor.removeFailed(this);
                     }
                     startException = null;
+                    assert failCount > 0;
                     failCount--;
                     getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyRetryingTask());
@@ -893,6 +894,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
+            assert !immediateUnavailableDependencies.contains(dependencyName);
             immediateUnavailableDependencies.add(dependencyName);
             if (ignoreNotification() || immediateUnavailableDependencies.size() != 1) return;
             // we raised it to 1
@@ -969,6 +971,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
+            assert stoppingDependencies > 0;
             --stoppingDependencies;
             if (ignoreNotification() || stoppingDependencies != 0) return;
             // we dropped it to 0
@@ -1020,6 +1023,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
+            assert failCount > 0;
             --failCount;
             if (ignoreNotification() || failCount != 0) return;
             // we dropped it to 0
@@ -1050,6 +1054,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
+            assert runningDependents > 0;
             --runningDependents;
             if (ignoreNotification() || runningDependents != 0) return;
             // we dropped it to 0
@@ -1130,6 +1135,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final boolean propagate;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
+            assert demandedByCount > 0;
             final int cnt = --demandedByCount;
             if (ignoreNotification()) return;
             boolean notStartedLazy = mode == Mode.LAZY && !(state.getState() == State.UP && state != Substate.STOP_REQUESTED);
@@ -1321,11 +1327,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            if (state.getState() != ServiceController.State.START_FAILED) {
+            if (failCount > 1 || state.getState() != ServiceController.State.START_FAILED) {
                 return;
             }
+            assert failCount == 1;
             failCount--;
-            assert failCount == 0;
             startException = null;
             transition(tasks = new ArrayList<Runnable>());
             addAsyncTasks(tasks.size());
@@ -2097,7 +2103,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             synchronized (ServiceControllerImpl.this) {
                 final boolean leavingRestState = isStableRestState();
                 startException = reason;
-                failCount ++;
+                failCount++;
                 // Subtract one for this task
                 decrementAsyncTasks();
                 transition(tasks);
