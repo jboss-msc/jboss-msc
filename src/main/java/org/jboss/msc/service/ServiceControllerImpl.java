@@ -955,9 +955,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     void dependentStarted() {
+        dependentsStarted(1);
+    }
+
+    void dependentsStarted(final int count) {
         assert !holdsLock(this);
         synchronized (this) {
-            runningDependents++;
+            runningDependents += count;
         }
     }
 
