@@ -56,6 +56,10 @@ final class ServiceRegistrationImpl implements Dependency {
      * propagate a demand to the instance, if any.
      */
     private int demandedByCount;
+    /**
+     * The number of started dependent instances.
+     */
+    private int dependentsStartedCount;
 
     ServiceRegistrationImpl(final ServiceContainerImpl container, final ServiceName name) {
         this.container = container;
@@ -138,6 +142,7 @@ final class ServiceRegistrationImpl implements Dependency {
             }
             this.instance = instance;
             if (demandedByCount > 0) instance.addDemands(demandedByCount);
+            if (dependentsStartedCount > 0) instance.dependentsStarted(dependentsStartedCount);
         }
     }
 
@@ -161,6 +166,7 @@ final class ServiceRegistrationImpl implements Dependency {
         assert ! holdsLock(this);
         final ServiceControllerImpl<?> instance;
         synchronized (this) {
+            dependentsStartedCount--;
             instance = this.instance;
         }
         if (instance != null) {
@@ -193,6 +199,7 @@ final class ServiceRegistrationImpl implements Dependency {
     public void dependentStarted() {
         assert ! holdsLock(this);
         synchronized (this) {
+            dependentsStartedCount++;
             if (instance != null) {
                 instance.dependentStarted();
             }
