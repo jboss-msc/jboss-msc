@@ -407,7 +407,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case START_INITIATING: {
-                return Transition.START_INITIATING_to_STARTING;
+                if (stoppingDependencies > 0 || failCount > 0 || runningDependents > 0) {
+                    // it is possible runningDependents > 0 if this service is optional dependency to some other service
+                    return Transition.START_INITIATING_to_START_REQUESTED;
+                } else {
+                    return Transition.START_INITIATING_to_STARTING;
+                }
             }
             case STARTING: {
                 if (startException == null) {
@@ -424,7 +429,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0 || failCount > 0) {
                         return Transition.START_REQUESTED_to_PROBLEM;
                     }
-                    else if (stoppingDependencies == 0) {
+                    if (stoppingDependencies == 0 && runningDependents == 0) {
+                        // it is possible runningDependents > 0 if this service is optional dependency to some other service
                         return Transition.START_REQUESTED_to_START_INITIATING;
                     }
                 } else {
@@ -602,6 +608,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 case START_INITIATING_to_STARTING: {
                     getListenerTasks(transition, tasks);
                     tasks.add(new StartTask());
+                    break;
+                }
+                case START_INITIATING_to_START_REQUESTED: {
+                    getListenerTasks(transition, tasks);
+                    tasks.add(new DependentStoppedTask());
                     break;
                 }
                 case START_FAILED_to_DOWN: {
