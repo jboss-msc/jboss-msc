@@ -727,7 +727,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             Dependency registration = getOrCreateRegistration(serviceName);
             final ServiceBuilderImpl.Dependency dependency = dependencyMap.get(serviceName);
             if (dependency.getDependencyType() == ServiceBuilder.DependencyType.OPTIONAL) {
-                registration = new OptionalDependency(registration);
+                registration = new OptionalDependencyImpl(registration);
             }
             dependencies[i++] = registration;
             for (Injector<Object> injector : dependency.getInjectorList()) {
