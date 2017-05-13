@@ -585,10 +585,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             switch (transition) {
                 case DOWN_to_WAITING: {
                     getListenerTasks(transition, listenerTransitionTasks);
+                    tasks.add(new DependencyUnavailableTask());
                     break;
                 }
                 case WAITING_to_DOWN: {
                     getListenerTasks(transition, listenerTransitionTasks);
+                    tasks.add(new DependencyAvailableTask());
                     break;
                 }
                 case DOWN_to_WONT_START: {
@@ -1066,7 +1068,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
             dependent.transitiveDependencyUnavailable();
         }
-        if ((state == Substate.WONT_START || state == Substate.REMOVING || state == Substate.PROBLEM) && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) {
+        if ((state == Substate.WAITING || state == Substate.WONT_START || state == Substate.REMOVING || state == Substate.PROBLEM) && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) {
             dependent.immediateDependencyUnavailable(dependencyName);
         } else if ((state == Substate.DOWN || state == Substate.START_REQUESTED) && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) {
             dependent.immediateDependencyUnavailable(dependencyName);
