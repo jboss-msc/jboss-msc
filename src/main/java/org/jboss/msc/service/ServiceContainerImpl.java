@@ -83,14 +83,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
     private static final AtomicInteger SERIAL = new AtomicInteger(1);
 
-    static final String PROFILE_OUTPUT;
-
     static {
-        PROFILE_OUTPUT = doPrivileged(new PrivilegedAction<String>() {
-            public String run() {
-                return System.getProperty("jboss.msc.profile.output");
-            }
-        });
         ServiceLogger.ROOT.greeting(Version.getVersionString());
     }
 
@@ -152,8 +145,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         private ShutdownHookHolder() {
         }
     }
-
-    private final Writer profileOutput;
 
     private TerminateListener.Info terminateInfo = null;
 
@@ -377,15 +368,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         this.mBeanServer = mBeanServer;
         this.objectName = objectName;
         final Set<Reference<ServiceContainerImpl, Void>> set = ShutdownHookHolder.containers;
-        Writer profileOutput = null;
-        if (PROFILE_OUTPUT != null) {
-            try {
-                profileOutput = new OutputStreamWriter(new FileOutputStream(PROFILE_OUTPUT));
-            } catch (FileNotFoundException e) {
-                // ignore
-            }
-        }
-        this.profileOutput = profileOutput;
         synchronized (set) {
             // if the shutdown hook was triggered, then no services can ever come up in any new containers.
             if (ShutdownHookHolder.down) {
@@ -458,10 +440,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
     public String getName() {
         return name;
-    }
-
-    Writer getProfileOutput() {
-        return profileOutput;
     }
 
     long getStart() {
