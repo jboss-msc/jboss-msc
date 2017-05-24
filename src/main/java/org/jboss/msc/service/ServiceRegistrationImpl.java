@@ -22,17 +22,15 @@
 
 package org.jboss.msc.service;
 
-import java.util.ArrayList;
-
 import static java.lang.Thread.holdsLock;
 
 /**
  * A single service registration.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 final class ServiceRegistrationImpl implements Dependency {
-
 
     /**
      * The service container which contains this registration.
@@ -83,7 +81,6 @@ final class ServiceRegistrationImpl implements Dependency {
         assert !holdsLock(this);
         assert !holdsLock(dependent);
         final ServiceControllerImpl<?> instance;
-        final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
         synchronized (this) {
             synchronized (dependents) {
                 if (dependents.contains(dependent)) {
@@ -99,24 +96,16 @@ final class ServiceRegistrationImpl implements Dependency {
                 return;
             }
             synchronized (instance) {
-                final boolean leavingRestState = instance.isStableRestState();
                 synchronized (dependents) {
                     dependents.add(dependent);
                 }
-                // if instance is not fully installed yet, we need to be on a synchronized(instance) block to avoid
-                // creation and execution of ServiceAvailableTask before immediateDependencyUnavailable is invoked on
-                // new dependent
                 if (!instance.isInstallationCommitted()) {
                     dependent.immediateDependencyUnavailable(name);
                     return;
                 }
                 instance.newDependent(name, dependent);
-                instance.transition(tasks);
-                instance.addAsyncTasks(tasks.size());
-                instance.updateStabilityState(leavingRestState);
             }
         }
-        instance.doExecute(tasks);
     }
 
     /**
