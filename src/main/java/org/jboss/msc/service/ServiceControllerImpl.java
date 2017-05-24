@@ -325,12 +325,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * Returns true if controller is in rest state and no async tasks are running, false otherwise.
      * @return true if stable rest state, false otherwise
      */
-    boolean isStableRestState() {
+    private boolean isStableRestState() {
         assert holdsLock(this);
         return asyncTasks == 0 && state.isRestState();
     }
 
-    void updateStabilityState(final boolean leavingStableRestState) {
+    private void updateStabilityState(final boolean leavingStableRestState) {
         assert holdsLock(this);
         final boolean enteringStableRestState = state.isRestState() && asyncTasks == 0;
         if (leavingStableRestState) {
@@ -468,7 +468,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      *
      * @param tasks the list to which async tasks should be appended
      */
-    void transition(final ArrayList<Runnable> tasks) {
+    private void transition(final ArrayList<Runnable> tasks) {
         assert holdsLock(this);
         if (asyncTasks != 0 || state == Substate.NEW) {
             // no movement possible
@@ -2222,18 +2222,18 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    void addAsyncTasks(final int size) {
+    private void addAsyncTasks(final int size) {
         assert holdsLock(this);
         assert size >= 0;
         if (size > 0) asyncTasks += size;
     }
 
-    void incrementAsyncTasks() {
+    private void incrementAsyncTasks() {
         assert holdsLock(this);
         asyncTasks++;
     }
 
-    void decrementAsyncTasks() {
+    private void decrementAsyncTasks() {
         assert holdsLock(this);
         assert asyncTasks > 0;
         asyncTasks--;
