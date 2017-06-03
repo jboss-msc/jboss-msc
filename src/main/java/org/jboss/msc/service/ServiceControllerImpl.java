@@ -211,17 +211,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * installation is {@link #commitInstallation(org.jboss.msc.service.ServiceController.Mode) committed}.
      */
     void startInstallation() {
+        primaryRegistration.setInstance(this);
+        for (ServiceRegistrationImpl aliasRegistration : aliasRegistrations) {
+            aliasRegistration.setInstance(this);
+        }
         for (Dependency dependency : dependencies) {
             dependency.addDependent(this);
         }
         if (parent != null) parent.addChild(this);
-
-        // Install the controller in each registration
-        primaryRegistration.setInstance(this);
-
-        for (ServiceRegistrationImpl aliasRegistration: aliasRegistrations) {
-            aliasRegistration.setInstance(this);
-        }
     }
 
     /**
