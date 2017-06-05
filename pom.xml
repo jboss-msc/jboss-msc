@@ -117,9 +117,6 @@
                     <includes>
                         <include>**/*TestCase.java</include>
                     </includes>
-                    <excludes>
-                        <exclude>org/jboss/msc/bench/*.java</exclude>
-                    </excludes>
                     <systemProperties>
                         <property>
                             <name>test.log.output</name>
