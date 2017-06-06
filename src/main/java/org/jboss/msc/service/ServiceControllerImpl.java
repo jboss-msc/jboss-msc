@@ -1622,6 +1622,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         abstract void inform(ServiceControllerImpl parent);
     }
 
+    private abstract class DependentsControllerTask extends ControllerTask {
+        protected final Dependent[][] dependents;
+        private DependentsControllerTask() {
+            dependents = getDependents();
+        }
+    }
+
     private class DemandDependenciesTask extends DependenciesControllerTask {
         void inform(final Dependency dependency) { dependency.addDemand(); }
         void inform(final ServiceControllerImpl parent) { parent.addDemand(); }
