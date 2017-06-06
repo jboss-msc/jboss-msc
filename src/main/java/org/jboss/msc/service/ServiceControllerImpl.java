@@ -1599,6 +1599,23 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             dependents = getDependentsByDependencyName();
             children = ServiceControllerImpl.this.children.toScatteredArray(NO_DEPENDENTS);
         }
+
+        final boolean execute() {
+            for (Map.Entry<ServiceName, Dependent[]> dependentEntry : dependents.entrySet()) {
+                ServiceName serviceName = dependentEntry.getKey();
+                for (Dependent dependent : dependentEntry.getValue()) {
+                    if (dependent != null) inform(dependent, serviceName);
+                }
+            }
+            final ServiceName primaryRegistrationName = primaryRegistration.getName();
+            for (Dependent child : children) {
+                if (child != null) inform(child, primaryRegistrationName);
+            }
+            return true;
+        }
+
+        void inform(final Dependent dependent, final ServiceName serviceName) { inform(dependent); }
+        void inform(final Dependent dependent) {}
     }
 
     private class DemandDependenciesTask extends DependenciesControllerTask {
@@ -1622,131 +1639,35 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private class DependencyAvailableTask extends DependentsControllerTask {
-        boolean execute() {
-            for (Map.Entry<ServiceName, Dependent[]> dependentEntry : dependents.entrySet()) {
-                ServiceName serviceName = dependentEntry.getKey();
-                for (Dependent dependent : dependentEntry.getValue()) {
-                    if (dependent != null) dependent.immediateDependencyAvailable(serviceName);
-                }
-            }
-            final ServiceName primaryRegistrationName = primaryRegistration.getName();
-            for (Dependent child : children) {
-                if (child != null) child.immediateDependencyAvailable(primaryRegistrationName);
-            }
-            return true;
-        }
+        void inform(final Dependent dependent, final ServiceName name) { dependent.immediateDependencyAvailable(name); }
     }
 
     private class DependencyUnavailableTask extends DependentsControllerTask {
-        boolean execute() {
-            for (Map.Entry<ServiceName, Dependent[]> dependentEntry : dependents.entrySet()) {
-                ServiceName serviceName = dependentEntry.getKey();
-                for (Dependent dependent : dependentEntry.getValue()) {
-                    if (dependent != null) dependent.immediateDependencyUnavailable(serviceName);
-                }
-            }
-            final ServiceName primaryRegistrationName = primaryRegistration.getName();
-            for (Dependent child : children) {
-                if (child != null) child.immediateDependencyUnavailable(primaryRegistrationName);
-            }
-            return true;
-        }
+        void inform(final Dependent dependent, final ServiceName name) { dependent.immediateDependencyUnavailable(name); }
     }
 
     private class DependencyStartedTask extends DependentsControllerTask {
-        boolean execute() {
-            for (Map.Entry<ServiceName, Dependent[]> dependentEntry : dependents.entrySet()) {
-                ServiceName serviceName = dependentEntry.getKey();
-                for (Dependent dependent : dependentEntry.getValue()) {
-                    if (dependent != null) dependent.immediateDependencyUp();
-                }
-            }
-            final ServiceName primaryRegistrationName = primaryRegistration.getName();
-            for (Dependent child : children) {
-                if (child != null) child.immediateDependencyUp();
-            }
-            return true;
-        }
+        void inform(final Dependent dependent) { dependent.immediateDependencyUp(); }
     }
 
     private class DependencyStoppedTask extends DependentsControllerTask {
-        boolean execute() {
-            for (Map.Entry<ServiceName, Dependent[]> dependentEntry : dependents.entrySet()) {
-                ServiceName serviceName = dependentEntry.getKey();
-                for (Dependent dependent : dependentEntry.getValue()) {
-                    if (dependent != null) dependent.immediateDependencyDown();
-                }
-            }
-            final ServiceName primaryRegistrationName = primaryRegistration.getName();
-            for (Dependent child : children) {
-                if (child != null) child.immediateDependencyDown();
-            }
-            return true;
-        }
+        void inform(final Dependent dependent) { dependent.immediateDependencyDown(); }
     }
 
     private class DependencyFailedTask extends DependentsControllerTask {
-        boolean execute() {
-            for (Map.Entry<ServiceName, Dependent[]> dependentEntry : dependents.entrySet()) {
-                ServiceName serviceName = dependentEntry.getKey();
-                for (Dependent dependent : dependentEntry.getValue()) {
-                    if (dependent != null) dependent.dependencyFailed();
-                }
-            }
-            final ServiceName primaryRegistrationName = primaryRegistration.getName();
-            for (Dependent child : children) {
-                if (child != null) child.dependencyFailed();
-            }
-            return true;
-        }
+        void inform(final Dependent dependent) { dependent.dependencyFailed(); }
     }
 
     private class DependencyRetryingTask extends DependentsControllerTask {
-        boolean execute() {
-            for (Map.Entry<ServiceName, Dependent[]> dependentEntry : dependents.entrySet()) {
-                ServiceName serviceName = dependentEntry.getKey();
-                for (Dependent dependent : dependentEntry.getValue()) {
-                    if (dependent != null) dependent.dependencyFailureCleared();
-                }
-            }
-            final ServiceName primaryRegistrationName = primaryRegistration.getName();
-            for (Dependent child : children) {
-                if (child != null) child.dependencyFailureCleared();
-            }
-            return true;
-        }
+        void inform(final Dependent dependent) { dependent.dependencyFailureCleared(); }
     }
 
     private class TransitiveDependencyAvailableTask extends DependentsControllerTask {
-        boolean execute() {
-            for (Map.Entry<ServiceName, Dependent[]> dependentEntry : dependents.entrySet()) {
-                ServiceName serviceName = dependentEntry.getKey();
-                for (Dependent dependent : dependentEntry.getValue()) {
-                    if (dependent != null) dependent.transitiveDependencyAvailable();
-                }
-            }
-            final ServiceName primaryRegistrationName = primaryRegistration.getName();
-            for (Dependent child : children) {
-                if (child != null) child.transitiveDependencyAvailable();
-            }
-            return true;
-        }
+        void inform(final Dependent dependent) { dependent.transitiveDependencyAvailable(); }
     }
 
     private class TransitiveDependencyUnavailableTask extends DependentsControllerTask {
-        boolean execute() {
-            for (Map.Entry<ServiceName, Dependent[]> dependentEntry : dependents.entrySet()) {
-                ServiceName serviceName = dependentEntry.getKey();
-                for (Dependent dependent : dependentEntry.getValue()) {
-                    if (dependent != null) dependent.transitiveDependencyUnavailable();
-                }
-            }
-            final ServiceName primaryRegistrationName = primaryRegistration.getName();
-            for (Dependent child : children) {
-                if (child != null) child.transitiveDependencyUnavailable();
-            }
-            return true;
-        }
+        void inform(final Dependent dependent) { dependent.transitiveDependencyUnavailable(); }
     }
 
     private class StartTask extends ControllerTask {
