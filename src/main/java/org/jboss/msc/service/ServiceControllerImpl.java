@@ -251,7 +251,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            tasks.add(new ServiceAvailableTask());
+            tasks.add(new DependencyAvailableTask());
             Dependent[][] dependents = getDependents();
             if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
                 tasks.add(new TransitiveDependencyUnavailableTask(dependents));
@@ -523,12 +523,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case DOWN_to_WONT_START: {
                     getListenerTasks(transition, tasks);
-                    tasks.add(new ServiceUnavailableTask());
+                    tasks.add(new DependencyUnavailableTask());
                     break;
                 }
                 case WONT_START_to_DOWN: {
                     getListenerTasks(transition, tasks);
-                    tasks.add(new ServiceAvailableTask());
+                    tasks.add(new DependencyAvailableTask());
                     break;
                 }
                 case STOPPING_to_DOWN: {
@@ -639,7 +639,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case DOWN_to_REMOVING: {
                     getListenerTasks(transition, tasks);
-                    tasks.add(new ServiceUnavailableTask());
+                    tasks.add(new DependencyUnavailableTask());
                     Dependent[][] dependents = getDependents();
                     // Clear all dependency uninstalled flags from dependents
                     if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
@@ -1649,11 +1649,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class ServiceUnavailableTask extends ControllerTask {
+    private class DependencyUnavailableTask extends ControllerTask {
         private final Map<ServiceName, Dependent[]> dependents;
         private final Dependent[] children;
 
-        ServiceUnavailableTask() {
+        DependencyUnavailableTask() {
             dependents = getDependentsByDependencyName();
             children = ServiceControllerImpl.this.children.toScatteredArray(NO_DEPENDENTS);
         }
@@ -1673,11 +1673,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class ServiceAvailableTask extends ControllerTask {
+    private class DependencyAvailableTask extends ControllerTask {
         private final Map<ServiceName, Dependent[]> dependents;
         private final Dependent[] children;
 
-        ServiceAvailableTask() {
+        DependencyAvailableTask() {
             dependents = getDependentsByDependencyName();
             children = ServiceControllerImpl.this.children.toScatteredArray(NO_DEPENDENTS);
         }
