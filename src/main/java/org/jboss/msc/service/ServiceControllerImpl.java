@@ -1629,6 +1629,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
+    private class DependentStartedTask extends ControllerTask {
+        boolean execute() {
+            for (Dependency dependency : dependencies) {
+                dependency.dependentStarted();
+            }
+            if (parent != null) parent.dependentStarted();
+            return true;
+        }
+    }
+
     private class DependentStoppedTask extends ControllerTask {
         boolean execute() {
             for (Dependency dependency : dependencies) {
@@ -1639,12 +1649,26 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class DependentStartedTask extends ControllerTask {
+    private class DependencyAvailableTask extends ControllerTask {
+        private final Map<ServiceName, Dependent[]> dependents;
+        private final Dependent[] children;
+
+        DependencyAvailableTask() {
+            dependents = getDependentsByDependencyName();
+            children = ServiceControllerImpl.this.children.toScatteredArray(NO_DEPENDENTS);
+        }
+
         boolean execute() {
-            for (Dependency dependency : dependencies) {
-                dependency.dependentStarted();
+            for (Map.Entry<ServiceName, Dependent[]> dependentEntry : dependents.entrySet()) {
+                ServiceName serviceName = dependentEntry.getKey();
+                for (Dependent dependent : dependentEntry.getValue()) {
+                    if (dependent != null) dependent.immediateDependencyAvailable(serviceName);
+                }
             }
-            if (parent != null) parent.dependentStarted();
+            final ServiceName primaryRegistrationName = primaryRegistration.getName();
+            for (Dependent child : children) {
+                if (child != null) child.immediateDependencyAvailable(primaryRegistrationName);
+            }
             return true;
         }
     }
@@ -1673,25 +1697,103 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class DependencyAvailableTask extends ControllerTask {
-        private final Map<ServiceName, Dependent[]> dependents;
-        private final Dependent[] children;
+    private class DependencyStartedTask extends ControllerTask {
+        private final Dependent[][] dependents;
 
-        DependencyAvailableTask() {
-            dependents = getDependentsByDependencyName();
-            children = ServiceControllerImpl.this.children.toScatteredArray(NO_DEPENDENTS);
+        DependencyStartedTask(final Dependent[][] dependents) {
+            this.dependents = dependents;
         }
 
         boolean execute() {
-            for (Map.Entry<ServiceName, Dependent[]> dependentEntry : dependents.entrySet()) {
-                ServiceName serviceName = dependentEntry.getKey();
-                for (Dependent dependent : dependentEntry.getValue()) {
-                    if (dependent != null) dependent.immediateDependencyAvailable(serviceName);
+            for (Dependent[] dependentArray : dependents) {
+                for (Dependent dependent : dependentArray) {
+                    if (dependent != null) dependent.immediateDependencyUp();
                 }
             }
-            final ServiceName primaryRegistrationName = primaryRegistration.getName();
-            for (Dependent child : children) {
-                if (child != null) child.immediateDependencyAvailable(primaryRegistrationName);
+            return true;
+        }
+    }
+
+    private class DependencyStoppedTask extends ControllerTask {
+        private final Dependent[][] dependents;
+
+        DependencyStoppedTask(final Dependent[][] dependents) {
+            this.dependents = dependents;
+        }
+
+        boolean execute() {
+            for (Dependent[] dependentArray : dependents) {
+                for (Dependent dependent : dependentArray) {
+                    if (dependent != null) dependent.immediateDependencyDown();
+                }
+            }
+            return true;
+        }
+    }
+
+    private class DependencyFailedTask extends ControllerTask {
+        private final Dependent[][] dependents;
+
+        DependencyFailedTask(final Dependent[][] dependents) {
+            this.dependents = dependents;
+        }
+
+        boolean execute() {
+            for (Dependent[] dependentArray : dependents) {
+                for (Dependent dependent : dependentArray) {
+                    if (dependent != null) dependent.dependencyFailed();
+                }
+            }
+            return true;
+        }
+    }
+
+    private class DependencyRetryingTask extends ControllerTask {
+        private final Dependent[][] dependents;
+
+        DependencyRetryingTask(final Dependent[][] dependents) {
+            this.dependents = dependents;
+        }
+
+        boolean execute() {
+            for (Dependent[] dependentArray : dependents) {
+                for (Dependent dependent : dependentArray) {
+                    if (dependent != null) dependent.dependencyFailureCleared();
+                }
+            }
+            return true;
+        }
+    }
+
+    private class TransitiveDependencyAvailableTask extends ControllerTask {
+        private final Dependent[][] dependents;
+
+        TransitiveDependencyAvailableTask(final Dependent[][] dependents) {
+            this.dependents = dependents;
+        }
+
+        boolean execute() {
+            for (Dependent[] dependentArray : dependents) {
+                for (Dependent dependent : dependentArray) {
+                    if (dependent != null) dependent.transitiveDependencyAvailable();
+                }
+            }
+            return true;
+        }
+    }
+
+    private class TransitiveDependencyUnavailableTask extends ControllerTask {
+        private final Dependent[][] dependents;
+
+        TransitiveDependencyUnavailableTask(final Dependent[][] dependents) {
+            this.dependents = dependents;
+        }
+
+        boolean execute() {
+            for (Dependent[] dependentArray : dependents) {
+                for (Dependent dependent : dependentArray) {
+                    if (dependent != null) dependent.transitiveDependencyUnavailable();
+                }
             }
             return true;
         }
@@ -1888,57 +1990,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class DependencyStartedTask extends ControllerTask {
-        private final Dependent[][] dependents;
-
-        DependencyStartedTask(final Dependent[][] dependents) {
-            this.dependents = dependents;
-        }
-
-        boolean execute() {
-            for (Dependent[] dependentArray : dependents) {
-                for (Dependent dependent : dependentArray) {
-                    if (dependent != null) dependent.immediateDependencyUp();
-                }
-            }
-            return true;
-        }
-    }
-
-    private class DependencyStoppedTask extends ControllerTask {
-        private final Dependent[][] dependents;
-
-        DependencyStoppedTask(final Dependent[][] dependents) {
-            this.dependents = dependents;
-        }
-
-        boolean execute() {
-            for (Dependent[] dependentArray : dependents) {
-                for (Dependent dependent : dependentArray) {
-                    if (dependent != null) dependent.immediateDependencyDown();
-                }
-            }
-            return true;
-        }
-    }
-
-    private class DependencyFailedTask extends ControllerTask {
-        private final Dependent[][] dependents;
-
-        DependencyFailedTask(final Dependent[][] dependents) {
-            this.dependents = dependents;
-        }
-
-        boolean execute() {
-            for (Dependent[] dependentArray : dependents) {
-                for (Dependent dependent : dependentArray) {
-                    if (dependent != null) dependent.dependencyFailed();
-                }
-            }
-            return true;
-        }
-    }
-
     private class RemoveChildrenTask extends ControllerTask {
         private final ServiceControllerImpl<?>[] children;
 
@@ -1959,57 +2010,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (children != null) {
                 for (ServiceControllerImpl<?> child : children) {
                     if (child != null) child.setMode(Mode.REMOVE);
-                }
-            }
-            return true;
-        }
-    }
-
-    private class TransitiveDependencyAvailableTask extends ControllerTask {
-        private final Dependent[][] dependents;
-
-        TransitiveDependencyAvailableTask(final Dependent[][] dependents) {
-            this.dependents = dependents;
-        }
-
-        boolean execute() {
-            for (Dependent[] dependentArray : dependents) {
-                for (Dependent dependent : dependentArray) {
-                    if (dependent != null) dependent.transitiveDependencyAvailable();
-                }
-            }
-            return true;
-        }
-    }
-
-    private class TransitiveDependencyUnavailableTask extends ControllerTask {
-        private final Dependent[][] dependents;
-
-        TransitiveDependencyUnavailableTask(final Dependent[][] dependents) {
-            this.dependents = dependents;
-        }
-
-        boolean execute() {
-            for (Dependent[] dependentArray : dependents) {
-                for (Dependent dependent : dependentArray) {
-                    if (dependent != null) dependent.transitiveDependencyUnavailable();
-                }
-            }
-            return true;
-        }
-    }
-
-    private class DependencyRetryingTask extends ControllerTask {
-        private final Dependent[][] dependents;
-
-        DependencyRetryingTask(final Dependent[][] dependents) {
-            this.dependents = dependents;
-        }
-
-        boolean execute() {
-            for (Dependent[] dependentArray : dependents) {
-                for (Dependent dependent : dependentArray) {
-                    if (dependent != null) dependent.dependencyFailureCleared();
                 }
             }
             return true;
@@ -2142,30 +2142,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private final class ChildServiceTarget extends ServiceTargetImpl {
-        private volatile boolean valid = true;
-
-        private ChildServiceTarget(final ServiceTargetImpl parentTarget) {
-            super(parentTarget);
-        }
-
-        <T> ServiceController<T> install(final ServiceBuilderImpl<T> serviceBuilder) throws ServiceRegistryException {
-            if (! valid) {
-                throw new IllegalStateException("Service target is no longer valid");
-            }
-            return super.install(serviceBuilder);
-        }
-
-        protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
-            return super.createServiceBuilder(name, value, ServiceControllerImpl.this);
-        }
-
-        @Override
-        public ServiceTarget subTarget() {
-            return new ChildServiceTarget(this);
-        }
-    }
-
     private class StopContextImpl implements StopContext {
 
         private ContextState state = ContextState.SYNC;
@@ -2225,6 +2201,30 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
         public long getElapsedTime() {
             return System.nanoTime() - lifecycleTime;
+        }
+    }
+
+    private final class ChildServiceTarget extends ServiceTargetImpl {
+        private volatile boolean valid = true;
+
+        private ChildServiceTarget(final ServiceTargetImpl parentTarget) {
+            super(parentTarget);
+        }
+
+        <T> ServiceController<T> install(final ServiceBuilderImpl<T> serviceBuilder) throws ServiceRegistryException {
+            if (! valid) {
+                throw new IllegalStateException("Service target is no longer valid");
+            }
+            return super.install(serviceBuilder);
+        }
+
+        protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
+            return super.createServiceBuilder(name, value, ServiceControllerImpl.this);
+        }
+
+        @Override
+        public ServiceTarget subTarget() {
+            return new ChildServiceTarget(this);
         }
     }
 
