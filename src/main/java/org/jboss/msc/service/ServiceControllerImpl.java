@@ -1618,59 +1618,59 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         void inform(final Dependent dependent) {}
     }
 
-    private class DemandDependenciesTask extends DependenciesControllerTask {
+    private final class DemandDependenciesTask extends DependenciesControllerTask {
         void inform(final Dependency dependency) { dependency.addDemand(); }
         void inform(final ServiceControllerImpl parent) { parent.addDemand(); }
     }
 
-    private class UndemandDependenciesTask extends DependenciesControllerTask {
+    private final class UndemandDependenciesTask extends DependenciesControllerTask {
         void inform(final Dependency dependency) { dependency.removeDemand(); }
         void inform(final ServiceControllerImpl parent) { parent.removeDemand(); }
     }
 
-    private class DependentStartedTask extends DependenciesControllerTask {
+    private final class DependentStartedTask extends DependenciesControllerTask {
         void inform(final Dependency dependency) { dependency.dependentStarted(); }
         void inform(final ServiceControllerImpl parent) { parent.dependentStarted(); }
     }
 
-    private class DependentStoppedTask extends DependenciesControllerTask {
+    private final class DependentStoppedTask extends DependenciesControllerTask {
         void inform(final Dependency dependency) { dependency.dependentStopped(); }
         void inform(final ServiceControllerImpl parent) { parent.dependentStopped(); }
     }
 
-    private class DependencyAvailableTask extends DependentsControllerTask {
+    private final class DependencyAvailableTask extends DependentsControllerTask {
         void inform(final Dependent dependent, final ServiceName name) { dependent.immediateDependencyAvailable(name); }
     }
 
-    private class DependencyUnavailableTask extends DependentsControllerTask {
+    private final class DependencyUnavailableTask extends DependentsControllerTask {
         void inform(final Dependent dependent, final ServiceName name) { dependent.immediateDependencyUnavailable(name); }
     }
 
-    private class DependencyStartedTask extends DependentsControllerTask {
+    private final class DependencyStartedTask extends DependentsControllerTask {
         void inform(final Dependent dependent) { dependent.immediateDependencyUp(); }
     }
 
-    private class DependencyStoppedTask extends DependentsControllerTask {
+    private final class DependencyStoppedTask extends DependentsControllerTask {
         void inform(final Dependent dependent) { dependent.immediateDependencyDown(); }
     }
 
-    private class DependencyFailedTask extends DependentsControllerTask {
+    private final class DependencyFailedTask extends DependentsControllerTask {
         void inform(final Dependent dependent) { dependent.dependencyFailed(); }
     }
 
-    private class DependencyRetryingTask extends DependentsControllerTask {
+    private final class DependencyRetryingTask extends DependentsControllerTask {
         void inform(final Dependent dependent) { dependent.dependencyFailureCleared(); }
     }
 
-    private class TransitiveDependencyAvailableTask extends DependentsControllerTask {
+    private final class TransitiveDependencyAvailableTask extends DependentsControllerTask {
         void inform(final Dependent dependent) { dependent.transitiveDependencyAvailable(); }
     }
 
-    private class TransitiveDependencyUnavailableTask extends DependentsControllerTask {
+    private final class TransitiveDependencyUnavailableTask extends DependentsControllerTask {
         void inform(final Dependent dependent) { dependent.transitiveDependencyUnavailable(); }
     }
 
-    private class StartTask extends ControllerTask {
+    private final class StartTask extends ControllerTask {
         boolean execute() {
             final ServiceName serviceName = primaryRegistration.getName();
             final StartContextImpl context = new StartContextImpl();
@@ -1725,7 +1725,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class StopTask extends ControllerTask {
+    private final class StopTask extends ControllerTask {
         private final boolean onlyUninject;
 
         StopTask(final boolean onlyUninject) {
@@ -1783,7 +1783,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class ListenerTask extends ControllerTask {
+    private final class ListenerTask extends ControllerTask {
         private final ListenerNotification notification;
         private final ServiceListener<? super S> listener;
         private final Transition transition;
@@ -1861,7 +1861,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class RemoveChildrenTask extends ControllerTask {
+    private final class RemoveChildrenTask extends ControllerTask {
         private final ServiceControllerImpl<?>[] children;
 
         RemoveChildrenTask() {
@@ -1887,7 +1887,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class RemoveTask extends ControllerTask {
+    private final class RemoveTask extends ControllerTask {
         boolean execute() {
             assert getMode() == ServiceController.Mode.REMOVE;
             assert getSubstate() == Substate.REMOVED;
@@ -1903,7 +1903,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class StartContextImpl implements StartContext {
+    private final class StartContextImpl implements StartContext {
 
         private ContextState state = ContextState.SYNC;
         private final Object lock = new Object();
@@ -2013,7 +2013,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private class StopContextImpl implements StopContext {
+    private final class StopContextImpl implements StopContext {
 
         private ContextState state = ContextState.SYNC;
         private final Object lock = new Object();
