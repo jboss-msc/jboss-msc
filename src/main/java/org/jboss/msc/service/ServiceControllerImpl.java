@@ -1609,6 +1609,19 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         abstract boolean execute();
     }
 
+    private abstract class DependenciesControllerTask extends ControllerTask {
+        final boolean execute() {
+            for (Dependency dependency : dependencies) {
+                inform(dependency);
+            }
+            if (parent != null) inform(parent);
+            return true;
+        }
+
+        abstract void inform(Dependency dependency);
+        abstract void inform(ServiceControllerImpl parent);
+    }
+
     private class DemandDependenciesTask extends ControllerTask {
         boolean execute() {
             for (Dependency dependency : dependencies) {
