@@ -1622,44 +1622,24 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         abstract void inform(ServiceControllerImpl parent);
     }
 
-    private class DemandDependenciesTask extends ControllerTask {
-        boolean execute() {
-            for (Dependency dependency : dependencies) {
-                dependency.addDemand();
-            }
-            if (parent != null) parent.addDemand();
-            return true;
-        }
+    private class DemandDependenciesTask extends DependenciesControllerTask {
+        void inform(final Dependency dependency) { dependency.addDemand(); }
+        void inform(final ServiceControllerImpl parent) { parent.addDemand(); }
     }
 
-    private class UndemandDependenciesTask extends ControllerTask {
-        boolean execute() {
-            for (Dependency dependency : dependencies) {
-                dependency.removeDemand();
-            }
-            if (parent != null) parent.removeDemand();
-            return true;
-        }
+    private class UndemandDependenciesTask extends DependenciesControllerTask {
+        void inform(final Dependency dependency) { dependency.removeDemand(); }
+        void inform(final ServiceControllerImpl parent) { parent.removeDemand(); }
     }
 
-    private class DependentStartedTask extends ControllerTask {
-        boolean execute() {
-            for (Dependency dependency : dependencies) {
-                dependency.dependentStarted();
-            }
-            if (parent != null) parent.dependentStarted();
-            return true;
-        }
+    private class DependentStartedTask extends DependenciesControllerTask {
+        void inform(final Dependency dependency) { dependency.dependentStarted(); }
+        void inform(final ServiceControllerImpl parent) { parent.dependentStarted(); }
     }
 
-    private class DependentStoppedTask extends ControllerTask {
-        boolean execute() {
-            for (Dependency dependency : dependencies) {
-                dependency.dependentStopped();
-            }
-            if (parent != null) parent.dependentStopped();
-            return true;
-        }
+    private class DependentStoppedTask extends DependenciesControllerTask {
+        void inform(final Dependency dependency) { dependency.dependentStopped(); }
+        void inform(final ServiceControllerImpl parent) { parent.dependentStopped(); }
     }
 
     private class DependencyAvailableTask extends ControllerTask {
