@@ -33,6 +33,7 @@ import org.jboss.msc.value.Value;
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
 interface Dependency extends Value<Object> {
+
     /**
      * Add a dependent to this dependency, establishing the dependency relation between this dependency and its
      * dependent.  This method must not be called under a lock.
@@ -94,4 +95,7 @@ interface Dependency extends Value<Object> {
      * @return the controller, or {@code null} for none
      */
     ServiceControllerImpl<?> getDependencyController();
+
+    Lockable getLock();
+
 }

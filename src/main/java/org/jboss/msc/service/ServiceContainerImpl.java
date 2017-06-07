@@ -767,23 +767,16 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         final Set<ServiceControllerImpl<?>> visited = new IdentityHashSet<ServiceControllerImpl<?>>();
         final Deque<ServiceName> visitStack = new ArrayDeque<ServiceName>();
         final ServiceRegistrationImpl reg = instance.getPrimaryRegistration();
-        IdentityHashSet<Dependent> dependents;
         synchronized (reg) {
             visitStack.push(instance.getName());
-            dependents = reg.getDependents();
-            synchronized (dependents) {
-                detectCircularity(reg.getDependents(), instance, visited, visitStack);
-            }
+            detectCircularity(reg.getDependents(), instance, visited, visitStack);
             synchronized (instance) {
                 detectCircularity(instance.getChildren(), instance, visited, visitStack);
             }
         }
         for (ServiceRegistrationImpl alias: instance.getAliasRegistrations()) {
             synchronized (alias) {
-                dependents = alias.getDependents();
-                synchronized (dependents) {
-                    detectCircularity(dependents, instance, visited, visitStack);
-                }
+                detectCircularity(alias.getDependents(), instance, visited, visitStack);
             }
         }
     }
@@ -811,26 +804,20 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                     }
                 }
                 ServiceRegistrationImpl reg = controller.getPrimaryRegistration();
-                synchronized(reg) {
+                synchronized (reg) {
                     // concurrent removal, skip this one entirely
                     if (reg.getInstance() == null) {
                         continue;
                     }
                     visitStack.push(controller.getName());
-                    IdentityHashSet<? extends Dependent> controllerDependents = reg.getDependents();
-                    synchronized(controllerDependents) {
-                        detectCircularity(reg.getDependents(), instance, visited, visitStack);
-                    }
+                    detectCircularity(reg.getDependents(), instance, visited, visitStack);
                     synchronized(controller) {
                         detectCircularity(controller.getChildren(), instance, visited, visitStack);
                     }
                 }
                 for (ServiceRegistrationImpl alias: controller.getAliasRegistrations()) {
                     synchronized (alias) {
-                        IdentityHashSet<? extends Dependent> controllerDependents = alias.getDependents();
-                        synchronized (controllerDependents) {
-                            detectCircularity(controllerDependents, instance, visited, visitStack);
-                        }
+                        detectCircularity(alias.getDependents(), instance, visited, visitStack);
                     }
                 }
                 visitStack.poll();

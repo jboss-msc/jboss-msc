@@ -27,14 +27,13 @@ import static java.lang.Thread.holdsLock;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
 import org.jboss.msc.service.management.ServiceStatus;
 import org.jboss.msc.value.Value;
 
@@ -213,7 +212,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
         this.parent = parent;
         int depCount = dependencies.length;
-        stoppingDependencies = parent == null? depCount : depCount + 1;
+        stoppingDependencies = parent == null ? depCount : depCount + 1;
         children = new IdentityHashSet<ServiceControllerImpl<?>>();
         immediateUnavailableDependencies = new IdentityHashSet<ServiceName>();
     }
@@ -230,14 +229,48 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * installation is {@link #commitInstallation(org.jboss.msc.service.ServiceController.Mode) committed}.
      */
     void startInstallation() {
-        primaryRegistration.setInstance(this);
-        for (ServiceRegistrationImpl aliasRegistration : aliasRegistrations) {
-            aliasRegistration.setInstance(this);
+        Lockable lock = primaryRegistration.getLock();
+        synchronized (lock) {
+            lock.acquireWrite();
+            try {
+                primaryRegistration.setInstance(this);
+            } finally {
+                lock.releaseWrite();
+            }
+        }
+        for (ServiceRegistrationImpl aliasRegistration: aliasRegistrations) {
+            lock = aliasRegistration.getLock();
+            synchronized (lock) {
+                lock.acquireWrite();
+                try {
+                    aliasRegistration.setInstance(this);
+                } finally {
+                    lock.releaseWrite();
+                }
+            }
         }
         for (Dependency dependency : dependencies) {
-            dependency.addDependent(this);
+            lock = dependency.getLock();
+            synchronized (lock) {
+                lock.acquireWrite();
+                try {
+                    dependency.addDependent(this);
+                } finally {
+                    lock.releaseWrite();
+                }
+            }
         }
-        if (parent != null) parent.addChild(this);
+        if (parent != null) {
+            lock = parent.primaryRegistration.getLock();
+            synchronized (lock) {
+                lock.acquireWrite();
+                try {
+                    parent.addChild(this);
+                } finally {
+                    lock.releaseWrite();
+                }
+            }
+        }
     }
 
     /**
@@ -1023,17 +1056,25 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     void newDependent(final ServiceName dependencyName, final Dependent dependent) {
         assert holdsLock(this);
-        if (failCount > 0 && state != Substate.STARTING) {
-            // if starting and failCount is 1, dependents have not been notified yet...
-            // hence, skip it to avoid duplicate notification
-            dependent.dependencyFailed();
+        if (failCount > 0) {
+            if ((state == Substate.DOWN || state == Substate.START_FAILED) && finishedTask(DEPENDENCY_FAILED_TASK)) {
+                dependent.dependencyFailed();
+            } else if (state != Substate.STARTING && finishedTask(DEPENDENCY_FAILED_TASK)) {
+                dependent.dependencyFailed();
+            }
         }
         if (!immediateUnavailableDependencies.isEmpty() || transitiveUnavailableDepCount > 0) {
             dependent.transitiveDependencyUnavailable();
         }
-        if (state == Substate.WONT_START) {
+        if ((state == Substate.WONT_START || state == Substate.REMOVING || state == Substate.PROBLEM) && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) {
             dependent.immediateDependencyUnavailable(dependencyName);
-        } else if (state.getState() == State.UP && state != Substate.STOP_REQUESTED) {
+        } else if ((state == Substate.DOWN || state == Substate.START_REQUESTED) && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) {
+            dependent.immediateDependencyUnavailable(dependencyName);
+        } else if (state == Substate.NEW || state == Substate.CANCELLED || state == Substate.REMOVED) {
+            dependent.immediateDependencyUnavailable(dependencyName);
+        } else if (state == Substate.UP && finishedTask(DEPENDENCY_STARTED_TASK)) {
+            dependent.immediateDependencyUp();
+        } else if (state == Substate.STOP_REQUESTED && unfinishedTask(DEPENDENCY_STOPPED_TASK)) {
             dependent.immediateDependencyUp();
         }
     }
@@ -1357,10 +1398,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final StringBuilder b = new StringBuilder();
         IdentityHashSet<Dependent> dependents;
         synchronized (primaryRegistration) {
-            dependents = primaryRegistration.getDependents();
-            synchronized (dependents) {
-                dependents = dependents.clone();
-            }
+            dependents = primaryRegistration.getDependents().clone();
         }
         b.append("Service Name: ").append(primaryRegistration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
         for (Dependent dependent : dependents) {
@@ -1372,10 +1410,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         b.append("Service Aliases: ").append(aliasRegistrations.length).append('\n');
         for (ServiceRegistrationImpl registration : aliasRegistrations) {
             synchronized (registration) {
-                dependents = registration.getDependents();
-                synchronized (dependents) {
-                    dependents = dependents.clone();
-                }
+                dependents = registration.getDependents().clone();
             }
             b.append("    ").append(registration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
             for (Dependent dependent : dependents) {
@@ -1523,31 +1558,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return aliasRegistrations;
     }
 
-    /**
-     * Returns a compiled map of all dependents of this service mapped by the dependency name.
-     * This map can be used when it is necessary to perform notifications to these dependents that require
-     * the name of the dependency issuing notification.
-     * <br> The return result does not include children.
-     *
-     * @return an array of dependents, including children
-     */
-    // children are not included in this this result
-    private Map<ServiceName, Dependent[]> getDependentsByDependencyName() {
-        final Map<ServiceName, Dependent[]> dependents = new HashMap<ServiceName, Dependent[]>();
-        addDependentsByName(primaryRegistration, dependents);
-        for (ServiceRegistrationImpl aliasRegistration: aliasRegistrations) {
-            addDependentsByName(aliasRegistration, dependents);
-        }
-        return dependents;
-    }
-
-    private void addDependentsByName(ServiceRegistrationImpl registration, Map<ServiceName, Dependent[]> dependentsByName) {
-        IdentityHashSet<Dependent> registrationDependents = registration.getDependents();
-        synchronized(registrationDependents) {
-            dependentsByName.put(registration.getName(), registrationDependents.toScatteredArray(NO_DEPENDENTS));
-        }
-    }
-
     private void performInjections() {
         final int injectionsLength = injections.length;
         boolean ok = false;
@@ -1624,7 +1634,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private abstract class ControllerTask implements Runnable {
-
         private ControllerTask() {
             assert holdsLock(ServiceControllerImpl.this);
         }
@@ -1632,6 +1641,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         public final void run() {
             assert !holdsLock(ServiceControllerImpl.this);
             try {
+                beforeExecute();
                 if (!execute()) return;
                 final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
                 synchronized (ServiceControllerImpl.this) {
@@ -1645,16 +1655,29 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 doExecute(tasks);
             } catch (Throwable t) {
                 ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
+            } finally {
+                afterExecute();
             }
         }
 
+        void afterExecute() {};
+        void beforeExecute() {};
         abstract boolean execute();
     }
 
     private abstract class DependenciesControllerTask extends ControllerTask {
         final boolean execute() {
+            Lockable lock;
             for (Dependency dependency : dependencies) {
-                inform(dependency);
+                lock = dependency.getLock();
+                synchronized (lock) {
+                    lock.acquireWrite();
+                    try {
+                        inform(dependency);
+                    } finally {
+                        lock.releaseWrite();
+                    }
+                }
             }
             if (parent != null) inform(parent);
             return true;
@@ -1665,29 +1688,26 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private abstract class DependentsControllerTask extends ControllerTask {
-        protected final Map<ServiceName, Dependent[]> dependents;
-        protected final Dependent[] children;
         private final int execFlag;
 
         private DependentsControllerTask(final int execFlag) {
-            dependents = getDependentsByDependencyName();
-            children = ServiceControllerImpl.this.children.toScatteredArray(NO_DEPENDENTS);
             this.execFlag = execFlag;
             execFlags |= (execFlag << 16);
         }
 
         final boolean execute() {
-            for (Map.Entry<ServiceName, Dependent[]> dependentEntry : dependents.entrySet()) {
-                ServiceName serviceName = dependentEntry.getKey();
-                for (Dependent dependent : dependentEntry.getValue()) {
-                    if (dependent != null) inform(dependent, serviceName);
+            for (Dependent dependent : primaryRegistration.getDependents()) {
+                inform(dependent, primaryRegistration.getName());
+            }
+            for (ServiceRegistrationImpl aliasRegistration : aliasRegistrations) {
+                for (Dependent dependent : aliasRegistration.getDependents()) {
+                    inform(dependent, aliasRegistration.getName());
                 }
             }
-            final ServiceName primaryRegistrationName = primaryRegistration.getName();
-            for (Dependent child : children) {
-                if (child != null) inform(child, primaryRegistrationName);
-            }
             synchronized (ServiceControllerImpl.this) {
+                for (Dependent child : children) {
+                    inform(child, primaryRegistration.getName());
+                }
                 execFlags |= execFlag;
             }
             return true;
@@ -1695,6 +1715,24 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
         void inform(final Dependent dependent, final ServiceName serviceName) { inform(dependent); }
         void inform(final Dependent dependent) {}
+
+        void beforeExecute() {
+            Lockable lock = primaryRegistration.getLock();
+            synchronized (lock) { lock.acquireRead(); }
+            for (ServiceRegistrationImpl aliasRegistration : aliasRegistrations) {
+                lock = aliasRegistration.getLock();
+                synchronized (lock) { lock.acquireRead(); }
+            }
+        }
+
+        void afterExecute() {
+            Lockable lock = primaryRegistration.getLock();
+            synchronized (lock) { lock.releaseRead(); }
+            for (ServiceRegistrationImpl aliasRegistration : aliasRegistrations) {
+                lock = aliasRegistration.getLock();
+                synchronized (lock) { lock.releaseRead(); }
+            }
+        }
     }
 
     private final class DemandDependenciesTask extends DependenciesControllerTask {
@@ -1949,26 +1987,19 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private final class RemoveChildrenTask extends ControllerTask {
-        private final ServiceControllerImpl<?>[] children;
-
-        RemoveChildrenTask() {
-            if (!ServiceControllerImpl.this.children.isEmpty()) {
-                final boolean leavingRestState = isStableRestState();
-                this.children = ServiceControllerImpl.this.children.toScatteredArray(NO_CONTROLLERS);
-                // placeholder async task for child removal; last removed child will decrement this count
-                // see removeChild method to verify when this count is decremented
-                incrementAsyncTasks();
-                updateStabilityState(leavingRestState);
-            } else {
-                this.children = null;
-            }
-        }
-
         boolean execute() {
-            if (children != null) {
-                for (ServiceControllerImpl<?> child : children) {
-                    if (child != null) child.setMode(Mode.REMOVE);
+            synchronized (ServiceControllerImpl.this) {
+                if (!children.isEmpty()) {
+                    final boolean leavingRestState = isStableRestState();
+                    // placeholder async task for child removal; last removed child will decrement this count
+                    // see removeChild method to verify when this count is decremented
+                    incrementAsyncTasks();
+                    for (ServiceControllerImpl<?> child : children) {
+                        child.setMode(Mode.REMOVE);
+                    }
+                    updateStabilityState(leavingRestState);
                 }
+
             }
             return true;
         }
@@ -1978,14 +2009,48 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         boolean execute() {
             assert getMode() == ServiceController.Mode.REMOVE;
             assert getSubstate() == Substate.REMOVED || getSubstate() == Substate.CANCELLED;
-            primaryRegistration.clearInstance(ServiceControllerImpl.this);
-            for (ServiceRegistrationImpl registration : aliasRegistrations) {
-                registration.clearInstance(ServiceControllerImpl.this);
+            Lockable lock = primaryRegistration.getLock();
+            synchronized (lock) {
+                lock.acquireWrite();
+                try {
+                    primaryRegistration.clearInstance(ServiceControllerImpl.this);
+                } finally {
+                    lock.releaseWrite();
+                }
+            }
+            for (ServiceRegistrationImpl aliasRegistration : aliasRegistrations) {
+                lock = aliasRegistration.getLock();
+                synchronized (lock) {
+                    lock.acquireWrite();
+                    try {
+                        aliasRegistration.clearInstance(ServiceControllerImpl.this);
+                    } finally {
+                        lock.releaseWrite();
+                    }
+                }
             }
             for (Dependency dependency : dependencies) {
-                dependency.removeDependent(ServiceControllerImpl.this);
+                lock = dependency.getLock();
+                synchronized (lock) {
+                    lock.acquireWrite();
+                    try {
+                        dependency.removeDependent(ServiceControllerImpl.this);
+                    } finally {
+                        lock.releaseWrite();
+                    }
+                }
             }
-            if (parent != null) parent.removeChild(ServiceControllerImpl.this);
+            if (parent != null) {
+                lock = parent.primaryRegistration.getLock();
+                synchronized (lock) {
+                    lock.acquireWrite();
+                    try {
+                        parent.removeChild(ServiceControllerImpl.this);
+                    } finally {
+                        lock.releaseWrite();
+                    }
+                }
+            }
             return true;
         }
     }
