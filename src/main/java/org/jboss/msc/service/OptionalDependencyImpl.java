@@ -144,4 +144,10 @@ final class OptionalDependencyImpl implements Dependency, Dependent {
         final Dependent dependent = this.dependent;
         return dependent != null ? dependent.getController() : null;
     }
+
+    @Override
+    public Lockable getLock() {
+        return dependency.getLock();
+    }
+
 }
