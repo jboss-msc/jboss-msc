@@ -51,6 +51,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private static final String ILLEGAL_CONTROLLER_STATE = "Illegal controller state";
 
+    private static final int DEPENDENCY_AVAILABLE_TASK = 1;
+    private static final int DEPENDENCY_UNAVAILABLE_TASK = 1 << 1;
+    private static final int DEPENDENCY_STARTED_TASK = 1 << 2;
+    private static final int DEPENDENCY_STOPPED_TASK = 1 << 3;
+    private static final int DEPENDENCY_FAILED_TASK = 1 << 4;
+    private static final int DEPENDENCY_RETRYING_TASK = 1 << 5;
+    private static final int TRANSITIVE_DEPENDENCY_AVAILABLE_TASK = 1 << 6;
+    private static final int TRANSITIVE_DEPENDENCY_UNAVAILABLE_TASK = 1 << 7;
+
     /**
      * The service itself.
      */
@@ -107,6 +116,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * The controller state.
      */
     private Substate state = Substate.NEW;
+    /**
+     * Tracks which dependent tasks have completed its execution.
+     * First 16 bits track if dependent task have been scheduled.
+     * Second 16 bits track whether scheduled dependent task finished its execution.
+     */
+    private int execFlags;
     /**
      * The number of registrations which place a demand-to-start on this
      * instance. If this value is >0, propagate a demand up to all parent
@@ -344,7 +359,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-
     /**
      * Identify the transition to take.  Call under lock.
      *
@@ -485,13 +499,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             // no movement possible
             return;
         }
+        // clean up tasks execution flags
+        execFlags = 0;
         if (postTransitionTasks(tasks)) {
             // no movement possible
             return;
         }
         Transition transition;
         do {
-            // first of all, check if parents should be demanded/undemanded
+            // first of all, check if dependencies & parent should be un/demanded
             switch (mode) {
                 case NEVER:
                 case REMOVE:
@@ -1020,6 +1036,20 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         } else if (state.getState() == State.UP && state != Substate.STOP_REQUESTED) {
             dependent.immediateDependencyUp();
         }
+    }
+
+    private boolean unfinishedTask(final int taskFlag) {
+        assert holdsLock(this);
+        final boolean taskScheduled = (execFlags & (taskFlag << 16)) != 0;
+        final boolean taskRunning = (execFlags & taskFlag) == 0;
+        return taskScheduled && taskRunning;
+    }
+
+    private boolean finishedTask(final int taskFlag) {
+        assert holdsLock(this);
+        final boolean taskUnscheduled = (execFlags & (taskFlag << 16)) == 0;
+        final boolean taskFinished = (execFlags & taskFlag) != 0;
+        return taskUnscheduled || taskFinished;
     }
 
     void addDemand() {
@@ -1637,9 +1667,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private abstract class DependentsControllerTask extends ControllerTask {
         protected final Map<ServiceName, Dependent[]> dependents;
         protected final Dependent[] children;
-        private DependentsControllerTask() {
+        private final int execFlag;
+
+        private DependentsControllerTask(final int execFlag) {
             dependents = getDependentsByDependencyName();
             children = ServiceControllerImpl.this.children.toScatteredArray(NO_DEPENDENTS);
+            this.execFlag = execFlag;
+            execFlags |= (execFlag << 16);
         }
 
         final boolean execute() {
@@ -1652,6 +1686,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final ServiceName primaryRegistrationName = primaryRegistration.getName();
             for (Dependent child : children) {
                 if (child != null) inform(child, primaryRegistrationName);
+            }
+            synchronized (ServiceControllerImpl.this) {
+                execFlags |= execFlag;
             }
             return true;
         }
@@ -1681,34 +1718,42 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private final class DependencyAvailableTask extends DependentsControllerTask {
+        DependencyAvailableTask() { super(DEPENDENCY_AVAILABLE_TASK); }
         void inform(final Dependent dependent, final ServiceName name) { dependent.immediateDependencyAvailable(name); }
     }
 
     private final class DependencyUnavailableTask extends DependentsControllerTask {
+        DependencyUnavailableTask() { super(DEPENDENCY_UNAVAILABLE_TASK); }
         void inform(final Dependent dependent, final ServiceName name) { dependent.immediateDependencyUnavailable(name); }
     }
 
     private final class DependencyStartedTask extends DependentsControllerTask {
+        private DependencyStartedTask() { super(DEPENDENCY_STARTED_TASK); }
         void inform(final Dependent dependent) { dependent.immediateDependencyUp(); }
     }
 
     private final class DependencyStoppedTask extends DependentsControllerTask {
+        private DependencyStoppedTask() { super(DEPENDENCY_STOPPED_TASK); }
         void inform(final Dependent dependent) { dependent.immediateDependencyDown(); }
     }
 
     private final class DependencyFailedTask extends DependentsControllerTask {
+        private DependencyFailedTask() { super(DEPENDENCY_FAILED_TASK); }
         void inform(final Dependent dependent) { dependent.dependencyFailed(); }
     }
 
     private final class DependencyRetryingTask extends DependentsControllerTask {
+        private DependencyRetryingTask() { super(DEPENDENCY_RETRYING_TASK); }
         void inform(final Dependent dependent) { dependent.dependencyFailureCleared(); }
     }
 
     private final class TransitiveDependencyAvailableTask extends DependentsControllerTask {
+        private TransitiveDependencyAvailableTask() { super(TRANSITIVE_DEPENDENCY_AVAILABLE_TASK); }
         void inform(final Dependent dependent) { dependent.transitiveDependencyAvailable(); }
     }
 
     private final class TransitiveDependencyUnavailableTask extends DependentsControllerTask {
+        private TransitiveDependencyUnavailableTask() { super(TRANSITIVE_DEPENDENCY_UNAVAILABLE_TASK); }
         void inform(final Dependent dependent) { dependent.transitiveDependencyUnavailable(); }
     }
 
