@@ -121,41 +121,6 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
         }
     }
 
-    @Test
-    public void testOptionalDependency() throws Exception {
-        final TestServiceListener listener = new TestServiceListener();
-        serviceContainer.addListener(listener);
-
-        Future<ServiceController<?>> startFuture = listener.expectServiceStart(ServiceName.of("7"));
-
-        serviceContainer.addService(ServiceName.of("7"), Service.NULL)
-            .addDependencies(DependencyType.OPTIONAL, ServiceName.of("11"), ServiceName.of("8"))
-            .install();
-
-        ServiceController<?> service7Controller = startFuture.get();
-        assertEquals(ServiceController.State.UP, service7Controller.getState());
-
-        final Future<ServiceController<?>> startFuture11 = listener.expectServiceStart(ServiceName.of("11"));
-        serviceContainer.addService(ServiceName.of("11"), Service.NULL).addListener(listener).install();
-        assertSame(ServiceController.State.UP, startFuture11.get().getState());
-
-        final Future<ServiceController<?>> startFuture8 = listener.expectServiceStart(ServiceName.of("8"));
-        serviceContainer.addService(ServiceName.of("8"), Service.NULL).addListener(listener).install();
-        assertSame(ServiceController.State.UP, startFuture8.get().getState());
-
-        final Future<ServiceController<?>> removalFuture = listener.expectServiceRemoval(ServiceName.of("7"));
-        service7Controller.setMode(Mode.REMOVE);
-        assertSame(service7Controller, removalFuture.get());
-
-        startFuture = listener.expectServiceStart(ServiceName.of("7"));
-        serviceContainer.addService(ServiceName.of("7"), Service.NULL)
-            .addDependencies(DependencyType.OPTIONAL, ServiceName.of("11"), ServiceName.of("8"))
-            .addListener(listener)
-            .install();
-        assertEquals(ServiceController.State.UP, startFuture.get().getState());
-    }
-
-
     private List<ServiceController<?>> getServiceDependencies(final ServiceController<?> serviceController) throws IllegalAccessException {
         Dependency[] deps = (Dependency[]) dependenciesField.get(serviceController);
         List<ServiceController<?>> depInstances = new ArrayList<ServiceController<?>>(deps.length);
