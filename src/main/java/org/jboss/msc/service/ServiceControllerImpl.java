@@ -167,6 +167,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private boolean dependenciesDemanded = false;
     /**
+     * Indicates whether async tasks count should be decremented on last child removal.
+     */
+    private boolean decrementOnLastChildRemoval;
+    /**
      * The number of asynchronous tasks that are currently running. This
      * includes listeners, start/stop methods, outstanding asynchronous
      * start/stops, and internal tasks.
@@ -1159,7 +1163,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
             children.remove(child);
-            if (children.isEmpty()) {
+            if (children.isEmpty() && decrementOnLastChildRemoval) {
                 switch (state) {
                     case START_FAILED:
                     case STOPPING:
@@ -1989,6 +1993,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private final class RemoveChildrenTask extends ControllerTask {
+        RemoveChildrenTask() {
+            decrementOnLastChildRemoval = false;
+        }
+
         boolean execute() {
             synchronized (ServiceControllerImpl.this) {
                 if (!children.isEmpty()) {
@@ -1996,6 +2004,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     // placeholder async task for child removal; last removed child will decrement this count
                     // see removeChild method to verify when this count is decremented
                     incrementAsyncTasks();
+                    decrementOnLastChildRemoval = true;
                     for (ServiceControllerImpl<?> child : children) {
                         child.setMode(Mode.REMOVE);
                     }
