@@ -348,6 +348,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     /**
+     * Controller notifications are ignored (we do not create new tasks on notification) if
+     * either controller didn't finish its installation process or controller have been removed.
+     *
+     * @return true if notification must be ignored, false otherwise
+     */
+    private boolean ignoreNotification() {
+        assert holdsLock(this);
+        return state.compareTo(Substate.REMOVING) >= 0 || state.compareTo(Substate.CANCELLED) <= 0;
+    }
+
+    /**
      * Determine whether a stopped controller should start.
      *
      * @return {@code true} if so
@@ -860,9 +871,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final boolean leavingRestState = isStableRestState();
             assert immediateUnavailableDependencies.contains(dependencyName);
             immediateUnavailableDependencies.remove(dependencyName);
-            if (!immediateUnavailableDependencies.isEmpty() || state.compareTo(Substate.CANCELLED) <= 0 || state.compareTo(Substate.REMOVING) >= 0) {
-                return;
-            }
+            if (ignoreNotification() || !immediateUnavailableDependencies.isEmpty()) return;
             // we dropped it to 0
             tasks = new ArrayList<Runnable>(16);
             if (state == Substate.PROBLEM) {
@@ -885,9 +894,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
             immediateUnavailableDependencies.add(dependencyName);
-            if (immediateUnavailableDependencies.size() != 1 || state.compareTo(Substate.CANCELLED) <= 0 || state.compareTo(Substate.REMOVING) >= 0) {
-                return;
-            }
+            if (ignoreNotification() || immediateUnavailableDependencies.size() != 1) return;
             // we raised it to 1
             tasks = new ArrayList<Runnable>(16);
             if (state == Substate.PROBLEM) {
@@ -910,9 +917,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            if (-- transitiveUnavailableDepCount != 0 || state.compareTo(Substate.CANCELLED) <= 0 || state.compareTo(Substate.REMOVING) >= 0) {
-                return;
-            }
+            --transitiveUnavailableDepCount;
+            if (ignoreNotification() || transitiveUnavailableDepCount != 0) return;
             // we dropped it to 0
             tasks = new ArrayList<Runnable>(16);
             if (state == Substate.PROBLEM) {
@@ -934,9 +940,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            if (++ transitiveUnavailableDepCount != 1 || state.compareTo(Substate.CANCELLED) <= 0 || state.compareTo(Substate.REMOVING) >= 0) {
-                return;
-            }
+            ++transitiveUnavailableDepCount;
+            if (ignoreNotification() || transitiveUnavailableDepCount != 1) return;
             // we raised it to 1
             tasks = new ArrayList<Runnable>(16);
             if (state == Substate.PROBLEM) {
@@ -964,9 +969,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            if (--stoppingDependencies != 0) {
-                return;
-            }
+            --stoppingDependencies;
+            if (ignoreNotification() || stoppingDependencies != 0) return;
             // we dropped it to 0
             tasks = new ArrayList<Runnable>();
             transition(tasks);
@@ -981,10 +985,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            if (++stoppingDependencies != 1) {
-                return;
-            }
-            // we dropped it below 0
+            ++stoppingDependencies;
+            if (ignoreNotification() || stoppingDependencies != 1) return;
+            // we raised it to 1
             tasks = new ArrayList<Runnable>();
             transition(tasks);
             addAsyncTasks(tasks.size());
@@ -998,9 +1001,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            if (++failCount != 1 || state.compareTo(Substate.CANCELLED) <= 0) {
-                return;
-            }
+            ++failCount;
+            if (ignoreNotification() || failCount != 1) return;
             // we raised it to 1
             tasks = new ArrayList<Runnable>();
             if (state == Substate.PROBLEM) {
@@ -1018,9 +1020,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            if (--failCount != 0 || state == Substate.CANCELLED || state == Substate.REMOVED) {
-                return;
-            }
+            --failCount;
+            if (ignoreNotification() || failCount != 0) return;
             // we dropped it to 0
             tasks = new ArrayList<Runnable>();
             if (state == Substate.PROBLEM) {
@@ -1049,9 +1050,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final ArrayList<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            if (--runningDependents != 0) {
-                return;
-            }
+            --runningDependents;
+            if (ignoreNotification() || runningDependents != 0) return;
+            // we dropped it to 0
             tasks = new ArrayList<Runnable>();
             transition(tasks);
             addAsyncTasks(tasks.size());
@@ -1111,6 +1112,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final boolean leavingRestState = isStableRestState();
             final int cnt = this.demandedByCount;
             this.demandedByCount += demandedByCount;
+            if (ignoreNotification()) return;
             boolean notStartedLazy = mode == Mode.LAZY && !(state.getState() == State.UP && state != Substate.STOP_REQUESTED);
             propagate = cnt == 0 && (mode == Mode.ON_DEMAND || notStartedLazy || mode == Mode.PASSIVE);
             if (propagate) {
@@ -1129,6 +1131,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
             final int cnt = --demandedByCount;
+            if (ignoreNotification()) return;
             boolean notStartedLazy = mode == Mode.LAZY && !(state.getState() == State.UP && state != Substate.STOP_REQUESTED);
             propagate = cnt == 0 && (mode == Mode.ON_DEMAND || notStartedLazy || mode == Mode.PASSIVE);
             if (propagate) {
