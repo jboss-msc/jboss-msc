@@ -271,16 +271,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * Roll back the service install.
      */
     void rollbackInstallation() {
-        final ArrayList<Runnable> tasks = new ArrayList<Runnable>(16);
+        final Runnable removeTask;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
             mode = Mode.REMOVE;
             state = Substate.CANCELLED;
-            transition(tasks);
-            addAsyncTasks(tasks.size());
+            removeTask = new RemoveTask();
+            incrementAsyncTasks();
             updateStabilityState(leavingRestState);
         }
-        doExecute(tasks);
+        removeTask.run();
     }
 
     /**
@@ -649,6 +649,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case CANCELLED_to_REMOVED:
+                    getListenerTasks(transition, tasks);
+                    listeners.clear();
+                    for (final StabilityMonitor monitor : monitors) {
+                        monitor.removeControllerNoCallback(this);
+                    }
+                    break;
                 case REMOVING_to_REMOVED: {
                     tasks.add(new RemoveTask());
                     getListenerTasks(transition, tasks);
@@ -1890,7 +1896,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private final class RemoveTask extends ControllerTask {
         boolean execute() {
             assert getMode() == ServiceController.Mode.REMOVE;
-            assert getSubstate() == Substate.REMOVED;
+            assert getSubstate() == Substate.REMOVED || getSubstate() == Substate.CANCELLED;
             primaryRegistration.clearInstance(ServiceControllerImpl.this);
             for (ServiceRegistrationImpl registration : aliasRegistrations) {
                 registration.clearInstance(ServiceControllerImpl.this);
