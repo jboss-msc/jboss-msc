@@ -37,6 +37,14 @@
     <version>1.2.8.Final-SNAPSHOT</version>
     <name>JBoss Modular Service Container</name>
 
+    <licenses>
+        <license>
+            <name>GNU Lesser General Public License v2.1 only</name>
+            <url>http://repository.jboss.org/licenses/lgpl-2.1.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
     <properties>
         <version.apiviz>1.3.2.GA</version.apiviz>
         <version.byteman>3.0.0</version.byteman>
