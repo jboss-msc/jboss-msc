@@ -273,21 +273,19 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert initialMode != null;
         assert !holdsLock(this);
         final ArrayList<Runnable> listenerAddedTasks = new ArrayList<Runnable>(16);
-        final ArrayList<Runnable> tasks = new ArrayList<Runnable>(16);
 
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
             getListenerTasks(ListenerNotification.LISTENER_ADDED, listenerAddedTasks);
-            internalSetMode(initialMode, tasks);
+            internalSetMode(initialMode);
             // placeholder async task for running listener added tasks
-            addAsyncTasks(listenerAddedTasks.size() + tasks.size() + 1);
+            addAsyncTasks(listenerAddedTasks.size() + 1);
             updateStabilityState(leavingRestState);
         }
-        doExecute(tasks);
-        tasks.clear();
         for (Runnable listenerAddedTask : listenerAddedTasks) {
             listenerAddedTask.run();
         }
+        final ArrayList<Runnable> tasks = new ArrayList<Runnable>(16);
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
             tasks.add(new DependencyAvailableTask());
@@ -796,7 +794,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (oldMode == newMode) {
                 return true;
             }
-            internalSetMode(newMode, tasks);
+            internalSetMode(newMode);
             transition(tasks);
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
@@ -805,7 +803,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return true;
     }
 
-    private void internalSetMode(final Mode newMode, final ArrayList<Runnable> taskList) {
+    private void internalSetMode(final Mode newMode) {
         assert holdsLock(this);
         final ServiceController.Mode oldMode = mode;
         if (oldMode == Mode.REMOVE) {
