@@ -80,6 +80,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private final IdentityHashSet<ServiceListener<? super S>> listeners;
     /**
+     * Container shutdown listener.
+     */
+    private ContainerShutdownListener shutdownListener;
+    /**
      * The set of registered stability monitors.
      */
     private final IdentityHashSet<StabilityMonitor> monitors;
@@ -214,10 +218,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     /**
-     * Start this service installation, connecting it to its parent and dependencies. Also,
-     * set the instance in primary and alias registrations.
-     * <p>
-     * All notifications from dependencies, parents, and registrations will be ignored until the
+     * Set this instance into primary and alias registrations.
+     * <p></p>
+     * All notifications from registrations will be ignored until the
      * installation is {@link #commitInstallation(org.jboss.msc.service.ServiceController.Mode) committed}.
      */
     void startInstallation() {
@@ -241,6 +244,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
             }
         }
+    }
+
+    /**
+     * Start this service configuration connecting it to its parent and dependencies.
+     * <p></p>
+     * All notifications from dependencies and parents will be ignored until the
+     * installation is {@link #commitInstallation(org.jboss.msc.service.ServiceController.Mode) committed}.
+     */
+    void startConfiguration() {
+        Lockable lock;
         for (Dependency dependency : dependencies) {
             lock = dependency.getLock();
             synchronized (lock) {
@@ -382,6 +395,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 primaryRegistration.getContainer().decrementUnstableServices();
                 for (StabilityMonitor monitor : monitors) {
                     monitor.decrementUnstableServices();
+                }
+                if (shutdownListener != null && state == Substate.REMOVED) {
+                    shutdownListener.controllerDied();
                 }
             }
         }
@@ -1158,6 +1174,20 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             names[i] = aliasRegistrations[i].getName();
         }
         return names;
+    }
+
+    public void addListener(final ContainerShutdownListener listener) {
+        assert !holdsLock(this);
+        synchronized (this) {
+            if (state == Substate.REMOVED && asyncTasks == 0) {
+                return; // controller is dead
+            }
+            if (shutdownListener != null) {
+                return; // register listener only once
+            }
+            shutdownListener = listener;
+            shutdownListener.controllerAlive();
+        }
     }
 
     public void addListener(final ServiceListener<? super S> listener) {
