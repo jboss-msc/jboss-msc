@@ -595,39 +595,33 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (transition == null) {
                 return tasks;
             }
+            getListenerTasks(transition, listenerTransitionTasks);
             switch (transition) {
                 case DOWN_to_WAITING: {
-                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyUnavailableTask());
                     break;
                 }
                 case WAITING_to_DOWN: {
-                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyAvailableTask());
                     break;
                 }
                 case DOWN_to_WONT_START: {
-                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyUnavailableTask());
                     break;
                 }
                 case WONT_START_to_DOWN: {
-                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyAvailableTask());
                     break;
                 }
                 case STOPPING_to_DOWN: {
-                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
                 case START_REQUESTED_to_DOWN: {
-                    getListenerTasks(transition, listenerTransitionTasks);
                     break;
                 }
                 case START_REQUESTED_to_START_INITIATING: {
                     lifecycleTime = System.nanoTime();
-                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependentStartedTask());
                     break;
                 }
@@ -637,7 +631,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     for (StabilityMonitor monitor : monitors) {
                         monitor.addProblem(this);
                     }
-                    getListenerTasks(transition, listenerTransitionTasks);
                     break;
                 }
                 case UP_to_STOP_REQUESTED: {
@@ -647,12 +640,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         tasks.add(new UndemandDependenciesTask());
                         dependenciesDemanded = false;
                     }
-                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyStoppedTask());
                     break;
                 }
                 case STARTING_to_UP: {
-                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyStartedTask());
                     break;
                 }
@@ -666,7 +657,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         childTarget.valid = false;
                         this.childTarget = null;
                     }
-                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyFailedTask());
                     tasks.add(new RemoveChildrenTask());
                     break;
@@ -676,17 +666,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     for (StabilityMonitor monitor : monitors) {
                         monitor.removeFailed(this);
                     }
-                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyRetryingTask());
                     break;
                 }
                 case START_INITIATING_to_STARTING: {
-                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new StartTask());
                     break;
                 }
                 case START_INITIATING_to_START_REQUESTED: {
-                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
@@ -696,14 +683,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         monitor.removeFailed(this);
                     }
                     startException = null;
-                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyRetryingTask());
                     tasks.add(new StopTask(true));
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
                 case STOP_REQUESTED_to_UP: {
-                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyStartedTask());
                     break;
                 }
@@ -713,18 +698,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         childTarget.valid = false;
                         this.childTarget = null;
                     }
-                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new StopTask(false));
                     tasks.add(new RemoveChildrenTask());
                     break;
                 }
                 case DOWN_to_REMOVING: {
-                    getListenerTasks(transition, listenerTransitionTasks);
                     tasks.add(new DependencyUnavailableTask());
                     break;
                 }
                 case CANCELLED_to_REMOVED:
-                    getListenerTasks(transition, listenerTransitionTasks);
                     listeners.clear();
                     for (StabilityMonitor monitor : monitors) {
                         monitor.removeControllerNoCallback(this);
@@ -732,7 +714,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 case REMOVING_to_REMOVED: {
                     tasks.add(new RemoveTask());
-                    getListenerTasks(transition, listenerTransitionTasks);
                     listeners.clear();
                     for (StabilityMonitor monitor : monitors) {
                         monitor.removeControllerNoCallback(this);
@@ -740,7 +721,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case DOWN_to_START_REQUESTED: {
-                    getListenerTasks(transition, listenerTransitionTasks);
                     break;
                 }
                 case PROBLEM_to_START_REQUESTED: {
@@ -749,7 +729,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     for (StabilityMonitor monitor : monitors) {
                         monitor.removeProblem(this);
                     }
-                    getListenerTasks(transition, listenerTransitionTasks);
                     break;
                 }
                 default: {
