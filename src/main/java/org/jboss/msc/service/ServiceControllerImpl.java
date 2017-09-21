@@ -104,9 +104,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private final IdentityHashSet<ServiceControllerImpl<?>> children;
     /**
-     * The immediate unavailable dependencies of this service.
+     * The unavailable dependencies of this service.
      */
-    private final IdentityHashSet<ServiceName> immediateUnavailableDependencies;
+    private final IdentityHashSet<ServiceName> unavailableDependencies;
     /**
      * The start exception.
      */
@@ -210,7 +210,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         int depCount = dependencies.length;
         stoppingDependencies = parent == null ? depCount : depCount + 1;
         children = new IdentityHashSet<ServiceControllerImpl<?>>();
-        immediateUnavailableDependencies = new IdentityHashSet<ServiceName>();
+        unavailableDependencies = new IdentityHashSet<ServiceName>();
     }
 
     Substate getSubstateLocked() {
@@ -488,7 +488,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (mode == Mode.PASSIVE && stoppingDependencies > 0) {
                         return Transition.START_REQUESTED_to_DOWN;
                     }
-                    if (!immediateUnavailableDependencies.isEmpty() || failCount > 0) {
+                    if (!unavailableDependencies.isEmpty() || failCount > 0) {
                         return Transition.START_REQUESTED_to_PROBLEM;
                     }
                     if (stoppingDependencies == 0 && runningDependents == 0) {
@@ -501,7 +501,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case PROBLEM: {
-                if (! shouldStart() || (immediateUnavailableDependencies.isEmpty() && failCount == 0) || mode == Mode.PASSIVE) {
+                if (! shouldStart() || (unavailableDependencies.isEmpty() && failCount == 0) || mode == Mode.PASSIVE) {
                     return Transition.PROBLEM_to_START_REQUESTED;
                 }
                 break;
@@ -819,9 +819,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final List<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            assert immediateUnavailableDependencies.contains(dependencyName);
-            immediateUnavailableDependencies.remove(dependencyName);
-            if (ignoreNotification() || !immediateUnavailableDependencies.isEmpty()) return;
+            assert unavailableDependencies.contains(dependencyName);
+            unavailableDependencies.remove(dependencyName);
+            if (ignoreNotification() || !unavailableDependencies.isEmpty()) return;
             // we dropped it to 0
             tasks = transition();
             addAsyncTasks(tasks.size());
@@ -835,9 +835,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final List<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            assert !immediateUnavailableDependencies.contains(dependencyName);
-            immediateUnavailableDependencies.add(dependencyName);
-            if (ignoreNotification() || immediateUnavailableDependencies.size() != 1) return;
+            assert !unavailableDependencies.contains(dependencyName);
+            unavailableDependencies.add(dependencyName);
+            if (ignoreNotification() || unavailableDependencies.size() != 1) return;
             // we raised it to 1
             tasks = transition();
             addAsyncTasks(tasks.size());
@@ -1220,7 +1220,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     @Override
     public synchronized Set<ServiceName> getImmediateUnavailableDependencies() {
-        return immediateUnavailableDependencies.clone();
+        return unavailableDependencies.clone();
     }
 
     public ServiceController.Mode getMode() {
@@ -1282,7 +1282,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     dependencyNames,
                     failCount != 0,
                     startException != null ? startException.toString() : null,
-                    !immediateUnavailableDependencies.isEmpty()
+                    !unavailableDependencies.isEmpty()
             );
         }
     }
@@ -1347,8 +1347,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             b.append("Stopping Dependencies: ").append(stoppingDependencies).append('\n');
             b.append("Running Dependents: ").append(runningDependents).append('\n');
             b.append("Fail Count: ").append(failCount).append('\n');
-            b.append("Immediate Unavailable Dep Count: ").append(immediateUnavailableDependencies.size()).append('\n');
-            for (ServiceName name : immediateUnavailableDependencies) {
+            b.append("Unavailable Dep Count: ").append(unavailableDependencies.size()).append('\n');
+            for (ServiceName name : unavailableDependencies) {
                 b.append("    ").append(name.toString()).append('\n');
             }
             b.append("Dependencies Demanded: ").append(dependenciesDemanded ? "yes" : "no").append('\n');
