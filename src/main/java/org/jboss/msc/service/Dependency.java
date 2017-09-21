@@ -22,55 +22,48 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.service.ServiceController.Mode;
 import org.jboss.msc.value.Value;
 
 /**
- * AbstractDependency represents the dependencies of a service.
- * The counterpart of this dependency relation is {@code AbstractDependent}.
- * 
- * @see Dependent
+ * Dependencies of a service.
+ *
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
+ * @see Dependent
  */
 interface Dependency extends Value<Object> {
 
     /**
-     * Add a dependent to this dependency, establishing the dependency relation between this dependency and its
-     * dependent.  This method must not be called under a lock.
+     * Add dependent to this dependency.
      *
-     * @param dependent the dependent to add
+     * @param dependent added dependent
      */
     void addDependent(final Dependent dependent);
 
     /**
-     * Remove a dependent from this dependency, breaking the dependency relation between this dependency and its
-     * dependent.  This method must not be called under a lock.
+     * Remove dependent from this dependency
      *
-     * @param dependent the dependent to remove
+     * @param dependent removed dependent
      */
     void removeDependent(final Dependent dependent);
 
     /**
-     * Notify that a {@link Dependent dependent} entered {@link Mode#ACTIVE active mode}.
-     * This method must not be called under a lock.
+     * Add demand on this dependency.
      */
     void addDemand();
 
     /**
-     * Notify that a {@link Dependent dependent} left {@link Mode#ACTIVE active mode}.
-     * This method must not be called under a lock.
+     * Remove demand from this dependency.
      */
     void removeDemand();
 
     /**
-     * Notify that a {@link Dependent dependent} is starting.
-     * This method must not be called under a lock.
+     * Notify this dependency that one of its dependents is starting.
      */
     void dependentStarted();
 
     /**
-     * Notify that a {@link Dependent dependent} is stopping.
-     * This method must not be called under a lock.
+     * Notify this dependency that one of its dependents is stopping.
      */
     void dependentStopped();
 
@@ -96,6 +89,11 @@ interface Dependency extends Value<Object> {
      */
     ServiceControllerImpl<?> getDependencyController();
 
+    /**
+     * Get R/W lock associated with this dependency.
+     *
+     * @return internal R/W lock
+     */
     Lockable getLock();
 
 }
