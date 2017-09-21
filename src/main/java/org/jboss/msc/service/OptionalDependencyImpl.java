@@ -90,29 +90,29 @@ final class OptionalDependencyImpl implements Dependency, Dependent {
     }
 
     @Override
-    public void immediateDependencyAvailable(final ServiceName dependencyName) {
+    public void dependencyAvailable(final ServiceName dependencyName) {
         available = true;
         final Dependent dependent = this.dependent;
-        if (dependent != null) dependent.immediateDependencyDown();
+        if (dependent != null) dependent.dependencyDown();
     }
 
     @Override
-    public void immediateDependencyUnavailable(final ServiceName dependencyName) {
+    public void dependencyUnavailable(final ServiceName dependencyName) {
         available = false;
         final Dependent dependent = this.dependent;
-        if (dependent != null) dependent.immediateDependencyUp();
+        if (dependent != null) dependent.dependencyUp();
     }
 
     @Override
-    public void immediateDependencyUp() {
+    public void dependencyUp() {
         final Dependent dependent = this.dependent;
-        if (dependent != null) dependent.immediateDependencyUp();
+        if (dependent != null) dependent.dependencyUp();
     }
 
     @Override
-    public void immediateDependencyDown() {
+    public void dependencyDown() {
         final Dependent dependent = this.dependent;
-        if (dependent != null) dependent.immediateDependencyDown();
+        if (dependent != null) dependent.dependencyDown();
     }
 
     @Override
@@ -122,19 +122,20 @@ final class OptionalDependencyImpl implements Dependency, Dependent {
     }
 
     @Override
-    public void dependencyFailureCleared() {
+    public void dependencySucceeded() {
         final Dependent dependent = this.dependent;
-        if (dependent != null) dependent.dependencyFailureCleared();
+        if (dependent != null) dependent.dependencySucceeded();
     }
 
     @Override
-    public ServiceControllerImpl<?> getController() {
+    public ServiceControllerImpl<?> getDependentController() {
         final Dependent dependent = this.dependent;
-        return dependent != null ? dependent.getController() : null;
+        return dependent != null ? dependent.getDependentController() : null;
     }
 
     @Override
     public Lockable getLock() {
         return dependency.getLock();
     }
+
 }

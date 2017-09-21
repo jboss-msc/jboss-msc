@@ -815,7 +815,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     @Override
-    public void immediateDependencyAvailable(ServiceName dependencyName) {
+    public void dependencyAvailable(final ServiceName dependencyName) {
         final List<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
@@ -831,7 +831,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     @Override
-    public void immediateDependencyUnavailable(ServiceName dependencyName) {
+    public void dependencyUnavailable(final ServiceName dependencyName) {
         final List<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
@@ -847,12 +847,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     /** {@inheritDoc} */
-    public ServiceControllerImpl<?> getController() {
+    public ServiceControllerImpl<?> getDependentController() {
         return this;
     }
 
     @Override
-    public void immediateDependencyUp() {
+    public void dependencyUp() {
         final List<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
@@ -868,7 +868,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     @Override
-    public void immediateDependencyDown() {
+    public void dependencyDown() {
         final List<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
@@ -898,7 +898,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     @Override
-    public void dependencyFailureCleared() {
+    public void dependencySucceeded() {
         final List<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
@@ -949,15 +949,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         if ((state == Substate.WAITING || state == Substate.WONT_START || state == Substate.REMOVING || state == Substate.PROBLEM) && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) {
-            dependent.immediateDependencyUnavailable(dependencyName);
+            dependent.dependencyUnavailable(dependencyName);
         } else if ((state == Substate.DOWN || state == Substate.START_REQUESTED) && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) {
-            dependent.immediateDependencyUnavailable(dependencyName);
+            dependent.dependencyUnavailable(dependencyName);
         } else if (state == Substate.NEW || state == Substate.CANCELLED || state == Substate.REMOVED) {
-            dependent.immediateDependencyUnavailable(dependencyName);
+            dependent.dependencyUnavailable(dependencyName);
         } else if (state == Substate.UP && finishedTask(DEPENDENCY_STARTED_TASK)) {
-            dependent.immediateDependencyUp();
+            dependent.dependencyUp();
         } else if (state == Substate.STOP_REQUESTED && unfinishedTask(DEPENDENCY_STOPPED_TASK)) {
-            dependent.immediateDependencyUp();
+            dependent.dependencyUp();
         }
     }
 
@@ -1295,7 +1295,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
         b.append("Service Name: ").append(primaryRegistration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
         for (Dependent dependent : dependents) {
-            final ServiceControllerImpl<?> controller = dependent.getController();
+            final ServiceControllerImpl<?> controller = dependent.getDependentController();
             synchronized (controller) {
                 b.append("        ").append(controller.getName().toString()).append(" - State: ").append(controller.state.getState()).append(" (Substate: ").append(controller.state).append(")\n");
             }
@@ -1307,7 +1307,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             b.append("    ").append(registration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
             for (Dependent dependent : dependents) {
-                final ServiceControllerImpl<?> controller = dependent.getController();
+                final ServiceControllerImpl<?> controller = dependent.getDependentController();
                 b.append("        ").append(controller.getName().toString()).append(" - State: ").append(controller.state.getState()).append(" (Substate: ").append(controller.state).append(")\n");
             }
         }
@@ -1633,22 +1633,22 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private final class DependencyAvailableTask extends DependentsControllerTask {
         DependencyAvailableTask() { super(DEPENDENCY_AVAILABLE_TASK); }
-        void inform(final Dependent dependent, final ServiceName name) { dependent.immediateDependencyAvailable(name); }
+        void inform(final Dependent dependent, final ServiceName name) { dependent.dependencyAvailable(name); }
     }
 
     private final class DependencyUnavailableTask extends DependentsControllerTask {
         DependencyUnavailableTask() { super(DEPENDENCY_UNAVAILABLE_TASK); }
-        void inform(final Dependent dependent, final ServiceName name) { dependent.immediateDependencyUnavailable(name); }
+        void inform(final Dependent dependent, final ServiceName name) { dependent.dependencyUnavailable(name); }
     }
 
     private final class DependencyStartedTask extends DependentsControllerTask {
         private DependencyStartedTask() { super(DEPENDENCY_STARTED_TASK); }
-        void inform(final Dependent dependent) { dependent.immediateDependencyUp(); }
+        void inform(final Dependent dependent) { dependent.dependencyUp(); }
     }
 
     private final class DependencyStoppedTask extends DependentsControllerTask {
         private DependencyStoppedTask() { super(DEPENDENCY_STOPPED_TASK); }
-        void inform(final Dependent dependent) { dependent.immediateDependencyDown(); }
+        void inform(final Dependent dependent) { dependent.dependencyDown(); }
     }
 
     private final class DependencyFailedTask extends DependentsControllerTask {
@@ -1658,7 +1658,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private final class DependencyRetryingTask extends DependentsControllerTask {
         private DependencyRetryingTask() { super(DEPENDENCY_RETRYING_TASK); }
-        void inform(final Dependent dependent) { dependent.dependencyFailureCleared(); }
+        void inform(final Dependent dependent) { dependent.dependencySucceeded(); }
     }
 
     private final class StartTask extends ControllerTask {
