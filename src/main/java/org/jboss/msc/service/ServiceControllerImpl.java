@@ -469,11 +469,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case START_INITIATING: {
-                if (stoppingDependencies > 0 || failCount > 0 || runningDependents > 0) {
+                if (shouldStart() && runningDependents == 0 && stoppingDependencies == 0 && failCount == 0) {
+                    return Transition.START_INITIATING_to_STARTING;
+                } else {
                     // it is possible runningDependents > 0 if this service is optional dependency to some other service
                     return Transition.START_INITIATING_to_START_REQUESTED;
-                } else {
-                    return Transition.START_INITIATING_to_STARTING;
                 }
             }
             case STARTING: {
