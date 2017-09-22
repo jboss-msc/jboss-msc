@@ -563,7 +563,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                     break;
                 case LAZY: {
-                    if (state.getState() == State.UP && state != Substate.STOP_REQUESTED) {
+                    if (state == Substate.UP) {
                         if (!dependenciesDemanded) {
                             tasks.add(new DemandDependenciesTask());
                             dependenciesDemanded = true;
