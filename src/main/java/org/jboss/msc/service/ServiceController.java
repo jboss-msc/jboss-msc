@@ -150,6 +150,7 @@ public interface ServiceController<S> extends Value<S> {
      *
      * @param serviceListener the service listener
      */
+    @Deprecated
     void addListener(ServiceListener<? super S> serviceListener);
 
     /**
@@ -157,6 +158,7 @@ public interface ServiceController<S> extends Value<S> {
      *
      * @param serviceListener the service listener to remove
      */
+    @Deprecated
     void removeListener(ServiceListener<? super S> serviceListener);
 
     /**
