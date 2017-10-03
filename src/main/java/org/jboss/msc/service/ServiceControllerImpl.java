@@ -1155,7 +1155,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return names;
     }
 
-    public void addListener(final ContainerShutdownListener listener) {
+    void addListener(final ContainerShutdownListener listener) {
         assert !holdsLock(this);
         synchronized (this) {
             if (state == Substate.REMOVED && asyncTasks == 0) {
