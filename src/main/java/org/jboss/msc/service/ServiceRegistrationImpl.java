@@ -181,17 +181,12 @@ final class ServiceRegistrationImpl implements Dependency {
     public void dependentStopped() {
         assert ! holdsLock(this);
         final ServiceControllerImpl<?> instance;
-        final ArrayList<Runnable> tasks;
         synchronized (this) {
             instance = this.instance;
-            if (instance == null) {
-                return;
-            }
-            synchronized (instance) {
-                tasks = instance.dependentStopped();
-            }
         }
-        instance.doExecute(tasks);
+        if (instance != null) {
+            instance.dependentStopped();
+        }
     }
 
     @Override
