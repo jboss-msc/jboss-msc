@@ -275,8 +275,17 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
         } catch (CircularDependencyException e) {
             assertCycle(e, new ServiceName[] {serviceAName, serviceBName, serviceCName, serviceDName, serviceEName});
         }
-        serviceContainer.addService(serviceFName, Service.NULL).addDependency(DependencyType.OPTIONAL, serviceGName)
-            .install();
+        try {
+            serviceContainer.addService(serviceFName, Service.NULL).addDependency(DependencyType.OPTIONAL, serviceGName)
+                .install();
+            // cycle may or may not be present - depends if OPTIONAL dependency G is up or not
+        } catch (CircularDependencyException e) {
+            if (e.getCycle().length == 3) {
+                assertCycle(e, new ServiceName[]{serviceFName, serviceEName, serviceGName});
+            } else {
+                assertCycle(e, new ServiceName[]{serviceFName, serviceEName, serviceDName, serviceGName});
+            }
+        }
         serviceContainer.addService(serviceOName, Service.NULL).addDependency(serviceMName).install();
         try {
             serviceContainer.addService(serviceMName, Service.NULL).addDependencies(serviceAName, serviceNName)

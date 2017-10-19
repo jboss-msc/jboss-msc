@@ -59,7 +59,7 @@ ENDRULE
 
 RULE service DependentStoppedTask
 CLASS org.jboss.msc.service.ServiceControllerImpl$DependentStoppedTask
-METHOD run
+METHOD execute
 AT ENTRY
 IF incrementCounter("run DependentStoppedTask rule only once") == 1
 DO
