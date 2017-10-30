@@ -39,7 +39,6 @@
 
     <properties>
         <version.apiviz>1.3.2.GA</version.apiviz>
-        <version.byteman>3.0.0</version.byteman>
         <version.jboss-logmanager>1.4.1.Final</version.jboss-logmanager>
         <version.jboss-logging>3.1.3.GA</version.jboss-logging>
         <version.jboss-logging-processor>1.1.0.Final</version.jboss-logging-processor>
@@ -78,24 +77,6 @@
             <version>${version.junit}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.jboss.byteman</groupId>
-            <artifactId>byteman</artifactId>
-            <version>${version.byteman}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jboss.byteman</groupId>
-            <artifactId>byteman-bmunit</artifactId>
-            <version>${version.byteman}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jboss.byteman</groupId>
-            <artifactId>byteman-install</artifactId>
-            <version>${version.byteman}</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>
@@ -112,14 +93,9 @@
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <!--  uncomment this to enable byteman rule debug messages
-                    <argLine>-Dorg.jboss.byteman.debug</argLine> -->
                     <includes>
                         <include>**/*TestCase.java</include>
                     </includes>
-                    <excludes>
-                        <exclude>org/jboss/msc/bench/*.java</exclude>
-                    </excludes>
                     <systemProperties>
                         <property>
                             <name>test.log.output</name>
@@ -129,63 +105,8 @@
                             <name>java.util.logging.manager</name>
                             <value>org.jboss.logmanager.LogManager</value>
                         </property>
-                        <property>
-                            <name>racecondition.dir</name>
-                            <value>${project.build.testOutputDirectory}</value>
-                        </property>
-                        <property>
-                            <name>org.jboss.byteman.transform.all</name>
-                            <value>true</value>
-                        </property>
                     </systemProperties>
                 </configuration>
-                <executions>
-                    <execution>
-                        <id>rejected-execution-test</id>
-                        <goals><goal>test</goal></goals>
-                        <configuration>
-                            <systemProperties>
-                                <property>
-                                    <name>org.jboss.byteman.transform.all</name>
-                                    <value>true</value>
-                                </property>
-                                <property>
-                                    <name>test.log.output</name>
-                                    <value>${project.build.directory}/surefire-reports</value>
-                                </property>
-                                <property>
-                                    <name>java.util.logging.manager</name>
-                                    <value>org.jboss.logmanager.LogManager</value>
-                                </property>
-                            </systemProperties>
-                            <!-- add this to agent parameter list to enable debug ,prop:org.jboss.byteman.debug=true -->
-                            <argLine>-Xbootclasspath/a:${settings.localRepository}/org/jboss/logmanager/${version.jboss-logmanager}/jboss-logmanager-${version.jboss-logmanager}.jar
-                                -javaagent:${settings.localRepository}/org/jboss/byteman/byteman/${version.byteman}/byteman-${version.byteman}.jar=boot:${settings.localRepository}/org/jboss/byteman/byteman/${version.byteman}/byteman-${version.byteman}.jar,script:${project.build.testOutputDirectory}/org/jboss/msc/racecondition/RejectedExecutionTestCase.btm</argLine>
-                            <includes>
-                                <include>org/jboss/msc/racecondition/RejectedExecutionTestSuite.java</include>
-                            </includes>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>removal-during-cycle-detection-test</id>
-                        <goals><goal>test</goal></goals>
-                        <configuration>
-                            <systemProperties>
-                                <property>
-                                    <name>test.log.output</name>
-                                    <value>${project.build.directory}/surefire-reports</value>
-                                </property>
-                                <property>
-                                    <name>java.util.logging.manager</name>
-                                    <value>org.jboss.logmanager.LogManager</value>
-                                </property>
-                            </systemProperties>
-                            <includes>
-                                <include>org/jboss/msc/racecondition/RemovalDuringCycleDetectionTest.java</include>
-                            </includes>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <artifactId>maven-javadoc-plugin</artifactId>

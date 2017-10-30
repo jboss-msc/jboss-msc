@@ -22,17 +22,15 @@
 
 package org.jboss.msc.service;
 
-import java.util.ArrayList;
-
 import static java.lang.Thread.holdsLock;
 
 /**
  * A single service registration.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-final class ServiceRegistrationImpl implements Dependency {
-
+final class ServiceRegistrationImpl extends Lockable implements Dependency {
 
     /**
      * The service container which contains this registration.
@@ -58,119 +56,66 @@ final class ServiceRegistrationImpl implements Dependency {
      * propagate a demand to the instance, if any.
      */
     private int demandedByCount;
+    /**
+     * The number of started dependent instances.
+     */
+    private int dependentsStartedCount;
 
     ServiceRegistrationImpl(final ServiceContainerImpl container, final ServiceName name) {
         this.container = container;
         this.name = name;
     }
 
-    /**
-     * Returns the dependents set.
-     *
-     * @return the dependents set
-     */
+    @Override
+    public Lockable getLock() {
+        return this;
+    }
+
     IdentityHashSet<Dependent> getDependents() {
         return dependents;
     }
 
-    /**
-     * Add a dependent to this controller.
-     *
-     * @param dependent the dependent to add
-     */
     @Override
     public void addDependent(final Dependent dependent) {
-        assert !holdsLock(this);
-        assert !holdsLock(dependent);
-        final ServiceControllerImpl<?> instance;
-        final ArrayList<Runnable> tasks = new ArrayList<Runnable>();
-        synchronized (this) {
-            synchronized (dependents) {
-                if (dependents.contains(dependent)) {
-                    throw new IllegalStateException("Dependent already exists on this registration");
-                }
-            }
-            instance = this.instance;
-            if (instance == null) {
+        assert isWriteLocked();
+        if (dependents.contains(dependent)) {
+            throw new IllegalStateException("Dependent already exists on this registration");
+        }
+        dependents.add(dependent);
+        if (instance == null) {
+            dependent.immediateDependencyUnavailable(name);
+            return;
+        }
+        synchronized (instance) {
+            if (!instance.isInstallationCommitted()) {
                 dependent.immediateDependencyUnavailable(name);
-                synchronized (dependents) {
-                    dependents.add(dependent);
-                }
                 return;
             }
-            synchronized (instance) {
-                final boolean leavingRestState = instance.isStableRestState();
-                synchronized (dependents) {
-                    dependents.add(dependent);
-                }
-                // if instance is not fully installed yet, we need to be on a synchronized(instance) block to avoid
-                // creation and execution of ServiceAvailableTask before immediateDependencyUnavailable is invoked on
-                // new dependent
-                if (!instance.isInstallationCommitted()) {
-                    dependent.immediateDependencyUnavailable(name);
-                    return;
-                }
-                instance.newDependent(name, dependent);
-                instance.addAsyncTasks(tasks.size() + 1);
-                instance.updateStabilityState(leavingRestState);
-            }
+            instance.newDependent(name, dependent);
         }
-        instance.doExecute(tasks);
-        tasks.clear();
-        synchronized(this) {
-            synchronized (instance) {
-                final boolean leavingRestState = instance.isStableRestState();
-                instance.decrementAsyncTasks();
-                instance.transition(tasks);
-                instance.addAsyncTasks(tasks.size());
-                instance.updateStabilityState(leavingRestState);
-            }
-        }
-        instance.doExecute(tasks);
     }
 
-    /**
-     * Remove a dependent from this controller.
-     *
-     * @param dependent the dependent to remove
-     */
     @Override
     public void removeDependent(final Dependent dependent) {
-        assert ! holdsLock(this);
-        assert ! holdsLock(dependent);
-        synchronized (dependents) {
-            dependents.remove(dependent);
-        }
+        assert isWriteLocked();
+        dependents.remove(dependent);
     }
 
-    /**
-     * Set the instance.
-     *
-     * @param instance the new instance
-     * @throws DuplicateServiceException if there is already an instance
-     */
-    void setInstance(final ServiceControllerImpl<?> instance) throws DuplicateServiceException {
-        assert instance != null;
-        assert ! holdsLock(this);
-        assert ! holdsLock(instance);
-        synchronized (this) {
-            if (this.instance != null) {
-                throw new DuplicateServiceException(String.format("Service %s is already registered", name.getCanonicalName()));
-            }
-            this.instance = instance;
-            if (demandedByCount > 0) instance.addDemands(demandedByCount);
+    void setInstance(final ServiceControllerImpl<?> newInstance) throws DuplicateServiceException {
+        assert newInstance != null;
+        assert isWriteLocked();
+        if (instance != null) {
+            throw new DuplicateServiceException(String.format("Service %s is already registered", name.getCanonicalName()));
         }
+        instance = newInstance;
+        if (demandedByCount > 0) instance.addDemands(demandedByCount);
+        if (dependentsStartedCount > 0) instance.dependentsStarted(dependentsStartedCount);
     }
 
     void clearInstance(final ServiceControllerImpl<?> oldInstance) {
-        assert ! holdsLock(this);
-        synchronized (this) {
-            final ServiceControllerImpl<?> instance = this.instance;
-            if (instance != oldInstance) {
-                return;
-            }
-            this.instance = null;
-        }
+        assert oldInstance != null;
+        assert isWriteLocked();
+        if (instance == oldInstance) instance = null;
     }
 
     ServiceContainerImpl getContainer() {
@@ -178,27 +123,11 @@ final class ServiceRegistrationImpl implements Dependency {
     }
 
     @Override
-    public void dependentStopped() {
-        assert ! holdsLock(this);
-        final ServiceControllerImpl<?> instance;
-        synchronized (this) {
-            instance = this.instance;
-        }
-        if (instance != null) {
-            instance.dependentStopped();
-        }
-    }
-
-    @Override
     public Object getValue() throws IllegalStateException {
         synchronized (this) {
-            final ServiceControllerImpl<?> instance = this.instance;
-            if (instance == null) {
-                throw new IllegalStateException("Service is not installed");
-            } else {
-                return instance.getValue();
-            }
+            if (instance != null) return instance.getValue();
         }
+        throw new IllegalStateException("Service is not installed");
     }
 
     @Override
@@ -206,44 +135,37 @@ final class ServiceRegistrationImpl implements Dependency {
         return name;
     }
 
+    @Override
     public ServiceControllerImpl<?> getDependencyController() {
         return getInstance();
     }
 
     @Override
     public void dependentStarted() {
-        assert ! holdsLock(this);
-        synchronized (this) {
-            if (instance != null) {
-                instance.dependentStarted();
-            }
-        }
+        assert isWriteLocked();
+        dependentsStartedCount++;
+        if (instance != null) instance.dependentStarted();
+    }
+
+    @Override
+    public void dependentStopped() {
+        assert isWriteLocked();
+        dependentsStartedCount--;
+        if (instance != null) instance.dependentStopped();
     }
 
     @Override
     public void addDemand() {
-        assert ! holdsLock(this);
-        final ServiceControllerImpl<?> instance;
-        synchronized (this) {
-            demandedByCount++;
-            instance = this.instance;
-        }
-        if (instance != null) {
-            instance.addDemand();
-        }
+        assert isWriteLocked();
+        demandedByCount++;
+        if (instance != null) instance.addDemand();
     }
 
     @Override
     public void removeDemand() {
-        assert ! holdsLock(this);
-        final ServiceControllerImpl<?> instance;
-        synchronized (this) {
-            demandedByCount--;
-            instance = this.instance;
-        }
-        if (instance != null) {
-            instance.removeDemand();
-        }
+        assert isWriteLocked();
+        demandedByCount--;
+        if (instance != null) instance.removeDemand();
     }
 
     ServiceControllerImpl<?> getInstance() {
@@ -251,4 +173,5 @@ final class ServiceRegistrationImpl implements Dependency {
             return instance;
         }
     }
+
 }

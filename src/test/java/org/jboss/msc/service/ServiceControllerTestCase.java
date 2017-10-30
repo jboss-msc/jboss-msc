@@ -197,45 +197,6 @@ public class ServiceControllerTestCase extends AbstractServiceTest {
     }
 
     @Test
-    public void testRemove() throws Exception {
-        final TestServiceListener listener = new TestServiceListener();
-        serviceContainer.addListener(listener);
-
-        final Future<ServiceController<?>> startFuture = listener.expectServiceStart(ServiceName.of("serviceOne"));
-
-        final ServiceController<?> controller = serviceContainer.addService(ServiceName.of("serviceOne"), Service.NULL)
-            .addDependencies(ServiceName.of("serviceTwo"))
-            .install();
-        serviceContainer.addService(ServiceName.of("serviceTwo"), Service.NULL)
-            .install();
-
-        assertController(ServiceName.of("serviceOne"), controller);
-        assertController(controller, startFuture);
-
-        assertEquals(ServiceController.State.UP, controller.getState());
-        assertState(serviceContainer, ServiceName.of("serviceTwo"), ServiceController.State.UP);
-
-        final Future<ServiceController<?>> removeFutureOne = listener.expectNoServiceRemoval(ServiceName.of("serviceOne"));
-        final Future<ServiceController<?>> removeFutureTwo = listener.expectServiceRemoval(ServiceName.of("serviceTwo"));
-        final Future<ServiceController<?>> removeReqFutureOne = listener.expectNoServiceRemovalRequest(ServiceName.of("serviceOne"));
-        final Future<ServiceController<?>> removeReqFutureTwo = listener.expectServiceRemovalRequest(ServiceName.of("serviceTwo"));
-
-        serviceContainer.getService(ServiceName.of("serviceTwo")).setMode(ServiceController.Mode.REMOVE);
-
-        assertNull(removeReqFutureOne.get());
-        ServiceController<?> removeController = removeFutureOne.get();
-        assertNull(removeController);
-
-        assertNotNull(removeReqFutureTwo.get());
-        removeController = removeFutureTwo.get();
-        assertNotNull(removeController);
-        removeController.addListener(listener); // no errors should occur; the operation is ignored
-
-        assertNull(serviceContainer.getService(ServiceName.of("serviceTwo")));
-        assertNotNull(serviceContainer.getService(ServiceName.of("serviceOne")));
-    }
-
-    @Test
     public void testFailedStart() throws Exception {
         final StartException startException = new StartException("Blahhhh");
         final TestServiceListener listener = new TestServiceListener();
