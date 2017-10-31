@@ -125,7 +125,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
         Dependency[] deps = (Dependency[]) dependenciesField.get(serviceController);
         List<ServiceController<?>> depInstances = new ArrayList<ServiceController<?>>(deps.length);
         for (Dependency dep: deps) {
-            ServiceController<?> depInstance = (ServiceController<?>) ((ServiceRegistrationImpl)dep).getInstance();
+            ServiceController<?> depInstance = dep.getDependencyController();
             if (depInstance != null) {
                 depInstances.add(depInstance);
             }
