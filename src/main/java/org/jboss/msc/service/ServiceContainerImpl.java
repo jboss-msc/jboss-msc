@@ -155,7 +155,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         public ServiceStatus getServiceStatus(final String name) {
             final ServiceRegistrationImpl registration = registry.get(ServiceName.parse(name));
             if (registration != null) {
-                final ServiceControllerImpl<?> instance = registration.getInstance();
+                final ServiceControllerImpl<?> instance = registration.getDependencyController();
                 if (instance != null) {
                     return instance.getStatus();
                 }
@@ -177,7 +177,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             final Collection<ServiceRegistrationImpl> registrations = registry.values();
             final ArrayList<ServiceStatus> list = new ArrayList<ServiceStatus>(registrations.size());
             for (ServiceRegistrationImpl registration : registrations) {
-                final ServiceControllerImpl<?> instance = registration.getInstance();
+                final ServiceControllerImpl<?> instance = registration.getDependencyController();
                 if (instance != null) list.add(instance.getStatus());
             }
             Collections.sort(list, new Comparator<ServiceStatus>() {
@@ -191,7 +191,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         public void setServiceMode(final String name, final String mode) {
             final ServiceRegistrationImpl registration = registry.get(ServiceName.parse(name));
             if (registration != null) {
-                final ServiceControllerImpl<?> instance = registration.getInstance();
+                final ServiceControllerImpl<?> instance = registration.getDependencyController();
                 if (instance != null) {
                     instance.setMode(Mode.valueOf(mode.toUpperCase(Locale.US)));
                 }
@@ -264,7 +264,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         public String dumpServiceDetails(final String serviceName) {
             final ServiceRegistrationImpl registration = registry.get(ServiceName.parse(serviceName));
             if (registration != null) {
-                final ServiceControllerImpl<?> instance = registration.getInstance();
+                final ServiceControllerImpl<?> instance = registration.getDependencyController();
                 if (instance != null) {
                     return instance.dumpServiceDetails();
                 }
@@ -317,7 +317,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             final Collection<ServiceRegistrationImpl> registrations = registry.values();
             final ArrayList<ServiceStatus> list = new ArrayList<ServiceStatus>(registrations.size());
             for (ServiceRegistrationImpl registration : registrations) {
-                final ServiceControllerImpl<?> instance = registration.getInstance();
+                final ServiceControllerImpl<?> instance = registration.getDependencyController();
                 if (instance != null) {
                     ServiceStatus serviceStatus = instance.getStatus();
                     if (serviceStatus.getStateName().equals(status)) {
@@ -542,7 +542,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         });
         ServiceControllerImpl<?> controller;
         for (ServiceRegistrationImpl registration : registry.values()) {
-            controller = registration.getInstance();
+            controller = registration.getDependencyController();
             if (controller != null) {
                 controller.addListener(shutdownListener);
                 try {
@@ -574,7 +574,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             for (ServiceName name : new TreeSet<ServiceName>(registry.keySet())) {
                 final ServiceRegistrationImpl registration = registry.get(name);
                 if (registration != null) {
-                    final ServiceControllerImpl<?> instance = registration.getInstance();
+                    final ServiceControllerImpl<?> instance = registration.getDependencyController();
                     if (instance != null && set.add(instance)) {
                         i++;
                         out.printf("%s\n", instance.getStatus());
@@ -653,14 +653,14 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     @Override
     public ServiceController<?> getService(final ServiceName serviceName) {
         final ServiceRegistrationImpl registration = registry.get(serviceName);
-        return registration == null ? null : registration.getInstance();
+        return registration == null ? null : registration.getDependencyController();
     }
 
     @Override
     public List<ServiceName> getServiceNames() {
         final List<ServiceName> result = new ArrayList<ServiceName>(registry.size());
         for (Map.Entry<ServiceName, ServiceRegistrationImpl> registryEntry: registry.entrySet()) {
-            if (registryEntry.getValue().getInstance() != null) {
+            if (registryEntry.getValue().getDependencyController() != null) {
                 result.add(registryEntry.getKey());
             }
         }
@@ -792,7 +792,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
     private void detectCircularity(IdentityHashSet<? extends Dependent> dependents, ServiceControllerImpl<?> instance, Set<ServiceControllerImpl<?>> visited,  Deque<ServiceName> visitStack) {
         for (Dependent dependent: dependents) {
-            final ServiceControllerImpl<?> controller = dependent.getController();
+            final ServiceControllerImpl<?> controller = dependent.getDependentController();
             if (controller == null) continue; // [MSC-145] optional dependencies may return null
             if (controller == instance) {
                 // change cycle from dependent order to dependency order
@@ -815,7 +815,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 ServiceRegistrationImpl reg = controller.getPrimaryRegistration();
                 synchronized (reg) {
                     // concurrent removal, skip this one entirely
-                    if (reg.getInstance() == null) {
+                    if (reg.getDependencyController() == null) {
                         continue;
                     }
                     visitStack.push(controller.getName());
