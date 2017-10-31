@@ -26,14 +26,9 @@ import static java.security.AccessController.doPrivileged;
 import static org.jboss.modules.management.ObjectProperties.property;
 
 import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
-import java.io.Writer;
 import java.lang.management.ManagementFactory;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -146,9 +141,9 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
     }
 
-    private TerminateListener.Info terminateInfo = null;
+    private volatile TerminateListener.Info terminateInfo;
 
-    private volatile boolean down = false;
+    private volatile boolean down;
 
     private final ContainerExecutor executor;
 
@@ -371,6 +366,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         synchronized (set) {
             // if the shutdown hook was triggered, then no services can ever come up in any new containers.
             if (ShutdownHookHolder.down) {
+                terminateInfo = new TerminateListener.Info(System.nanoTime(), System.nanoTime());
                 down = true;
             }
             //noinspection ThisEscapedInObjectConstruction
@@ -447,12 +443,19 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     }
 
     @Override
-    public synchronized void addTerminateListener(TerminateListener listener) {
-        if (terminateInfo != null) { // if shutdown is already performed
-            listener.handleTermination(terminateInfo); // invoke handleTermination immediately
+    public void addTerminateListener(final TerminateListener listener) {
+        if (terminateInfo == null) {
+            synchronized (this) {
+                if (terminateInfo == null) {
+                    terminateListeners.add(listener);
+                    return;
+                }
+            }
         }
-        else {
-            terminateListeners.add(listener);
+        try {
+            listener.handleTermination(terminateInfo);
+        } catch (final Throwable t) {
+            // ignored
         }
     }
 
@@ -527,38 +530,33 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     }
 
     public void shutdown() {
-        final MultipleRemoveListener<Runnable> shutdownListener;
-        synchronized(this) {
-            if (down){
-                return;
-            }
+        synchronized (this) {
+            if (down) return;
             down = true;
             shutdownInitiated = System.nanoTime();
         }
-        shutdownListener = MultipleRemoveListener.create(new Runnable() {
+        final ContainerShutdownListener shutdownListener = new ContainerShutdownListener(new Runnable() {
             public void run() {
                 executor.shutdown();
             }
         });
-        final HashSet<ServiceControllerImpl<?>> done = new HashSet<ServiceControllerImpl<?>>();
+        ServiceControllerImpl<?> controller;
         for (ServiceRegistrationImpl registration : registry.values()) {
-            ServiceControllerImpl<?> serviceInstance = registration.getInstance();
-            if (serviceInstance != null && serviceInstance.getSubstate() != Substate.CANCELLED && serviceInstance.getSubstate() != Substate.REMOVED && done.add(serviceInstance)) {
+            controller = registration.getInstance();
+            if (controller != null) {
+                controller.addListener(shutdownListener);
                 try {
-                    serviceInstance.addListener(shutdownListener);
-                } catch (IllegalArgumentException e) {
-                    continue;
+                    controller.setMode(Mode.REMOVE);
+                } catch (IllegalArgumentException ignored) {
+                    // controller removed in the meantime
                 }
-                serviceInstance.setMode(Mode.REMOVE);
             }
         }
         shutdownListener.done();
     }
 
     public boolean isShutdownComplete() {
-        synchronized (this) {
-            return terminateInfo != null;
-        }
+        return terminateInfo != null;
     }
 
     public void dumpServices() {
@@ -591,8 +589,10 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         shutdown();
     }
 
-    private synchronized void shutdownComplete(long started) {
-        terminateInfo = new TerminateListener.Info(started, System.nanoTime());
+    private void shutdownComplete(final long started) {
+        synchronized (this) {
+            terminateInfo = new TerminateListener.Info(started, System.nanoTime());
+        }
         for (TerminateListener terminateListener : terminateListeners) {
             try {
                 terminateListener.handleTermination(terminateInfo);
@@ -691,9 +691,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
     @Override
     <T> ServiceController<T> install(final ServiceBuilderImpl<T> serviceBuilder) throws DuplicateServiceException {
-        if (down) {
-            throw new IllegalStateException ("Container is down");
-        }
         apply(serviceBuilder);
 
         // Get names & aliases
@@ -727,7 +724,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             Dependency registration = getOrCreateRegistration(serviceName);
             final ServiceBuilderImpl.Dependency dependency = dependencyMap.get(serviceName);
             if (dependency.getDependencyType() == ServiceBuilder.DependencyType.OPTIONAL) {
-                registration = new OptionalDependency(registration);
+                registration = new OptionalDependencyImpl(registration);
             }
             dependencies[i++] = registration;
             for (Injector<Object> injector : dependency.getInjectorList()) {
@@ -744,7 +741,19 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         boolean ok = false;
         try {
             serviceValue.setValue(instance);
-            instance.startInstallation();
+            synchronized (this) {
+                if (down) {
+                    throw new IllegalStateException ("Container is down");
+                }
+                // It is necessary to call startInstallation() under container intrinsic lock.
+                // This is the only point in MSC code where ServiceRegistrationImpl.instance
+                // field is being set to non null value. So in order for shutdown() method
+                // which iterates 'registry' concurrent hash map outside of intrinsic lock
+                // to see up to date installed controllers this synchronized section is necessary.
+                // Otherwise it may happen container stability will be seriously broken on shutdown.
+                instance.startInstallation();
+            }
+            instance.startConfiguration();
             // detect circularity before committing
             detectCircularity(instance);
             instance.commitInstallation(serviceBuilder.getInitialMode());
@@ -767,23 +776,16 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         final Set<ServiceControllerImpl<?>> visited = new IdentityHashSet<ServiceControllerImpl<?>>();
         final Deque<ServiceName> visitStack = new ArrayDeque<ServiceName>();
         final ServiceRegistrationImpl reg = instance.getPrimaryRegistration();
-        IdentityHashSet<Dependent> dependents;
         synchronized (reg) {
             visitStack.push(instance.getName());
-            dependents = reg.getDependents();
-            synchronized (dependents) {
-                detectCircularity(reg.getDependents(), instance, visited, visitStack);
-            }
+            detectCircularity(reg.getDependents(), instance, visited, visitStack);
             synchronized (instance) {
                 detectCircularity(instance.getChildren(), instance, visited, visitStack);
             }
         }
         for (ServiceRegistrationImpl alias: instance.getAliasRegistrations()) {
             synchronized (alias) {
-                dependents = alias.getDependents();
-                synchronized (dependents) {
-                    detectCircularity(dependents, instance, visited, visitStack);
-                }
+                detectCircularity(alias.getDependents(), instance, visited, visitStack);
             }
         }
     }
@@ -811,26 +813,20 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                     }
                 }
                 ServiceRegistrationImpl reg = controller.getPrimaryRegistration();
-                synchronized(reg) {
+                synchronized (reg) {
                     // concurrent removal, skip this one entirely
                     if (reg.getInstance() == null) {
                         continue;
                     }
                     visitStack.push(controller.getName());
-                    IdentityHashSet<? extends Dependent> controllerDependents = reg.getDependents();
-                    synchronized(controllerDependents) {
-                        detectCircularity(reg.getDependents(), instance, visited, visitStack);
-                    }
+                    detectCircularity(reg.getDependents(), instance, visited, visitStack);
                     synchronized(controller) {
                         detectCircularity(controller.getChildren(), instance, visited, visitStack);
                     }
                 }
                 for (ServiceRegistrationImpl alias: controller.getAliasRegistrations()) {
                     synchronized (alias) {
-                        IdentityHashSet<? extends Dependent> controllerDependents = alias.getDependents();
-                        synchronized (controllerDependents) {
-                            detectCircularity(controllerDependents, instance, visited, visitStack);
-                        }
+                        detectCircularity(alias.getDependents(), instance, visited, visitStack);
                     }
                 }
                 visitStack.poll();

@@ -205,12 +205,10 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         // remove service E, thus triggering the listener above
         final Future<ServiceController<?>> serviceERemoval = testListener.expectServiceRemoval(fooServiceName);
         final Future<ServiceController<?>> serviceAInstalledAsServiceE = testListener.expectListenerAdded(fooServiceName);
-        final Future<ServiceController<?>> serviceADependencyMissing = testListener.expectImmediateDependencyUnavailable(fooServiceName);
         serviceEController.setMode(Mode.REMOVE);
         assertController(serviceEController, serviceERemoval);
         assertNull(serviceE.serviceD);
         final ServiceController<?> serviceAController = assertController(fooServiceName, serviceAInstalledAsServiceE);
-        assertController(serviceAController, serviceADependencyMissing);
 
         // install service B, which will allow service A to start
         final Future<ServiceController<?>> serviceBStart = testListener.expectServiceStart(serviceNameB);
@@ -228,103 +226,6 @@ public class CompleteServiceTestCase extends AbstractServiceTest {
         assertEquals(2218, serviceA.initialParameter);
         assertSame(serviceB, serviceA.serviceB);
         assertNotNull(serviceA.serviceC);
-    }
-
-    @Test
-    public void test3() throws Exception {
-        final TestServiceListener testListener = new TestServiceListener();
-        final ServiceA serviceA = new ServiceA();
-        final ServiceB serviceB = new ServiceB();
-        final ServiceC serviceC = new ServiceC();
-        final ServiceD serviceD = new ServiceD();
-        final ServiceE serviceE = new ServiceE();
-        final ServiceBWrapper serviceBWrapper = new ServiceBWrapper();
-
-        final Future<ServiceController<?>> serviceAStart = testListener.expectServiceStart(fooServiceName);
-        final Future<ServiceController<?>> serviceBStart = testListener.expectServiceStart(serviceNameB);
-        final Future<ServiceController<?>> serviceDStart = testListener.expectServiceStart(serviceNameD);
-
-        // install service B, in wrapper
-        final ServiceController<?> serviceBController = serviceContainer.addService(serviceNameB, serviceBWrapper)
-            .addInjection(
-                new SetMethodInjector<ServiceB>(Values.immediateValue(serviceBWrapper), getMethod(ServiceBWrapper.class, "setValue", ServiceB.class)), serviceB)
-                .addListener(testListener)
-                .install();
-        // install service D, and inject service C in it
-        final ServiceController<?> serviceDController = serviceContainer.addService(serviceNameD, serviceD)
-            .addInjection(new SetMethodInjector<SomeService>(Values.immediateValue(serviceD), getMethod(ServiceD.class,"setSomeService", SomeService.class)), serviceC)
-            .addListener(testListener)
-            .install();
-        // install service A, inject description, initialParameter, service B and service D
-        final Value<ServiceA> serviceAValue = Values.immediateValue(serviceA);
-        final ServiceController<?> serviceAController = serviceContainer.addService(fooServiceName, serviceA).addInjection(new FieldInjector<String>(serviceAValue, getField(ServiceA.class, "description")), "foo service_")
-                .addInjection(new FieldInjector<Integer>(serviceAValue, getField(ServiceA.class, "initialParameter")), 137)
-                .addDependency(serviceNameB, new FieldInjector<Object>(serviceAValue, getField(ServiceA.class, "serviceB")))
-                .addDependency(serviceNameD, new SetMethodInjector<Object>(Values.immediateValue(serviceA), getMethod(ServiceA.class, "setServiceD", ServiceD.class)))
-                .addListener(testListener)
-                .addListener(new AbstractServiceListener<ServiceA>() {
-                    @Override
-                    public void immediateDependencyUnavailable(final ServiceController<? extends ServiceA> controller) {
-                        // remove foo service as soon as its dep is uninstalled
-                        controller.setMode(Mode.REMOVE);
-                    }
-
-                    @Override
-                    public void transition(final ServiceController<? extends ServiceA> controller, final ServiceController.Transition transition) {
-                        if (transition.enters(State.REMOVED)) {
-                            try {
-                                // replace the removed service by service E
-                                serviceContainer.addService(fooServiceName, serviceE).addDependency(DependencyType.OPTIONAL, serviceNameD, ServiceD.class, new SetMethodInjector<ServiceD>(Values.immediateValue(serviceE), getMethod(ServiceE.class, "initialize", ServiceD.class))).addListener(testListener).install();
-                            } catch (IllegalArgumentException e) {
-                                throw new RuntimeException(e);
-                            } catch (ServiceRegistryException e) {
-                                throw new RuntimeException(e);
-                            }
-                        }
-                    }
-             }).install();
-
-        assertController(fooServiceName, serviceAController);
-        assertController(serviceAController, serviceAStart);
-        assertController(serviceNameB, serviceBController);
-        assertController(serviceBController, serviceBStart);
-        assertController(serviceNameD, serviceDController);
-        assertController(serviceDController, serviceDStart);
-        assertSame(serviceA, serviceAController.getValue());
-        assertEquals("foo service_", serviceA.description);
-        assertEquals(137, serviceA.initialParameter);
-        assertSame(serviceB, serviceA.serviceB);
-        assertSame(serviceC, serviceA.serviceC);
-
-        // stop service B
-        final Future<ServiceController<?>> serviceBStop = testListener.expectServiceStop(serviceNameB);
-        final Future<ServiceController<?>> serviceAStop = testListener.expectServiceStop(fooServiceName);
-        final Future<ServiceController<?>> serviceARemoval = testListener.expectServiceRemoval(fooServiceName);
-        Future<ServiceController<?>> serviceEStart = testListener.expectServiceStart(fooServiceName);
-        serviceBController.setMode(Mode.NEVER);
-        assertController(serviceBController, serviceBStop);
-        assertController(serviceAController, serviceAStop);
-        assertController(serviceAController, serviceARemoval);
-        assertSame(serviceA, serviceAController.getValue());
-        assertNull(serviceA.description);
-        assertEquals(0, serviceA.initialParameter);
-        assertNull(serviceA.serviceB);
-        assertNull(serviceA.serviceC);
-        ServiceController<?> serviceEController = assertController(fooServiceName, serviceEStart);
-        assertNull(serviceEController.getValue());
-        assertSame(serviceD, serviceE.serviceD);
-
-        final Future<ServiceController<?>> serviceBRemoval = testListener.expectServiceRemoval(serviceNameB);
-        serviceBController.setMode(Mode.REMOVE);
-        assertController(serviceBController, serviceBRemoval);
-
-        final Future<ServiceController<?>> serviceDStop = testListener.expectServiceStop(serviceNameD);
-        final Future<ServiceController<?>> serviceEStop = testListener.expectServiceStop(fooServiceName);
-        serviceEStart = testListener.expectServiceStart(fooServiceName);
-        serviceDController.setMode(Mode.REMOVE);
-        assertController(serviceDController, serviceDStop);
-        assertOppositeNotifications(serviceEController, serviceEStop, serviceEStart);
-        assertNull(serviceE.serviceD);
     }
 
     @Test

@@ -41,79 +41,89 @@ import org.junit.Test;
  * Test for {@link MultipleRemoveListener}.
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
+ * @author <a href="mailto:ropalka@jboss.com">Richard Opalka</a>
  */
 public class MultipleRemoveListenerTestCase extends AbstractServiceTest {
 
     private static final ServiceName firstServiceName = ServiceName.of("1");
     private static final ServiceName secondServiceName = ServiceName.of("2");
     private static final ServiceName thirdServiceName = ServiceName.of("3");
+    private static final int ITERATION_COUNT = 100;
 
     @SuppressWarnings("unchecked")
     @Test
     public void testDoneAfterRemoval() throws Exception {
-        final IntegerValue integerValue = new IntegerValue(); 
-        final SetValueCallback callback = new SetValueCallback(integerValue);
-        final MultipleRemoveListener<Integer> removeListener = MultipleRemoveListener.create(callback, Integer.valueOf(1050));
-        final TestServiceListener testListener = new TestServiceListener();
+        for (int i = 0; i < ITERATION_COUNT; i++) {
+            if (i > 0) setUp();
+            final IntegerValue integerValue = new IntegerValue();
+            final SetValueCallback callback = new SetValueCallback(integerValue);
+            final MultipleRemoveListener<Integer> removeListener = MultipleRemoveListener.create(callback, Integer.valueOf(1050));
+            final TestServiceListener testListener = new TestServiceListener();
 
-        final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
-        serviceContainer.addService(firstServiceName, Service.NULL).addListener(removeListener, testListener).install();
-        assertController(firstServiceName, firstServiceStart);
+            final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
+            serviceContainer.addService(firstServiceName, Service.NULL).addListener(removeListener, testListener).install();
+            assertController(firstServiceName, firstServiceStart);
 
-        final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
-        serviceContainer.addService(secondServiceName, Service.NULL).addListener(removeListener, testListener).install();
-        assertController(secondServiceName, secondServiceStart);
+            final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
+            serviceContainer.addService(secondServiceName, Service.NULL).addListener(removeListener, testListener).install();
+            assertController(secondServiceName, secondServiceStart);
 
-        final Future<ServiceController<?>> thirdServiceStart = testListener.expectServiceStart(thirdServiceName);
-        serviceContainer.addService(thirdServiceName, Service.NULL).addListener(removeListener, testListener).install();
-        assertController(thirdServiceName, thirdServiceStart);
+            final Future<ServiceController<?>> thirdServiceStart = testListener.expectServiceStart(thirdServiceName);
+            serviceContainer.addService(thirdServiceName, Service.NULL).addListener(removeListener, testListener).install();
+            assertController(thirdServiceName, thirdServiceStart);
 
-        assertNull(integerValue.getValue());
-        shutdownContainer();
-        assertNull(integerValue.getValue());
-        // call done after removal
-        removeListener.done();
-        assertEquals(Integer.valueOf(1050), callback.get());
+            assertNull(integerValue.getValue());
+            shutdownContainer();
+            assertNull(integerValue.getValue());
+            // call done after removal
+            removeListener.done();
+            assertEquals(Integer.valueOf(1050), callback.get());
+            if (i < ITERATION_COUNT - 1) tearDown();
+        }
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testDoneBeforeRemoval() throws Exception {
-        final IntegerValue integerValue = new IntegerValue(); 
-        final SetValueCallback callback = new SetValueCallback(integerValue);
-        final MultipleRemoveListener<Integer> removeListener = MultipleRemoveListener.create(callback, Integer.valueOf(2457));
-        final TestServiceListener testListener = new TestServiceListener();
+        for (int i = 0; i < ITERATION_COUNT; i++) {
+            if (i > 0) setUp();
+            final IntegerValue integerValue = new IntegerValue();
+            final SetValueCallback callback = new SetValueCallback(integerValue);
+            final MultipleRemoveListener<Integer> removeListener = MultipleRemoveListener.create(callback, Integer.valueOf(2457));
+            final TestServiceListener testListener = new TestServiceListener();
 
-        final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
-        serviceContainer.addService(firstServiceName, Service.NULL).addListener(removeListener, testListener).install();
-        final ServiceController<?> firstController = assertController(firstServiceName, firstServiceStart);
+            final Future<ServiceController<?>> firstServiceStart = testListener.expectServiceStart(firstServiceName);
+            serviceContainer.addService(firstServiceName, Service.NULL).addListener(removeListener, testListener).install();
+            final ServiceController<?> firstController = assertController(firstServiceName, firstServiceStart);
 
-        final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
-        serviceContainer.addService(secondServiceName, Service.NULL).addListener(removeListener, testListener).install();
-        final ServiceController<?> secondController = assertController(secondServiceName, secondServiceStart);
+            final Future<ServiceController<?>> secondServiceStart = testListener.expectServiceStart(secondServiceName);
+            serviceContainer.addService(secondServiceName, Service.NULL).addListener(removeListener, testListener).install();
+            final ServiceController<?> secondController = assertController(secondServiceName, secondServiceStart);
 
-        final Future<ServiceController<?>> thirdServiceStart = testListener.expectServiceStart(thirdServiceName);
-        serviceContainer.addService(thirdServiceName, Service.NULL).addListener(removeListener, testListener).install();
-        final ServiceController<?> thirdController = assertController(thirdServiceName, thirdServiceStart);
+            final Future<ServiceController<?>> thirdServiceStart = testListener.expectServiceStart(thirdServiceName);
+            serviceContainer.addService(thirdServiceName, Service.NULL).addListener(removeListener, testListener).install();
+            final ServiceController<?> thirdController = assertController(thirdServiceName, thirdServiceStart);
 
-        // call done before removal
-        removeListener.done();
-        assertNull(integerValue.getValue());
+            // call done before removal
+            removeListener.done();
+            assertNull(integerValue.getValue());
 
-        final Future<ServiceController<?>> firstServiceRemoval = testListener.expectServiceRemoval(firstServiceName);
-        firstController.setMode(Mode.REMOVE);
-        assertController(firstController, firstServiceRemoval);
-        assertNull(integerValue.getValue());
+            final Future<ServiceController<?>> firstServiceRemoval = testListener.expectServiceRemoval(firstServiceName);
+            firstController.setMode(Mode.REMOVE);
+            assertController(firstController, firstServiceRemoval);
+            assertNull(integerValue.getValue());
 
-        final Future<ServiceController<?>> secondServiceRemoval = testListener.expectServiceRemoval(secondServiceName);
-        secondController.setMode(Mode.REMOVE);
-        assertController(secondController, secondServiceRemoval);
-        assertNull(integerValue.getValue());
+            final Future<ServiceController<?>> secondServiceRemoval = testListener.expectServiceRemoval(secondServiceName);
+            secondController.setMode(Mode.REMOVE);
+            assertController(secondController, secondServiceRemoval);
+            assertNull(integerValue.getValue());
 
-        final Future<ServiceController<?>> thirdServiceRemoval = testListener.expectServiceRemoval(thirdServiceName);
-        thirdController.setMode(Mode.REMOVE);
-        assertController(thirdController, thirdServiceRemoval);
-        assertEquals(Integer.valueOf(2457), callback.get());
+            final Future<ServiceController<?>> thirdServiceRemoval = testListener.expectServiceRemoval(thirdServiceName);
+            thirdController.setMode(Mode.REMOVE);
+            assertController(thirdController, thirdServiceRemoval);
+            assertEquals(Integer.valueOf(2457), callback.get());
+            if (i < ITERATION_COUNT - 1) tearDown();
+        }
     }
 
     private class IntegerValue implements Value<Integer> {
