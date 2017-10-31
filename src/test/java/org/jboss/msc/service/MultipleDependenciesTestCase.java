@@ -331,7 +331,7 @@ public class MultipleDependenciesTestCase extends AbstractServiceTest {
         Dependency[] deps = (Dependency[]) dependenciesField.get(serviceController);
         List<ServiceControllerImpl<?>> depInstances = new ArrayList<ServiceControllerImpl<?>>(deps.length);
         for (Dependency dep: deps) {
-            ServiceControllerImpl<?> depInstance = (ServiceControllerImpl<?>) ((ServiceRegistrationImpl)dep).getInstance();
+            ServiceControllerImpl<?> depInstance = dep.getDependencyController();
             if (depInstance != null) {
                 depInstances.add(depInstance);
             }
