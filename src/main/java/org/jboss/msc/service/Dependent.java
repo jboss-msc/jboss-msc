@@ -23,89 +23,53 @@
 package org.jboss.msc.service;
 
 /**
- * Depends on one or more dependencies, represented by {@code AbstractDependency}.
- * 
+ * Depends on one or more dependencies.
+ *
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  * @see Dependency
  */
 interface Dependent {
 
     /**
-     * Notify this dependent that one of its immediate dependencies is available, i.e., it is installed and, if not
-     * {@link ServiceController.State#STARTED started}, should start shortly.
-     * <p> This method must not be called under a lock.
+     * Notify this dependent that one of its dependencies is available.
      *
-     * @param dependencyName the name of the immediate dependency that is now available
+     * @param dependencyName the name of the dependency that is now available
      */
-    void immediateDependencyAvailable(ServiceName dependencyName);
+    void dependencyAvailable(ServiceName dependencyName);
 
     /**
-     * Notify this dependent that one of its immediate dependencies is unavailable.<br>
-     * A dependency is unavailable when it is not installed or when it is in {@link ServiceController.Mode#NEVER NEVER}
-     * mode.
-     * <p> This method must not be called under a lock.
+     * Notify this dependent that one of its dependencies is unavailable.
      *
-     * @param dependencyName the name of the immediate dependency that is now unavailable
+     * @param dependencyName the name of the dependency that is now unavailable
      */
-    void immediateDependencyUnavailable(ServiceName dependencyName);
+    void dependencyUnavailable(ServiceName dependencyName);
 
     /**
-     * Notify this dependent that one of its immediate dependencies entered {@link ServiceControllerImpl.Substate#UP UP}
-     * state.
-     * <p> This method must not be called under a lock.
+     * Notify this dependent that one of its dependencies is up.
      */
-    void immediateDependencyUp();
+    void dependencyUp();
 
     /**
-     * Notify this dependent that one of its immediate dependencies is leaving the {@link
-     * ServiceControllerImpl.Substate#UP UP} state.
-     * <p> This method must not be called under a lock.
+     * Notify this dependent that one of its dependencies is down.
      */
-    void immediateDependencyDown();
+    void dependencyDown();
 
     /**
-     * Notify this dependent that one of its dependencies (immediate or transitive) failed to start. This method is
-     * called after the dependency state transitions from {@code STARTING} to {@code START_FAILED}.
-     * <p>
-     * Dependency failures that occur after the notified failure do not result in new {@code dependencyFailed}
-     * notifications, as the dependent will never receive two or more dependencyFailed calls in a row. A {@code
-     * dependencyFailed} notification is only invoked again to notify of new failures if the previous failures have been
-     * {@link #dependencyFailureCleared cleared}. 
-     * <p> This method must not be called under a lock.
+     * Notify this dependent that one of its dependencies failed.
      */
     void dependencyFailed();
 
     /**
-     * Notify this dependent that all dependency failures previously {@link #dependencyFailed() notified} are now
-     * cleared. This method is called only after all affected dependencies left {@code START_FAILED} state.
-     * <p> This method must not be called under a lock.
+     * Notify this dependent that one of its depenencies was corrected.
      */
-    void dependencyFailureCleared();
-
-    /**
-     * Notify this dependent that one of its transitive dependencies is unavailable (either uninstalled, or in
-     * {@link ServiceController.Mode#NEVER NEVER mode}).
-     * <p>
-     * New transitive dependencies that become unavailable after the notified one do not result in new {@code
-     * dependencyUnavailable} notifications, as the dependent will never receive two or more dependencyUnavailable calls
-     * in a row. A {@code dependencyUnavailable} notification is only invoked again to notify of newly found unavailable
-     * dependencies if all the previously unavailable dependencies have become {@link #transitiveDependencyAvailable()
-     * available}.
-     * <p> This method must not be called under a lock.
-     */
-    void transitiveDependencyUnavailable();
-
-    /**
-     * Notify this dependent that all {@link #transitiveDependencyUnavailable() unavailable} transitive dependencies are
-     * now available (i.e., they are installed and will perform an attempt to start shortly).
-     * <p> This method must not be called under a lock.
-     */
-    void transitiveDependencyAvailable();
+    void dependencySucceeded();
 
     /**
      * Get the controller of this dependent.
      *
      * @return the controller
      */
-    ServiceControllerImpl<?> getController();
+    ServiceControllerImpl<?> getDependentController();
+
 }

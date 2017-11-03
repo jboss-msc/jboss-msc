@@ -22,21 +22,38 @@
 
 package org.jboss.msc.service;
 
+import static org.jboss.modules.management.ObjectProperties.property;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanException;
+import javax.management.MBeanServerConnection;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.management.ReflectionException;
+
+import org.jboss.modules.management.ObjectProperties;
 import org.jboss.msc.util.TestServiceListener;
 import org.jboss.msc.value.Values;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -49,6 +66,7 @@ import org.junit.Test;
  */
 public class MultipleDependenciesTestCase extends AbstractServiceTest {
 
+    public static final String MODULE = "module";
     private static Field dependenciesField;
     private static final ServiceName firstServiceName = ServiceName.of("firstService");
     private static final ServiceName secondServiceName = ServiceName.of("secondService");
@@ -65,6 +83,108 @@ public class MultipleDependenciesTestCase extends AbstractServiceTest {
     public static void initDependenciesField() throws Exception {
         dependenciesField = ServiceControllerImpl.class.getDeclaredField("dependencies");
         dependenciesField.setAccessible(true);
+    }
+
+    @Test
+    public void testSomeThings2() throws Exception {
+        for(int i = 0; i < 1000; ++i) {
+
+            ServiceName s3 = ServiceName.JBOSS.append("s3");
+            ServiceName s2 = ServiceName.JBOSS.append("s2");
+            ServiceName s1 = ServiceName.JBOSS.append("s1");
+            ServiceController<Void> c3 = serviceContainer.addService(s3, new RootService(s3, s2.append(MODULE)))
+                    .install();
+            ServiceController<Void> c2 = serviceContainer.addService(s2, new RootService(s2, s1.append(MODULE)))
+                    .install();
+            ServiceController<Void> c1 = serviceContainer.addService(s1, new RootService(s1))
+                    .install();
+            serviceContainer.awaitStability();
+            final CountDownLatch latch = new CountDownLatch(1);
+            c1.addListener(new AbstractServiceListener<Void>() {
+                @Override
+                public void transition(ServiceController<? extends Void> controller, ServiceController.Transition transition) {
+                    if (transition.getAfter() == ServiceController.Substate.REMOVED) {
+                        latch.countDown();
+                    }
+                }
+            });
+            c1.setMode(ServiceController.Mode.REMOVE);
+            latch.await();
+            c1 = serviceContainer.addService(s1, new RootService(s1))
+                    .install();
+            if(!serviceContainer.awaitStability(2, TimeUnit.SECONDS)) {
+                dumpDetails();
+                Assert.fail();
+            }
+            c1.setMode(ServiceController.Mode.REMOVE);
+            c2.setMode(ServiceController.Mode.REMOVE);
+            c3.setMode(ServiceController.Mode.REMOVE);
+            if(!serviceContainer.awaitStability(2, TimeUnit.SECONDS)) {
+                dumpDetails();
+                Assert.fail();
+            }
+        }
+    }
+
+    private void dumpDetails() throws Exception {
+        MBeanServerConnection mbs = ManagementFactory.getPlatformMBeanServer();
+        ObjectName on = new ObjectName("jboss.msc", ObjectProperties.properties(property("type", "container"), property("name", serviceContainer.getName())));
+        String[] names = (String[]) mbs.invoke(on, "queryServiceNames", new Object[]{}, new String[]{});
+        StringBuilder sb = new StringBuilder("Services for ");
+        sb.append(serviceContainer.getName());
+        sb.append("\n");
+        for (String name : names) {
+            sb.append(mbs.invoke(on, "dumpServiceDetails", new Object[]{name}, new String[]{String.class.getName()}));
+            sb.append("\n");
+        }
+        sb.append(names.length);
+        sb.append(" services displayed");
+        System.out.println(sb);
+    }
+
+    private class RootService extends AbstractService<Void> {
+        final ServiceName baseName;
+        private final ServiceName[] serviceNames;
+
+        private RootService(ServiceName baseName, ServiceName... serviceNames) {
+            this.baseName = baseName;
+            this.serviceNames = serviceNames;
+        }
+
+        @Override
+        public void start(final StartContext context) throws StartException {
+            ServiceName module = baseName.append(MODULE);
+            context.getChildTarget().addService(baseName.append("firstModuleUse"), new FirstModuleUseService())
+                    .addDependency(module)
+                    .install();
+            context.getChildTarget().addService(module, Service.NULL)
+                    .addDependencies(serviceNames)
+                    .install();
+        }
+    }
+
+    private class FirstModuleUseService extends AbstractService<Void> {
+
+        volatile boolean first = true;
+
+        @Override
+        public void start(final StartContext context) throws StartException {
+            if(first) {
+                first = false;
+            } else {
+                first = true;
+                context.getController().getParent().addListener(new AbstractServiceListener() {
+                    @Override
+                    public void transition(ServiceController controller, ServiceController.Transition transition) {
+                        if(transition.getAfter() == ServiceController.Substate.DOWN) {
+                            controller.setMode(ServiceController.Mode.ACTIVE);
+                            controller.removeListener(this);
+                        }
+                    }
+                });
+                context.getController().getParent().setMode(ServiceController.Mode.NEVER);
+            }
+        }
     }
 
     @Test
@@ -211,7 +331,7 @@ public class MultipleDependenciesTestCase extends AbstractServiceTest {
         Dependency[] deps = (Dependency[]) dependenciesField.get(serviceController);
         List<ServiceControllerImpl<?>> depInstances = new ArrayList<ServiceControllerImpl<?>>(deps.length);
         for (Dependency dep: deps) {
-            ServiceControllerImpl<?> depInstance = (ServiceControllerImpl<?>) ((ServiceRegistrationImpl)dep).getInstance();
+            ServiceControllerImpl<?> depInstance = dep.getDependencyController();
             if (depInstance != null) {
                 depInstances.add(depInstance);
             }

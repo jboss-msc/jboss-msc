@@ -150,6 +150,7 @@ public interface ServiceController<S> extends Value<S> {
      *
      * @param serviceListener the service listener
      */
+    @Deprecated
     void addListener(ServiceListener<? super S> serviceListener);
 
     /**
@@ -157,6 +158,7 @@ public interface ServiceController<S> extends Value<S> {
      *
      * @param serviceListener the service listener to remove
      */
+    @Deprecated
     void removeListener(ServiceListener<? super S> serviceListener);
 
     /**
@@ -411,6 +413,10 @@ public interface ServiceController<S> extends Value<S> {
          * Transition from {@link Substate#START_INITIATING START_INITIATING} to {@link Substate#STARTING STARTING}.
          */
         START_INITIATING_to_STARTING (Substate.START_INITIATING, Substate.STARTING),
+        /**
+         * Transition from {@link Substate#START_INITIATING START_INITIATING} to {@link Substate#START_REQUESTED START_REQUESTED}.
+         */
+        START_INITIATING_to_START_REQUESTED (Substate.START_INITIATING, Substate.START_REQUESTED),
         /**
          * Transition from {@link Substate#STARTING STARTING} to {@link Substate#UP UP}.
          */
