@@ -1478,7 +1478,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         injection.getTarget().inject(injection.getSource().getValue());
     }
 
-    private static ClassLoader setTCCL(ClassLoader newTCCL) {
+    private static ClassLoader setTCCL(final ClassLoader newTCCL) {
         final SecurityManager sm = System.getSecurityManager();
         final SetTCCLAction setTCCLAction = new SetTCCLAction(newTCCL);
         if (sm != null) {
@@ -1490,15 +1490,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private static ClassLoader getCL(final Class<?> clazz) {
         final SecurityManager sm = System.getSecurityManager();
+        final GetCLAction getCLAction = new GetCLAction(clazz);
         if (sm != null) {
-            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
-                @Override
-                public ClassLoader run() {
-                    return clazz.getClassLoader();
-                }
-            });
+            return AccessController.doPrivileged(getCLAction);
         } else {
-            return clazz.getClassLoader();
+            return getCLAction.run();
         }
     }
 
@@ -1688,7 +1684,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         private void startService(Service<? extends S> service, StartContext context) throws StartException {
-            final ClassLoader contextClassLoader = setTCCL(service.getClass().getClassLoader());
+            final ClassLoader contextClassLoader = setTCCL(getCL(service.getClass()));
             try {
                 service.start(context);
             } finally {
@@ -1754,7 +1750,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         private void stopService(Service<? extends S> service, StopContext context) {
-            final ClassLoader contextClassLoader = setTCCL(service.getClass().getClassLoader());
+            final ClassLoader contextClassLoader = setTCCL(getCL(service.getClass()));
             try {
                 service.stop(context);
             } finally {
@@ -1990,7 +1986,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public void execute(final Runnable command) {
-            final ClassLoader contextClassLoader = setTCCL(command.getClass().getClassLoader());
+            final ClassLoader contextClassLoader = setTCCL(getCL(command.getClass()));
             try {
                 command.run();
             } finally {
@@ -2048,7 +2044,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public void execute(final Runnable command) {
-            final ClassLoader contextClassLoader = setTCCL(command.getClass().getClassLoader());
+            final ClassLoader contextClassLoader = setTCCL(getCL(command.getClass()));
             try {
                 command.run();
             } finally {
