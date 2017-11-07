@@ -22,15 +22,13 @@
 
 package org.jboss.msc.service;
 
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 /**
-* @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
-*/
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ */
 final class SetTCCLAction implements PrivilegedAction<ClassLoader> {
 
-    static final SetTCCLAction CLEAR_TCCL_ACTION = new SetTCCLAction(null);
     private final ClassLoader classLoader;
 
     SetTCCLAction(final ClassLoader classLoader) {
