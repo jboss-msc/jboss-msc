@@ -1966,12 +1966,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public void execute(final Runnable command) {
-            final ClassLoader contextClassLoader = setTCCL(getCL(command.getClass()));
-            try {
-                command.run();
-            } finally {
-                setTCCL(contextClassLoader);
-            }
+            doExecute(Collections.<Runnable>singletonList(new Runnable() {
+                public void run() {
+                    final ClassLoader contextClassLoader = setTCCL(getCL(command.getClass()));
+                    try {
+                        command.run();
+                    } finally {
+                        setTCCL(contextClassLoader);
+                    }
+                }
+            }));
         }
     }
 
@@ -2024,12 +2028,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public void execute(final Runnable command) {
-            final ClassLoader contextClassLoader = setTCCL(getCL(command.getClass()));
-            try {
-                command.run();
-            } finally {
-                setTCCL(contextClassLoader);
-            }
+            doExecute(Collections.<Runnable>singletonList(new Runnable() {
+                public void run() {
+                    final ClassLoader contextClassLoader = setTCCL(getCL(command.getClass()));
+                    try {
+                        command.run();
+                    } finally {
+                        setTCCL(contextClassLoader);
+                    }
+                }
+            }));
         }
 
         public long getElapsedTime() {
