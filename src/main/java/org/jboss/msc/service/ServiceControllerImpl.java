@@ -23,9 +23,9 @@
 package org.jboss.msc.service;
 
 import static java.lang.Thread.holdsLock;
+import static org.jboss.msc.service.SecurityUtils.getCL;
+import static org.jboss.msc.service.SecurityUtils.setTCCL;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -1476,26 +1476,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private static <T> void doInject(final ValueInjection<T> injection) {
         injection.getTarget().inject(injection.getSource().getValue());
-    }
-
-    private static ClassLoader setTCCL(final ClassLoader newTCCL) {
-        final SecurityManager sm = System.getSecurityManager();
-        final SetTCCLAction setTCCLAction = new SetTCCLAction(newTCCL);
-        if (sm != null) {
-            return AccessController.doPrivileged(setTCCLAction);
-        } else {
-            return setTCCLAction.run();
-        }
-    }
-
-    private static ClassLoader getCL(final Class<?> clazz) {
-        final SecurityManager sm = System.getSecurityManager();
-        final GetCLAction getCLAction = new GetCLAction(clazz);
-        if (sm != null) {
-            return AccessController.doPrivileged(getCLAction);
-        } else {
-            return getCLAction.run();
-        }
     }
 
     @Override
