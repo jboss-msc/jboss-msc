@@ -1534,8 +1534,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
         }
 
-        void afterExecute() {};
-        void beforeExecute() {};
+        void afterExecute() {}
+        void beforeExecute() {}
         abstract boolean execute();
     }
 
