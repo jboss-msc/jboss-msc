@@ -184,8 +184,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     @SuppressWarnings("VolatileLongOrDoubleField")
     private volatile long lifecycleTime;
 
-    private static final Dependent[] NO_DEPENDENTS = new Dependent[0];
-    private static final ServiceControllerImpl<?>[] NO_CONTROLLERS = new ServiceControllerImpl<?>[0];
     private static final String[] NO_STRINGS = new String[0];
 
     static final int MAX_DEPENDENCIES = (1 << 14) - 1;
