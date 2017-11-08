@@ -298,13 +298,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         for (Runnable listenerAddedTask : listenerAddedTasks) {
             listenerAddedTask.run();
         }
-        final List<Runnable> tasks = new ArrayList<Runnable>();
+        final List<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            tasks.add(new DependencyAvailableTask());
-            state = Substate.DOWN;
             // subtract one to compensate for +1 above
             decrementAsyncTasks();
+            tasks = transition();
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
         }
@@ -409,6 +408,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private Transition getTransition() {
         assert holdsLock(this);
         switch (state) {
+            case NEW: {
+                return Transition.NEW_to_DOWN;
+            }
             case DOWN: {
                 if (mode == ServiceController.Mode.REMOVE) {
                     return Transition.DOWN_to_REMOVING;
@@ -537,7 +539,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private List<Runnable> transition() {
         assert holdsLock(this);
-        if (asyncTasks != 0 || state == Substate.NEW) {
+        if (asyncTasks != 0) {
             // no movement possible
             return Collections.EMPTY_LIST;
         }
@@ -595,6 +597,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             getListenerTasks(transition, listenerTransitionTasks);
             switch (transition) {
+                case NEW_to_DOWN: {
+                    tasks.add(new DependencyAvailableTask());
+                    break;
+                }
                 case DOWN_to_WAITING: {
                     tasks.add(new DependencyUnavailableTask());
                     break;
