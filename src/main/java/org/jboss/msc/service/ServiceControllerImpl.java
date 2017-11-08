@@ -291,8 +291,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final boolean leavingRestState = isStableRestState();
             getListenerTasks(ListenerNotification.LISTENER_ADDED, listenerAddedTasks);
             internalSetMode(initialMode);
-            // placeholder async task for running listener added tasks
-            addAsyncTasks(listenerAddedTasks.size() + 1);
+            addAsyncTasks(listenerAddedTasks.size());
             updateStabilityState(leavingRestState);
         }
         for (Runnable listenerAddedTask : listenerAddedTasks) {
@@ -301,8 +300,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final List<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            // subtract one to compensate for +1 above
-            decrementAsyncTasks();
             tasks = transition();
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
