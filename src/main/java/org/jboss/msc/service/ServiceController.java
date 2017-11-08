@@ -486,7 +486,11 @@ public interface ServiceController<S> extends Value<S> {
         /**
          * Transition from {@link Substate#CANCELLED} to {@link Substate#REMOVED}.
          */
-        CANCELLED_to_REMOVED(Substate.CANCELLED,Substate.REMOVED);
+        CANCELLED_to_REMOVED(Substate.CANCELLED,Substate.REMOVED),
+        /**
+         * Transition from {@link Substate#NEW} to {@link Substate#DOWN}.
+         */
+        NEW_to_DOWN(Substate.NEW,Substate.DOWN);
 
         private final Substate before;
         private final Substate after;
