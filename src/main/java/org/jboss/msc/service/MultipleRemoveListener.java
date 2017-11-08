@@ -31,7 +31,9 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  * @param <T> the callback parameter type
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @deprecated Service listeners are not encouraged for general user use.
  */
+@Deprecated
 public final class MultipleRemoveListener<T> extends AbstractServiceListener<Object> {
     @SuppressWarnings({ "UnusedDeclaration" })
     private volatile int count = 1;

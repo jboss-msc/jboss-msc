@@ -29,7 +29,9 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  * is created and ends when the last service is batched and the services are all started.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @deprecated Use {@link StartContext#getElapsedTime()} instead
  */
+@Deprecated
 public final class TimingServiceListener extends AbstractServiceListener<Object> implements ServiceListener<Object> {
     private volatile int finished = 0;
     private volatile int count = 1;
