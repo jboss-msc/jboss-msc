@@ -685,7 +685,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                     startException = null;
                     tasks.add(new DependencyRetryingTask());
-                    tasks.add(new StopTask(true));
+                    tasks.add(new StopTask(false));
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
@@ -699,7 +699,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         childTarget.valid = false;
                         this.childTarget = null;
                     }
-                    tasks.add(new StopTask(false));
+                    tasks.add(new StopTask(true));
                     tasks.add(new RemoveChildrenTask());
                     break;
                 }
@@ -1693,10 +1693,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private final class StopTask extends ControllerTask {
-        private final boolean onlyUninject;
+        private final boolean stopService;
 
-        StopTask(final boolean onlyUninject) {
-            this.onlyUninject = onlyUninject;
+        StopTask(final boolean stopService) {
+            this.stopService = stopService;
         }
 
         boolean execute() {
@@ -1704,7 +1704,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final StopContextImpl context = new StopContextImpl();
             boolean ok = false;
             try {
-                if (! onlyUninject) {
+                if (stopService) {
                     try {
                         final Service<? extends S> service = serviceValue.getValue();
                         if (service != null) {
