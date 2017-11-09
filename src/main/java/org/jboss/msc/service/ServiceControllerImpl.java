@@ -439,8 +439,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             case STOP_REQUESTED: {
                 if (shouldStart() && stoppingDependencies == 0) {
                     return Transition.STOP_REQUESTED_to_UP;
-                }
-                if (runningDependents == 0) {
+                } else if (runningDependents == 0) {
                     return Transition.STOP_REQUESTED_to_STOPPING;
                 }
                 break;
@@ -452,15 +451,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case START_FAILED: {
-                if (shouldStart()) {
-                    if (stoppingDependencies == 0) {
-                        if (startException == null) {
-                            return Transition.START_FAILED_to_STARTING;
-                        }
-                    } else {
-                        return Transition.START_FAILED_to_DOWN;
+                if (shouldStart() && stoppingDependencies == 0) {
+                    if (startException == null) {
+                        return Transition.START_FAILED_to_STARTING;
                     }
-                } else {
+                } else if (runningDependents == 0) {
                     return Transition.START_FAILED_to_DOWN;
                 }
                 break;
@@ -660,6 +655,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                     tasks.add(new DependencyFailedTask());
                     tasks.add(new RemoveChildrenTask());
+                    tasks.add(new StopTask(false));
                     break;
                 }
                 case START_FAILED_to_STARTING: {
@@ -668,6 +664,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         monitor.removeFailed(this);
                     }
                     tasks.add(new DependencyRetryingTask());
+                    tasks.add(new StartTask());
                     break;
                 }
                 case START_INITIATING_to_STARTING: {
@@ -685,7 +682,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                     startException = null;
                     tasks.add(new DependencyRetryingTask());
-                    tasks.add(new StopTask(false));
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
