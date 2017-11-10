@@ -159,10 +159,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private boolean dependenciesDemanded = false;
     /**
-     * Indicates whether async tasks count should be decremented on last child removal.
-     */
-    private boolean decrementOnLastChildRemoval;
-    /**
      * The number of asynchronous tasks that are currently running. This
      * includes listeners, start/stop methods, outstanding asynchronous
      * start/stops, and internal tasks.
@@ -434,7 +430,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case STOPPING: {
-                return Transition.STOPPING_to_DOWN;
+                if (children.isEmpty()) {
+                    return Transition.STOPPING_to_DOWN;
+                }
+                break;
             }
             case STOP_REQUESTED: {
                 if (shouldStart() && stoppingDependencies == 0) {
@@ -451,12 +450,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case START_FAILED: {
-                if (shouldStart() && stoppingDependencies == 0) {
-                    if (startException == null) {
-                        return Transition.START_FAILED_to_STARTING;
+                if (children.isEmpty()) {
+                    if (shouldStart() && stoppingDependencies == 0) {
+                        if (startException == null) {
+                            return Transition.START_FAILED_to_STARTING;
+                        }
+                    } else if (runningDependents == 0) {
+                        return Transition.START_FAILED_to_DOWN;
                     }
-                } else if (runningDependents == 0) {
-                    return Transition.START_FAILED_to_DOWN;
                 }
                 break;
             }
@@ -1014,43 +1015,26 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         doExecute(tasks);
     }
 
-    void addChild(ServiceControllerImpl<?> child) {
+    void addChild(final ServiceControllerImpl<?> child) {
         assert !holdsLock(this);
         synchronized (this) {
-            switch (state) {
-                case START_INITIATING:
-                case STARTING:
-                case UP:
-                case STOP_REQUESTED: {
-                    children.add(child);
-                    newDependent(primaryRegistration.getName(), child);
-                    break;
-                }
-                default: throw new IllegalStateException("Children cannot be added in state " + state.getState());
+            if (state.getState() != State.STARTING && state.getState() != State.UP) {
+                throw new IllegalStateException("Children cannot be added in state " + state.getState());
             }
+            children.add(child);
+            newDependent(primaryRegistration.getName(), child);
         }
     }
 
-    void removeChild(ServiceControllerImpl<?> child) {
+    void removeChild(final ServiceControllerImpl<?> child) {
         assert !holdsLock(this);
         final List<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
             children.remove(child);
-            if (children.isEmpty() && decrementOnLastChildRemoval) {
-                switch (state) {
-                    case START_FAILED:
-                    case STOPPING:
-                        // last child was removed; drop async count
-                        decrementAsyncTasks();
-                        tasks = transition();
-                        break;
-                    default:
-                        return;
-                }
-            } else {
-                return;
-            }
+            if (children.size() > 0) return;
+            // we dropped it to 0
+            tasks = transition();
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
         }
@@ -1793,23 +1777,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private final class RemoveChildrenTask extends ControllerTask {
-        RemoveChildrenTask() {
-            decrementOnLastChildRemoval = false;
-        }
-
         boolean execute() {
             synchronized (ServiceControllerImpl.this) {
-                if (!children.isEmpty()) {
-                    final boolean leavingRestState = isStableRestState();
-                    // placeholder async task for child removal; last removed child will decrement this count
-                    // see removeChild method to verify when this count is decremented
-                    incrementAsyncTasks();
-                    decrementOnLastChildRemoval = true;
-                    for (ServiceControllerImpl<?> child : children) {
-                        child.setMode(Mode.REMOVE);
-                    }
-                    updateStabilityState(leavingRestState);
-                }
+                for (ServiceControllerImpl<?> child : children) child.setMode(Mode.REMOVE);
             }
             return true;
         }
