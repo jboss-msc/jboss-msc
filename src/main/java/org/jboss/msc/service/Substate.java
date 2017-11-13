@@ -42,10 +42,6 @@ enum Substate {
      */
     DOWN(ServiceController.State.DOWN, true),
     /**
-     * Controller is waiting for an external condition to start, such as a dependent demand.
-     */
-    WAITING(ServiceController.State.DOWN, true),
-    /**
      * Controller is configured not to start.
      */
     WONT_START(ServiceController.State.DOWN, true),

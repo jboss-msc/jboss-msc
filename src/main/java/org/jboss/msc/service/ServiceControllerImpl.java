@@ -406,13 +406,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     return Transition.DOWN_to_START_REQUESTED;
                 } else {
                     // mode is either LAZY or ON_DEMAND with demandedByCount == 0, or mode is PASSIVE and downDep > 0
-                    return Transition.DOWN_to_WAITING;
-                }
-            }
-            case WAITING: {
-                if (((mode != Mode.ON_DEMAND && mode != Mode.LAZY) || demandedByCount > 0) &&
-                        (mode != Mode.PASSIVE || stoppingDependencies == 0)) {
-                    return Transition.WAITING_to_DOWN;
                 }
                 break;
             }
@@ -583,12 +576,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             switch (transition) {
                 case NEW_to_DOWN: {
                     getListenerTasks(LifecycleEvent.DOWN, listenerTransitionTasks);
-                    break;
-                }
-                case DOWN_to_WAITING: {
-                    break;
-                }
-                case WAITING_to_DOWN: {
                     break;
                 }
                 case DOWN_to_WONT_START: {
@@ -936,7 +923,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private boolean isUnavailable() {
         assert holdsLock(this);
         if (state == Substate.CANCELLED || state == Substate.REMOVED || state == Substate.TERMINATED) return true;
-        if (state == Substate.NEW || state == Substate.WAITING || state == Substate.WONT_START) return true;
+        if (state == Substate.NEW || state == Substate.WONT_START) return true;
         if (state == Substate.PROBLEM && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
         if (state == Substate.DOWN && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
         if (state == Substate.START_REQUESTED && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;

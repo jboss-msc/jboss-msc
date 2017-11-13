@@ -100,17 +100,9 @@ enum Transition {
      */
     DOWN_to_START_REQUESTED(Substate.DOWN, Substate.START_REQUESTED),
     /**
-     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#WAITING WAITING}.
-     */
-    DOWN_to_WAITING(Substate.DOWN, Substate.WAITING),
-    /**
      * Transition from {@link Substate#DOWN DOWN} to {@link Substate#WONT_START WONT_START}.
      */
     DOWN_to_WONT_START(Substate.DOWN, Substate.WONT_START),
-    /**
-     * Transition from {@link Substate#WAITING WAITING} to {@link Substate#DOWN DOWN}.
-     */
-    WAITING_to_DOWN(Substate.WAITING, Substate.DOWN),
     /**
      * Transition from {@link Substate#WONT_START WONT_START} to {@link Substate#DOWN DOWN}.
      */
