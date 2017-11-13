@@ -82,10 +82,6 @@ enum Substate {
      */
     STOPPING(ServiceController.State.STOPPING, false),
     /**
-     * Service is being removed.
-     */
-    REMOVING(ServiceController.State.DOWN, false),
-    /**
      * Service has been removed.
      */
     REMOVED(ServiceController.State.REMOVED, false),
