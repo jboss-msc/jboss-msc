@@ -400,18 +400,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             case DOWN: {
                 if (mode == ServiceController.Mode.REMOVE) {
                     return Transition.DOWN_to_REMOVED;
-                } else if (mode == ServiceController.Mode.NEVER) {
-                    return Transition.DOWN_to_WONT_START;
                 } else if (shouldStart() && (mode != Mode.PASSIVE || stoppingDependencies == 0)) {
                     return Transition.DOWN_to_START_REQUESTED;
-                } else {
-                    // mode is either LAZY or ON_DEMAND with demandedByCount == 0, or mode is PASSIVE and downDep > 0
-                }
-                break;
-            }
-            case WONT_START: {
-                if (mode != ServiceController.Mode.NEVER){
-                    return Transition.WONT_START_to_DOWN;
                 }
                 break;
             }
@@ -576,12 +566,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             switch (transition) {
                 case NEW_to_DOWN: {
                     getListenerTasks(LifecycleEvent.DOWN, listenerTransitionTasks);
-                    break;
-                }
-                case DOWN_to_WONT_START: {
-                    break;
-                }
-                case WONT_START_to_DOWN: {
                     break;
                 }
                 case STOPPING_to_DOWN: {
@@ -922,8 +906,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private boolean isUnavailable() {
         assert holdsLock(this);
-        if (state == Substate.CANCELLED || state == Substate.REMOVED || state == Substate.TERMINATED) return true;
-        if (state == Substate.NEW || state == Substate.WONT_START) return true;
+        if (state == Substate.NEW || state == Substate.CANCELLED || state == Substate.REMOVED || state == Substate.TERMINATED) return true;
         if (state == Substate.PROBLEM && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
         if (state == Substate.DOWN && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
         if (state == Substate.START_REQUESTED && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;

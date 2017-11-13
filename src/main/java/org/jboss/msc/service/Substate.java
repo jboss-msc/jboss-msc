@@ -42,10 +42,6 @@ enum Substate {
      */
     DOWN(ServiceController.State.DOWN, true),
     /**
-     * Controller is configured not to start.
-     */
-    WONT_START(ServiceController.State.DOWN, true),
-    /**
      * Controller cannot start due to a problem with a dependency or transitive dependency.
      */
     PROBLEM(ServiceController.State.DOWN, true),
