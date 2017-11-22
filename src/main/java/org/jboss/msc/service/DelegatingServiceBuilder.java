@@ -34,7 +34,7 @@ import org.jboss.msc.value.Value;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
+public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     private final ServiceBuilder<T> delegate;
 
     /**
@@ -46,128 +46,136 @@ public final class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
         this.delegate = delegate;
     }
 
+    /**
+     * Get the ServiceBuilder delegate.
+     * @return ServiceBuilder delegate
+     */
+    protected ServiceBuilder<T> getDelegate() {
+        return delegate;
+    }
+
     /** {@inheritDoc} */
     public ServiceBuilder<T> addAliases(final ServiceName... aliases) {
-        delegate.addAliases(aliases);
+        getDelegate().addAliases(aliases);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> setInitialMode(final ServiceController.Mode mode) {
-        delegate.setInitialMode(mode);
+        getDelegate().setInitialMode(mode);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependencies(final ServiceName... dependencies) {
-        delegate.addDependencies(dependencies);
+        getDelegate().addDependencies(dependencies);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final ServiceName... dependencies) {
-        delegate.addDependencies(dependencyType, dependencies);
+        getDelegate().addDependencies(dependencyType, dependencies);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> dependencies) {
-        delegate.addDependencies(dependencies);
+        getDelegate().addDependencies(dependencies);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final Iterable<ServiceName> dependencies) {
-        delegate.addDependencies(dependencyType, dependencies);
+        getDelegate().addDependencies(dependencyType, dependencies);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependency(final ServiceName dependency) {
-        delegate.addDependency(dependency);
+        getDelegate().addDependency(dependency);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency) {
-        delegate.addDependency(dependencyType, dependency);
+        getDelegate().addDependency(dependencyType, dependency);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
-        delegate.addDependency(dependency, target);
+        getDelegate().addDependency(dependency, target);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Injector<Object> target) {
-        delegate.addDependency(dependencyType, dependency, target);
+        getDelegate().addDependency(dependencyType, dependency, target);
         return this;
     }
 
     /** {@inheritDoc} */
     public <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
-        delegate.addDependency(dependency, type, target);
+        getDelegate().addDependency(dependency, type, target);
         return this;
     }
 
     /** {@inheritDoc} */
     public <I> ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Class<I> type, final Injector<I> target) {
-        delegate.addDependency(dependencyType, dependency, type, target);
+        getDelegate().addDependency(dependencyType, dependency, type, target);
         return this;
     }
 
     /** {@inheritDoc} */
     public <I> ServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {
-        delegate.addInjection(target, value);
+        getDelegate().addInjection(target, value);
         return this;
     }
 
     /** {@inheritDoc} */
     public <I> ServiceBuilder<T> addInjectionValue(final Injector<? super I> target, final Value<I> value) {
-        delegate.addInjectionValue(target, value);
+        getDelegate().addInjectionValue(target, value);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addInjection(final Injector<? super T> target) {
-        delegate.addInjection(target);
+        getDelegate().addInjection(target);
         return this;
     }
 
-    @Override
+    /** {@inheritDoc} */
     public ServiceBuilder<T> addMonitor(final StabilityMonitor monitor) {
-        delegate.addMonitor(monitor);
+        getDelegate().addMonitor(monitor);
         return this;
     }
 
-    @Override
+    /** {@inheritDoc} */
     public ServiceBuilder<T> addMonitors(final StabilityMonitor... monitors) {
-        delegate.addMonitors(monitors);
+        getDelegate().addMonitors(monitors);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addListener(final ServiceListener<? super T> listener) {
-        delegate.addListener(listener);
+        getDelegate().addListener(listener);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addListener(final ServiceListener<? super T>... listeners) {
-        delegate.addListener(listeners);
+        getDelegate().addListener(listeners);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addListener(final Collection<? extends ServiceListener<? super T>> listeners) {
-        delegate.addListener(listeners);
+        getDelegate().addListener(listeners);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceController<T> install() throws ServiceRegistryException {
-        return delegate.install();
+        return getDelegate().install();
     }
 }
