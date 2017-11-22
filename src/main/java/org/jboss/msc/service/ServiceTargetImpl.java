@@ -43,6 +43,7 @@ class ServiceTargetImpl implements ServiceTarget {
 
     private final ServiceTargetImpl parent;
     private final Set<ServiceListener<Object>> listeners = Collections.synchronizedSet(new IdentityHashSet<ServiceListener<Object>>());
+    private final Set<LifecycleListener> lifecycleListeners = Collections.synchronizedSet(new IdentityHashSet<LifecycleListener>());
     private final Set<ServiceName> dependencies = Collections.synchronizedSet(new HashSet<ServiceName>());
     private final Set<StabilityMonitor> monitors = Collections.synchronizedSet(new IdentityHashSet<StabilityMonitor>());
 
@@ -80,6 +81,13 @@ class ServiceTargetImpl implements ServiceTarget {
     public ServiceTarget addListener(final ServiceListener<Object> listener) {
         if (listener != null) {
             listeners.add(listener);
+        }
+        return this;
+    }
+
+    public ServiceTarget addListener(final LifecycleListener listener) {
+        if (listener != null) {
+            lifecycleListeners.add(listener);
         }
         return this;
     }
@@ -132,6 +140,12 @@ class ServiceTargetImpl implements ServiceTarget {
             return this;
         }
         listeners.remove(listener);
+        return this;
+    }
+
+    @Override
+    public ServiceTarget removeListener(final LifecycleListener listener) {
+        if (listener != null) lifecycleListeners.remove(listener);
         return this;
     }
 

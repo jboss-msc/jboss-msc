@@ -64,24 +64,40 @@ public class DelegatingServiceTarget implements ServiceTarget {
     }
 
     /** {@inheritDoc} */
+    public ServiceTarget addListener(final LifecycleListener listener) {
+        delegate.addListener(listener);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
     public ServiceTarget addListener(final ServiceListener<Object> listener) {
         getDelegate().addListener(listener);
         return this;
     }
 
     /** {@inheritDoc} */
+    @Deprecated
     public ServiceTarget addListener(final ServiceListener<Object>... listeners) {
         getDelegate().addListener(listeners);
         return this;
     }
 
     /** {@inheritDoc} */
+    @Deprecated
     public ServiceTarget addListener(final Collection<ServiceListener<Object>> listeners) {
         getDelegate().addListener(listeners);
         return this;
     }
 
     /** {@inheritDoc} */
+    public ServiceTarget removeListener(final LifecycleListener listener) {
+        delegate.removeListener(listener);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
     public ServiceTarget removeListener(final ServiceListener<Object> listener) {
         getDelegate().removeListener(listener);
         return this;

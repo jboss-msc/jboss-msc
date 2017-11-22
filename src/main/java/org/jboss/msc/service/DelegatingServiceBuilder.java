@@ -157,18 +157,27 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     }
 
     /** {@inheritDoc} */
+    @Deprecated
     public ServiceBuilder<T> addListener(final ServiceListener<? super T> listener) {
         getDelegate().addListener(listener);
         return this;
     }
 
     /** {@inheritDoc} */
+    @Deprecated
     public ServiceBuilder<T> addListener(final ServiceListener<? super T>... listeners) {
         getDelegate().addListener(listeners);
         return this;
     }
 
     /** {@inheritDoc} */
+    public ServiceBuilder<T> addListener(final LifecycleListener listener) {
+        delegate.addListener(listener);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
     public ServiceBuilder<T> addListener(final Collection<? extends ServiceListener<? super T>> listeners) {
         getDelegate().addListener(listeners);
         return this;

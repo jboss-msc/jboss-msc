@@ -66,7 +66,7 @@ interface ServiceLogger {
 
     @LogMessage(level = ERROR)
     @Message(id = 2, value = "Invocation of listener \"%s\" failed")
-    void listenerFailed(@Cause Throwable cause, ServiceListener<?> listener);
+    void listenerFailed(@Cause Throwable cause, Object listener);
 
     @LogMessage(level = WARN)
     @Message(id = 3, value = "Exception thrown after start was already completed in %s")
