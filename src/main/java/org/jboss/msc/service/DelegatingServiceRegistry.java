@@ -25,11 +25,12 @@ package org.jboss.msc.service;
 import java.util.List;
 
 /**
- * An "insulated" view of a service registry which prevents access to other public methods on the delegate registry object.
+ * A service registry which delegates to another service registry.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class DelegatingServiceRegistry implements ServiceRegistry {
+public class DelegatingServiceRegistry implements ServiceRegistry {
     private final ServiceRegistry delegate;
 
     /**
@@ -41,18 +42,26 @@ public final class DelegatingServiceRegistry implements ServiceRegistry {
         this.delegate = delegate;
     }
 
+    /**
+     * Get the ServiceRegistry delegate.
+     * @return ServiceRegistry delegate
+     */
+    protected ServiceRegistry getDelegate() {
+        return delegate;
+    }
+
     /** {@inheritDoc} */
     public ServiceController<?> getRequiredService(final ServiceName serviceName) throws ServiceNotFoundException {
-        return delegate.getRequiredService(serviceName);
+        return getDelegate().getRequiredService(serviceName);
     }
 
     /** {@inheritDoc} */
     public ServiceController<?> getService(final ServiceName serviceName) {
-        return delegate.getService(serviceName);
+        return getDelegate().getService(serviceName);
     }
 
     /** {@inheritDoc} */
     public List<ServiceName> getServiceNames() {
-        return delegate.getServiceNames();
+        return getDelegate().getServiceNames();
     }
 }

@@ -28,12 +28,12 @@ import java.util.Set;
 import org.jboss.msc.value.Value;
 
 /**
- * An "insulated" view of a service target which prevents access to other public methods on the delegate target object.
+ * A service target which delegates to another service target.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class DelegatingServiceTarget implements ServiceTarget {
+public class DelegatingServiceTarget implements ServiceTarget {
     private final ServiceTarget delegate;
 
     /**
@@ -45,101 +45,112 @@ public final class DelegatingServiceTarget implements ServiceTarget {
         this.delegate = delegate;
     }
 
+    /**
+     * Get the ServiceTarget delegate.
+     * @return ServiceTarget delegate
+     */
+    protected ServiceTarget getDelegate() {
+        return delegate;
+    }
+
     /** {@inheritDoc} */
     public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
-        return delegate.addServiceValue(name, value);
+        return getDelegate().addServiceValue(name, value);
     }
 
     /** {@inheritDoc} */
     public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
-        return delegate.addService(name, service);
+        return getDelegate().addService(name, service);
     }
 
     /** {@inheritDoc} */
     public ServiceTarget addListener(final ServiceListener<Object> listener) {
-        delegate.addListener(listener);
+        getDelegate().addListener(listener);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceTarget addListener(final ServiceListener<Object>... listeners) {
-        delegate.addListener(listeners);
+        getDelegate().addListener(listeners);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceTarget addListener(final Collection<ServiceListener<Object>> listeners) {
-        delegate.addListener(listeners);
+        getDelegate().addListener(listeners);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceTarget removeListener(final ServiceListener<Object> listener) {
-        delegate.removeListener(listener);
+        getDelegate().removeListener(listener);
         return this;
     }
 
     /** {@inheritDoc} */
     public Set<ServiceListener<Object>> getListeners() {
-        return delegate.getListeners();
+        return getDelegate().getListeners();
     }
 
     /** {@inheritDoc} */
     public ServiceTarget addDependency(final ServiceName dependency) {
-        delegate.addDependency(dependency);
+        getDelegate().addDependency(dependency);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceTarget addDependency(final ServiceName... dependencies) {
-        delegate.addDependency(dependencies);
+        getDelegate().addDependency(dependencies);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceTarget addDependency(final Collection<ServiceName> dependencies) {
-        delegate.addDependency(dependencies);
+        getDelegate().addDependency(dependencies);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceTarget removeDependency(final ServiceName dependency) {
-        delegate.removeDependency(dependency);
+        getDelegate().removeDependency(dependency);
         return this;
     }
 
     /** {@inheritDoc} */
     public Set<ServiceName> getDependencies() {
-        return delegate.getDependencies();
+        return getDelegate().getDependencies();
     }
 
     /** {@inheritDoc} */
     public ServiceTarget subTarget() {
-        return delegate.subTarget();
+        return getDelegate().subTarget();
     }
 
     /** {@inheritDoc} */
     public BatchServiceTarget batchTarget() {
-        return delegate.batchTarget();
+        return getDelegate().batchTarget();
     }
 
     /** {@inheritDoc} */
-    public ServiceTarget addMonitor(StabilityMonitor monitor) {
-        return delegate.addMonitor(monitor);
+    public ServiceTarget addMonitor(final StabilityMonitor monitor) {
+        getDelegate().addMonitor(monitor);
+        return this;
     }
 
     /** {@inheritDoc} */
-    public ServiceTarget addMonitors(StabilityMonitor... monitors) {
-        return delegate.addMonitors(monitors);
+    public ServiceTarget addMonitors(final StabilityMonitor... monitors) {
+        getDelegate().addMonitors(monitors);
+        return this;
     }
 
     /** {@inheritDoc} */
-    public ServiceTarget removeMonitor(StabilityMonitor monitor) {
-        return delegate.removeMonitor(monitor);
+    public ServiceTarget removeMonitor(final StabilityMonitor monitor) {
+        getDelegate().removeMonitor(monitor);
+        return this;
     }
 
     /** {@inheritDoc} */
     public Set<StabilityMonitor> getMonitors() {
-        return delegate.getMonitors();
+        return getDelegate().getMonitors();
     }
 }
