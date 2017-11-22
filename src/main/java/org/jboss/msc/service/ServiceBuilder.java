@@ -211,7 +211,9 @@ public interface ServiceBuilder<T> {
      *
      * @param listener the listener to add to the service
      * @return this builder
+     * @deprecated use {@link #addListener(LifecycleListener)} instead
      */
+    @Deprecated
     ServiceBuilder<T> addListener(ServiceListener<? super T> listener);
 
     /**
@@ -219,7 +221,9 @@ public interface ServiceBuilder<T> {
      *
      * @param listeners a list of listeners to add to the service
      * @return this builder
+     * @deprecated use {@link #addListener(LifecycleListener)} instead
      */
+    @Deprecated
     ServiceBuilder<T> addListener(ServiceListener<? super T>... listeners);
 
     /**
@@ -227,8 +231,18 @@ public interface ServiceBuilder<T> {
      *
      * @param listeners a collection of listeners to add to the service
      * @return this builder
+     * @deprecated use {@link #addListener(LifecycleListener)} instead
      */
+    @Deprecated
     ServiceBuilder<T> addListener(Collection<? extends ServiceListener<? super T>> listeners);
+
+    /**
+     * Add a service lifecycle listener that will be added to this service.
+     *
+     * @param listener the lifecycle listener to add to the service
+     * @return this builder
+     */
+    ServiceBuilder<T> addListener(LifecycleListener listener);
 
     /**
      * Install the defined service into the container.  All service listeners defined for this built service will

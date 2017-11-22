@@ -80,6 +80,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private final IdentityHashSet<ServiceListener<? super S>> listeners;
     /**
+     * Lifecycle listeners.
+     */
+    private final IdentityHashSet<LifecycleListener> lifecycleListeners;
+    /**
      * Container shutdown listener.
      */
     private ContainerShutdownListener shutdownListener;
@@ -184,7 +188,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     static final int MAX_DEPENDENCIES = (1 << 14) - 1;
 
-    ServiceControllerImpl(final Value<? extends Service<S>> serviceValue, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<StabilityMonitor> monitors, final Set<? extends ServiceListener<? super S>> listeners, final ServiceControllerImpl<?> parent) {
+    ServiceControllerImpl(final Value<? extends Service<S>> serviceValue, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<StabilityMonitor> monitors, final Set<? extends ServiceListener<? super S>> listeners, final Set<LifecycleListener> lifecycleListeners, final ServiceControllerImpl<?> parent) {
         assert dependencies.length <= MAX_DEPENDENCIES;
         this.serviceValue = serviceValue;
         this.dependencies = dependencies;
@@ -193,6 +197,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         this.primaryRegistration = primaryRegistration;
         this.aliasRegistrations = aliasRegistrations;
         this.listeners = new IdentityHashSet<ServiceListener<? super S>>(listeners);
+        this.lifecycleListeners = new IdentityHashSet<LifecycleListener>(lifecycleListeners);
         this.monitors = new IdentityHashSet<StabilityMonitor>(monitors);
         // We also need to register this controller with monitors explicitly.
         // This allows inherited monitors to have registered all child controllers
@@ -591,6 +596,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             getListenerTasks(transition, listenerTransitionTasks);
             switch (transition) {
                 case NEW_to_DOWN: {
+                    getListenerTasks(LifecycleEvent.DOWN, listenerTransitionTasks);
                     tasks.add(new DependencyAvailableTask());
                     break;
                 }
@@ -611,6 +617,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case STOPPING_to_DOWN: {
+                    getListenerTasks(LifecycleEvent.DOWN, listenerTransitionTasks);
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
@@ -641,10 +648,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case STARTING_to_UP: {
+                    getListenerTasks(LifecycleEvent.UP, listenerTransitionTasks);
                     tasks.add(new DependencyStartedTask());
                     break;
                 }
                 case STARTING_to_START_FAILED: {
+                    getListenerTasks(LifecycleEvent.FAILED, listenerTransitionTasks);
                     getPrimaryRegistration().getContainer().addFailed(this);
                     for (StabilityMonitor monitor : monitors) {
                         monitor.addFailed(this);
@@ -677,6 +686,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case START_FAILED_to_DOWN: {
+                    getListenerTasks(LifecycleEvent.DOWN, listenerTransitionTasks);
                     getPrimaryRegistration().getContainer().removeFailed(this);
                     for (StabilityMonitor monitor : monitors) {
                         monitor.removeFailed(this);
@@ -705,17 +715,21 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case CANCELLED_to_REMOVED:
-                    listeners.clear();
+                    getListenerTasks(LifecycleEvent.REMOVED, listenerTransitionTasks);
                     for (StabilityMonitor monitor : monitors) {
                         monitor.removeControllerNoCallback(this);
                     }
+                    listeners.clear();
+                    lifecycleListeners.clear();
                     break;
                 case REMOVING_to_REMOVED: {
+                    getListenerTasks(LifecycleEvent.REMOVED, listenerTransitionTasks);
                     tasks.add(new RemoveTask());
-                    listeners.clear();
                     for (StabilityMonitor monitor : monitors) {
                         monitor.removeControllerNoCallback(this);
                     }
+                    listeners.clear();
+                    lifecycleListeners.clear();
                     break;
                 }
                 case DOWN_to_START_REQUESTED: {
@@ -754,6 +768,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private void getListenerTasks(final ListenerNotification notification, final List<Runnable> tasks) {
         for (ServiceListener<? super S> listener : listeners) {
             tasks.add(new ListenerTask(listener, notification));
+        }
+    }
+
+    private void getListenerTasks(final LifecycleEvent event, final List<Runnable> tasks) {
+        for (LifecycleListener listener : lifecycleListeners) {
+            tasks.add(new LifecycleListenerTask(listener, event));
         }
     }
 
@@ -1150,6 +1170,29 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
+    public void addListener(final LifecycleListener listener) {
+        if (listener == null) return;
+        final List<Runnable> tasks;
+        synchronized (this) {
+            final boolean leavingRestState = isStableRestState();
+            if (lifecycleListeners.contains(listener)) return;
+            lifecycleListeners.add(listener);
+            if (state == Substate.UP) {
+                listenerTransitionTasks.add(new LifecycleListenerTask(listener, LifecycleEvent.UP));
+            } else if (state == Substate.DOWN) {
+                listenerTransitionTasks.add(new LifecycleListenerTask(listener, LifecycleEvent.DOWN));
+            } else if (state == Substate.START_FAILED) {
+                listenerTransitionTasks.add(new LifecycleListenerTask(listener, LifecycleEvent.FAILED));
+            } else if (state == Substate.REMOVED) {
+                listenerTransitionTasks.add(new LifecycleListenerTask(listener, LifecycleEvent.REMOVED));
+            }
+            tasks = transition();
+            addAsyncTasks(tasks.size());
+            updateStabilityState(leavingRestState);
+        }
+        doExecute(tasks);
+    }
+
     public void addListener(final ServiceListener<? super S> listener) {
         assert !holdsLock(this);
         ListenerTask listenerAddedTask, listenerRemovedTask = null;
@@ -1169,6 +1212,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             updateStabilityState(leavingRestState);
         }
         try { listenerAddedTask.run(); } finally { if (listenerRemovedTask != null) listenerRemovedTask.run(); }
+    }
+
+    public void removeListener(final LifecycleListener listener) {
+        synchronized (this) {
+            lifecycleListeners.remove(listener);
+        }
     }
 
     public void removeListener(final ServiceListener<? super S> listener) {
@@ -1773,6 +1822,28 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 // reset TCCL
                 setTCCL(contextClassLoader);
             }
+        }
+    }
+
+    private final class LifecycleListenerTask extends ControllerTask {
+        private final LifecycleListener listener;
+        private final LifecycleEvent event;
+
+        LifecycleListenerTask(final LifecycleListener listener, final LifecycleEvent event) {
+            this.listener = listener;
+            this.event = event;
+        }
+
+        boolean execute() {
+            final ClassLoader oldCL = setTCCL(getCL(listener.getClass()));
+            try {
+                listener.handleEvent(ServiceControllerImpl.this, event);
+            } catch (Throwable t) {
+                ServiceLogger.SERVICE.listenerFailed(t, listener);
+            } finally {
+                setTCCL(oldCL);
+            }
+            return true;
         }
     }
 
