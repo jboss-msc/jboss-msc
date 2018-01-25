@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import static java.lang.System.getSecurityManager;
 import static java.security.AccessController.doPrivileged;
 
 import java.lang.reflect.Field;
@@ -38,27 +39,24 @@ final class SecurityUtils {
     }
 
     static int getSystemProperty(final String propertyName, final int defaultValue) {
-        return doPrivileged(new PrivilegedAction<Integer>() {
-            public Integer run() {
-                return Integer.getInteger(propertyName, defaultValue);
-            }
-        });
+        if (getSecurityManager() != null) {
+            return doPrivileged(new GetSystemPropertyAction(propertyName, defaultValue));
+        } else {
+            return Integer.getInteger(propertyName, defaultValue);
+        }
     }
 
     static ClassLoader getCL(final Class<?> clazz) {
-        final SecurityManager sm = System.getSecurityManager();
-        final GetCLAction getCLAction = new GetCLAction(clazz);
-        if (sm != null) {
-            return doPrivileged(getCLAction);
+        if (getSecurityManager() != null) {
+            return doPrivileged(new GetCLAction(clazz));
         } else {
-            return getCLAction.run();
+            return clazz.getClassLoader();
         }
     }
 
     static ClassLoader setTCCL(final ClassLoader newTCCL) {
-        final SecurityManager sm = System.getSecurityManager();
         final SetTCCLAction setTCCLAction = new SetTCCLAction(newTCCL);
-        if (sm != null) {
+        if (getSecurityManager() != null) {
             return doPrivileged(setTCCLAction);
         } else {
             return setTCCLAction.run();
@@ -66,9 +64,8 @@ final class SecurityUtils {
     }
 
     static Field getClassField(final Class clazz, final String fieldName) {
-        final SecurityManager sm = System.getSecurityManager();
         final GetFieldAction getFieldAction = new GetFieldAction(clazz, fieldName);
-        if (sm != null) {
+        if (getSecurityManager() != null) {
             return doPrivileged(getFieldAction);
         } else {
             return getFieldAction.run();
@@ -109,6 +106,20 @@ final class SecurityUtils {
             }
             field.setAccessible(true);
             return field;
+        }
+    }
+
+    private static final class GetSystemPropertyAction implements PrivilegedAction<Integer> {
+        private final String propertyName;
+        private final int defaultValue;
+
+        GetSystemPropertyAction(final String propertyName, final int defaultValue) {
+            this.propertyName = propertyName;
+            this.defaultValue = defaultValue;
+        }
+
+        public Integer run() {
+            return Integer.getInteger(propertyName, defaultValue);
         }
     }
 
