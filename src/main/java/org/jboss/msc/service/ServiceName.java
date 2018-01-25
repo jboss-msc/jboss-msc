@@ -21,13 +21,13 @@
  */
 package org.jboss.msc.service;
 
+import static org.jboss.msc.service.SecurityUtils.getClassField;
+
 import java.io.IOException;
 import java.io.InvalidObjectException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.lang.reflect.Field;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -591,22 +591,7 @@ public final class ServiceName implements Comparable<ServiceName>, Serializable 
 
     // Serialization stuff
 
-    private static final Field hashCodeField;
-
-    static {
-        hashCodeField = AccessController.doPrivileged(new PrivilegedAction<Field>() {
-            public Field run() {
-                final Field field;
-                try {
-                    field = ServiceName.class.getDeclaredField("hashCode");
-                } catch (Exception e) {
-                    throw new IllegalStateException(e);
-                }
-                field.setAccessible(true);
-                return field;
-            }
-        });
-    }
+    private static final Field hashCodeField = getClassField(ServiceName.class, "hashCode");
 
     private void readObject(ObjectInputStream ois) throws ClassNotFoundException, IOException {
         ois.defaultReadObject();

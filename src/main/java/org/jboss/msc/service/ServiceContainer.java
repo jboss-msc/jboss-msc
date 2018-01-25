@@ -22,9 +22,9 @@
 
 package org.jboss.msc.service;
 
+import static org.jboss.msc.service.SecurityUtils.getSystemProperty;
+
 import java.io.PrintStream;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -149,17 +149,9 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
      */
     class Factory {
 
-        private static final int MAX_THREADS_COUNT;
+        private static final int MAX_THREADS_COUNT = getSystemProperty("jboss.msc.max.container.threads", 8);
 
         private Factory() {
-        }
-
-        static {
-            MAX_THREADS_COUNT = AccessController.doPrivileged(new PrivilegedAction<Integer>() {
-                public Integer run() {
-                    return Integer.getInteger("jboss.msc.max.container.threads", 8);
-                }
-            });
         }
 
         /**

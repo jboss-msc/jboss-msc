@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2011, Red Hat, Inc., and individual contributors
+ * Copyright 2017, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -22,26 +22,16 @@
 
 package org.jboss.msc.service;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 /**
-* @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
-*/
-final class SetTCCLAction implements PrivilegedAction<ClassLoader> {
+ * Service lifecycle events.
+ *
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ */
+public enum LifecycleEvent {
 
-    static final SetTCCLAction CLEAR_TCCL_ACTION = new SetTCCLAction(null);
-    private final ClassLoader classLoader;
+    REMOVED,
+    DOWN,
+    FAILED,
+    UP
 
-    SetTCCLAction(final ClassLoader classLoader) {
-        this.classLoader = classLoader;
-    }
-
-    public ClassLoader run() {
-        try {
-            return Thread.currentThread().getContextClassLoader();
-        } finally {
-            Thread.currentThread().setContextClassLoader(classLoader);
-        }
-    }
 }

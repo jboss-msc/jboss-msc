@@ -27,12 +27,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Future;
 
-import org.jboss.msc.service.util.LatchedFinishListener;
 import org.jboss.msc.util.TestServiceListener;
 import org.junit.Test;
 
@@ -48,10 +45,15 @@ public class MultipleListenersTestCase extends AbstractServiceTest {
 
     @Test
     public void test1() throws Exception {
-        final LatchedFinishListener latch = new LatchedFinishListener();
-        final MockListener listenerOne = new MockListener(latch);
-        final MockListener listenerTwo = new MockListener(latch);
-        final MockListener listenerThree = new MockListener(latch);
+        final TestServiceListener listenerOne = new TestServiceListener();
+        Future<ServiceController<?>> listener1Service1Future = listenerOne.expectServiceStart(firstServiceName);
+        Future<ServiceController<?>> listener1Service2Future = listenerOne.expectServiceStart(secondServiceName);
+        final TestServiceListener listenerTwo = new TestServiceListener();
+        Future<ServiceController<?>> listener2Service1Future = listenerTwo.expectServiceStart(firstServiceName);
+        Future<ServiceController<?>> listener2Service2Future = listenerTwo.expectServiceStart(secondServiceName);
+        final TestServiceListener listenerThree = new TestServiceListener();
+        Future<ServiceController<?>> listener3Service1Future = listenerThree.expectServiceStart(firstServiceName);
+        Future<ServiceController<?>> listener3Service2Future = listenerThree.expectServiceStart(secondServiceName);
         final TestServiceListener testListener = new TestServiceListener();
         serviceContainer.addListener(testListener);
 
@@ -59,8 +61,8 @@ public class MultipleListenersTestCase extends AbstractServiceTest {
         serviceContainer.addListener(listenerTwo);
 
         serviceContainer.addListener(listenerThree);
-        serviceContainer.addService(firstServiceName, Service.NULL).install();
-        serviceContainer.addService(secondServiceName, Service.NULL).install();
+        ServiceController<?> firstServiceController = serviceContainer.addService(firstServiceName, Service.NULL).install();
+        ServiceController<?> secondServiceController = serviceContainer.addService(secondServiceName, Service.NULL).install();
 
         Set<ServiceListener<Object>> listeners = serviceContainer.getListeners();
         assertNotNull(listeners);
@@ -73,28 +75,31 @@ public class MultipleListenersTestCase extends AbstractServiceTest {
         Set<ServiceName> dependencies = serviceContainer.getDependencies();
         assertNotNull(dependencies);
         assertTrue(dependencies.isEmpty());
+        serviceContainer.awaitStability();
 
-        latch.await();
 
-        assertTrue(listenerOne.startedServices.contains(firstServiceName));
-        assertTrue(listenerOne.startedServices.contains(secondServiceName));
-        assertTrue(listenerTwo.startedServices.contains(firstServiceName));
-        assertTrue(listenerTwo.startedServices.contains(secondServiceName));
-        assertTrue(listenerThree.startedServices.contains(firstServiceName));
-        assertTrue(listenerThree.startedServices.contains(secondServiceName));
+        assertTrue(listener1Service1Future.get() == firstServiceController);
+        assertTrue(listener1Service2Future.get() == secondServiceController);
+        assertTrue(listener2Service1Future.get() == firstServiceController);
+        assertTrue(listener2Service2Future.get() == secondServiceController);
+        assertTrue(listener3Service1Future.get() == firstServiceController);
+        assertTrue(listener3Service2Future.get() == secondServiceController);
     }
 
     @Test
     public void test2() throws Exception {
-        final LatchedFinishListener latch = new LatchedFinishListener();
-        final MockListener listener1 = new MockListener(latch);
-        final MockListener listener2 = new MockListener(latch);
+        final TestServiceListener listener1 = new TestServiceListener();
+        Future<ServiceController<?>> listener1Service1Future = listener1.expectServiceStart(firstServiceName);
+        Future<ServiceController<?>> listener1Service2Future = listener1.expectServiceStart(secondServiceName);
+        final TestServiceListener listener2 = new TestServiceListener();
+        Future<ServiceController<?>> listener2Service1Future = listener2.expectServiceStart(firstServiceName);
+        Future<ServiceController<?>> listener2Service2Future = listener2.expectServiceStart(secondServiceName);
 
         final TestServiceListener testListener = new TestServiceListener();
         serviceContainer.addListener(testListener);
         serviceContainer.addListener(listener1);
 
-        serviceContainer.addService(firstServiceName, Service.NULL).install();
+        ServiceController<?> firstServiceController = serviceContainer.addService(firstServiceName, Service.NULL).install();
 
         Set<ServiceListener<Object>> listeners = serviceContainer.getListeners();
         assertNotNull(listeners);
@@ -108,53 +113,32 @@ public class MultipleListenersTestCase extends AbstractServiceTest {
 
         final ServiceTarget subTarget = serviceContainer.subTarget();
         subTarget.addListener(listener2);
-        subTarget.addService(secondServiceName, Service.NULL).install();
+        ServiceController<?> secondServiceController = subTarget.addService(secondServiceName, Service.NULL).install();
 
         listeners = subTarget.getListeners();
         assertNotNull(listeners);
         assertEquals(1, listeners.size());
         assertTrue(listeners.contains(listener2));
 
-        latch.await();
+        serviceContainer.awaitStability();
 
-        assertTrue(listener1.startedServices.contains(firstServiceName));
-        assertTrue(listener1.startedServices.contains(secondServiceName));
+        assertTrue(listener1Service1Future.get() == firstServiceController);
+        assertTrue(listener1Service2Future.get() == secondServiceController);
 
-        assertFalse(listener2.startedServices.contains(firstServiceName));
-        assertTrue(listener2.startedServices.contains(secondServiceName));
+        assertFalse(listener2Service1Future.get() == firstServiceController);
+        assertTrue(listener2Service2Future.get() == secondServiceController);
     }
 
     @Test
     public void testAddListenerOnListenerAdded() throws Exception {
-        final LatchedFinishListener latch = new LatchedFinishListener();
-        MockListener listener1 = new MockListener(latch);
+        TestServiceListener listener1 = new TestServiceListener();
         ListenerAdder listener2 = new ListenerAdder(listener1);
+        Future<ServiceController<?>> serviceStartFuture = listener1.expectServiceStart(firstServiceName);
 
-        serviceContainer.addService(firstServiceName, Service.NULL).addListener(listener2).install();
-        latch.await();
-        assertTrue(listener1.startedServices.contains(firstServiceName));
-    }
+        ServiceController<?> firstServiceController = serviceContainer.addService(firstServiceName, Service.NULL).addListener(listener2).install();
 
-    private static class MockListener extends AbstractServiceListener<Object> {
-
-        private final LatchedFinishListener latch;
-        private final List<ServiceName> startedServices = Collections.synchronizedList(new ArrayList<ServiceName>());
-
-        MockListener(LatchedFinishListener latch) {
-            this.latch = latch;
-        }
-
-        @Override
-        public void listenerAdded(ServiceController<? extends Object> serviceController) {
-            latch.listenerAdded(serviceController);
-        }
-
-        public void transition(final ServiceController<? extends Object> serviceController, final ServiceController.Transition transition) {
-            if (transition == ServiceController.Transition.STARTING_to_UP) {
-                startedServices.add(serviceController.getName());
-                latch.transition(serviceController, transition);
-            }
-        }
+        serviceContainer.awaitStability();
+        assertTrue(serviceStartFuture.get() == firstServiceController);
     }
 
     private static class ListenerAdder extends AbstractServiceListener<Object> {

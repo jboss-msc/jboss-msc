@@ -737,7 +737,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         // Next create the actual controller
         final ServiceControllerImpl<T> instance = new ServiceControllerImpl<T>(serviceBuilder.getServiceValue(),
                 dependencies, valueInjectionArray, outInjectionArray, primaryRegistration, aliasRegistrations,
-                serviceBuilder.getMonitors(), serviceBuilder.getListeners(), serviceBuilder.getParent());
+                serviceBuilder.getMonitors(), serviceBuilder.getListeners(), serviceBuilder.getLifecycleListeners(), serviceBuilder.getParent());
         boolean ok = false;
         try {
             serviceValue.setValue(instance);
@@ -856,7 +856,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     }
 
     final class ThreadAction implements PrivilegedAction<ServiceThread> {
-
         private final Runnable r;
         private final int id;
         private final AtomicInteger threadSeq;
@@ -869,6 +868,8 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
         public ServiceThread run() {
             ServiceThread thread = new ServiceThread(r, ServiceContainerImpl.this);
+            if (thread.isDaemon()) thread.setDaemon(false);
+            if (thread.getPriority() != Thread.NORM_PRIORITY) thread.setPriority(Thread.NORM_PRIORITY);
             thread.setName(String.format("MSC service thread %d-%d", Integer.valueOf(id), Integer.valueOf(threadSeq.getAndIncrement())));
             thread.setUncaughtExceptionHandler(HANDLER);
             return thread;

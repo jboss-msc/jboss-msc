@@ -145,18 +145,34 @@ public interface ServiceController<S> extends Value<S> {
     ServiceName[] getAliases();
 
     /**
+     * Add a service lifecycle listener.
+     *
+     * @param listener the lifecycle listener
+     */
+    void addListener(LifecycleListener listener);
+
+    /**
      * Add a service listener.  The listener's "listener added" callback will be invoked from the same thread that calls
      * this method.  Then, the method corresponding to the current service state is called.
      *
      * @param serviceListener the service listener
+     * @deprecated use {@link #addListener(LifecycleListener)} instead
      */
     @Deprecated
     void addListener(ServiceListener<? super S> serviceListener);
 
     /**
+     * Remove a lifecycle listener.
+     *
+     * @param listener the lifecycle listener to remove
+     */
+    void removeListener(LifecycleListener listener);
+
+    /**
      * Remove a service listener.
      *
      * @param serviceListener the service listener to remove
+     * @deprecated use {@link #removeListener(LifecycleListener)} instead
      */
     @Deprecated
     void removeListener(ServiceListener<? super S> serviceListener);
@@ -486,7 +502,11 @@ public interface ServiceController<S> extends Value<S> {
         /**
          * Transition from {@link Substate#CANCELLED} to {@link Substate#REMOVED}.
          */
-        CANCELLED_to_REMOVED(Substate.CANCELLED,Substate.REMOVED);
+        CANCELLED_to_REMOVED(Substate.CANCELLED,Substate.REMOVED),
+        /**
+         * Transition from {@link Substate#NEW} to {@link Substate#DOWN}.
+         */
+        NEW_to_DOWN(Substate.NEW,Substate.DOWN);
 
         private final Substate before;
         private final Substate after;

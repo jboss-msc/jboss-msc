@@ -70,7 +70,10 @@ public interface ServiceBuilder<T> {
      * @param dependencyType the dependency type; must not be {@code null}
      * @param dependencies the service names to depend on
      * @return this builder
+     *
+     * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
      */
+    @Deprecated
     ServiceBuilder<T> addDependencies(DependencyType dependencyType, ServiceName... dependencies);
 
     /**
@@ -87,7 +90,10 @@ public interface ServiceBuilder<T> {
      * @param dependencyType the dependency type; must not be {@code null}
      * @param dependencies the service names to depend on
      * @return this builder
+     *
+     * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
      */
+    @Deprecated
     ServiceBuilder<T> addDependencies(DependencyType dependencyType, Iterable<ServiceName> dependencies);
 
     /**
@@ -106,7 +112,10 @@ public interface ServiceBuilder<T> {
      * @param dependencyType the dependency type; must not be {@code null}
      * @param dependency the name of the dependency
      * @return an injection builder for optionally injecting the dependency
+     *
+     * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
      */
+    @Deprecated
     ServiceBuilder<T> addDependency(DependencyType dependencyType, ServiceName dependency);
 
     /**
@@ -127,7 +136,10 @@ public interface ServiceBuilder<T> {
      * @param dependency the name of the dependency
      * @param target the injector into which the dependency should be stored
      * @return this builder
+     *
+     * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
      */
+    @Deprecated
     ServiceBuilder<T> addDependency(DependencyType dependencyType, ServiceName dependency, Injector<Object> target);
 
     /**
@@ -154,7 +166,10 @@ public interface ServiceBuilder<T> {
      * @param target the injector into which the dependency should be stored
      * @param <I> the type of the value of the dependency
      * @return this builder
+     *
+     * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
      */
+    @Deprecated
     <I> ServiceBuilder<T> addDependency(DependencyType dependencyType, ServiceName dependency, Class<I> type, Injector<I> target);
 
     /**
@@ -211,7 +226,9 @@ public interface ServiceBuilder<T> {
      *
      * @param listener the listener to add to the service
      * @return this builder
+     * @deprecated use {@link #addListener(LifecycleListener)} instead
      */
+    @Deprecated
     ServiceBuilder<T> addListener(ServiceListener<? super T> listener);
 
     /**
@@ -219,7 +236,9 @@ public interface ServiceBuilder<T> {
      *
      * @param listeners a list of listeners to add to the service
      * @return this builder
+     * @deprecated use {@link #addListener(LifecycleListener)} instead
      */
+    @Deprecated
     ServiceBuilder<T> addListener(ServiceListener<? super T>... listeners);
 
     /**
@@ -227,8 +246,18 @@ public interface ServiceBuilder<T> {
      *
      * @param listeners a collection of listeners to add to the service
      * @return this builder
+     * @deprecated use {@link #addListener(LifecycleListener)} instead
      */
+    @Deprecated
     ServiceBuilder<T> addListener(Collection<? extends ServiceListener<? super T>> listeners);
+
+    /**
+     * Add a service lifecycle listener that will be added to this service.
+     *
+     * @param listener the lifecycle listener to add to the service
+     * @return this builder
+     */
+    ServiceBuilder<T> addListener(LifecycleListener listener);
 
     /**
      * Install the defined service into the container.  All service listeners defined for this built service will
@@ -242,7 +271,10 @@ public interface ServiceBuilder<T> {
 
     /**
      * The dependency type.
+     *
+     * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
      */
+    @Deprecated
     enum DependencyType {
 
         /**
