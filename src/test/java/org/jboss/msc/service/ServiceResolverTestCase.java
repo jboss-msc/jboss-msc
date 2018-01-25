@@ -22,21 +22,15 @@
 package org.jboss.msc.service;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Future;
 
-import org.jboss.msc.service.ServiceBuilder.DependencyType;
-import org.jboss.msc.service.ServiceController.Mode;
-import org.jboss.msc.service.util.LatchedFinishListener;
 import org.jboss.msc.util.TestServiceListener;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -58,7 +52,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
 
     @Test
     public void testResolvable() throws Exception {
-        final LatchedListener listener = new LatchedListener();
+        final TestServiceListener listener = new TestServiceListener();
         serviceContainer.addListener(listener);
         final Set<ServiceController<?>> expected = new HashSet<ServiceController<?>>();
         expected.add(serviceContainer.addService(ServiceName.of("7"), Service.NULL).addDependencies(ServiceName.of("11"), ServiceName.of("8"))
@@ -74,10 +68,9 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
         expected.add(serviceContainer.addService(ServiceName.of("9"), Service.NULL).install());
         expected.add(serviceContainer.addService(ServiceName.of("10"), Service.NULL).install());
 
-        listener.await();
+        serviceContainer.awaitStability();
 
-        assertEquals(8, listener.startedControllers.size());
-        for(ServiceController<?> serviceController : listener.startedControllers) {
+        for(ServiceController<?> serviceController : expected) {
             assertEquals(ServiceController.State.UP, serviceController.getState());
             final List<ServiceController<?>> deps = getServiceDependencies(serviceController);
             for(ServiceController<?> depController : deps) {
@@ -88,7 +81,7 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
 
     @Test
     public void testResolvableWithPreexistingDeps() throws Exception {
-        final LatchedListener listener = new LatchedListener();
+        final TestServiceListener listener = new TestServiceListener();
         serviceContainer.addListener(listener);
         final Set<ServiceController<?>> expected = new HashSet<ServiceController<?>>();
         expected.add(serviceContainer.addService(ServiceName.of("2"), Service.NULL).install());
@@ -109,10 +102,9 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
             fail("DuplicateServiceException expected");
         } catch (DuplicateServiceException e) {}
 
-        listener.await();
+        serviceContainer.awaitStability();
 
-        assertEquals(8, listener.startedControllers.size());
-        for(ServiceController<?> serviceController : listener.startedControllers) {
+        for(ServiceController<?> serviceController : expected) {
             assertEquals(ServiceController.State.UP, serviceController.getState());
             final List<ServiceController<?>> deps = getServiceDependencies(serviceController);
             for(ServiceController<?> depController : deps) {
@@ -131,18 +123,5 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
             }
         }
         return depInstances;
-    }
-
-    private static class LatchedListener extends LatchedFinishListener {
-
-        final List<ServiceController<? extends Object>> startedControllers = Collections.synchronizedList(new ArrayList<ServiceController<? extends Object>>());
-
-        @Override
-        public void transition(final ServiceController<? extends Object> controller, final ServiceController.Transition transition) {
-            if (transition.enters(ServiceController.State.UP)) {
-                startedControllers.add(controller);
-            }
-            super.transition(controller, transition);
-        }
     }
 }

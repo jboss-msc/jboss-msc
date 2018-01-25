@@ -78,7 +78,9 @@ public interface ServiceTarget {
      *
      * @param listener the listener to add to the target
      * @return this target
+     * @deprecated use {@link #addListener(LifecycleListener)} instead
      */
+    @Deprecated
     ServiceTarget addListener(ServiceListener<Object> listener);
 
     /**
@@ -86,7 +88,9 @@ public interface ServiceTarget {
      *
      * @param listeners a list of listeners to add to the target
      * @return this target
+     * @deprecated use {@link #addListener(LifecycleListener)} instead
      */
+    @Deprecated
     ServiceTarget addListener(ServiceListener<Object>... listeners);
 
     /**
@@ -94,8 +98,18 @@ public interface ServiceTarget {
      *
      * @param listeners a collection of listeners to add to the target
      * @return this target
+     * @deprecated use {@link #addListener(LifecycleListener)} instead
      */
+    @Deprecated
     ServiceTarget addListener(Collection<ServiceListener<Object>> listeners);
+
+    /**
+     * Add a service lifecycle listener that will be added to this service.
+     *
+     * @param listener the lifecycle listener to add to the service
+     * @return this target
+     */
+    ServiceTarget addListener(LifecycleListener listener);
 
     /**
      * Remove a monitor from this target, if it exists.
@@ -110,9 +124,19 @@ public interface ServiceTarget {
      *
      * @param listener the listener to remove
      * @return this target
+     * @deprecated use {@link #removeListener(LifecycleListener)} instead
      */
+    @Deprecated
     ServiceTarget removeListener(ServiceListener<Object> listener);
-    
+
+    /**
+     * Remove a lifecycle listener from this target, if it exists.
+     *
+     * @param listener the lifecycle listener to remove
+     * @return this target
+     */
+    ServiceTarget removeListener(LifecycleListener listener);
+
     /**
      * Returns a set of the monitors added to this target.
      * 
@@ -124,7 +148,9 @@ public interface ServiceTarget {
      * Returns a set of the listeners added to this target.
      * 
      * @return the listeners added to this target
+     * @deprecated ServiceListeners are deprecated
      */
+    @Deprecated
     Set<ServiceListener<Object>> getListeners();
 
     /**

@@ -73,7 +73,7 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
         assertController(serviceName, serviceController);
         assertController(serviceController, serviceStart);
         // removing null will be ignored
-        serviceTarget.removeListener(null);
+        serviceTarget.removeListener((ServiceListener)null);
     }
 
     @Test

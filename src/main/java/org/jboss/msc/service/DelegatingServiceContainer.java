@@ -37,136 +37,167 @@ import org.jboss.msc.value.Value;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public final class DelegatingServiceContainer implements ServiceContainer {
-    private final ServiceTarget delegateTarget;
-    private final ServiceRegistry delegateRegistry;
+public class DelegatingServiceContainer implements ServiceContainer {
+    private final ServiceTarget serviceTargetDelegate;
+    private final ServiceRegistry serviceRegistryDelegate;
 
     /**
      * Construct a new instance.
      *
-     * @param delegateTarget the delegate to forward service target requests to
-     * @param delegateRegistry the delegate to forward registry requests to
+     * @param serviceTargetDelegate the delegate to forward service target requests to
+     * @param serviceRegistryDelegate the delegate to forward registry requests to
      */
-    public DelegatingServiceContainer(final ServiceTarget delegateTarget, final ServiceRegistry delegateRegistry) {
+    public DelegatingServiceContainer(final ServiceTarget serviceTargetDelegate, final ServiceRegistry serviceRegistryDelegate) {
+        this.serviceTargetDelegate = serviceTargetDelegate;
+        this.serviceRegistryDelegate = serviceRegistryDelegate;
+    }
 
-        this.delegateTarget = delegateTarget;
-        this.delegateRegistry = delegateRegistry;
+    /**
+     * Get the ServiceTarget delegate.
+     * @return ServiceTarget delegate
+     */
+    protected ServiceTarget getServiceTargetDelegate() {
+        return serviceTargetDelegate;
+    }
+
+    /**
+     * Get the ServiceRegistry delegate.
+     * @return ServiceRegistry delegate
+     */
+    protected ServiceRegistry getServiceRegistryDelegate() {
+        return serviceRegistryDelegate;
     }
 
     /** {@inheritDoc} */
     public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
-        return delegateTarget.addServiceValue(name, value);
+        return getServiceTargetDelegate().addServiceValue(name, value);
     }
 
     /** {@inheritDoc} */
     public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
-        return delegateTarget.addService(name, service);
+        return getServiceTargetDelegate().addService(name, service);
     }
 
     /** {@inheritDoc} */
+    public ServiceContainer addListener(final LifecycleListener listener) {
+        getServiceTargetDelegate().addListener(listener);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
     public ServiceContainer addListener(final ServiceListener<Object> listener) {
-        delegateTarget.addListener(listener);
+        getServiceTargetDelegate().addListener(listener);
         return this;
     }
 
     /** {@inheritDoc} */
+    @Deprecated
     public ServiceContainer addListener(final ServiceListener<Object>... listeners) {
-        delegateTarget.addListener(listeners);
+        getServiceTargetDelegate().addListener(listeners);
         return this;
     }
 
     /** {@inheritDoc} */
+    @Deprecated
     public ServiceContainer addListener(final Collection<ServiceListener<Object>> listeners) {
-        delegateTarget.addListener(listeners);
+        getServiceTargetDelegate().addListener(listeners);
         return this;
     }
 
     /** {@inheritDoc} */
+    public ServiceContainer removeListener(final LifecycleListener listener) {
+        getServiceTargetDelegate().removeListener(listener);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
     public ServiceContainer removeListener(final ServiceListener<Object> listener) {
-        delegateTarget.removeListener(listener);
+        getServiceTargetDelegate().removeListener(listener);
         return this;
     }
 
     /** {@inheritDoc} */
     public Set<ServiceListener<Object>> getListeners() {
-        return delegateTarget.getListeners();
+        return getServiceTargetDelegate().getListeners();
     }
 
     /** {@inheritDoc} */
     public ServiceTarget addMonitor(StabilityMonitor monitor) {
-        delegateTarget.addMonitor(monitor);
+        getServiceTargetDelegate().addMonitor(monitor);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceTarget addMonitors(StabilityMonitor... monitors) {
-        delegateTarget.addMonitors(monitors);
+        getServiceTargetDelegate().addMonitors(monitors);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceTarget removeMonitor(StabilityMonitor monitor) {
-        delegateTarget.removeMonitor(monitor);
+        getServiceTargetDelegate().removeMonitor(monitor);
         return this;
     }
 
     /** {@inheritDoc} */
     public Set<StabilityMonitor> getMonitors() {
-        return delegateTarget.getMonitors();
+        return getServiceTargetDelegate().getMonitors();
     }
 
     /** {@inheritDoc} */
     public ServiceContainer addDependency(final ServiceName dependency) {
-        delegateTarget.addDependency(dependency);
+        getServiceTargetDelegate().addDependency(dependency);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceContainer addDependency(final ServiceName... dependencies) {
-        delegateTarget.addDependency(dependencies);
+        getServiceTargetDelegate().addDependency(dependencies);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceContainer addDependency(final Collection<ServiceName> dependencies) {
-        delegateTarget.addDependency(dependencies);
+        getServiceTargetDelegate().addDependency(dependencies);
         return this;
     }
 
     /** {@inheritDoc} */
     public ServiceContainer removeDependency(final ServiceName dependency) {
-        delegateTarget.removeDependency(dependency);
+        getServiceTargetDelegate().removeDependency(dependency);
         return this;
     }
 
     /** {@inheritDoc} */
     public Set<ServiceName> getDependencies() {
-        return delegateTarget.getDependencies();
+        return getServiceTargetDelegate().getDependencies();
     }
 
     /** {@inheritDoc} */
     public ServiceTarget subTarget() {
-        return delegateTarget.subTarget();
+        return getServiceTargetDelegate().subTarget();
     }
 
     /** {@inheritDoc} */
     public BatchServiceTarget batchTarget() {
-        return delegateTarget.batchTarget();
+        return getServiceTargetDelegate().batchTarget();
     }
 
     /** {@inheritDoc} */
     public ServiceController<?> getRequiredService(final ServiceName serviceName) throws ServiceNotFoundException {
-        return delegateRegistry.getRequiredService(serviceName);
+        return getServiceRegistryDelegate().getRequiredService(serviceName);
     }
 
     /** {@inheritDoc} */
     public ServiceController<?> getService(final ServiceName serviceName) {
-        return delegateRegistry.getService(serviceName);
+        return getServiceRegistryDelegate().getService(serviceName);
     }
 
     /** {@inheritDoc} */
     public List<ServiceName> getServiceNames() {
-        return delegateRegistry.getServiceNames();
+        return getServiceRegistryDelegate().getServiceNames();
     }
 
     /** {@inheritDoc} */

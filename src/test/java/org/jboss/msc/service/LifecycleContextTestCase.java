@@ -100,11 +100,9 @@ public class LifecycleContextTestCase extends AbstractServiceTest{
         startServiceThread.join();
         assertController(serviceName, contextServiceController);
         assertFailure(contextServiceController, serviceFailure);
-        assertEquals(Integer.valueOf(20), contextService.getValue());
+        assertNull(contextService.getValue()); // failed services will have all injections uninjected
 
         startService.assertNoError();
-
-        // todo it would be nice to check if the contextService value is uninjected when we set the mode to NEVER
     }
 
     @Test

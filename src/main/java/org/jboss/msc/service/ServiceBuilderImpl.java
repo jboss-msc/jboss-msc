@@ -54,6 +54,7 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     private final IdentityHashSet<StabilityMonitor> monitors = new IdentityHashSet<StabilityMonitor>();
     private final Map<ServiceName, Dependency> dependencies = new HashMap<ServiceName, Dependency>(0);
     private final Set<ServiceListener<? super T>> listeners = new IdentityHashSet<ServiceListener<? super T>>(0);
+    private final Set<LifecycleListener> lifecycleListeners = new IdentityHashSet<LifecycleListener>(0);
     private final List<ValueInjection<?>> valueInjections = new ArrayList<ValueInjection<?>>(0);
     private final List<Injector<? super T>> outInjections = new ArrayList<Injector<? super T>>(0);
     private boolean installed = false;
@@ -261,6 +262,13 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     }
 
     @Override
+    public ServiceBuilderImpl<T> addListener(final LifecycleListener listener) {
+        checkAlreadyInstalled();
+        lifecycleListeners.add(listener);
+        return this;
+    }
+
+    @Override
     public ServiceBuilderImpl<T> addListener(final ServiceListener<? super T> listener) {
         checkAlreadyInstalled();
         listeners.add(listener);
@@ -339,6 +347,10 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     Set<ServiceListener<? super T>> getListeners() {
         return listeners;
+    }
+
+    Set<LifecycleListener> getLifecycleListeners() {
+        return lifecycleListeners;
     }
 
     List<ValueInjection<?>> getValueInjections() {
