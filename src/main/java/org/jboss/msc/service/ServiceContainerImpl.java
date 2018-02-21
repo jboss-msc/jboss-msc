@@ -749,6 +749,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             serviceValue.setValue(instance);
             synchronized (this) {
                 if (down) {
+                    ok = true; // do not rollback installation because we didn't install anything
                     throw new IllegalStateException ("Container is down");
                 }
                 // It is necessary to call startInstallation() under container intrinsic lock.
