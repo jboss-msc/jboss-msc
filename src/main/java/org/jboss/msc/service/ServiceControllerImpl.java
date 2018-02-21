@@ -1051,7 +1051,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final List<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            children.remove(child);
+            if (!children.remove(child)) return; // may happen if child installation process failed
             if (children.size() > 0) return;
             // we dropped it to 0
             tasks = transition();
