@@ -289,6 +289,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final List<Runnable> listenerAddedTasks = new ArrayList<Runnable>();
 
         synchronized (this) {
+            if (getServiceContainer().isShutdown()) {
+                throw new IllegalStateException ("Container is down");
+            }
             final boolean leavingRestState = isStableRestState();
             getListenerTasks(ListenerNotification.LISTENER_ADDED, listenerAddedTasks);
             internalSetMode(initialMode);
@@ -300,6 +303,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
         final List<Runnable> tasks;
         synchronized (this) {
+            if (getServiceContainer().isShutdown()) {
+                throw new IllegalStateException ("Container is down");
+            }
             final boolean leavingRestState = isStableRestState();
             tasks = transition();
             addAsyncTasks(tasks.size());
@@ -407,7 +413,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert holdsLock(this);
         switch (state) {
             case NEW: {
-                return Transition.NEW_to_DOWN;
+                if (!getServiceContainer().isShutdown()) {
+                    return Transition.NEW_to_DOWN;
+                }
+                break;
             }
             case DOWN: {
                 if (mode == ServiceController.Mode.REMOVE) {
@@ -1051,7 +1060,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final List<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            children.remove(child);
+            if (!children.remove(child)) return; // may happen if child installation process failed
             if (children.size() > 0) return;
             // we dropped it to 0
             tasks = transition();
