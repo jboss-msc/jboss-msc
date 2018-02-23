@@ -295,7 +295,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final boolean leavingRestState = isStableRestState();
             getListenerTasks(ListenerNotification.LISTENER_ADDED, listenerAddedTasks);
             internalSetMode(initialMode);
-            addAsyncTasks(listenerAddedTasks.size());
+            // placeholder async task for running listener added tasks
+            addAsyncTasks(listenerAddedTasks.size() + 1);
             updateStabilityState(leavingRestState);
         }
         for (Runnable listenerAddedTask : listenerAddedTasks) {
@@ -307,6 +308,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 throw new IllegalStateException ("Container is down");
             }
             final boolean leavingRestState = isStableRestState();
+            // subtract one to compensate for +1 above
+            decrementAsyncTasks();
             tasks = transition();
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
