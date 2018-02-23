@@ -295,7 +295,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final boolean leavingRestState = isStableRestState();
             getListenerTasks(ListenerNotification.LISTENER_ADDED, listenerAddedTasks);
             internalSetMode(initialMode);
-            addAsyncTasks(listenerAddedTasks.size());
+            // placeholder async task for running listener added tasks
+            addAsyncTasks(listenerAddedTasks.size() + 1);
             updateStabilityState(leavingRestState);
         }
         for (Runnable listenerAddedTask : listenerAddedTasks) {
@@ -307,6 +308,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 throw new IllegalStateException ("Container is down");
             }
             final boolean leavingRestState = isStableRestState();
+            // subtract one to compensate for +1 above
+            decrementAsyncTasks();
             tasks = transition();
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
@@ -399,6 +402,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 if (shutdownListener != null && state == Substate.REMOVED) {
                     shutdownListener.controllerDied();
+                    shutdownListener = null;
                 }
             }
         }
@@ -1061,7 +1065,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
             if (!children.remove(child)) return; // may happen if child installation process failed
-            if (children.size() > 0) return;
+            if (ignoreNotification() || children.size() > 0) return;
             // we dropped it to 0
             tasks = transition();
             addAsyncTasks(tasks.size());
