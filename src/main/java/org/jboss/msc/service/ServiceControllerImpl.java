@@ -402,6 +402,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 if (shutdownListener != null && state == Substate.REMOVED) {
                     shutdownListener.controllerDied();
+                    shutdownListener = null;
                 }
             }
         }
