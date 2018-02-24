@@ -351,13 +351,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     /**
      * Controller notifications are ignored (we do not create new tasks on notification) if
-     * either controller didn't finish its installation process or controller have been removed.
+     * controller didn't finish its installation process.
      *
      * @return true if notification must be ignored, false otherwise
      */
     private boolean ignoreNotification() {
         assert holdsLock(this);
-        return state.compareTo(Substate.REMOVING) >= 0 || state.compareTo(Substate.CANCELLED) <= 0;
+        return state == Substate.NEW;
     }
 
     /**
