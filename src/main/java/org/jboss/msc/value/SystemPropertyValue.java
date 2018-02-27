@@ -31,7 +31,10 @@ import java.security.PrivilegedAction;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @see System#getProperty(String)
+ * @deprecated use {@link org.jboss.msc.service.ServiceBuilder#requires(org.jboss.msc.service.ServiceName)}
+ * method instead. This class will be removed in future releases.
  */
+@Deprecated
 public final class SystemPropertyValue implements Value<String>, PrivilegedAction<String> {
     private final String propertyName;
     private final AccessControlContext accessControlContext;

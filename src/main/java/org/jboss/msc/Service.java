@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2010, Red Hat, Inc., and individual contributors
+ * Copyright 2018, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -20,23 +20,22 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.service;
+package org.jboss.msc;
 
-import org.jboss.msc.value.ImmediateValue;
-import org.jboss.msc.value.Value;
+import org.jboss.msc.service.StartContext;
+import org.jboss.msc.service.StartException;
+import org.jboss.msc.service.StopContext;
+
+import java.util.function.Consumer;
 
 /**
- * A service is a thing which can be started and stopped.  A service may be started or stopped from any thread.  In
- * general, injections will always happen from the same thread that will call {@code start()}, and uninjections will
- * always happen from the same thread that had called {@code stop()}.  However no other guarantees are made with respect
- * to locking or thread safety; a robust service implementation should always take care to protect any mutable state
- * appropriately.
- * <p>
- * The value type specified by this service is used by default by consumers of this service, and should represent the
- * public interface of this service, which may or may not be the same as the implementing type of this service.
+ * A service is a thing which can be started and stopped.
+ * A service may be started or stopped from any thread.
+ * Service implementation should always take care to protect any mutable state appropriately.
+ * Service may provide multiple values to its consumers.
  * <p>
  * When writing MSC service implementations, your {@link #start(StartContext)} and {@link #stop(StopContext)}
- * methods must never block.  This means these methods must not:
+ * methods must never block. This means these methods must not:
  * <ul>
  * <li>Use network connections</li>
  * <li>Wait for network connections</li>
@@ -49,26 +48,27 @@ import org.jboss.msc.value.Value;
  * </ul>
  *
  * If your service start/stop does any of these things, you must use the asynchronous start/stop mechanism
- * ({@link LifecycleContext#asynchronous()}) and do one of the following:
+ * ({@link org.jboss.msc.service.LifecycleContext#asynchronous()}) and do one of the following:
  *
  * <ul>
  * <li>Initiate your task in start()/stop(), and utilize a callback (NIO, ThreadPoolExecutor.terminated(), etc.) to call
- * {@link LifecycleContext#complete()} when your start/stop completes instead of blocking</li>
- * <li>Delegate your blocking task to a thread pool ({@code Executor}) which calls {@link LifecycleContext#complete()}
- * when done</li>
+ * {@link org.jboss.msc.service.LifecycleContext#complete()} when your start/stop completes instead of blocking</li>
+ * <li>Delegate your blocking task to a thread pool ({@code Executor}) which calls
+ * {@link org.jboss.msc.service.LifecycleContext#complete()} when done</li>
  * <li>Use proper dependencies instead of explicitly waiting for services in your start/stop</li>
  * </ul>
  * <p>
- * Note that using {@link LifecycleContext#execute(Runnable)} to execute the blocking task is also not permissible.
- *
- * @param <T> the type of value that this service provides; may be {@link Void}
+ * Note that using {@link org.jboss.msc.service.LifecycleContext#execute(Runnable)} to execute the blocking task is also not permissible.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
- * @deprecated use {@link org.jboss.msc.Service} instead.
  */
-@Deprecated
-public interface Service<T> extends org.jboss.msc.Service, Value<T> {
+public interface Service {
+
+    /**
+     * A simple null service whose start and stop methods do nothing.
+     */
+    Service NULL = NullService.INSTANCE;
 
     /**
      * Start the service.  Do not return until the service has been fully started, unless an asynchronous service
@@ -95,12 +95,15 @@ public interface Service<T> extends org.jboss.msc.Service, Value<T> {
     void stop(StopContext context);
 
     /**
-     * A simple null service which performs no start or stop action.
+     * Factory for services providing single value.
+     *
+     * @param injector target
+     * @param value to assign
+     * @param <V> provided value type
+     * @return new service instance
      */
-    Service<Void> NULL = NullService.INSTANCE;
+    static <V> Service newInstance(final Consumer<V> injector, final V value) {
+        return new SimpleService<>(injector, value);
+    }
 
-    /**
-     * A value which resolves to the {@link #NULL null service}.
-     */
-    Value<Service<Void>> NULL_VALUE = new ImmediateValue<Service<Void>>(NULL);
 }

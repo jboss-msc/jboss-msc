@@ -136,7 +136,9 @@ public interface ServiceController<S> extends Value<S> {
      *
      * @return the service
      * @throws IllegalStateException if the service is not available (i.e. it is not up)
+     * @deprecated this method will be removed in future releases
      */
+    @Deprecated
     Service<S> getService() throws IllegalStateException;
 
     /**
@@ -150,9 +152,7 @@ public interface ServiceController<S> extends Value<S> {
      * Get other names this service is known as.
      *
      * @return the aliases
-     * @deprecated this method will be removed in future releases
      */
-    @Deprecated
     ServiceName[] getAliases();
 
     /**

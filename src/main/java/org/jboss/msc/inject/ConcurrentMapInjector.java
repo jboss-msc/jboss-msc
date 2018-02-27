@@ -32,7 +32,10 @@ import org.jboss.msc.value.Value;
  * @param <K> the key type
  * @param <T> the value type
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @deprecated use {@link org.jboss.msc.service.ServiceBuilder#provides(org.jboss.msc.service.ServiceName...)}
+ * method instead. This class will be removed in future releases.
  */
+@Deprecated
 public final class ConcurrentMapInjector<K, T> extends RetainingInjector<T> implements Injector<T> {
     private final ConcurrentMap<K, T> map;
     private final K key;

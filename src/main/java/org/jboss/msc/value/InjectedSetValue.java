@@ -39,7 +39,10 @@ import org.jboss.msc.inject.RetainingInjector;
  * @param <T> the value type
  *
  * @author Stuart Douglas
+ * @deprecated use {@link org.jboss.msc.service.ServiceBuilder#requires(org.jboss.msc.service.ServiceName)}
+ * method instead. This class will be removed in future releases.
  */
+@Deprecated
 public final class InjectedSetValue<T> implements Value<Set<T>> {
 
     private final Set<T> value = new LinkedHashSet<T>();

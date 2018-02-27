@@ -32,7 +32,10 @@ import org.jboss.msc.value.Value;
  * @param <T> the type of the value to inject
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @deprecated use {@link org.jboss.msc.service.ServiceBuilder#provides(org.jboss.msc.service.ServiceName...)}
+ * method instead. This class will be removed in future releases.
  */
+@Deprecated
 public final class AtomicReferenceFieldUpdaterInjector<C, T> implements Injector<T> {
     private final AtomicReferenceFieldUpdater<C, ? super T> updater;
     private final Value<C> target;

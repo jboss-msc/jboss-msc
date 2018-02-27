@@ -33,7 +33,10 @@ import java.util.Map;
  * @param <V> the value type
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @deprecated use {@link org.jboss.msc.service.ServiceBuilder#requires(org.jboss.msc.service.ServiceName)}
+ * method instead. This class will be removed in future releases.
  */
+@Deprecated
 public final class MapValue<K, V> implements Value<Map<K, V>> {
     private final List<MapEntry<? extends Value<? extends K>, ? extends Value<? extends V>>> values;
     private final Value<? extends Map<K, V>> mapValue;

@@ -26,7 +26,9 @@ package org.jboss.msc.inject;
  * An injection exception which is thrown when an injection fails for some reason.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @deprecated This class will be removed in future releases.
  */
+@Deprecated
 public class InjectionException extends RuntimeException {
 
     private static final long serialVersionUID = 6413200398685740543L;

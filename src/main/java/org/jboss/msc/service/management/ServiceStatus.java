@@ -110,9 +110,7 @@ public class ServiceStatus implements Serializable {
      * Get the service aliases, if any, as strings.  If there are no aliases, an empty array is returned.
      *
      * @return the service aliases
-     * @deprecated this method will be removed in future releases
      */
-    @Deprecated
     public String[] getAliases() {
         return aliases;
     }

@@ -23,12 +23,18 @@
 package org.jboss.msc.inject;
 
 /**
- * A receiver for values that are injected from another source, typically connected to a service lifecycle.
+ * Reference to a writable dependency.
+ * <p>
+ * Implementations of this interface are thread safe.
  *
- * @param <T> the injected value type
+ * @param <T> referenced writable dependency type
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ * @deprecated use {@link org.jboss.msc.service.ServiceBuilder#provides(org.jboss.msc.service.ServiceName...)}
+ * method instead. This class will be removed in future releases.
  */
+@Deprecated
 public interface Injector<T> {
 
     /**
@@ -44,4 +50,5 @@ public interface Injector<T> {
      * has been called.
      */
     void uninject();
+
 }

@@ -80,6 +80,11 @@ public class DelegatingServiceContainer implements ServiceContainer {
     }
 
     /** {@inheritDoc} */
+    public <T> ServiceBuilder<T> addService(final ServiceName name) throws IllegalArgumentException {
+        return getServiceTargetDelegate().addService(name);
+    }
+
+    /** {@inheritDoc} */
     public ServiceContainer addListener(final LifecycleListener listener) {
         getServiceTargetDelegate().addListener(listener);
         return this;

@@ -31,7 +31,10 @@ import java.util.List;
  * @param <T> the list entry type
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @deprecated use {@link org.jboss.msc.service.ServiceBuilder#requires(org.jboss.msc.service.ServiceName)}
+ * method instead. This class will be removed in future releases.
  */
+@Deprecated
 public final class ListValue<T> implements Value<List<T>> {
     private final List<? extends Value<? extends T>> values;
 
