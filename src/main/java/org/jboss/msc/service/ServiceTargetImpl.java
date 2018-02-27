@@ -60,22 +60,29 @@ class ServiceTargetImpl implements ServiceTarget {
 
     @Override
     public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
-        return createServiceBuilder(name, value, null);
-    }
-
-    protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
         if (name == null) {
             throw new IllegalArgumentException("name is null");
         }
         if (value == null) {
             throw new IllegalArgumentException("value is null");
         }
-        return new ServiceBuilderImpl<T>(this, value, name, parent);
+        final Service<T> service = value.getValue();
+        return createServiceBuilder(name, (Service<T>)(service != null ? service : Service.NULL), null);
+    }
+
+    protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Service<T> service, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
+        return new ServiceBuilderImpl<T>(this, service, name, parent);
     }
 
     @Override
     public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
-        return createServiceBuilder(name, new ImmediateValue<Service<T>>(service), null);
+        if (name == null) {
+            throw new IllegalArgumentException("name is null");
+        }
+        if (service == null) {
+            throw new IllegalArgumentException("service is null");
+        }
+        return createServiceBuilder(name, service, null);
     }
 
     public ServiceTarget addListener(final ServiceListener<Object> listener) {

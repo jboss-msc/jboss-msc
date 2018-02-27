@@ -741,7 +741,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         final ValueInjection<?>[] outInjectionArray = outInjections.toArray(new ValueInjection<?>[outInjections.size()]);
 
         // Next create the actual controller
-        final ServiceControllerImpl<T> instance = new ServiceControllerImpl<T>(serviceBuilder.getServiceValue(),
+        final ServiceControllerImpl<T> instance = new ServiceControllerImpl<T>(serviceBuilder.getService(),
                 dependencies, valueInjectionArray, outInjectionArray, primaryRegistration, aliasRegistrations,
                 serviceBuilder.getMonitors(), serviceBuilder.getListeners(), serviceBuilder.getLifecycleListeners(), serviceBuilder.getParent());
         boolean ok = false;

@@ -47,7 +47,7 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     private final ServiceControllerImpl<?> parent;
     private final ServiceTargetImpl serviceTarget;
-    private final Value<? extends Service<T>> serviceValue;
+    private final Service<T> service;
     private final ServiceName serviceName;
     private ServiceController.Mode initialMode = ServiceController.Mode.ACTIVE;
     private final Set<ServiceName> aliases = new HashSet<ServiceName>(0);
@@ -86,13 +86,13 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         }
     }
 
-    ServiceBuilderImpl(ServiceTargetImpl serviceTarget, final Value<? extends Service<T>> serviceValue, final ServiceName serviceName, final ServiceControllerImpl<?> parent) {
+    ServiceBuilderImpl(ServiceTargetImpl serviceTarget, final Service<T> service, final ServiceName serviceName, final ServiceControllerImpl<?> parent) {
         this.parent = parent;
-        if(serviceTarget == null) throw new IllegalArgumentException("ServiceTarget can not be null");
+        if (serviceTarget == null) throw new IllegalArgumentException("ServiceTarget can not be null");
         this.serviceTarget = serviceTarget;
-        if(serviceValue == null) throw new IllegalArgumentException("ServiceValue can not be null");
-        this.serviceValue = serviceValue;
-        if(serviceName == null) throw new IllegalArgumentException("ServiceName can not be null");
+        if (service == null) throw new IllegalArgumentException("Service can not be null");
+        this.service = service;
+        if (serviceName == null) throw new IllegalArgumentException("ServiceName can not be null");
         this.serviceName = serviceName;
     }
 
@@ -330,8 +330,8 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return serviceTarget.install(this);
     }
 
-    Value<? extends Service<T>> getServiceValue() {
-        return serviceValue;
+    Service<T> getService() {
+        return service;
     }
 
     ServiceName getName() {

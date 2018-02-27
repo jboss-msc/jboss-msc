@@ -38,7 +38,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.jboss.msc.service.management.ServiceStatus;
-import org.jboss.msc.value.Value;
 
 /**
  * The service controller implementation.
@@ -63,7 +62,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     /**
      * The service itself.
      */
-    private final Value<? extends Service<S>> serviceValue;
+    private final Service<S> service;
     /**
      * The dependencies of this service.
      */
@@ -189,9 +188,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     static final int MAX_DEPENDENCIES = (1 << 14) - 1;
 
-    ServiceControllerImpl(final Value<? extends Service<S>> serviceValue, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<StabilityMonitor> monitors, final Set<? extends ServiceListener<? super S>> listeners, final Set<LifecycleListener> lifecycleListeners, final ServiceControllerImpl<?> parent) {
+    ServiceControllerImpl(final Service<S> service, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<StabilityMonitor> monitors, final Set<? extends ServiceListener<? super S>> listeners, final Set<LifecycleListener> lifecycleListeners, final ServiceControllerImpl<?> parent) {
         assert dependencies.length <= MAX_DEPENDENCIES;
-        this.serviceValue = serviceValue;
+        this.service = service;
         this.dependencies = dependencies;
         this.injections = injections;
         this.outInjections = outInjections;
@@ -1095,7 +1094,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     public S getValue() throws IllegalStateException {
-        return serviceValue.getValue().getValue();
+        return service.getValue();
     }
 
     public S awaitValue() throws IllegalStateException, InterruptedException {
@@ -1103,7 +1102,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         synchronized (this) {
             for (;;) switch (state.getState()) {
                 case UP: {
-                    return serviceValue.getValue().getValue();
+                    return service.getValue();
                 }
                 case START_FAILED: {
                     throw new IllegalStateException("Failed to start service", startException);
@@ -1127,7 +1126,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             do {
                 switch (state.getState()) {
                     case UP: {
-                        return serviceValue.getValue().getValue();
+                        return service.getValue();
                     }
                     case START_FAILED: {
                         throw new IllegalStateException("Failed to start service", startException);
@@ -1150,7 +1149,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     public Service<S> getService() throws IllegalStateException {
-        return serviceValue.getValue();
+        return service;
     }
 
     public ServiceName getName() {
@@ -1304,7 +1303,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             String serviceClass = "<unknown>";
             try {
-                final Service<? extends S> value = serviceValue.getValue();
+                final Service<? extends S> value = service;
                 if (value != null) {
                     serviceClass = value.getClass().getName();
                 }
@@ -1378,15 +1377,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (startException != null) {
                 b.append("Start Exception: ").append(startException.getClass().getName()).append(" (Message: ").append(startException.getMessage()).append(")\n");
             }
-            String serviceValueString = "(indeterminate)";
-            try {
-                serviceValueString = serviceValue.toString();
-            } catch (Throwable ignored) {}
-            b.append("Service Value: ").append(serviceValueString).append('\n');
             String serviceObjectString = "(indeterminate)";
             Object serviceObjectClass = "(indeterminate)";
             try {
-                Object serviceObject = serviceValue.getValue();
+                Object serviceObject = service;
                 if (serviceObject != null) {
                     serviceObjectClass = serviceObject.getClass();
                     serviceObjectString = serviceObject.toString();
@@ -1699,10 +1693,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final StartContextImpl context = new StartContextImpl();
             try {
                 inject(serviceName, injections);
-                final Service<? extends S> service = serviceValue.getValue();
-                if (service == null) {
-                    throw new IllegalArgumentException("Service is null");
-                }
                 startService(service, context);
                 synchronized (context.lock) {
                     if (context.state != ContextState.SYNC) {
@@ -1761,13 +1751,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             try {
                 if (stopService) {
                     try {
-                        final Service<? extends S> service = serviceValue.getValue();
-                        if (service != null) {
-                            stopService(service, context);
-                            ok = true;
-                        } else {
-                            ServiceLogger.ROOT.stopServiceMissing(serviceName);
-                        }
+                        stopService(service, context);
+                        ok = true;
                     } catch (Throwable t) {
                         ServiceLogger.FAIL.stopFailed(t, serviceName);
                     }
@@ -2118,8 +2103,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             return super.install(serviceBuilder);
         }
 
-        protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Value<? extends Service<T>> value, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
-            return super.createServiceBuilder(name, value, ServiceControllerImpl.this);
+        protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Service<T> service, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
+            return super.createServiceBuilder(name, service, ServiceControllerImpl.this);
         }
 
         @Override
