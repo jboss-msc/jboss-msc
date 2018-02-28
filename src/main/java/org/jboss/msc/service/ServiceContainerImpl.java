@@ -635,7 +635,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         ServiceRegistrationImpl registration;
         registration = registry.get(name);
         if (registration == null) {
-            registration = new ServiceRegistrationImpl(this, name);
+            registration = new ServiceRegistrationImpl(name);
             ServiceRegistrationImpl existing = registry.putIfAbsent(name, registration);
             if(existing != null) {
                 return existing;
@@ -741,7 +741,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         final ValueInjection<?>[] outInjectionArray = outInjections.toArray(new ValueInjection<?>[outInjections.size()]);
 
         // Next create the actual controller
-        final ServiceControllerImpl<T> instance = new ServiceControllerImpl<T>(serviceBuilder.getService(),
+        final ServiceControllerImpl<T> instance = new ServiceControllerImpl<T>(this, serviceBuilder.getService(),
                 dependencies, valueInjectionArray, outInjectionArray, primaryRegistration, aliasRegistrations,
                 serviceBuilder.getMonitors(), serviceBuilder.getListeners(), serviceBuilder.getLifecycleListeners(), serviceBuilder.getParent());
         boolean ok = false;

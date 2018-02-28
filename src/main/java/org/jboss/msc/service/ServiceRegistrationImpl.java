@@ -31,10 +31,6 @@ package org.jboss.msc.service;
 final class ServiceRegistrationImpl extends Lockable implements Dependency {
 
     /**
-     * The service container which contains this registration.
-     */
-    private final ServiceContainerImpl container;
-    /**
      * The name of this registration.
      */
     private final ServiceName name;
@@ -59,8 +55,7 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
      */
     private int dependentsStartedCount;
 
-    ServiceRegistrationImpl(final ServiceContainerImpl container, final ServiceName name) {
-        this.container = container;
+    ServiceRegistrationImpl(final ServiceName name) {
         this.name = name;
     }
 
@@ -114,10 +109,6 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
         assert oldInstance != null;
         assert isWriteLocked();
         if (instance == oldInstance) instance = null;
-    }
-
-    ServiceContainerImpl getContainer() {
-        return container;
     }
 
     @Override

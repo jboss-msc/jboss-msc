@@ -60,6 +60,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private static final int DEPENDENCY_RETRYING_TASK = 1 << 5;
 
     /**
+     * The service container.
+     */
+    private final ServiceContainerImpl container;
+    /**
      * The service itself.
      */
     private final Service<S> service;
@@ -188,8 +192,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     static final int MAX_DEPENDENCIES = (1 << 14) - 1;
 
-    ServiceControllerImpl(final Service<S> service, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<StabilityMonitor> monitors, final Set<? extends ServiceListener<? super S>> listeners, final Set<LifecycleListener> lifecycleListeners, final ServiceControllerImpl<?> parent) {
+    ServiceControllerImpl(final ServiceContainerImpl container, final Service<S> service, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<StabilityMonitor> monitors, final Set<? extends ServiceListener<? super S>> listeners, final Set<LifecycleListener> lifecycleListeners, final ServiceControllerImpl<?> parent) {
         assert dependencies.length <= MAX_DEPENDENCIES;
+        this.container = container;
         this.service = service;
         this.dependencies = dependencies;
         this.injections = injections;
@@ -289,7 +294,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final List<Runnable> listenerAddedTasks = new ArrayList<Runnable>();
 
         synchronized (this) {
-            if (getServiceContainer().isShutdown()) {
+            if (container.isShutdown()) {
                 throw new IllegalStateException ("Container is down");
             }
             final boolean leavingRestState = isStableRestState();
@@ -304,7 +309,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
         final List<Runnable> tasks;
         synchronized (this) {
-            if (getServiceContainer().isShutdown()) {
+            if (container.isShutdown()) {
                 throw new IllegalStateException ("Container is down");
             }
             final boolean leavingRestState = isStableRestState();
@@ -389,14 +394,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final boolean enteringStableRestState = state.isRestState() && asyncTasks == 0;
         if (leavingStableRestState) {
             if (!enteringStableRestState) {
-                primaryRegistration.getContainer().incrementUnstableServices();
+                container.incrementUnstableServices();
                 for (StabilityMonitor monitor : monitors) {
                     monitor.incrementUnstableServices();
                 }
             }
         } else {
             if (enteringStableRestState) {
-                primaryRegistration.getContainer().decrementUnstableServices();
+                container.decrementUnstableServices();
                 for (StabilityMonitor monitor : monitors) {
                     monitor.decrementUnstableServices();
                 }
@@ -417,7 +422,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert holdsLock(this);
         switch (state) {
             case NEW: {
-                if (!getServiceContainer().isShutdown()) {
+                if (!container.isShutdown()) {
                     return Transition.NEW_to_DOWN;
                 }
                 break;
@@ -644,7 +649,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case START_REQUESTED_to_PROBLEM: {
                     tasks.add(new DependencyUnavailableTask());
-                    getPrimaryRegistration().getContainer().addProblem(this);
+                    container.addProblem(this);
                     for (StabilityMonitor monitor : monitors) {
                         monitor.addProblem(this);
                     }
@@ -667,7 +672,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case STARTING_to_START_FAILED: {
                     getListenerTasks(LifecycleEvent.FAILED, listenerTransitionTasks);
-                    getPrimaryRegistration().getContainer().addFailed(this);
+                    container.addFailed(this);
                     for (StabilityMonitor monitor : monitors) {
                         monitor.addFailed(this);
                     }
@@ -682,7 +687,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case START_FAILED_to_STARTING: {
-                    getPrimaryRegistration().getContainer().removeFailed(this);
+                    container.removeFailed(this);
                     for (StabilityMonitor monitor : monitors) {
                         monitor.removeFailed(this);
                     }
@@ -700,7 +705,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case START_FAILED_to_DOWN: {
                     getListenerTasks(LifecycleEvent.DOWN, listenerTransitionTasks);
-                    getPrimaryRegistration().getContainer().removeFailed(this);
+                    container.removeFailed(this);
                     for (StabilityMonitor monitor : monitors) {
                         monitor.removeFailed(this);
                     }
@@ -750,7 +755,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case PROBLEM_to_START_REQUESTED: {
                     tasks.add(new DependencyAvailableTask());
-                    getPrimaryRegistration().getContainer().removeProblem(this);
+                    container.removeProblem(this);
                     for (StabilityMonitor monitor : monitors) {
                         monitor.removeProblem(this);
                     }
@@ -793,7 +798,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     void doExecute(final List<Runnable> tasks) {
         assert !holdsLock(this);
         if (tasks.isEmpty()) return;
-        final Executor executor = primaryRegistration.getContainer().getExecutor();
+        final Executor executor = container.getExecutor();
         for (Runnable task : tasks) {
             try {
                 executor.execute(task);
@@ -812,7 +817,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         if (newMode == null) {
             throw new IllegalArgumentException("newMode is null");
         }
-        if (newMode != Mode.REMOVE && primaryRegistration.getContainer().isShutdown()) {
+        if (newMode != Mode.REMOVE && container.isShutdown()) {
             throw new IllegalArgumentException("Container is shutting down");
         }
         final List<Runnable> tasks;
@@ -1084,7 +1089,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     public ServiceContainerImpl getServiceContainer() {
-        return primaryRegistration.getContainer();
+        return container;
     }
 
     public ServiceController.State getState() {
@@ -1953,7 +1958,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 synchronized (ServiceControllerImpl.this) {
                     if (childTarget == null) {
-                        childTarget = new ChildServiceTarget(getServiceContainer());
+                        childTarget = new ChildServiceTarget(container);
                     }
                     return childTarget;
                 }
