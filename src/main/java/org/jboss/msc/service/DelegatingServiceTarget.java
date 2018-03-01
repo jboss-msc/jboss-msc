@@ -34,6 +34,7 @@ import org.jboss.msc.value.Value;
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class DelegatingServiceTarget implements ServiceTarget {
+
     private final ServiceTarget delegate;
 
     /**
@@ -65,7 +66,7 @@ public class DelegatingServiceTarget implements ServiceTarget {
 
     /** {@inheritDoc} */
     public ServiceTarget addListener(final LifecycleListener listener) {
-        delegate.addListener(listener);
+        getDelegate().addListener(listener);
         return this;
     }
 
@@ -92,7 +93,7 @@ public class DelegatingServiceTarget implements ServiceTarget {
 
     /** {@inheritDoc} */
     public ServiceTarget removeListener(final LifecycleListener listener) {
-        delegate.removeListener(listener);
+        getDelegate().removeListener(listener);
         return this;
     }
 

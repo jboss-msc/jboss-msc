@@ -35,6 +35,7 @@ import org.jboss.msc.value.Value;
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
+
     private final ServiceBuilder<T> delegate;
 
     /**
@@ -172,7 +173,7 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
 
     /** {@inheritDoc} */
     public ServiceBuilder<T> addListener(final LifecycleListener listener) {
-        delegate.addListener(listener);
+        getDelegate().addListener(listener);
         return this;
     }
 
@@ -187,4 +188,5 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     public ServiceController<T> install() throws ServiceRegistryException {
         return getDelegate().install();
     }
+
 }
