@@ -112,10 +112,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private final IdentityHashSet<ServiceControllerImpl<?>> children;
     /**
-     * The unavailable dependencies of this service.
-     */
-    private final IdentityHashSet<ServiceName> unavailableDependencies;
-    /**
      * The start exception.
      */
     private StartException startException;
@@ -144,6 +140,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * dependents will be notified that a stop is necessary.
      */
     private int stoppingDependencies;
+    /**
+     * Count of unavailable dependencies of this service.
+     */
+    private int unavailableDependencies;
     /**
      * The number of dependents that are currently running. The deployment will
      * not execute the {@code stop()} method (and subsequently leave the
@@ -214,7 +214,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         int depCount = dependencies.length;
         stoppingDependencies = parent == null ? depCount : depCount + 1;
         children = new IdentityHashSet<ServiceControllerImpl<?>>();
-        unavailableDependencies = new IdentityHashSet<ServiceName>();
     }
 
     Substate getSubstateLocked() {
@@ -494,7 +493,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (mode == Mode.PASSIVE && stoppingDependencies > 0) {
                         return Transition.START_REQUESTED_to_DOWN;
                     }
-                    if (!unavailableDependencies.isEmpty() || failCount > 0) {
+                    if (unavailableDependencies > 0 || failCount > 0) {
                         return Transition.START_REQUESTED_to_PROBLEM;
                     }
                     if (stoppingDependencies == 0 && runningDependents == 0) {
@@ -507,7 +506,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case PROBLEM: {
-                if (! shouldStart() || (unavailableDependencies.isEmpty() && failCount == 0) || mode == Mode.PASSIVE) {
+                if (! shouldStart() || (unavailableDependencies == 0 && failCount == 0) || mode == Mode.PASSIVE) {
                     return Transition.PROBLEM_to_START_REQUESTED;
                 }
                 break;
@@ -844,9 +843,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final List<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            assert unavailableDependencies.contains(dependencyName);
-            unavailableDependencies.remove(dependencyName);
-            if (ignoreNotification() || !unavailableDependencies.isEmpty()) return;
+            assert unavailableDependencies > 0;
+            --unavailableDependencies;
+            if (ignoreNotification() || unavailableDependencies != 0) return;
             // we dropped it to 0
             tasks = transition();
             addAsyncTasks(tasks.size());
@@ -860,9 +859,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         final List<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
-            assert !unavailableDependencies.contains(dependencyName);
-            unavailableDependencies.add(dependencyName);
-            if (ignoreNotification() || unavailableDependencies.size() != 1) return;
+            ++unavailableDependencies;
+            if (ignoreNotification() || unavailableDependencies != 1) return;
             // we raised it to 1
             tasks = transition();
             addAsyncTasks(tasks.size());
@@ -1271,13 +1269,29 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     @Override
-    public synchronized Set<ServiceName> getImmediateUnavailableDependencies() {
-        return unavailableDependencies.clone();
+    public Collection<ServiceName> getUnavailableDependencies() {
+        return getImmediateUnavailableDependencies();
     }
 
     @Override
-    public Collection<ServiceName> getUnavailableDependencies() {
-        return getImmediateUnavailableDependencies();
+    public synchronized Set<ServiceName> getImmediateUnavailableDependencies() {
+        final Set<ServiceName> retVal = new IdentityHashSet<ServiceName>();
+        for (Dependency dependency : dependencies) {
+            synchronized (dependency.getLock()) {
+                if (isUnavailable(dependency)) {
+                    retVal.add(dependency.getName());
+                }
+            }
+        }
+        return retVal;
+    }
+
+    private static boolean isUnavailable(final Dependency dependency) {
+        final ServiceControllerImpl controller = dependency.getDependencyController();
+        if (controller == null) return true;
+        synchronized (controller) {
+            return controller.isUnavailable();
+        }
     }
 
     public ServiceController.Mode getMode() {
@@ -1339,7 +1353,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     dependencyNames,
                     failCount != 0,
                     startException != null ? startException.toString() : null,
-                    !unavailableDependencies.isEmpty()
+                    unavailableDependencies > 0
             );
         }
     }
@@ -1399,10 +1413,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             b.append("Stopping Dependencies: ").append(stoppingDependencies).append('\n');
             b.append("Running Dependents: ").append(runningDependents).append('\n');
             b.append("Fail Count: ").append(failCount).append('\n');
-            b.append("Unavailable Dep Count: ").append(unavailableDependencies.size()).append('\n');
-            for (ServiceName name : unavailableDependencies) {
-                b.append("    ").append(name.toString()).append('\n');
-            }
+            b.append("Unavailable Dep Count: ").append(unavailableDependencies).append('\n');
             b.append("Dependencies Demanded: ").append(dependenciesDemanded ? "yes" : "no").append('\n');
             b.append("Async Tasks: ").append(asyncTasks).append('\n');
             if (lifecycleTime != 0L) {
