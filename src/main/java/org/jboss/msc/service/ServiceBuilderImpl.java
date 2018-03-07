@@ -347,6 +347,13 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     }
 
     Set<StabilityMonitor> getMonitors() {
+        ServiceControllerImpl parent = this.parent;
+        while (parent != null) {
+            synchronized (parent) {
+                addMonitorsNoCheck(parent.getMonitors());
+                parent = parent.getParent();
+            }
+        }
         return monitors;
     }
 

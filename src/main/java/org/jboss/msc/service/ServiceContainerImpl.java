@@ -673,28 +673,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         return result;
     }
 
-    void apply(ServiceBuilderImpl<?> builder, ServiceControllerImpl<?> parent) {
-        while (parent != null) {
-            synchronized (parent) {
-                final Set<StabilityMonitor> monitors = parent.getMonitors();
-                for (final StabilityMonitor monitor : monitors) {
-                    builder.addMonitorNoCheck(monitor);
-                }
-                parent = parent.getParent();
-            }
-        }
-    }
-
-    void apply(ServiceBuilderImpl<?> builder) {
-        // Apply listeners from the target, first
-        super.apply(builder);
-        // Now apply inherited listeners from the parent
-        final ServiceControllerImpl<?> parent = builder.getParent();
-        if (parent != null) {
-            apply(builder, parent);
-        }
-    }
-
     @Override
     <T> ServiceController<T> install(final ServiceBuilderImpl<T> serviceBuilder) throws DuplicateServiceException {
         apply(serviceBuilder);
