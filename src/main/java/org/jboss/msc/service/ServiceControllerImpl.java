@@ -967,23 +967,36 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     void newDependent(final ServiceName dependencyName, final Dependent dependent) {
         assert holdsLock(this);
-        if (state == Substate.START_FAILED && finishedTask(DEPENDENCY_FAILED_TASK)) {
-            dependent.dependencyFailed();
-        } else if ((state == Substate.STARTING || state == Substate.DOWN) && unfinishedTask(DEPENDENCY_RETRYING_TASK)) {
-            dependent.dependencyFailed();
-        }
+        if (isFailed()) dependent.dependencyFailed();
+        if (isUnavailable()) dependent.dependencyUnavailable(dependencyName);
+        if (isUp()) dependent.dependencyUp();
+    }
 
-        if ((state == Substate.WAITING || state == Substate.WONT_START || state == Substate.REMOVING || state == Substate.PROBLEM) && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) {
-            dependent.dependencyUnavailable(dependencyName);
-        } else if ((state == Substate.DOWN || state == Substate.START_REQUESTED) && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) {
-            dependent.dependencyUnavailable(dependencyName);
-        } else if (state == Substate.NEW || state == Substate.CANCELLED || state == Substate.REMOVED) {
-            dependent.dependencyUnavailable(dependencyName);
-        } else if (state == Substate.UP && finishedTask(DEPENDENCY_STARTED_TASK)) {
-            dependent.dependencyUp();
-        } else if (state == Substate.STOP_REQUESTED && unfinishedTask(DEPENDENCY_STOPPED_TASK)) {
-            dependent.dependencyUp();
-        }
+    private boolean isFailed() {
+        assert holdsLock(this);
+        if (state == Substate.START_FAILED && finishedTask(DEPENDENCY_FAILED_TASK)) return true;
+        if (state == Substate.STARTING && unfinishedTask(DEPENDENCY_RETRYING_TASK)) return true;
+        if (state == Substate.DOWN && unfinishedTask(DEPENDENCY_RETRYING_TASK)) return true;
+        return false;
+    }
+
+    private boolean isUnavailable() {
+        assert holdsLock(this);
+        if (state == Substate.WAITING && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
+        if (state == Substate.WONT_START && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
+        if (state == Substate.REMOVING && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
+        if (state == Substate.PROBLEM && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
+        if (state == Substate.DOWN && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;
+        if (state == Substate.START_REQUESTED && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;
+        if (state == Substate.NEW || state == Substate.CANCELLED || state == Substate.REMOVED) return true;
+        return false;
+    }
+
+    private boolean isUp() {
+        assert holdsLock(this);
+        if (state == Substate.UP && finishedTask(DEPENDENCY_STARTED_TASK)) return true;
+        if (state == Substate.STOP_REQUESTED && unfinishedTask(DEPENDENCY_STOPPED_TASK)) return true;
+        return false;
     }
 
     private boolean unfinishedTask(final int taskFlag) {
