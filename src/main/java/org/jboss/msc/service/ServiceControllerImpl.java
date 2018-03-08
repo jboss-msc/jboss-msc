@@ -269,17 +269,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
             }
         }
-        if (parent != null) {
-            lock = parent.primaryRegistration.getLock();
-            synchronized (lock) {
-                lock.acquireWrite();
-                try {
-                    parent.addChild(this);
-                } finally {
-                    lock.releaseWrite();
-                }
-            }
-        }
+        if (parent != null) parent.addChild(this);
     }
 
     /**
@@ -1898,17 +1888,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                 }
             }
-            if (parent != null) {
-                lock = parent.primaryRegistration.getLock();
-                synchronized (lock) {
-                    lock.acquireWrite();
-                    try {
-                        parent.removeChild(ServiceControllerImpl.this);
-                    } finally {
-                        lock.releaseWrite();
-                    }
-                }
-            }
+            if (parent != null) parent.removeChild(ServiceControllerImpl.this);
             return true;
         }
     }
