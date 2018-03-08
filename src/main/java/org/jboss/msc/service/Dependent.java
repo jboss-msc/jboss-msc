@@ -33,17 +33,13 @@ interface Dependent {
 
     /**
      * Notify this dependent that one of its dependencies is available.
-     *
-     * @param dependencyName the name of the dependency that is now available
      */
-    void dependencyAvailable(ServiceName dependencyName);
+    void dependencyAvailable();
 
     /**
      * Notify this dependent that one of its dependencies is unavailable.
-     *
-     * @param dependencyName the name of the dependency that is now unavailable
      */
-    void dependencyUnavailable(ServiceName dependencyName);
+    void dependencyUnavailable();
 
     /**
      * Notify this dependent that one of its dependencies is up.

@@ -839,7 +839,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     @Override
-    public void dependencyAvailable(final ServiceName dependencyName) {
+    public void dependencyAvailable() {
         final List<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
@@ -855,7 +855,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     @Override
-    public void dependencyUnavailable(final ServiceName dependencyName) {
+    public void dependencyUnavailable() {
         final List<Runnable> tasks;
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
@@ -963,10 +963,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         doExecute(tasks);
     }
 
-    void newDependent(final ServiceName dependencyName, final Dependent dependent) {
+    void newDependent(final Dependent dependent) {
         assert holdsLock(this);
         if (isFailed()) dependent.dependencyFailed();
-        if (isUnavailable()) dependent.dependencyUnavailable(dependencyName);
+        if (isUnavailable()) dependent.dependencyUnavailable();
         if (isUp()) dependent.dependencyUp();
     }
 
@@ -1060,7 +1060,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 throw new IllegalStateException("Children cannot be added in state " + state.getState());
             }
             children.add(child);
-            newDependent(primaryRegistration.getName(), child);
+            newDependent(child);
         }
     }
 
@@ -1606,23 +1606,22 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
         final boolean execute() {
             for (Dependent dependent : primaryRegistration.getDependents()) {
-                inform(dependent, primaryRegistration.getName());
+                inform(dependent);
             }
             for (ServiceRegistrationImpl aliasRegistration : aliasRegistrations) {
                 for (Dependent dependent : aliasRegistration.getDependents()) {
-                    inform(dependent, aliasRegistration.getName());
+                    inform(dependent);
                 }
             }
             synchronized (ServiceControllerImpl.this) {
                 for (Dependent child : children) {
-                    inform(child, primaryRegistration.getName());
+                    inform(child);
                 }
                 execFlags |= execFlag;
             }
             return true;
         }
 
-        void inform(final Dependent dependent, final ServiceName serviceName) { inform(dependent); }
         void inform(final Dependent dependent) {}
 
         void beforeExecute() {
@@ -1666,12 +1665,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private final class DependencyAvailableTask extends DependentsControllerTask {
         DependencyAvailableTask() { super(DEPENDENCY_AVAILABLE_TASK); }
-        void inform(final Dependent dependent, final ServiceName name) { dependent.dependencyAvailable(name); }
+        void inform(final Dependent dependent) { dependent.dependencyAvailable(); }
     }
 
     private final class DependencyUnavailableTask extends DependentsControllerTask {
         DependencyUnavailableTask() { super(DEPENDENCY_UNAVAILABLE_TASK); }
-        void inform(final Dependent dependent, final ServiceName name) { dependent.dependencyUnavailable(name); }
+        void inform(final Dependent dependent) { dependent.dependencyUnavailable(); }
     }
 
     private final class DependencyStartedTask extends DependentsControllerTask {

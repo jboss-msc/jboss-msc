@@ -76,15 +76,15 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
         }
         dependents.add(dependent);
         if (instance == null) {
-            dependent.dependencyUnavailable(name);
+            dependent.dependencyUnavailable();
             return;
         }
         synchronized (instance) {
             if (!instance.isInstallationCommitted()) {
-                dependent.dependencyUnavailable(name);
+                dependent.dependencyUnavailable();
                 return;
             }
-            instance.newDependent(name, dependent);
+            instance.newDependent(dependent);
         }
     }
 
