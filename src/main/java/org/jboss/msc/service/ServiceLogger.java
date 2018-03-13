@@ -102,4 +102,9 @@ interface ServiceLogger {
 
     @Message(id = 11, value = "Service not started")
     IllegalStateException serviceNotStarted();
+
+    @LogMessage(level = ERROR)
+    @Message(id = 12, value = "Injection failed for service %s")
+    void injectFailed(@Cause Throwable cause, ServiceName serviceName);
+
 }

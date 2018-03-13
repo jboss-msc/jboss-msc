@@ -1485,34 +1485,43 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return aliasRegistrations;
     }
 
-    private void performInjections() {
-        final int injectionsLength = injections.length;
+    private static void inject(final ServiceName serviceName, final ValueInjection<?>[] injections) {
         boolean ok = false;
         int i = 0;
         try {
-            for (; i < injectionsLength; i++) {
-                final ValueInjection<?> injection = injections[i];
-                doInject(injection);
+            for (; i < injections.length; i++) {
+                inject(serviceName, injections[i]);
             }
             ok = true;
         } finally {
-            if (! ok) {
+            if (!ok) {
                 for (; i >= 0; i--) {
-                    injections[i].getTarget().uninject();
+                    uninject(serviceName, injections[i]);
                 }
             }
         }
     }
 
-    private void performOutInjections() {
-        final int injectionsLength = outInjections.length;
-        for (int i = 0; i < injectionsLength; i++) {
-            final ValueInjection<?> injection = outInjections[i];
-            try {
-                doInject(injection);
-            } catch (Throwable t) {
-                ServiceLogger.SERVICE.exceptionAfterComplete(t, primaryRegistration.getName());
-            }
+    private static <T> void inject(final ServiceName serviceName, final ValueInjection<T> injection) {
+        try {
+            injection.getTarget().inject(injection.getSource().getValue());
+        } catch (final Throwable t) {
+            ServiceLogger.SERVICE.injectFailed(t, serviceName);
+            throw t;
+        }
+    }
+
+    private static void uninject(final ServiceName serviceName, final ValueInjection<?>[] injections) {
+        for (ValueInjection<?> injection : injections) {
+            uninject(serviceName, injection);
+        }
+    }
+
+    private static <T> void uninject(final ServiceName serviceName, final ValueInjection<T> injection) {
+        try {
+            injection.getTarget().uninject();
+        } catch (Throwable t) {
+            ServiceLogger.ROOT.uninjectFailed(t, serviceName, injection);
         }
     }
 
@@ -1525,10 +1534,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         ASYNC,
         COMPLETE,
         FAILED,
-    }
-
-    private static <T> void doInject(final ValueInjection<T> injection) {
-        injection.getTarget().inject(injection.getSource().getValue());
     }
 
     @Override
@@ -1693,7 +1698,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final ServiceName serviceName = primaryRegistration.getName();
             final StartContextImpl context = new StartContextImpl();
             try {
-                performInjections();
+                inject(serviceName, injections);
                 final Service<? extends S> service = serviceValue.getValue();
                 if (service == null) {
                     throw new IllegalArgumentException("Service is null");
@@ -1705,7 +1710,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                     context.state = ContextState.COMPLETE;
                 }
-                performOutInjections();
+                inject(serviceName, outInjections);
                 return true;
             } catch (StartException e) {
                 e.setServiceName(serviceName);
@@ -1788,14 +1793,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 service.stop(context);
             } finally {
                 setTCCL(contextClassLoader);
-            }
-        }
-
-        private void uninject(final ServiceName serviceName, ValueInjection<?>[] injections) {
-            for (ValueInjection<?> injection : injections) try {
-                injection.getTarget().uninject();
-            } catch (Throwable t) {
-                ServiceLogger.ROOT.uninjectFailed(t, serviceName, injection);
             }
         }
     }
@@ -2005,7 +2002,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     state = ContextState.SYNC_ASYNC_COMPLETE;
                 }
             }
-            performOutInjections();
+            final ServiceName serviceName = primaryRegistration.getName();
+            inject(serviceName, outInjections);
             final List<Runnable> tasks;
             synchronized (ServiceControllerImpl.this) {
                 final boolean leavingRestState = isStableRestState();
@@ -2069,9 +2067,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     state = ContextState.SYNC_ASYNC_COMPLETE;
                 }
             }
-            for (ValueInjection<?> injection : injections) {
-                injection.getTarget().uninject();
-            }
+            final ServiceName serviceName = primaryRegistration.getName();
+            uninject(serviceName, injections);
+            uninject(serviceName, outInjections);
             final List<Runnable> tasks;
             synchronized (ServiceControllerImpl.this) {
                 final boolean leavingRestState = isStableRestState();
