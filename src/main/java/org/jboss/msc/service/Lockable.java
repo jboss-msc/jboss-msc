@@ -59,7 +59,7 @@ import static java.lang.Thread.holdsLock;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-abstract class Lockable {
+class Lockable {
 
     /**
      * Number of read locks being held.
