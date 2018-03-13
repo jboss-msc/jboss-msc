@@ -1089,7 +1089,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     public ServiceController.State getState() {
-        return state.getState();
+        synchronized (this) {
+            return state.getState();
+        }
     }
 
     public S getValue() throws IllegalStateException {
