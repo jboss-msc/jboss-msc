@@ -301,6 +301,11 @@ class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return this;
     }
 
+    ServiceBuilderImpl<T> addLifecycleListenersNoCheck(final Set<LifecycleListener> lifecycleListeners) {
+        lifecycleListeners.addAll(lifecycleListeners);
+        return this;
+    }
+
     ServiceBuilderImpl<T> addMonitorsNoCheck(final Collection<? extends StabilityMonitor> monitors) {
         for (final StabilityMonitor monitor : monitors) {
             this.monitors.add(monitor);

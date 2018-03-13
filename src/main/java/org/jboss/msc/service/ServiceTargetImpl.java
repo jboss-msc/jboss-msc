@@ -218,6 +218,9 @@ class ServiceTargetImpl implements ServiceTarget {
         synchronized (listeners) {
             serviceBuilder.addListenerNoCheck(listeners);
         }
+        synchronized (lifecycleListeners) {
+            serviceBuilder.addLifecycleListenersNoCheck(lifecycleListeners);
+        }
         synchronized (dependencies) {
             serviceBuilder.addDependenciesNoCheck(dependencies);
         }
