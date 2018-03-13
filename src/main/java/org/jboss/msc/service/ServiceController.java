@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import java.util.Collection;
 import java.util.Set;
 
 import java.util.concurrent.TimeUnit;
@@ -193,8 +194,17 @@ public interface ServiceController<S> extends Value<S> {
      * Get the complete list of immediate dependencies that are unavailable.
      * 
      * @return a set containing the names of all unavailable immediate dependencies
+     * @deprecated use {@link #getUnavailableDependencies()} instead
      */
+    @Deprecated
     Set<ServiceName> getImmediateUnavailableDependencies();
+
+    /**
+     * Get the complete list of dependencies that are unavailable.
+     *
+     * @return a set containing the names of all unavailable dependencies
+     */
+    Collection<ServiceName> getUnavailableDependencies();
 
     /**
      * A possible state for a service controller.

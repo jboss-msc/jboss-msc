@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -170,6 +171,12 @@ public class DelegatingServiceController<S> implements ServiceController<S> {
     @Override
     public Set<ServiceName> getImmediateUnavailableDependencies() {
         return getDelegate().getImmediateUnavailableDependencies();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public Collection<ServiceName> getUnavailableDependencies() {
+        return getDelegate().getUnavailableDependencies();
     }
 
 }

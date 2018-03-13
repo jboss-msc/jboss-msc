@@ -27,6 +27,7 @@ import static org.jboss.msc.service.SecurityUtils.getCL;
 import static org.jboss.msc.service.SecurityUtils.setTCCL;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -1264,6 +1265,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     @Override
     public synchronized Set<ServiceName> getImmediateUnavailableDependencies() {
         return unavailableDependencies.clone();
+    }
+
+    @Override
+    public Collection<ServiceName> getUnavailableDependencies() {
+        return getImmediateUnavailableDependencies();
     }
 
     public ServiceController.Mode getMode() {
