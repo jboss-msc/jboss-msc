@@ -1725,7 +1725,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
         }
 
-        private boolean startFailed(StartException e, ServiceName serviceName, StartContextImpl context) {
+        private boolean startFailed(final StartException e, final ServiceName serviceName, final StartContextImpl context) {
             ServiceLogger.FAIL.startFailed(e, serviceName);
             synchronized (context.lock) {
                 final ContextState oldState = context.state;
@@ -1914,11 +1914,79 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    private final class StartContextImpl implements StartContext {
+    private abstract class AbstractContext implements LifecycleContext {
+        ContextState state = ContextState.SYNC;
+        final Object lock = new Object();
 
-        private ContextState state = ContextState.SYNC;
-        private final Object lock = new Object();
+        abstract void onComplete();
 
+        final void taskCompleted() {
+            final List<Runnable> tasks;
+            synchronized (ServiceControllerImpl.this) {
+                final boolean leavingRestState = isStableRestState();
+                // Subtract one for this task
+                decrementAsyncTasks();
+                tasks = transition();
+                addAsyncTasks(tasks.size());
+                updateStabilityState(leavingRestState);
+            }
+            doExecute(tasks);
+        }
+
+        public final void complete() {
+            synchronized (lock) {
+                if (state == ContextState.COMPLETE || state == ContextState.FAILED
+                        || state == ContextState.SYNC_ASYNC_COMPLETE || state == ContextState.SYNC_ASYNC_FAILED) {
+                    throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
+                }
+                if (state == ContextState.ASYNC) {
+                    state = ContextState.COMPLETE;
+                }
+                if (state == ContextState.SYNC) {
+                    state = ContextState.SYNC_ASYNC_COMPLETE;
+                }
+            }
+            onComplete();
+            taskCompleted();
+        }
+
+        public final void asynchronous() {
+            synchronized (lock) {
+                if (state == ContextState.SYNC) {
+                    state = ContextState.ASYNC;
+                } else if (state == ContextState.SYNC_ASYNC_COMPLETE) {
+                    state = ContextState.COMPLETE;
+                } else if (state == ContextState.SYNC_ASYNC_FAILED) {
+                    state = ContextState.FAILED;
+                } else if (state == ContextState.ASYNC) {
+                    throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
+                }
+            }
+        }
+
+        public final long getElapsedTime() {
+            return System.nanoTime() - lifecycleTime;
+        }
+
+        public final ServiceController<?> getController() {
+            return ServiceControllerImpl.this;
+        }
+
+        public final void execute(final Runnable command) {
+            doExecute(Collections.<Runnable>singletonList(new Runnable() {
+                public void run() {
+                    final ClassLoader contextClassLoader = setTCCL(getCL(command.getClass()));
+                    try {
+                        command.run();
+                    } finally {
+                        setTCCL(contextClassLoader);
+                    }
+                }
+            }));
+        }
+    }
+
+    private final class StartContextImpl extends AbstractContext implements StartContext {
         public void failed(StartException reason) throws IllegalStateException {
             synchronized (lock) {
                 if (state == ContextState.COMPLETE || state == ContextState.FAILED
@@ -1938,17 +2006,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final ServiceName serviceName = getName();
             reason.setServiceName(serviceName);
             ServiceLogger.FAIL.startFailed(reason, serviceName);
-            final List<Runnable> tasks;
             synchronized (ServiceControllerImpl.this) {
-                final boolean leavingRestState = isStableRestState();
                 startException = reason;
-                // Subtract one for this task
-                decrementAsyncTasks();
-                tasks = transition();
-                addAsyncTasks(tasks.size());
-                updateStabilityState(leavingRestState);
             }
-            doExecute(tasks);
+            taskCompleted();
         }
 
         public ServiceTarget getChildTarget() {
@@ -1965,132 +2026,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
         }
 
-        public void asynchronous() throws IllegalStateException {
-            synchronized (lock) {
-                if (state == ContextState.SYNC) {
-                    state = ContextState.ASYNC;
-                } else if (state == ContextState.SYNC_ASYNC_COMPLETE) {
-                    state = ContextState.COMPLETE;
-                } else if (state == ContextState.SYNC_ASYNC_FAILED) {
-                    state = ContextState.FAILED;
-                } else if (state == ContextState.ASYNC) {
-                    throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
-                }
-            }
-        }
-
-        public void complete() throws IllegalStateException {
-            synchronized (lock) {
-                if (state == ContextState.COMPLETE || state == ContextState.FAILED
-                        || state == ContextState.SYNC_ASYNC_COMPLETE || state == ContextState.SYNC_ASYNC_FAILED) {
-                    throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
-                }
-                if (state == ContextState.ASYNC) {
-                    state = ContextState.COMPLETE;
-                }
-                if (state == ContextState.SYNC) {
-                    state = ContextState.SYNC_ASYNC_COMPLETE;
-                }
-            }
+        void onComplete() {
             final ServiceName serviceName = primaryRegistration.getName();
             inject(serviceName, outInjections);
-            final List<Runnable> tasks;
-            synchronized (ServiceControllerImpl.this) {
-                final boolean leavingRestState = isStableRestState();
-                // Subtract one for this task
-                decrementAsyncTasks();
-                tasks = transition();
-                addAsyncTasks(tasks.size());
-                updateStabilityState(leavingRestState);
-            }
-            doExecute(tasks);
-        }
-
-        public long getElapsedTime() {
-            return System.nanoTime() - lifecycleTime;
-        }
-
-        public ServiceController<?> getController() {
-            return ServiceControllerImpl.this;
-        }
-
-        public void execute(final Runnable command) {
-            doExecute(Collections.<Runnable>singletonList(new Runnable() {
-                public void run() {
-                    final ClassLoader contextClassLoader = setTCCL(getCL(command.getClass()));
-                    try {
-                        command.run();
-                    } finally {
-                        setTCCL(contextClassLoader);
-                    }
-                }
-            }));
         }
     }
 
-    private final class StopContextImpl implements StopContext {
-
-        private ContextState state = ContextState.SYNC;
-        private final Object lock = new Object();
-
-        public void asynchronous() throws IllegalStateException {
-            synchronized (lock) {
-                if (state == ContextState.SYNC) {
-                    state = ContextState.ASYNC;
-                } else if (state == ContextState.SYNC_ASYNC_COMPLETE) {
-                    state = ContextState.COMPLETE;
-                } else if (state == ContextState.ASYNC) {
-                    throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
-                }
-            }
-        }
-
-        public void complete() throws IllegalStateException {
-            synchronized (lock) {
-                if (state == ContextState.COMPLETE || state == ContextState.SYNC_ASYNC_COMPLETE) {
-                    throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
-                }
-                if (state == ContextState.ASYNC) {
-                    state = ContextState.COMPLETE;
-                }
-                if (state == ContextState.SYNC) {
-                    state = ContextState.SYNC_ASYNC_COMPLETE;
-                }
-            }
+    private final class StopContextImpl extends AbstractContext implements StopContext {
+        void onComplete() {
             final ServiceName serviceName = primaryRegistration.getName();
             uninject(serviceName, injections);
             uninject(serviceName, outInjections);
-            final List<Runnable> tasks;
-            synchronized (ServiceControllerImpl.this) {
-                final boolean leavingRestState = isStableRestState();
-                // Subtract one for this task
-                decrementAsyncTasks();
-                tasks = transition();
-                addAsyncTasks(tasks.size());
-                updateStabilityState(leavingRestState);
-            }
-            doExecute(tasks);
-        }
-
-        public ServiceController<?> getController() {
-            return ServiceControllerImpl.this;
-        }
-
-        public void execute(final Runnable command) {
-            doExecute(Collections.<Runnable>singletonList(new Runnable() {
-                public void run() {
-                    final ClassLoader contextClassLoader = setTCCL(getCL(command.getClass()));
-                    try {
-                        command.run();
-                    } finally {
-                        setTCCL(contextClassLoader);
-                    }
-                }
-            }));
-        }
-
-        public long getElapsedTime() {
-            return System.nanoTime() - lifecycleTime;
         }
     }
 
