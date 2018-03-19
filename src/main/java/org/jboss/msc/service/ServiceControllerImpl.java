@@ -683,7 +683,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                     tasks.add(new DependencyFailedTask());
                     tasks.add(new RemoveChildrenTask());
-                    tasks.add(new StopTask(false));
                     break;
                 }
                 case START_FAILED_to_STARTING: {
@@ -724,7 +723,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         childTarget.valid = false;
                         this.childTarget = null;
                     }
-                    tasks.add(new StopTask(true));
+                    tasks.add(new StopTask());
                     tasks.add(new RemoveChildrenTask());
                     break;
                 }
@@ -1688,6 +1687,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             try {
                 inject(serviceName, injections);
                 startService(service, context);
+                boolean startFailed;
                 synchronized (context.lock) {
                     context.state |= AbstractContext.CLOSED;
                     if ((context.state & AbstractContext.ASYNC) != 0) {
@@ -1703,8 +1703,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                             context.state |= AbstractContext.COMPLETED;
                         }
                     }
+                    startFailed = (context.state & AbstractContext.FAILED) != 0;
                 }
-                inject(serviceName, outInjections);
+                if (startFailed) {
+                    uninject(serviceName, injections);
+                } else {
+                    inject(serviceName, outInjections);
+                }
                 return true;
             } catch (StartException e) {
                 e.setServiceName(serviceName);
@@ -1732,30 +1737,22 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     startException = e;
                 }
             }
+            uninject(serviceName, injections);
+            uninject(serviceName, outInjections);
             return true;
         }
     }
 
     private final class StopTask extends ControllerTask {
-        private final boolean stopService;
-
-        StopTask(final boolean stopService) {
-            this.stopService = stopService;
-        }
-
         boolean execute() {
             final ServiceName serviceName = primaryRegistration.getName();
             final StopContextImpl context = new StopContextImpl();
             boolean ok = false;
             try {
-                if (stopService) {
-                    try {
-                        stopService(service, context);
-                        ok = true;
-                    } catch (Throwable t) {
-                        ServiceLogger.FAIL.stopFailed(t, serviceName);
-                    }
-                }
+                stopService(service, context);
+                ok = true;
+            } catch (Throwable t) {
+                ServiceLogger.FAIL.stopFailed(t, serviceName);
             } finally {
                 synchronized (context.lock) {
                     context.state |= AbstractContext.CLOSED;
@@ -2001,6 +1998,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
             }
             if ((state & CLOSED) != 0) {
+                uninject(serviceName, injections);
                 taskCompleted();
             }
         }
