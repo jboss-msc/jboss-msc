@@ -1524,17 +1524,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    enum ContextState {
-        // mid transition states
-        SYNC_ASYNC_COMPLETE,
-        SYNC_ASYNC_FAILED,
-        // final transition states
-        SYNC,
-        ASYNC,
-        COMPLETE,
-        FAILED,
-    }
-
     @Override
     public String toString() {
         return String.format("Controller for %s@%x", getName(), Integer.valueOf(hashCode()));
@@ -1700,10 +1689,20 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 inject(serviceName, injections);
                 startService(service, context);
                 synchronized (context.lock) {
-                    if (context.state != ContextState.SYNC) {
-                        return false;
+                    context.state |= AbstractContext.CLOSED;
+                    if ((context.state & AbstractContext.ASYNC) != 0) {
+                        // asynchronous() was called
+                        if ((context.state & (AbstractContext.COMPLETED | AbstractContext.FAILED)) == 0) {
+                            // Neither complete() nor failed() have been called yet
+                            return false;
+                        }
+                    } else {
+                        // asynchronous() was not called
+                        if ((context.state & (AbstractContext.COMPLETED | AbstractContext.FAILED)) == 0) {
+                            // Neither complete() nor failed() have been called yet
+                            context.state |= AbstractContext.COMPLETED;
+                        }
                     }
-                    context.state = ContextState.COMPLETE;
                 }
                 inject(serviceName, outInjections);
                 return true;
@@ -1728,15 +1727,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         private boolean startFailed(final StartException e, final ServiceName serviceName, final StartContextImpl context) {
             ServiceLogger.FAIL.startFailed(e, serviceName);
             synchronized (context.lock) {
-                final ContextState oldState = context.state;
-                if (oldState != ContextState.SYNC && oldState != ContextState.ASYNC) {
-                    ServiceLogger.FAIL.exceptionAfterComplete(e, serviceName);
-                    return false;
+                context.state |= (AbstractContext.FAILED | AbstractContext.CLOSED);
+                synchronized (ServiceControllerImpl.this) {
+                    startException = e;
                 }
-                context.state = ContextState.FAILED;
-            }
-            synchronized (ServiceControllerImpl.this) {
-                startException = e;
             }
             return true;
         }
@@ -1764,17 +1758,25 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
             } finally {
                 synchronized (context.lock) {
-                    if (ok && context.state != ContextState.SYNC) {
-                        // We want to discard the exception anyway, if there was one.  Which there can't be.
-                        //noinspection ReturnInsideFinallyBlock
-                        return false;
+                    context.state |= AbstractContext.CLOSED;
+                    if (ok & (context.state & AbstractContext.ASYNC) != 0) {
+                        // no exception thrown and asynchronous() was called
+                        if ((context.state & AbstractContext.COMPLETED) == 0) {
+                            // complete() have not been called yet
+                            return false;
+                        }
+                    } else {
+                        // exception thrown or asynchronous() was not called
+                        if ((context.state & AbstractContext.COMPLETED) == 0) {
+                            // complete() have not been called yet
+                            context.state |= AbstractContext.COMPLETED;
+                        }
                     }
-                    context.state = ContextState.COMPLETE;
                 }
                 uninject(serviceName, injections);
                 uninject(serviceName, outInjections);
-                return true;
             }
+            return true;
         }
 
         private void stopService(Service<? extends S> service, StopContext context) {
@@ -1915,10 +1917,26 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     private abstract class AbstractContext implements LifecycleContext {
-        ContextState state = ContextState.SYNC;
+        static final int ASYNC = 1;
+        static final int CLOSED = 1 << 1;
+        static final int COMPLETED = 1 << 2;
+        static final int FAILED = 1 << 3;
+
+        int state;
         final Object lock = new Object();
 
         abstract void onComplete();
+
+        final int setState(final int newState) {
+            synchronized (lock) {
+                if (((newState & ASYNC) != 0 && ((state & ASYNC) != 0 || (state & CLOSED) != 0)) ||
+                    ((newState & (COMPLETED | FAILED)) != 0 && (state & (COMPLETED | FAILED)) != 0) ||
+                    ((newState & (COMPLETED | FAILED)) != 0 && (state & CLOSED) != 0 && (state & ASYNC) == 0)) {
+                    throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
+                }
+                return state |= newState;
+            }
+        }
 
         final void taskCompleted() {
             final List<Runnable> tasks;
@@ -1934,34 +1952,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public final void complete() {
-            synchronized (lock) {
-                if (state == ContextState.COMPLETE || state == ContextState.FAILED
-                        || state == ContextState.SYNC_ASYNC_COMPLETE || state == ContextState.SYNC_ASYNC_FAILED) {
-                    throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
-                }
-                if (state == ContextState.ASYNC) {
-                    state = ContextState.COMPLETE;
-                }
-                if (state == ContextState.SYNC) {
-                    state = ContextState.SYNC_ASYNC_COMPLETE;
-                }
+            final int state = setState(COMPLETED);
+            if ((state & CLOSED) != 0) {
+                onComplete();
+                taskCompleted();
             }
-            onComplete();
-            taskCompleted();
         }
 
         public final void asynchronous() {
-            synchronized (lock) {
-                if (state == ContextState.SYNC) {
-                    state = ContextState.ASYNC;
-                } else if (state == ContextState.SYNC_ASYNC_COMPLETE) {
-                    state = ContextState.COMPLETE;
-                } else if (state == ContextState.SYNC_ASYNC_FAILED) {
-                    state = ContextState.FAILED;
-                } else if (state == ContextState.ASYNC) {
-                    throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
-                }
-            }
+            setState(ASYNC);
         }
 
         public final long getElapsedTime() {
@@ -1988,33 +1987,27 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private final class StartContextImpl extends AbstractContext implements StartContext {
         public void failed(StartException reason) throws IllegalStateException {
-            synchronized (lock) {
-                if (state == ContextState.COMPLETE || state == ContextState.FAILED
-                        || state == ContextState.SYNC_ASYNC_COMPLETE || state == ContextState.SYNC_ASYNC_FAILED) {
-                    throw new IllegalStateException(ILLEGAL_CONTROLLER_STATE);
-                }
-                if (state == ContextState.ASYNC) {
-                    state = ContextState.FAILED;
-                }
-                if (state == ContextState.SYNC) {
-                    state = ContextState.SYNC_ASYNC_FAILED;
-                }
-            }
             if (reason == null) {
                 reason = new StartException("Start failed, and additionally, a null cause was supplied");
             }
             final ServiceName serviceName = getName();
             reason.setServiceName(serviceName);
             ServiceLogger.FAIL.startFailed(reason, serviceName);
-            synchronized (ServiceControllerImpl.this) {
-                startException = reason;
+            final int state;
+            synchronized (lock) {
+                state = setState(FAILED);
+                synchronized (ServiceControllerImpl.this) {
+                    startException = reason;
+                }
             }
-            taskCompleted();
+            if ((state & CLOSED) != 0) {
+                taskCompleted();
+            }
         }
 
         public ServiceTarget getChildTarget() {
             synchronized (lock) {
-                if (state == ContextState.COMPLETE || state == ContextState.FAILED) {
+                if ((state & (COMPLETED | FAILED)) != 0) {
                     throw new IllegalStateException("Lifecycle context is no longer valid");
                 }
                 synchronized (ServiceControllerImpl.this) {
