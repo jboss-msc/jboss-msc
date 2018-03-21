@@ -783,12 +783,12 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         final Set<ServiceControllerImpl<?>> visited = new IdentityHashSet<ServiceControllerImpl<?>>();
         final Deque<ServiceName> visitStack = new ArrayDeque<ServiceName>();
         final ServiceRegistrationImpl reg = instance.getPrimaryRegistration();
+        visitStack.push(instance.getName());
+        synchronized (instance) {
+            detectCircularity(instance.getChildren(), instance, visited, visitStack);
+        }
         synchronized (reg) {
-            visitStack.push(instance.getName());
             detectCircularity(reg.getDependents(), instance, visited, visitStack);
-            synchronized (instance) {
-                detectCircularity(instance.getChildren(), instance, visited, visitStack);
-            }
         }
         for (ServiceRegistrationImpl alias: instance.getAliasRegistrations()) {
             synchronized (alias) {
@@ -819,17 +819,17 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                         continue;
                     }
                 }
+                visitStack.push(controller.getName());
+                synchronized(controller) {
+                    detectCircularity(controller.getChildren(), instance, visited, visitStack);
+                }
                 ServiceRegistrationImpl reg = controller.getPrimaryRegistration();
                 synchronized (reg) {
                     // concurrent removal, skip this one entirely
                     if (reg.getDependencyController() == null) {
                         continue;
                     }
-                    visitStack.push(controller.getName());
                     detectCircularity(reg.getDependents(), instance, visited, visitStack);
-                    synchronized(controller) {
-                        detectCircularity(controller.getChildren(), instance, visited, visitStack);
-                    }
                 }
                 for (ServiceRegistrationImpl alias: controller.getAliasRegistrations()) {
                     synchronized (alias) {
