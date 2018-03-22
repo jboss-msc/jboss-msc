@@ -97,13 +97,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private final IdentityHashSet<StabilityMonitor> monitors;
     /**
-     * The primary registration of this service.
+     * The registrations of this service.
      */
-    private final ServiceRegistrationImpl primaryRegistration;
-    /**
-     * The alias registrations of this service.
-     */
-    private final ServiceRegistrationImpl[] aliasRegistrations;
+    private final ServiceRegistrationImpl[] registrations;
     /**
      * The parent of this service.
      */
@@ -193,15 +189,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     static final int MAX_DEPENDENCIES = (1 << 14) - 1;
 
-    ServiceControllerImpl(final ServiceContainerImpl container, final Service<S> service, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl primaryRegistration, final ServiceRegistrationImpl[] aliasRegistrations, final Set<StabilityMonitor> monitors, final Set<? extends ServiceListener<? super S>> listeners, final Set<LifecycleListener> lifecycleListeners, final ServiceControllerImpl<?> parent) {
+    ServiceControllerImpl(final ServiceContainerImpl container, final Service<S> service, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl[] registrations, final Set<StabilityMonitor> monitors, final Set<? extends ServiceListener<? super S>> listeners, final Set<LifecycleListener> lifecycleListeners, final ServiceControllerImpl<?> parent) {
         assert dependencies.length <= MAX_DEPENDENCIES;
         this.container = container;
         this.service = service;
         this.dependencies = dependencies;
         this.injections = injections;
         this.outInjections = outInjections;
-        this.primaryRegistration = primaryRegistration;
-        this.aliasRegistrations = aliasRegistrations;
+        this.registrations = registrations;
         this.listeners = new IdentityHashSet<ServiceListener<? super S>>(listeners);
         this.lifecycleListeners = new IdentityHashSet<LifecycleListener>(lifecycleListeners);
         this.monitors = new IdentityHashSet<StabilityMonitor>(monitors);
@@ -228,21 +223,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * installation is {@link #commitInstallation(org.jboss.msc.service.ServiceController.Mode) committed}.
      */
     void startInstallation() {
-        Lockable lock = primaryRegistration.getLock();
-        synchronized (lock) {
-            lock.acquireWrite();
-            try {
-                primaryRegistration.setInstance(this);
-            } finally {
-                lock.releaseWrite();
-            }
-        }
-        for (ServiceRegistrationImpl aliasRegistration: aliasRegistrations) {
-            lock = aliasRegistration.getLock();
+        Lockable lock;
+        for (ServiceRegistrationImpl registration : registrations) {
+            lock = registration.getLock();
             synchronized (lock) {
                 lock.acquireWrite();
                 try {
-                    aliasRegistration.setInstance(this);
+                    registration.setInstance(this);
                 } finally {
                     lock.releaseWrite();
                 }
@@ -1160,9 +1147,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private Collection<ServiceName> getNames() {
         final Collection<ServiceName> retVal = new ArrayList<ServiceName>();
-        retVal.add(primaryRegistration.getName());
-        for (int i = 0; i < aliasRegistrations.length; i++) {
-            retVal.add(aliasRegistrations[i].getName());
+        for (int i = 0; i < registrations.length; i++) {
+            retVal.add(registrations[i].getName());
         }
         return retVal;
     }
@@ -1317,16 +1303,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     ServiceStatus getStatus() {
         synchronized (this) {
             final String parentName = parent == null ? null : parent.getName().getCanonicalName();
-            final String name = primaryRegistration.getName().getCanonicalName();
-            final ServiceRegistrationImpl[] aliasRegistrations = this.aliasRegistrations;
-            final int aliasLength = aliasRegistrations.length;
+            final String name = getName().getCanonicalName();
+            final ServiceName[] aliasNames = getAliases();
+            final int aliasLength = aliasNames.length;
             final String[] aliases;
             if (aliasLength == 0) {
                 aliases = NO_STRINGS;
             } else {
                 aliases = new String[aliasLength];
                 for (int i = 0; i < aliasLength; i++) {
-                    aliases[i] = aliasRegistrations[i].getName().getCanonicalName();
+                    aliases[i] = aliasNames[i].getCanonicalName();
                 }
             }
             String serviceClass = "<unknown>";
@@ -1368,25 +1354,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     String dumpServiceDetails() {
         final StringBuilder b = new StringBuilder();
         IdentityHashSet<Dependent> dependents;
-        synchronized (primaryRegistration) {
-            dependents = primaryRegistration.getDependents().clone();
-        }
-        b.append("Service Name: ").append(primaryRegistration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
-        for (Dependent dependent : dependents) {
-            final ServiceControllerImpl<?> controller = dependent.getDependentController();
-            synchronized (controller) {
-                b.append("        ").append(controller.getName().toString()).append(" - State: ").append(controller.state.getState()).append(" (Substate: ").append(controller.state).append(")\n");
-            }
-        }
-        b.append("Service Aliases: ").append(aliasRegistrations.length).append('\n');
-        for (ServiceRegistrationImpl registration : aliasRegistrations) {
+        for (ServiceRegistrationImpl registration : registrations) {
             synchronized (registration) {
                 dependents = registration.getDependents().clone();
             }
-            b.append("    ").append(registration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
+            b.append("Service Name: ").append(registration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
             for (Dependent dependent : dependents) {
                 final ServiceControllerImpl<?> controller = dependent.getDependentController();
-                b.append("        ").append(controller.getName().toString()).append(" - State: ").append(controller.state.getState()).append(" (Substate: ").append(controller.state).append(")\n");
+                synchronized (controller) {
+                    b.append("        ").append(controller.getName().toString()).append(" - State: ").append(controller.state.getState()).append(" (Substate: ").append(controller.state).append(")\n");
+                }
             }
         }
         synchronized (this) {
@@ -1399,7 +1376,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final Substate state = this.state;
             b.append("State: ").append(state.getState()).append(" (Substate: ").append(state).append(")\n");
             if (parent != null) {
-                b.append("Parent Name: ").append(parent.getPrimaryRegistration().getName().toString()).append('\n');
+                b.append("Parent Names: ").append(parent.getNames()).append('\n');
             }
             b.append("Service Mode: ").append(mode).append('\n');
             if (startException != null) {
@@ -1496,12 +1473,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    ServiceRegistrationImpl getPrimaryRegistration() {
-        return primaryRegistration;
-    }
-
-    ServiceRegistrationImpl[] getAliasRegistrations() {
-        return aliasRegistrations;
+    ServiceRegistrationImpl[] getRegistrations() {
+        return registrations;
     }
 
     private void inject(final ValueInjection<?>[] injections) {
@@ -1612,11 +1585,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         final boolean execute() {
-            for (Dependent dependent : primaryRegistration.getDependents()) {
-                inform(dependent);
-            }
-            for (ServiceRegistrationImpl aliasRegistration : aliasRegistrations) {
-                for (Dependent dependent : aliasRegistration.getDependents()) {
+            for (ServiceRegistrationImpl registration : registrations) {
+                for (Dependent dependent : registration.getDependents()) {
                     inform(dependent);
                 }
             }
@@ -1632,19 +1602,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         void inform(final Dependent dependent) {}
 
         void beforeExecute() {
-            Lockable lock = primaryRegistration.getLock();
-            synchronized (lock) { lock.acquireRead(); }
-            for (ServiceRegistrationImpl aliasRegistration : aliasRegistrations) {
-                lock = aliasRegistration.getLock();
+            Lockable lock;
+            for (ServiceRegistrationImpl registration : registrations) {
+                lock = registration.getLock();
                 synchronized (lock) { lock.acquireRead(); }
             }
         }
 
         void afterExecute() {
-            Lockable lock = primaryRegistration.getLock();
-            synchronized (lock) { lock.releaseRead(); }
-            for (ServiceRegistrationImpl aliasRegistration : aliasRegistrations) {
-                lock = aliasRegistration.getLock();
+            Lockable lock;
+            for (ServiceRegistrationImpl registration : registrations) {
+                lock = registration.getLock();
                 synchronized (lock) { lock.releaseRead(); }
             }
         }
@@ -1884,21 +1852,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         boolean execute() {
             assert getMode() == ServiceController.Mode.REMOVE;
             assert getSubstate() == Substate.REMOVED || getSubstate() == Substate.CANCELLED;
-            Lockable lock = primaryRegistration.getLock();
-            synchronized (lock) {
-                lock.acquireWrite();
-                try {
-                    primaryRegistration.clearInstance(ServiceControllerImpl.this);
-                } finally {
-                    lock.releaseWrite();
-                }
-            }
-            for (ServiceRegistrationImpl aliasRegistration : aliasRegistrations) {
-                lock = aliasRegistration.getLock();
+            Lockable lock;
+            for (ServiceRegistrationImpl registration : registrations) {
+                lock = registration.getLock();
                 synchronized (lock) {
                     lock.acquireWrite();
                     try {
-                        aliasRegistration.clearInstance(ServiceControllerImpl.this);
+                        registration.clearInstance(ServiceControllerImpl.this);
                     } finally {
                         lock.releaseWrite();
                     }
