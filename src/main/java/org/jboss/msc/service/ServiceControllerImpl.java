@@ -29,6 +29,7 @@ import static org.jboss.msc.service.SecurityUtils.setTCCL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -1157,23 +1158,29 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return service;
     }
 
+    private Collection<ServiceName> getNames() {
+        final Collection<ServiceName> retVal = new ArrayList<ServiceName>();
+        retVal.add(primaryRegistration.getName());
+        for (int i = 0; i < aliasRegistrations.length; i++) {
+            retVal.add(aliasRegistrations[i].getName());
+        }
+        return retVal;
+    }
+
     public ServiceName getName() {
-        return primaryRegistration.getName();
+        return getNames().iterator().next();
     }
 
     private static final ServiceName[] NO_NAMES = new ServiceName[0];
 
     public ServiceName[] getAliases() {
-        final ServiceRegistrationImpl[] aliasRegistrations = this.aliasRegistrations;
-        final int len = aliasRegistrations.length;
-        if (len == 0) {
-            return NO_NAMES;
-        }
-        final ServiceName[] names = new ServiceName[len];
-        for (int i = 0; i < len; i++) {
-            names[i] = aliasRegistrations[i].getName();
-        }
-        return names;
+        final Collection<ServiceName> names = getNames();
+        if (names.size() == 1) return NO_NAMES;
+        final ServiceName[] retVal = new ServiceName[names.size() - 1];
+        final Iterator<ServiceName> namesIterator = names.iterator();
+        namesIterator.next();
+        for (int i = 0; namesIterator.hasNext(); i++) retVal[i] = namesIterator.next();
+        return retVal;
     }
 
     void addListener(final ContainerShutdownListener listener) {
@@ -1220,7 +1227,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final boolean leavingRestState = isStableRestState();
             if (listeners.contains(listener)) {
                 // Duplicates not allowed
-                throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + primaryRegistration.getName());
+                throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + getName());
             }
             listeners.add(listener);
             listenerAddedTask = new ListenerTask(listener, ListenerNotification.LISTENER_ADDED);
@@ -1497,43 +1504,43 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return aliasRegistrations;
     }
 
-    private static void inject(final ServiceName serviceName, final ValueInjection<?>[] injections) {
+    private void inject(final ValueInjection<?>[] injections) {
         boolean ok = false;
         int i = 0;
         try {
             for (; i < injections.length; i++) {
-                inject(serviceName, injections[i]);
+                inject(injections[i]);
             }
             ok = true;
         } finally {
             if (!ok) {
                 for (; i >= 0; i--) {
-                    uninject(serviceName, injections[i]);
+                    uninject(injections[i]);
                 }
             }
         }
     }
 
-    private static <T> void inject(final ServiceName serviceName, final ValueInjection<T> injection) {
+    private <T> void inject(final ValueInjection<T> injection) {
         try {
             injection.getTarget().inject(injection.getSource().getValue());
         } catch (final Throwable t) {
-            ServiceLogger.SERVICE.injectFailed(t, serviceName);
+            ServiceLogger.SERVICE.injectFailed(t, getName());
             throw t;
         }
     }
 
-    private static void uninject(final ServiceName serviceName, final ValueInjection<?>[] injections) {
+    private void uninject(final ValueInjection<?>[] injections) {
         for (ValueInjection<?> injection : injections) {
-            uninject(serviceName, injection);
+            uninject(injection);
         }
     }
 
-    private static <T> void uninject(final ServiceName serviceName, final ValueInjection<T> injection) {
+    private <T> void uninject(final ValueInjection<T> injection) {
         try {
             injection.getTarget().uninject();
         } catch (Throwable t) {
-            ServiceLogger.ROOT.uninjectFailed(t, serviceName, injection);
+            ServiceLogger.ROOT.uninjectFailed(t, getName(), injection);
         }
     }
 
@@ -1563,7 +1570,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 doExecute(tasks);
             } catch (Throwable t) {
-                ServiceLogger.SERVICE.internalServiceError(t, primaryRegistration.getName());
+                ServiceLogger.SERVICE.internalServiceError(t, getName());
             } finally {
                 afterExecute();
             }
@@ -1695,10 +1702,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private final class StartTask extends ControllerTask {
         boolean execute() {
-            final ServiceName serviceName = primaryRegistration.getName();
             final StartContextImpl context = new StartContextImpl();
             try {
-                inject(serviceName, injections);
+                inject(injections);
                 startService(service, context);
                 boolean startFailed;
                 synchronized (context.lock) {
@@ -1719,17 +1725,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     startFailed = (context.state & AbstractContext.FAILED) != 0;
                 }
                 if (startFailed) {
-                    uninject(serviceName, injections);
+                    uninject(injections);
                 } else {
-                    inject(serviceName, outInjections);
+                    inject(outInjections);
                 }
                 return true;
             } catch (StartException e) {
-                e.setServiceName(serviceName);
-                return startFailed(e, serviceName, context);
+                e.setServiceName(getName());
+                return startFailed(e, context);
             } catch (Throwable t) {
-                StartException e = new StartException("Failed to start service", t, serviceName);
-                return startFailed(e, serviceName, context);
+                return startFailed(new StartException("Failed to start service", t, getName()), context);
             }
         }
 
@@ -1742,30 +1747,29 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
         }
 
-        private boolean startFailed(final StartException e, final ServiceName serviceName, final StartContextImpl context) {
-            ServiceLogger.FAIL.startFailed(e, serviceName);
+        private boolean startFailed(final StartException e, final StartContextImpl context) {
+            ServiceLogger.FAIL.startFailed(e, getName());
             synchronized (context.lock) {
                 context.state |= (AbstractContext.FAILED | AbstractContext.CLOSED);
                 synchronized (ServiceControllerImpl.this) {
                     startException = e;
                 }
             }
-            uninject(serviceName, injections);
-            uninject(serviceName, outInjections);
+            uninject(injections);
+            uninject(outInjections);
             return true;
         }
     }
 
     private final class StopTask extends ControllerTask {
         boolean execute() {
-            final ServiceName serviceName = primaryRegistration.getName();
             final StopContextImpl context = new StopContextImpl();
             boolean ok = false;
             try {
                 stopService(service, context);
                 ok = true;
             } catch (Throwable t) {
-                ServiceLogger.FAIL.stopFailed(t, serviceName);
+                ServiceLogger.FAIL.stopFailed(t, getName());
             } finally {
                 synchronized (context.lock) {
                     context.state |= AbstractContext.CLOSED;
@@ -1783,8 +1787,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         }
                     }
                 }
-                uninject(serviceName, injections);
-                uninject(serviceName, outInjections);
+                uninject(injections);
+                uninject(outInjections);
             }
             return true;
         }
@@ -2001,7 +2005,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
             }
             if ((state & CLOSED) != 0) {
-                uninject(serviceName, injections);
+                uninject(injections);
                 taskCompleted();
             }
         }
@@ -2021,16 +2025,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         void onComplete() {
-            final ServiceName serviceName = primaryRegistration.getName();
-            inject(serviceName, outInjections);
+            inject(outInjections);
         }
     }
 
     private final class StopContextImpl extends AbstractContext implements StopContext {
         void onComplete() {
-            final ServiceName serviceName = primaryRegistration.getName();
-            uninject(serviceName, injections);
-            uninject(serviceName, outInjections);
+            uninject(injections);
+            uninject(outInjections);
         }
     }
 

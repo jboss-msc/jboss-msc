@@ -127,6 +127,7 @@ public class DelegatingServiceController<S> implements ServiceController<S> {
 
     /** {@inheritDoc} */
     @Override
+    @Deprecated
     public ServiceName[] getAliases() {
         return getDelegate().getAliases();
     }
@@ -139,6 +140,7 @@ public class DelegatingServiceController<S> implements ServiceController<S> {
 
     /** {@inheritDoc} */
     @Override
+    @Deprecated
     public void addListener(final ServiceListener<? super S> listener) {
         getDelegate().addListener(listener);
     }
@@ -151,6 +153,7 @@ public class DelegatingServiceController<S> implements ServiceController<S> {
 
     /** {@inheritDoc} */
     @Override
+    @Deprecated
     public void removeListener(final ServiceListener<? super S> listener) {
         getDelegate().removeListener(listener);
     }
