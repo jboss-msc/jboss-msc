@@ -100,7 +100,9 @@ public interface ServiceController<S> extends Value<S> {
      *
      * @return the service value
      * @throws IllegalStateException if the service is not available (i.e. it is not up)
+     * @deprecated this method will be removed in the future
      */
+    @Deprecated
     S getValue() throws IllegalStateException;
 
     /**
@@ -109,7 +111,9 @@ public interface ServiceController<S> extends Value<S> {
      * @return the service value
      * @throws IllegalStateException if the service is not available (i.e. it was removed or failed)
      * @throws InterruptedException if the wait operation was interrupted
+     * @deprecated this method will be removed in the future
      */
+    @Deprecated
     S awaitValue() throws IllegalStateException, InterruptedException;
 
     /**
@@ -120,7 +124,9 @@ public interface ServiceController<S> extends Value<S> {
      * @return the service value
      * @throws IllegalStateException if the service is not available (i.e. it was removed or failed)
      * @throws InterruptedException if the wait operation was interrupted
+     * @deprecated this method will be removed in the future
      */
+    @Deprecated
     S awaitValue(long time, TimeUnit unit) throws IllegalStateException, InterruptedException, TimeoutException;
 
     /**

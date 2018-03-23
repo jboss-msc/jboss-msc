@@ -97,18 +97,21 @@ public class DelegatingServiceController<S> implements ServiceController<S> {
 
     /** {@inheritDoc} */
     @Override
+    @Deprecated
     public S getValue() throws IllegalStateException {
         return getDelegate().getValue();
     }
 
     /** {@inheritDoc} */
     @Override
+    @Deprecated
     public S awaitValue() throws IllegalStateException, InterruptedException {
         return getDelegate().awaitValue();
     }
 
     /** {@inheritDoc} */
     @Override
+    @Deprecated
     public S awaitValue(final long time, final TimeUnit unit) throws IllegalStateException, InterruptedException, TimeoutException {
         return getDelegate().awaitValue(time, unit);
     }
