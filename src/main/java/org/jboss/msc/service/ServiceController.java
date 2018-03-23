@@ -92,7 +92,9 @@ public interface ServiceController<S> extends Value<S> {
      * Get the current service controller substate.
      *
      * @return the current substate
+     * @deprecated this method will be removed in the future
      */
+    @Deprecated
     Substate getSubstate();
 
     /**
@@ -315,7 +317,9 @@ public interface ServiceController<S> extends Value<S> {
     /**
      * A fine-grained substate of the more general basic controller {@link State}s.  The list of possible
      * substates may change over time, so users should not rely on its permanence.
+     * @deprecated this class will be removed in the future
      */
+    @Deprecated
     enum Substate {
         /**
          * New controller being installed.
@@ -423,7 +427,9 @@ public interface ServiceController<S> extends Value<S> {
     /**
      * A transition from one substate to another.  The list of possible transitions may change over time, so users
      * should not rely on its permanence.
+     * @deprecated this class will be removed in the future
      */
+    @Deprecated
     enum Transition {
         // New transitions should be added to the end.  Unused transitions should be retained as "deprecated" for
         // binary compatibility.

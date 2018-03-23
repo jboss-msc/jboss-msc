@@ -91,6 +91,7 @@ public class DelegatingServiceController<S> implements ServiceController<S> {
 
     /** {@inheritDoc} */
     @Override
+    @Deprecated
     public Substate getSubstate() {
         return getDelegate().getSubstate();
     }
