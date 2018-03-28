@@ -1008,7 +1008,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final int cnt = this.demandedByCount;
             this.demandedByCount += demandedByCount;
             if (ignoreNotification()) return;
-            boolean notStartedLazy = mode == Mode.LAZY && !(state.getState() == State.UP && state != Substate.STOP_REQUESTED);
+            boolean notStartedLazy = mode == Mode.LAZY && state != Substate.UP;
             propagate = cnt == 0 && (mode == Mode.ON_DEMAND || notStartedLazy || mode == Mode.PASSIVE);
             if (!propagate) return;
             tasks = transition();
@@ -1027,7 +1027,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             assert demandedByCount > 0;
             final int cnt = --demandedByCount;
             if (ignoreNotification()) return;
-            boolean notStartedLazy = mode == Mode.LAZY && !(state.getState() == State.UP && state != Substate.STOP_REQUESTED);
+            boolean notStartedLazy = mode == Mode.LAZY && state != Substate.UP;
             propagate = cnt == 0 && (mode == Mode.ON_DEMAND || notStartedLazy || mode == Mode.PASSIVE);
             if (!propagate) return;
             tasks = transition();
