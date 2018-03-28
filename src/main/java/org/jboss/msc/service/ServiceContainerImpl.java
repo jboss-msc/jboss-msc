@@ -783,11 +783,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 throw new CircularDependencyException("Container " + name + " has a circular dependency: " + Arrays.asList(cycle), cycle);
             }
             if (visited.add(controller)) {
-                synchronized (controller) {
-                    if (controller.getSubstateLocked() == Substate.CANCELLED || controller.getSubstateLocked() == Substate.REMOVED) {
-                        continue;
-                    }
-                }
+                if (controller.getState() == ServiceController.State.REMOVED) continue;
                 visitStack.push(controller.getName());
                 synchronized(controller) {
                     detectCircularity(controller.getChildren(), instance, visited, visitStack);

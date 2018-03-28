@@ -212,10 +212,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         children = new IdentityHashSet<ServiceControllerImpl<?>>();
     }
 
-    Substate getSubstateLocked() {
-        return state;
-    }
-
     /**
      * Set this instance into primary and alias registrations.
      * <p></p>
