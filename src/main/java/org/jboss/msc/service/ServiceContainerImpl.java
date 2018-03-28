@@ -759,9 +759,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         final Set<ServiceControllerImpl<?>> visited = new IdentityHashSet<ServiceControllerImpl<?>>();
         final Deque<ServiceName> visitStack = new ArrayDeque<ServiceName>();
         visitStack.push(instance.getName());
-        synchronized (instance) {
-            detectCircularity(instance.getChildren(), instance, visited, visitStack);
-        }
         for (ServiceRegistrationImpl registration : instance.getRegistrations()) {
             synchronized (registration) {
                 detectCircularity(registration.getDependents(), instance, visited, visitStack);
