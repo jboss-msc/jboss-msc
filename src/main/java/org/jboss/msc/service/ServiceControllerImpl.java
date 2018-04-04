@@ -31,6 +31,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -38,6 +40,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.management.ServiceStatus;
 
 /**
@@ -65,13 +68,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private final ServiceContainerImpl container;
     /**
+     * The service identifier.
+     */
+    private final ServiceName serviceId;
+    /**
+     * The service aliases.
+     */
+    private final ServiceName[] serviceAliases;
+    /**
      * The service itself.
      */
-    private final Service<S> service;
-    /**
-     * The dependencies of this service.
-     */
-    private final Dependency[] dependencies;
+    private final org.jboss.msc.Service service;
     /**
      * The injections of this service.
      */
@@ -97,9 +104,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private final IdentityHashSet<StabilityMonitor> monitors;
     /**
-     * The registrations of this service.
+     * Required dependencies by this service.
      */
-    private final ServiceRegistrationImpl[] registrations;
+    private final Set<Dependency> requires;
+    /**
+     * Provided dependencies by this service.
+     */
+    private final Map<ServiceRegistrationImpl, WritableValueImpl> provides;
     /**
      * The parent of this service.
      */
@@ -189,14 +200,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     static final int MAX_DEPENDENCIES = (1 << 14) - 1;
 
-    ServiceControllerImpl(final ServiceContainerImpl container, final Service<S> service, final Dependency[] dependencies, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final ServiceRegistrationImpl[] registrations, final Set<StabilityMonitor> monitors, final Set<? extends ServiceListener<? super S>> listeners, final Set<LifecycleListener> lifecycleListeners, final ServiceControllerImpl<?> parent) {
-        assert dependencies.length <= MAX_DEPENDENCIES;
+    ServiceControllerImpl(final ServiceContainerImpl container, final ServiceName serviceId, final ServiceName[] serviceAliases, final org.jboss.msc.Service service, final Set<Dependency> requires, final Map<ServiceRegistrationImpl, WritableValueImpl> provides, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final Set<StabilityMonitor> monitors, final Set<? extends ServiceListener<? super S>> listeners, final Set<LifecycleListener> lifecycleListeners, final ServiceControllerImpl<?> parent) {
+        assert requires.size() <= MAX_DEPENDENCIES;
         this.container = container;
+        this.serviceId = serviceId;
+        this.serviceAliases = serviceAliases;
         this.service = service;
-        this.dependencies = dependencies;
         this.injections = injections;
         this.outInjections = outInjections;
-        this.registrations = registrations;
+        this.requires = requires;
+        this.provides = provides;
         this.listeners = new IdentityHashSet<ServiceListener<? super S>>(listeners);
         this.lifecycleListeners = new IdentityHashSet<LifecycleListener>(lifecycleListeners);
         this.monitors = new IdentityHashSet<StabilityMonitor>(monitors);
@@ -207,7 +220,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             monitor.addControllerNoCallback(this);
         }
         this.parent = parent;
-        int depCount = dependencies.length;
+        int depCount = requires.size();
         stoppingDependencies = parent == null ? depCount : depCount + 1;
         children = new IdentityHashSet<ServiceControllerImpl<?>>();
     }
@@ -219,13 +232,21 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * installation is {@link #commitInstallation(org.jboss.msc.service.ServiceController.Mode) committed}.
      */
     void startInstallation() {
+        ServiceRegistrationImpl registration;
+        WritableValueImpl injector;
         Lockable lock;
-        for (ServiceRegistrationImpl registration : registrations) {
+        for (Entry<ServiceRegistrationImpl, WritableValueImpl> provided : provides.entrySet()) {
+            registration = provided.getKey();
+            injector = provided.getValue();
             lock = registration.getLock();
             synchronized (lock) {
                 lock.acquireWrite();
                 try {
                     registration.setInstance(this);
+                    if (injector != null) {
+                        injector.setInstance(this);
+                        registration.setInjector(injector);
+                    }
                 } finally {
                     lock.releaseWrite();
                 }
@@ -241,7 +262,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     void startConfiguration() {
         Lockable lock;
-        for (Dependency dependency : dependencies) {
+        for (Dependency dependency : requires) {
             lock = dependency.getLock();
             synchronized (lock) {
                 lock.acquireWrite();
@@ -1083,15 +1104,21 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     public S getValue() throws IllegalStateException {
-        return service.getValue();
+        if (!(service instanceof Service)) {
+            throw new UnsupportedOperationException();
+        }
+        return ((Service<S>) service).getValue();
     }
 
     public S awaitValue() throws IllegalStateException, InterruptedException {
         assert !holdsLock(this);
+        if (!(service instanceof Service)) {
+            throw new UnsupportedOperationException();
+        }
         synchronized (this) {
             for (;;) switch (state.getState()) {
                 case UP: {
-                    return service.getValue();
+                    return ((Service<S>) service).getValue();
                 }
                 case START_FAILED: {
                     throw new IllegalStateException("Failed to start service", startException);
@@ -1108,6 +1135,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     public S awaitValue(final long time, final TimeUnit unit) throws IllegalStateException, InterruptedException, TimeoutException {
         assert !holdsLock(this);
+        if (!(service instanceof Service)) {
+            throw new UnsupportedOperationException();
+        }
         long now;
         long then = System.nanoTime();
         long remaining = unit.toNanos(time);
@@ -1115,7 +1145,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             do {
                 switch (state.getState()) {
                     case UP: {
-                        return service.getValue();
+                        return ((Service<S>) service).getValue();
                     }
                     case START_FAILED: {
                         throw new IllegalStateException("Failed to start service", startException);
@@ -1138,31 +1168,18 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     public Service<S> getService() throws IllegalStateException {
-        return service;
-    }
-
-    private Collection<ServiceName> getNames() {
-        final Collection<ServiceName> retVal = new ArrayList<ServiceName>();
-        for (int i = 0; i < registrations.length; i++) {
-            retVal.add(registrations[i].getName());
+        if (!(service instanceof Service)) {
+            throw new UnsupportedOperationException();
         }
-        return retVal;
+        return (Service<S>) service;
     }
 
     public ServiceName getName() {
-        return getNames().iterator().next();
+        return serviceId;
     }
 
-    private static final ServiceName[] NO_NAMES = new ServiceName[0];
-
     public ServiceName[] getAliases() {
-        final Collection<ServiceName> names = getNames();
-        if (names.size() == 1) return NO_NAMES;
-        final ServiceName[] retVal = new ServiceName[names.size() - 1];
-        final Iterator<ServiceName> namesIterator = names.iterator();
-        namesIterator.next();
-        for (int i = 0; namesIterator.hasNext(); i++) retVal[i] = namesIterator.next();
-        return retVal;
+        return serviceAliases.clone();
     }
 
     void addListener(final ContainerShutdownListener listener) {
@@ -1265,7 +1282,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     @Override
     public synchronized Set<ServiceName> getImmediateUnavailableDependencies() {
         final Set<ServiceName> retVal = new IdentityHashSet<ServiceName>();
-        for (Dependency dependency : dependencies) {
+        for (Dependency dependency : requires) {
             synchronized (dependency.getLock()) {
                 if (isUnavailable(dependency)) {
                     retVal.add(dependency.getName());
@@ -1311,23 +1328,17 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     aliases[i] = aliasNames[i].getCanonicalName();
                 }
             }
-            String serviceClass = "<unknown>";
-            try {
-                final Service<? extends S> value = service;
-                if (value != null) {
-                    serviceClass = value.getClass().getName();
-                }
-            } catch (RuntimeException ignored) {
-            }
-            final Dependency[] dependencies = this.dependencies;
-            final int dependenciesLength = dependencies.length;
+            String serviceClass = service.getClass().getName();
+            final Collection<Dependency> dependencies = requires;
+            final int dependenciesLength = dependencies.size();
             final String[] dependencyNames;
             if (dependenciesLength == 0) {
                 dependencyNames = NO_STRINGS;
             } else {
                 dependencyNames = new String[dependenciesLength];
-                for (int i = 0; i < dependenciesLength; i++) {
-                    dependencyNames[i] = dependencies[i].getName().getCanonicalName();
+                int i = 0;
+                for (Dependency dependency : dependencies) {
+                    dependencyNames[i++] = dependency.getName().getCanonicalName();
                 }
             }
             StartException startException = this.startException;
@@ -1350,7 +1361,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     String dumpServiceDetails() {
         final StringBuilder b = new StringBuilder();
         IdentityHashSet<Dependent> dependents;
-        for (ServiceRegistrationImpl registration : registrations) {
+        for (ServiceRegistrationImpl registration : provides.keySet()) {
             synchronized (registration) {
                 dependents = registration.getDependents().clone();
             }
@@ -1372,7 +1383,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final Substate state = this.state;
             b.append("State: ").append(state.getState()).append(" (Substate: ").append(state).append(")\n");
             if (parent != null) {
-                b.append("Parent Names: ").append(parent.getNames()).append('\n');
+                b.append("Parent name: ").append(parent.getName()).append('\n');
             }
             b.append("Service Mode: ").append(mode).append('\n');
             if (startException != null) {
@@ -1403,9 +1414,8 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 b.append("Lifecycle Timestamp: ").append(lifecycleTime).append(String.format(" = %tb %<td %<tH:%<tM:%<tS.%<tL%n", stamp));
             }
         }
-        b.append("Dependencies: ").append(dependencies.length).append('\n');
-        for (int i = 0; i < dependencies.length; i ++) {
-            final Dependency dependency = dependencies[i];
+        b.append("Dependencies: ").append(requires.size()).append('\n');
+        for (Dependency dependency : requires) {
             final ServiceControllerImpl<?> controller = dependency.getDependencyController();
             b.append("    ").append(dependency.getName().toString());
             if (controller == null) {
@@ -1469,8 +1479,18 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
     }
 
-    ServiceRegistrationImpl[] getRegistrations() {
-        return registrations;
+    Collection<ServiceRegistrationImpl> getRegistrations() {
+        return provides.keySet();
+    }
+
+    private void checkProvidedValues() {
+        WritableValueImpl injector;
+        for (Entry<ServiceRegistrationImpl, WritableValueImpl> entry : provides.entrySet()) {
+            injector = entry.getValue();
+            if (injector != null && injector.value == null) {
+                throw new IllegalStateException("Injector for " + entry.getKey().getName() + " was not initialized");
+            }
+        }
     }
 
     private void inject(final ValueInjection<?>[] injections) {
@@ -1510,6 +1530,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             injection.getTarget().uninject();
         } catch (Throwable t) {
             ServiceLogger.ROOT.uninjectFailed(t, getName(), injection);
+        }
+    }
+
+    private void uninjectProvides(final Collection<WritableValueImpl> injectors) {
+        for (WritableValueImpl injector : injectors) {
+            if (injector != null) injector.uninject();
         }
     }
 
@@ -1553,7 +1579,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private abstract class DependenciesControllerTask extends ControllerTask {
         final boolean execute() {
             Lockable lock;
-            for (Dependency dependency : dependencies) {
+            for (Dependency dependency : requires) {
                 lock = dependency.getLock();
                 synchronized (lock) {
                     lock.acquireWrite();
@@ -1581,7 +1607,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         final boolean execute() {
-            for (ServiceRegistrationImpl registration : registrations) {
+            for (ServiceRegistrationImpl registration : provides.keySet()) {
                 for (Dependent dependent : registration.getDependents()) {
                     inform(dependent);
                 }
@@ -1599,7 +1625,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
         void beforeExecute() {
             Lockable lock;
-            for (ServiceRegistrationImpl registration : registrations) {
+            for (ServiceRegistrationImpl registration : provides.keySet()) {
                 lock = registration.getLock();
                 synchronized (lock) { lock.acquireRead(); }
             }
@@ -1607,7 +1633,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
         void afterExecute() {
             Lockable lock;
-            for (ServiceRegistrationImpl registration : registrations) {
+            for (ServiceRegistrationImpl registration : provides.keySet()) {
                 lock = registration.getLock();
                 synchronized (lock) { lock.releaseRead(); }
             }
@@ -1690,19 +1716,21 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 if (startFailed) {
                     uninject(injections);
+                    uninjectProvides(provides.values());
                 } else {
+                    checkProvidedValues();
                     inject(outInjections);
                 }
-                return true;
             } catch (StartException e) {
                 e.setServiceName(getName());
-                return startFailed(e, context);
+                startFailed(e, context);
             } catch (Throwable t) {
-                return startFailed(new StartException("Failed to start service", t, getName()), context);
+                startFailed(new StartException("Failed to start service", t, getName()), context);
             }
+            return true;
         }
 
-        private void startService(Service<? extends S> service, StartContext context) throws StartException {
+        private void startService(org.jboss.msc.Service service, StartContext context) throws StartException {
             final ClassLoader contextClassLoader = setTCCL(getCL(service.getClass()));
             try {
                 service.start(context);
@@ -1710,19 +1738,19 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 setTCCL(contextClassLoader);
             }
         }
+    }
 
-        private boolean startFailed(final StartException e, final StartContextImpl context) {
-            ServiceLogger.FAIL.startFailed(e, getName());
-            synchronized (context.lock) {
-                context.state |= (AbstractContext.FAILED | AbstractContext.CLOSED);
-                synchronized (ServiceControllerImpl.this) {
-                    startException = e;
-                }
+    private void startFailed(final StartException e, final StartContextImpl context) {
+        ServiceLogger.FAIL.startFailed(e, getName());
+        synchronized (context.lock) {
+            context.state |= (AbstractContext.FAILED | AbstractContext.CLOSED);
+            synchronized (ServiceControllerImpl.this) {
+                startException = e;
             }
-            uninject(injections);
-            uninject(outInjections);
-            return true;
         }
+        uninject(injections);
+        uninject(outInjections);
+        uninjectProvides(provides.values());
     }
 
     private final class StopTask extends ControllerTask {
@@ -1753,11 +1781,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 uninject(injections);
                 uninject(outInjections);
+                uninjectProvides(provides.values());
             }
             return true;
         }
 
-        private void stopService(Service<? extends S> service, StopContext context) {
+        private void stopService(org.jboss.msc.Service service, StopContext context) {
             final ClassLoader contextClassLoader = setTCCL(getCL(service.getClass()));
             try {
                 service.stop(context);
@@ -1848,19 +1877,27 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         boolean execute() {
             assert getMode() == ServiceController.Mode.REMOVE;
             assert getSubstate() == Substate.REMOVED || getSubstate() == Substate.CANCELLED;
+            ServiceRegistrationImpl registration;
+            WritableValueImpl injector;
             Lockable lock;
-            for (ServiceRegistrationImpl registration : registrations) {
+            for (Entry<ServiceRegistrationImpl, WritableValueImpl> provided : provides.entrySet()) {
+                registration = provided.getKey();
+                injector = provided.getValue();
                 lock = registration.getLock();
                 synchronized (lock) {
                     lock.acquireWrite();
                     try {
                         registration.clearInstance(ServiceControllerImpl.this);
+                        if (injector != null) {
+                            injector.setInstance(null);
+                            registration.clearInjector(injector);
+                        }
                     } finally {
                         lock.releaseWrite();
                     }
                 }
             }
-            for (Dependency dependency : dependencies) {
+            for (Dependency dependency : requires) {
                 lock = dependency.getLock();
                 synchronized (lock) {
                     lock.acquireWrite();
@@ -1962,6 +1999,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             if ((state & CLOSED) != 0) {
                 uninject(injections);
+                uninjectProvides(provides.values());
                 taskCompleted();
             }
         }
@@ -1981,7 +2019,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         void onComplete() {
-            inject(outInjections);
+            try {
+                checkProvidedValues();
+                inject(outInjections);
+            } catch (Throwable t) {
+                startFailed(new StartException("Failed to start service", t, getName()), this);
+            }
         }
     }
 
@@ -1989,6 +2032,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         void onComplete() {
             uninject(injections);
             uninject(outInjections);
+            uninjectProvides(provides.values());
         }
     }
 
@@ -1999,15 +2043,19 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             super(parentTarget);
         }
 
-        <T> ServiceController<T> install(final ServiceBuilderImpl<T> serviceBuilder) throws ServiceRegistryException {
+        <T> ServiceController<T> install(final AbstractServiceBuilder<T> serviceBuilder) throws ServiceRegistryException {
             if (! valid) {
                 throw new IllegalStateException("Service target is no longer valid");
             }
             return super.install(serviceBuilder);
         }
 
-        protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Service<T> service, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
+        protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Service<T> service, final ServiceControllerImpl<?> parent) {
             return super.createServiceBuilder(name, service, ServiceControllerImpl.this);
+        }
+
+        protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final ServiceControllerImpl<?> parent) {
+            return super.createServiceBuilder(name, ServiceControllerImpl.this);
         }
 
         @Override

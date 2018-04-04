@@ -39,9 +39,12 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
@@ -526,11 +529,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
     }
 
-    @Override
-    public ServiceRegistry getServiceRegistry() {
-        return this;
-    }
-
     public boolean isShutdown() {
         return down;
     }
@@ -630,7 +628,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
      * @param name the service name
      * @return the registration
      */
-    private ServiceRegistrationImpl getOrCreateRegistration(final ServiceName name) {
+    ServiceRegistrationImpl getOrCreateRegistration(final ServiceName name) {
         final ConcurrentMap<ServiceName, ServiceRegistrationImpl> registry = this.registry;
         ServiceRegistrationImpl registration;
         registration = registry.get(name);
@@ -659,7 +657,24 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     @Override
     public ServiceController<?> getService(final ServiceName serviceName) {
         final ServiceRegistrationImpl registration = registry.get(serviceName);
-        return registration == null ? null : registration.getDependencyController();
+        if (registration != null) {
+            final ServiceControllerImpl controller = registration.getDependencyController();
+            if (controller != null) {
+                if (serviceName.equals(controller.getName())) {
+                    // requested service represents service identity
+                    return controller;
+                }
+                for (ServiceName alias : controller.getAliases()) {
+                    if (alias.equals(serviceName)) {
+                        // requested service represents service alias
+                        return controller;
+                    }
+                }
+            } else {
+                // it is forbidden to retrieve controller for services defined via ServiceBuilder.provides() method
+            }
+        }
+        return null;
     }
 
     @Override
@@ -674,25 +689,18 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     }
 
     @Override
-    <T> ServiceController<T> install(final ServiceBuilderImpl<T> serviceBuilder) throws DuplicateServiceException {
+    <T> ServiceController<T> install(final AbstractServiceBuilder<T> serviceBuilder) throws DuplicateServiceException {
         apply(serviceBuilder);
 
-        // Get names & aliases
-        final ServiceName name = serviceBuilder.getName();
-        final ServiceName[] aliases = serviceBuilder.getAliases();
-
-        // Create registrations
-        final ServiceRegistrationImpl[] registrations = new ServiceRegistrationImpl[aliases.length + 1];
-        registrations[0] = getOrCreateRegistration(name);
-        for (int i = 0; i < aliases.length; i++) {
-            registrations[i + 1] = getOrCreateRegistration(aliases[i]);
+        // Initialize registrations and injectors map
+        final Map<ServiceRegistrationImpl, WritableValueImpl> provides = new LinkedHashMap<ServiceRegistrationImpl, WritableValueImpl>();
+        Entry<ServiceName, WritableValueImpl> entry;
+        for (Iterator<Entry<ServiceName, WritableValueImpl>> j = serviceBuilder.getProvides().entrySet().iterator(); j.hasNext(); ) {
+            entry = j.next();
+            provides.put(getOrCreateRegistration(entry.getKey()), entry.getValue());
         }
 
         // Create the list of dependencies
-        final Map<ServiceName, ServiceBuilderImpl.Dependency> dependencyMap = serviceBuilder.getDependencies();
-        final int dependencyCount = dependencyMap.size();
-        final Dependency[] dependencies = new Dependency[dependencyCount];
-        final List<ValueInjection<?>> valueInjections = serviceBuilder.getValueInjections();
         final List<ValueInjection<?>> outInjections = new ArrayList<ValueInjection<?>>();
         // set up outInjections with an InjectedValue
         final InjectedValue<T> serviceValue = new InjectedValue<T>();
@@ -701,25 +709,37 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
 
         // Dependencies
-        int i = 0;
-        for (ServiceName serviceName : dependencyMap.keySet()) {
-            Dependency registration = getOrCreateRegistration(serviceName);
-            final ServiceBuilderImpl.Dependency dependency = dependencyMap.get(serviceName);
-            if (dependency.getDependencyType() == ServiceBuilder.DependencyType.OPTIONAL) {
-                registration = new OptionalDependencyImpl(registration);
+        final Map<ServiceName, AbstractServiceBuilder.Dependency> dependencyMap = serviceBuilder.getDependencies();
+        final Set<Dependency> requires = new HashSet<Dependency>();
+        final List<ValueInjection<?>> valueInjections = serviceBuilder.getValueInjections();
+        ServiceRegistrationImpl dependencyRegistration;
+        Dependency dependency;
+        AbstractServiceBuilder.Dependency dependencyDefinition;
+        for (Entry<ServiceName, AbstractServiceBuilder.Dependency> dependencyEntry : dependencyMap.entrySet()) {
+            dependencyRegistration = getOrCreateRegistration(dependencyEntry.getKey());
+            dependency = dependencyRegistration;
+            dependencyDefinition = dependencyEntry.getValue();
+            if (dependencyDefinition.getDependencyType() == ServiceBuilder.DependencyType.OPTIONAL) {
+                dependency = new OptionalDependencyImpl(dependency);
             }
-            dependencies[i++] = registration;
-            for (Injector<Object> injector : dependency.getInjectorList()) {
-                valueInjections.add(new ValueInjection<Object>(registration, injector));
+            requires.add(dependency);
+            for (Injector<Object> injector : dependencyDefinition.getInjectorList()) {
+                valueInjections.add(new ValueInjection<Object>(dependency, injector));
             }
         }
         final ValueInjection<?>[] valueInjectionArray = valueInjections.toArray(new ValueInjection<?>[valueInjections.size()]);
         final ValueInjection<?>[] outInjectionArray = outInjections.toArray(new ValueInjection<?>[outInjections.size()]);
+        final Collection<ServiceName> serviceAliases = serviceBuilder.getServiceAliases();
+        final ServiceName[] aliases = new ServiceName[serviceAliases.size()];
+        int i = 0;
+        for (ServiceName alias : serviceAliases) {
+            aliases[i++] = alias;
+        }
 
         // Next create the actual controller
-        final ServiceControllerImpl<T> instance = new ServiceControllerImpl<T>(this, serviceBuilder.getService(),
-                dependencies, valueInjectionArray, outInjectionArray, registrations,
-                serviceBuilder.getMonitors(), serviceBuilder.getListeners(), serviceBuilder.getLifecycleListeners(), serviceBuilder.getParent());
+        final ServiceControllerImpl<T> instance = new ServiceControllerImpl<T>(this, serviceBuilder.getServiceId(), aliases, serviceBuilder.getService(),
+                requires, provides, valueInjectionArray, outInjectionArray,
+                serviceBuilder.getMonitors(), serviceBuilder.getServiceListeners(), serviceBuilder.getLifecycleListeners(), serviceBuilder.getParent());
         boolean ok = false;
         try {
             serviceValue.setValue(instance);

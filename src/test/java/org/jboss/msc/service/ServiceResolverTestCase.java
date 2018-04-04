@@ -42,12 +42,12 @@ import org.junit.Test;
  */
 public class ServiceResolverTestCase extends AbstractServiceTest {
 
-    private static Field dependenciesField;
+    private static Field requiresField;
 
     @BeforeClass
     public static void initDependenciesField() throws Exception {
-        dependenciesField = ServiceControllerImpl.class.getDeclaredField("dependencies");
-        dependenciesField.setAccessible(true);
+        requiresField = ServiceControllerImpl.class.getDeclaredField("requires");
+        requiresField.setAccessible(true);
     }
 
     @Test
@@ -114,8 +114,8 @@ public class ServiceResolverTestCase extends AbstractServiceTest {
     }
 
     private List<ServiceController<?>> getServiceDependencies(final ServiceController<?> serviceController) throws IllegalAccessException {
-        Dependency[] deps = (Dependency[]) dependenciesField.get(serviceController);
-        List<ServiceController<?>> depInstances = new ArrayList<ServiceController<?>>(deps.length);
+        Set<Dependency> deps = (Set<Dependency>) requiresField.get(serviceController);
+        List<ServiceController<?>> depInstances = new ArrayList<ServiceController<?>>();
         for (Dependency dep: deps) {
             ServiceController<?> depInstance = dep.getDependencyController();
             if (depInstance != null) {

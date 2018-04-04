@@ -28,7 +28,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 
 /**
@@ -71,7 +70,11 @@ class ServiceTargetImpl implements ServiceTarget {
     }
 
     protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Service<T> service, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
-        return new ServiceBuilderImpl<T>(this, service, name, parent);
+        return new ObsoleteServiceBuilderImpl<T>(name, this, service, parent);
+    }
+
+    protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
+        return new ServiceBuilderImpl<T>(name, this, parent);
     }
 
     @Override
@@ -83,6 +86,14 @@ class ServiceTargetImpl implements ServiceTarget {
             throw new IllegalArgumentException("service is null");
         }
         return createServiceBuilder(name, service, null);
+    }
+
+    @Override
+    public <T> ServiceBuilder<T> addService(final ServiceName name) {
+        if (name == null) {
+            throw new IllegalArgumentException("name is null");
+        }
+        return createServiceBuilder(name, null);
     }
 
     public ServiceTarget addListener(final ServiceListener<Object> listener) {
@@ -218,12 +229,12 @@ class ServiceTargetImpl implements ServiceTarget {
      * 
      * @param serviceBuilder serviceBuilder which listeners and dependencies will be added to.
      */
-    void apply(ServiceBuilderImpl<?> serviceBuilder) {
+    void apply(AbstractServiceBuilder<?> serviceBuilder) {
         synchronized (monitors) {
             serviceBuilder.addMonitorsNoCheck(monitors);
         }
         synchronized (listeners) {
-            serviceBuilder.addListenerNoCheck(listeners);
+            serviceBuilder.addServiceListenersNoCheck(listeners);
         }
         synchronized (lifecycleListeners) {
             serviceBuilder.addLifecycleListenersNoCheck(lifecycleListeners);
@@ -242,18 +253,13 @@ class ServiceTargetImpl implements ServiceTarget {
      *
      * @throws ServiceRegistryException if a service registry issue occurred during installation
      */
-    <T> ServiceController<T> install(ServiceBuilderImpl<T> serviceBuilder) throws ServiceRegistryException {
+    <T> ServiceController<T> install(AbstractServiceBuilder<T> serviceBuilder) throws ServiceRegistryException {
         apply(serviceBuilder);
         return parent.install(serviceBuilder);
     }
 
-    /**
-     * Returns the serviceRegistry that contains all services installed by this target.
-     * 
-     * @return the serviceRegistry containing services installed by this target
-     */
-    ServiceRegistry getServiceRegistry() {
-        return parent.getServiceRegistry();
+    ServiceRegistrationImpl getOrCreateRegistration(final ServiceName name) {
+        return parent.getOrCreateRegistration(name);
     }
 
     @Override
