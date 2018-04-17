@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2010, Red Hat, Inc., and individual contributors
+ * Copyright 2018, Red Hat, Inc., and individual contributors
  * as indicated by the @author tags. See the copyright.txt file in the
  * distribution for a full listing of individual contributors.
  *
@@ -20,8 +20,24 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+package org.jboss.msc.service;
+
+import java.util.function.Supplier;
+
 /**
- * Classes which implement value injection.  See {@link org.jboss.msc.inject.Injector}.
- * @deprecated this package will be removed in future releases.
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-package org.jboss.msc.inject;
+final class ReadableValueImpl implements Supplier<Object> {
+
+    private ServiceRegistrationImpl dependency;
+
+    ReadableValueImpl(final ServiceRegistrationImpl dependency) {
+        this.dependency = dependency;
+    }
+
+    @Override
+    public Object get() {
+        return dependency.getValue();
+    }
+
+}

@@ -23,10 +23,7 @@
 package org.jboss.msc.service;
 
 /**
- * Runs all the tests in {@code AbstractServiceBuilderTest} against {@code ServiceBuilderImpl}.
- * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
- *
  */
 public class ServiceBuilderTestCase extends AbstractServiceBuilderTest {
 

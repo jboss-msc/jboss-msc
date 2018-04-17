@@ -29,26 +29,19 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import javax.management.InstanceNotFoundException;
-import javax.management.MBeanException;
 import javax.management.MBeanServerConnection;
-import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
-import javax.management.ReflectionException;
 
 import org.jboss.modules.management.ObjectProperties;
 import org.jboss.msc.util.TestServiceListener;
@@ -67,7 +60,7 @@ import org.junit.Test;
 public class MultipleDependenciesTestCase extends AbstractServiceTest {
 
     public static final String MODULE = "module";
-    private static Field dependenciesField;
+    private static Field requiresField;
     private static final ServiceName firstServiceName = ServiceName.of("firstService");
     private static final ServiceName secondServiceName = ServiceName.of("secondService");
     private static final ServiceName thirdServiceName = ServiceName.of("thirdService");
@@ -81,8 +74,8 @@ public class MultipleDependenciesTestCase extends AbstractServiceTest {
 
     @BeforeClass
     public static void initDependenciesField() throws Exception {
-        dependenciesField = ServiceControllerImpl.class.getDeclaredField("dependencies");
-        dependenciesField.setAccessible(true);
+        requiresField = ServiceControllerImpl.class.getDeclaredField("requires");
+        requiresField.setAccessible(true);
     }
 
     @Test
@@ -328,8 +321,8 @@ public class MultipleDependenciesTestCase extends AbstractServiceTest {
     }
 
     private List<ServiceControllerImpl<?>> getServiceDependencies(ServiceController<?> serviceController) throws IllegalAccessException {
-        Dependency[] deps = (Dependency[]) dependenciesField.get(serviceController);
-        List<ServiceControllerImpl<?>> depInstances = new ArrayList<ServiceControllerImpl<?>>(deps.length);
+        Set<Dependency> deps = (Set<Dependency>) requiresField.get(serviceController);
+        List<ServiceControllerImpl<?>> depInstances = new ArrayList<ServiceControllerImpl<?>>();
         for (Dependency dep: deps) {
             ServiceControllerImpl<?> depInstance = dep.getDependencyController();
             if (depInstance != null) {

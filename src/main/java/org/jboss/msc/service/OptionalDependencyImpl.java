@@ -90,14 +90,14 @@ final class OptionalDependencyImpl implements Dependency, Dependent {
     }
 
     @Override
-    public void dependencyAvailable(final ServiceName dependencyName) {
+    public void dependencyAvailable() {
         available = true;
         final Dependent dependent = this.dependent;
         if (dependent != null) dependent.dependencyDown();
     }
 
     @Override
-    public void dependencyUnavailable(final ServiceName dependencyName) {
+    public void dependencyUnavailable() {
         available = false;
         final Dependent dependent = this.dependent;
         if (dependent != null) dependent.dependencyUp();

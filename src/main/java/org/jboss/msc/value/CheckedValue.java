@@ -28,7 +28,10 @@ package org.jboss.msc.value;
  * @param <T> the value type
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @deprecated use {@link org.jboss.msc.service.ServiceBuilder#requires(org.jboss.msc.service.ServiceName)}
+ * method instead. This class will be removed in future releases.
  */
+@Deprecated
 public final class CheckedValue<T> implements Value<T> {
     private final Class<T> valueClass;
     private final Value<?> value;

@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import java.util.Collection;
 import java.util.Set;
 
 import java.util.concurrent.TimeUnit;
@@ -91,7 +92,9 @@ public interface ServiceController<S> extends Value<S> {
      * Get the current service controller substate.
      *
      * @return the current substate
+     * @deprecated this method will be removed in the future
      */
+    @Deprecated
     Substate getSubstate();
 
     /**
@@ -99,7 +102,9 @@ public interface ServiceController<S> extends Value<S> {
      *
      * @return the service value
      * @throws IllegalStateException if the service is not available (i.e. it is not up)
+     * @deprecated this method will be removed in the future
      */
+    @Deprecated
     S getValue() throws IllegalStateException;
 
     /**
@@ -108,7 +113,9 @@ public interface ServiceController<S> extends Value<S> {
      * @return the service value
      * @throws IllegalStateException if the service is not available (i.e. it was removed or failed)
      * @throws InterruptedException if the wait operation was interrupted
+     * @deprecated this method will be removed in the future
      */
+    @Deprecated
     S awaitValue() throws IllegalStateException, InterruptedException;
 
     /**
@@ -119,7 +126,9 @@ public interface ServiceController<S> extends Value<S> {
      * @return the service value
      * @throws IllegalStateException if the service is not available (i.e. it was removed or failed)
      * @throws InterruptedException if the wait operation was interrupted
+     * @deprecated this method will be removed in the future
      */
+    @Deprecated
     S awaitValue(long time, TimeUnit unit) throws IllegalStateException, InterruptedException, TimeoutException;
 
     /**
@@ -127,7 +136,9 @@ public interface ServiceController<S> extends Value<S> {
      *
      * @return the service
      * @throws IllegalStateException if the service is not available (i.e. it is not up)
+     * @deprecated this method will be removed in future releases
      */
+    @Deprecated
     Service<S> getService() throws IllegalStateException;
 
     /**
@@ -193,8 +204,17 @@ public interface ServiceController<S> extends Value<S> {
      * Get the complete list of immediate dependencies that are unavailable.
      * 
      * @return a set containing the names of all unavailable immediate dependencies
+     * @deprecated use {@link #getUnavailableDependencies()} instead
      */
+    @Deprecated
     Set<ServiceName> getImmediateUnavailableDependencies();
+
+    /**
+     * Get the complete list of dependencies that are unavailable.
+     *
+     * @return a set containing the names of all unavailable dependencies
+     */
+    Collection<ServiceName> getUnavailableDependencies();
 
     /**
      * A possible state for a service controller.
@@ -297,7 +317,9 @@ public interface ServiceController<S> extends Value<S> {
     /**
      * A fine-grained substate of the more general basic controller {@link State}s.  The list of possible
      * substates may change over time, so users should not rely on its permanence.
+     * @deprecated this class will be removed in the future
      */
+    @Deprecated
     enum Substate {
         /**
          * New controller being installed.
@@ -405,7 +427,9 @@ public interface ServiceController<S> extends Value<S> {
     /**
      * A transition from one substate to another.  The list of possible transitions may change over time, so users
      * should not rely on its permanence.
+     * @deprecated this class will be removed in the future
      */
+    @Deprecated
     enum Transition {
         // New transitions should be added to the end.  Unused transitions should be retained as "deprecated" for
         // binary compatibility.

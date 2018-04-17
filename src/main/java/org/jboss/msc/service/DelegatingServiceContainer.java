@@ -38,6 +38,7 @@ import org.jboss.msc.value.Value;
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class DelegatingServiceContainer implements ServiceContainer {
+
     private final ServiceTarget serviceTargetDelegate;
     private final ServiceRegistry serviceRegistryDelegate;
 
@@ -76,6 +77,11 @@ public class DelegatingServiceContainer implements ServiceContainer {
     /** {@inheritDoc} */
     public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
         return getServiceTargetDelegate().addService(name, service);
+    }
+
+    /** {@inheritDoc} */
+    public <T> ServiceBuilder<T> addService(final ServiceName name) throws IllegalArgumentException {
+        return getServiceTargetDelegate().addService(name);
     }
 
     /** {@inheritDoc} */
@@ -270,4 +276,5 @@ public class DelegatingServiceContainer implements ServiceContainer {
     public boolean awaitStability(final long timeout, final TimeUnit unit, final Set<? super ServiceController<?>> failed, final Set<? super ServiceController<?>> problem) throws InterruptedException {
         throw new UnsupportedOperationException();
     }
+
 }

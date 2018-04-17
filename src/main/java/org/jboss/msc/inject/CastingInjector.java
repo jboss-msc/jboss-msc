@@ -28,7 +28,10 @@ package org.jboss.msc.inject;
  * @param <T> the type to which the argument should be cast
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @deprecated use {@link org.jboss.msc.service.ServiceBuilder#provides(org.jboss.msc.service.ServiceName...)}
+ * method instead. This class will be removed in future releases.
  */
+@Deprecated
 public final class CastingInjector<T> implements Injector<Object> {
     private final Injector<T> target;
     private final Class<T> type;

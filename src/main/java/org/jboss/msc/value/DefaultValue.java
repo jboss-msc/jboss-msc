@@ -26,7 +26,10 @@ package org.jboss.msc.value;
  * A defaulted value.  If the delegate value returns {@code null}, a default value will be returned in its place.
  *
  * @param <T> the value type
+ * @deprecated use {@link org.jboss.msc.service.ServiceBuilder#requires(org.jboss.msc.service.ServiceName)}
+ * method instead. This class will be removed in future releases.
  */
+@Deprecated
 public final class DefaultValue<T> implements Value<T> {
     private final Value<T> value;
     private final Value<? extends T> defaultValue;

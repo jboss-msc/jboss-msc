@@ -29,79 +29,17 @@ import org.jboss.msc.value.Value;
 
 /**
  * The target of ServiceBuilder installations.
- * ServicesBuilders to be installed on a target should be retrieved by calling one of the {@code addService} methods
- * ({@link #addService(ServiceName, Service)}, {@link #addServiceValue(ServiceName, Value)}.
- * Notice that installation will only take place after {@link ServiceBuilder#install()} is invoked. ServiceBuilders that
- * are not installed are ignored.
+ *
+ * ServiceBuilders to be installed on a target have to be retrieved via {@link #addService(ServiceName)} method.
+ * Service installation will only take place after {@link ServiceBuilder#install()} is issued.
+ * ServiceBuilders that are not installed will be ignored.
+ * <p>
+ * Implementations of this interface are thread safe.
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public interface ServiceTarget {
-
-    /**
-     * Get a builder which can be used to add a service to this target.
-     *
-     * @param name the service name
-     * @param value the service value
-     * @return the builder for the service
-     */
-    <T> ServiceBuilder<T> addServiceValue(ServiceName name, Value<? extends Service<T>> value);
-
-    /**
-     * Get a builder which can be used to add a service to this target.
-     *
-     * @param name the service name
-     * @param service the service
-     * @return the builder for the service
-     */
-    <T> ServiceBuilder<T> addService(ServiceName name, Service<T> service);
-    
-    /**
-     * Add a stability monitor that will be added to all the ServiceBuilders installed in this target.
-     *
-     * @param monitor the monitor to add to the target
-     * @return this target
-     */
-    ServiceTarget addMonitor(StabilityMonitor monitor);
-
-    /**
-     * Add a stability monitors that will be added to all the ServiceBuilders installed in this target.
-     *
-     * @param monitors the monitors to add to the target
-     * @return this target
-     */
-    ServiceTarget addMonitors(StabilityMonitor... monitors);
-
-    /**
-     * Add a service listener that will be added to all the ServiceBuilders installed in this target.
-     *
-     * @param listener the listener to add to the target
-     * @return this target
-     * @deprecated use {@link #addListener(LifecycleListener)} instead
-     */
-    @Deprecated
-    ServiceTarget addListener(ServiceListener<Object> listener);
-
-    /**
-     * Add a list of service listener that will be added to all ServiceBuilders installed in this target.
-     *
-     * @param listeners a list of listeners to add to the target
-     * @return this target
-     * @deprecated use {@link #addListener(LifecycleListener)} instead
-     */
-    @Deprecated
-    ServiceTarget addListener(ServiceListener<Object>... listeners);
-
-    /**
-     * Add a collection of service listener that will be added to all ServiceBuilders installed in this target.
-     *
-     * @param listeners a collection of listeners to add to the target
-     * @return this target
-     * @deprecated use {@link #addListener(LifecycleListener)} instead
-     */
-    @Deprecated
-    ServiceTarget addListener(Collection<ServiceListener<Object>> listeners);
 
     /**
      * Add a service lifecycle listener that will be added to this service.
@@ -112,24 +50,6 @@ public interface ServiceTarget {
     ServiceTarget addListener(LifecycleListener listener);
 
     /**
-     * Remove a monitor from this target, if it exists.
-     *
-     * @param monitor the monitor to remove
-     * @return this target
-     */
-    ServiceTarget removeMonitor(StabilityMonitor monitor);
-
-    /**
-     * Remove a listener from this target, if it exists.
-     *
-     * @param listener the listener to remove
-     * @return this target
-     * @deprecated use {@link #removeListener(LifecycleListener)} instead
-     */
-    @Deprecated
-    ServiceTarget removeListener(ServiceListener<Object> listener);
-
-    /**
      * Remove a lifecycle listener from this target, if it exists.
      *
      * @param listener the lifecycle listener to remove
@@ -138,17 +58,132 @@ public interface ServiceTarget {
     ServiceTarget removeListener(LifecycleListener listener);
 
     /**
+     * Add a stability monitor that will be added to all the ServiceBuilders installed in this target.
+     *
+     * @param monitor the monitor to add to the target
+     * @return this target
+     */
+    ServiceTarget addMonitor(StabilityMonitor monitor);
+
+    /**
+     * Remove a monitor from this target, if it exists.
+     *
+     * @param monitor the monitor to remove
+     * @return this target
+     */
+    ServiceTarget removeMonitor(StabilityMonitor monitor);
+
+    /**
+     * Get a builder which can be used to add a service to this target.
+     *
+     * @param name the service name
+     * @return new service configurator
+     */
+    <T> ServiceBuilder<T> addService(ServiceName name);
+
+    /**
+     * Create a sub-target using this as the parent target.
+     *
+     * @return the new service target
+     */
+    ServiceTarget subTarget();
+
+    ////////////////////////
+    // DEPRECATED METHODS //
+    ////////////////////////
+
+    /**
+     * Get a builder which can be used to add a service to this target.
+     *
+     * @param name the service name
+     * @param value the service value
+     * @return the builder for the service
+     * @deprecated use {@link #addService(ServiceName)} instead.
+     * This method will be removed in future releases.
+     */
+    @Deprecated
+    <T> ServiceBuilder<T> addServiceValue(ServiceName name, Value<? extends Service<T>> value);
+
+    /**
+     * Get a builder which can be used to add a service to this target.
+     *
+     * @param name the service name
+     * @param service the service
+     * @return the builder for the service
+     * @deprecated use {@link #addService(ServiceName)} instead.
+     * This method will be removed in future releases.
+     */
+    @Deprecated
+    <T> ServiceBuilder<T> addService(ServiceName name, Service<T> service);
+
+    /**
+     * Add a stability monitors that will be added to all the ServiceBuilders installed in this target.
+     *
+     * @param monitors the monitors to add to the target
+     * @return this target
+     * @deprecated this method will be removed in future releases.
+     */
+    @Deprecated
+    ServiceTarget addMonitors(StabilityMonitor... monitors);
+
+    /**
+     * Add a service listener that will be added to all the ServiceBuilders installed in this target.
+     *
+     * @param listener the listener to add to the target
+     * @return this target
+     * @deprecated use {@link #addListener(LifecycleListener)} instead.
+     * This method will be removed in future releases.
+     */
+    @Deprecated
+    ServiceTarget addListener(ServiceListener<Object> listener);
+
+    /**
+     * Add a list of service listener that will be added to all ServiceBuilders installed in this target.
+     *
+     * @param listeners a list of listeners to add to the target
+     * @return this target
+     * @deprecated use {@link #addListener(LifecycleListener)} instead.
+     * This method will be removed in future releases.
+     */
+    @Deprecated
+    ServiceTarget addListener(ServiceListener<Object>... listeners);
+
+    /**
+     * Add a collection of service listener that will be added to all ServiceBuilders installed in this target.
+     *
+     * @param listeners a collection of listeners to add to the target
+     * @return this target
+     * @deprecated use {@link #addListener(LifecycleListener)} instead.
+     * This method will be removed in future releases.
+     */
+    @Deprecated
+    ServiceTarget addListener(Collection<ServiceListener<Object>> listeners);
+
+    /**
+     * Remove a listener from this target, if it exists.
+     *
+     * @param listener the listener to remove
+     * @return this target
+     * @deprecated use {@link #removeListener(LifecycleListener)} instead.
+     * This method will be removed in future releases.
+     */
+    @Deprecated
+    ServiceTarget removeListener(ServiceListener<Object> listener);
+
+    /**
      * Returns a set of the monitors added to this target.
      * 
      * @return the monitors added to this target
+     * @deprecated this method will be removed in future releases.
      */
+    @Deprecated
     Set<StabilityMonitor> getMonitors();
 
     /**
      * Returns a set of the listeners added to this target.
      * 
      * @return the listeners added to this target
-     * @deprecated ServiceListeners are deprecated
+     * @deprecated this method will be removed in future releases.
      */
     @Deprecated
     Set<ServiceListener<Object>> getListeners();
@@ -158,7 +193,9 @@ public interface ServiceTarget {
      *
      * @param dependency the dependency to add to the target
      * @return this target
+     * @deprecated this method will be removed in future releases.
      */
+    @Deprecated
     ServiceTarget addDependency(ServiceName dependency);
 
     /**
@@ -166,7 +203,9 @@ public interface ServiceTarget {
      *
      * @param dependencies a list of dependencies to add to the target
      * @return this target
+     * @deprecated this method will be removed in future releases.
      */
+    @Deprecated
     ServiceTarget addDependency(ServiceName... dependencies);
 
     /**
@@ -174,7 +213,9 @@ public interface ServiceTarget {
      *
      * @param dependencies a collection of dependencies to add to this target
      * @return this target
+     * @deprecated this method will be removed in future releases.
      */
+    @Deprecated
     ServiceTarget addDependency(Collection<ServiceName> dependencies);
 
     /**
@@ -182,27 +223,27 @@ public interface ServiceTarget {
      *
      * @param dependency the dependency
      * @return this target
+     * @deprecated this method will be removed in future releases.
      */
+    @Deprecated
     ServiceTarget removeDependency(ServiceName dependency);
 
     /**
      * Returns a set of all dependencies added to this target.
      * 
      * @return all dependencies of this target
+     * @deprecated this method will be removed in future releases.
      */
+    @Deprecated
     Set<ServiceName> getDependencies();
-
-    /**
-     * Create a sub-target using this as the parent target.
-     *
-     * @return the new service target
-     */
-    ServiceTarget subTarget();
 
     /**
      * Create a new batch service target, which is used to install described services in this target.
      *
      * @return the new batch service target
+     * @deprecated this method will be removed in future releases.
      */
+    @Deprecated
     BatchServiceTarget batchTarget();
+
 }

@@ -34,6 +34,7 @@ import org.jboss.logging.annotations.MessageLogger;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 @MessageLogger(projectCode = "MSC")
+@Deprecated
 interface InjectorLogger {
 
     // **********************************************************

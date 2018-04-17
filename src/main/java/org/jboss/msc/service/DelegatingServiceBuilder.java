@@ -26,6 +26,9 @@ import java.util.Collection;
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.value.Value;
 
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
 /**
  * A service builder which delegates to another service builder.
  *
@@ -35,6 +38,7 @@ import org.jboss.msc.value.Value;
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
+
     private final ServiceBuilder<T> delegate;
 
     /**
@@ -55,9 +59,20 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     }
 
     /** {@inheritDoc} */
+    @Override
     public ServiceBuilder<T> addAliases(final ServiceName... aliases) {
         getDelegate().addAliases(aliases);
         return this;
+    }
+
+    /** {@inheritDoc} */
+    public <V> Supplier<V> requires(final ServiceName name) {
+        return getDelegate().requires(name);
+    }
+
+    /** {@inheritDoc} */
+    public <V> Consumer<V> provides(final ServiceName... names) {
+        return getDelegate().provides(names);
     }
 
     /** {@inheritDoc} */
@@ -67,80 +82,8 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     }
 
     /** {@inheritDoc} */
-    public ServiceBuilder<T> addDependencies(final ServiceName... dependencies) {
-        getDelegate().addDependencies(dependencies);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final ServiceName... dependencies) {
-        getDelegate().addDependencies(dependencyType, dependencies);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> dependencies) {
-        getDelegate().addDependencies(dependencies);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final Iterable<ServiceName> dependencies) {
-        getDelegate().addDependencies(dependencyType, dependencies);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceBuilder<T> addDependency(final ServiceName dependency) {
-        getDelegate().addDependency(dependency);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency) {
-        getDelegate().addDependency(dependencyType, dependency);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
-        getDelegate().addDependency(dependency, target);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Injector<Object> target) {
-        getDelegate().addDependency(dependencyType, dependency, target);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
-        getDelegate().addDependency(dependency, type, target);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public <I> ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Class<I> type, final Injector<I> target) {
-        getDelegate().addDependency(dependencyType, dependency, type, target);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public <I> ServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {
-        getDelegate().addInjection(target, value);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public <I> ServiceBuilder<T> addInjectionValue(final Injector<? super I> target, final Value<I> value) {
-        getDelegate().addInjectionValue(target, value);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceBuilder<T> addInjection(final Injector<? super T> target) {
-        getDelegate().addInjection(target);
+    public ServiceBuilder<T> setInstance(final org.jboss.msc.Service service) {
+        getDelegate().setInstance(service);
         return this;
     }
 
@@ -151,6 +94,127 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     }
 
     /** {@inheritDoc} */
+    public ServiceBuilder<T> addListener(final LifecycleListener listener) {
+        getDelegate().addListener(listener);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    public ServiceController<T> install() {
+        return getDelegate().install();
+    }
+
+    ////////////////////////
+    // DEPRECATED METHODS //
+    ////////////////////////
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
+    public ServiceBuilder<T> addDependencies(final ServiceName... dependencies) {
+        getDelegate().addDependencies(dependencies);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
+    public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final ServiceName... dependencies) {
+        getDelegate().addDependencies(dependencyType, dependencies);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
+    public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> dependencies) {
+        getDelegate().addDependencies(dependencies);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
+    public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final Iterable<ServiceName> dependencies) {
+        getDelegate().addDependencies(dependencyType, dependencies);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
+    public ServiceBuilder<T> addDependency(final ServiceName dependency) {
+        getDelegate().addDependency(dependency);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
+    public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency) {
+        getDelegate().addDependency(dependencyType, dependency);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
+    public ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
+        getDelegate().addDependency(dependency, target);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
+    public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Injector<Object> target) {
+        getDelegate().addDependency(dependencyType, dependency, target);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
+    public <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
+        getDelegate().addDependency(dependency, type, target);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
+    public <I> ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Class<I> type, final Injector<I> target) {
+        getDelegate().addDependency(dependencyType, dependency, type, target);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
+    public <I> ServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {
+        getDelegate().addInjection(target, value);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
+    public <I> ServiceBuilder<T> addInjectionValue(final Injector<? super I> target, final Value<I> value) {
+        getDelegate().addInjectionValue(target, value);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
+    public ServiceBuilder<T> addInjection(final Injector<? super T> target) {
+        getDelegate().addInjection(target);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
     public ServiceBuilder<T> addMonitors(final StabilityMonitor... monitors) {
         getDelegate().addMonitors(monitors);
         return this;
@@ -158,6 +222,7 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
 
     /** {@inheritDoc} */
     @Deprecated
+    @Override
     public ServiceBuilder<T> addListener(final ServiceListener<? super T> listener) {
         getDelegate().addListener(listener);
         return this;
@@ -165,26 +230,18 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
 
     /** {@inheritDoc} */
     @Deprecated
+    @Override
     public ServiceBuilder<T> addListener(final ServiceListener<? super T>... listeners) {
         getDelegate().addListener(listeners);
         return this;
     }
 
     /** {@inheritDoc} */
-    public ServiceBuilder<T> addListener(final LifecycleListener listener) {
-        delegate.addListener(listener);
-        return this;
-    }
-
-    /** {@inheritDoc} */
     @Deprecated
+    @Override
     public ServiceBuilder<T> addListener(final Collection<? extends ServiceListener<? super T>> listeners) {
         getDelegate().addListener(listeners);
         return this;
     }
 
-    /** {@inheritDoc} */
-    public ServiceController<T> install() throws ServiceRegistryException {
-        return getDelegate().install();
-    }
 }

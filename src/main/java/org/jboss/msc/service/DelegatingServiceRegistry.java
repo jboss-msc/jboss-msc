@@ -31,6 +31,7 @@ import java.util.List;
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class DelegatingServiceRegistry implements ServiceRegistry {
+
     private final ServiceRegistry delegate;
 
     /**
@@ -64,4 +65,5 @@ public class DelegatingServiceRegistry implements ServiceRegistry {
     public List<ServiceName> getServiceNames() {
         return getDelegate().getServiceNames();
     }
+
 }

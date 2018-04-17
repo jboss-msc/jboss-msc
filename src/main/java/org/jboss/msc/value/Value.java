@@ -23,22 +23,29 @@
 package org.jboss.msc.value;
 
 /**
- * An indirect value.  A value may be available trivially (without any computation), or it may involve a complex calculation
- * to produce.  The value may also be <em>time-sensitive</em>, such that it is only available under certain circumstances
- * (e.g. when the corresponding service is "up").
+ * Reference to a readonly dependency value.
+ * User code should never store referenced value in global fields
+ * and should always use {@link #getValue()} method instead.
+ * <p>
+ * Implementations of this interface are thread safe.
  *
- * @param <T> the value type
+ * @param <T> referenced dependency value type
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ * @deprecated use {@link org.jboss.msc.service.ServiceBuilder#requires(org.jboss.msc.service.ServiceName)}
+ * method instead. This class will be removed in future releases.
  */
+@Deprecated
 public interface Value<T> {
 
     /**
-     * Get the actual value.
+     * Get the actual dependency value.
      *
-     * @return the actual value
+     * @return the actual dependency value
      * @throws IllegalStateException if the value is time-sensitive and the current state does not allow retrieval.
      * @throws IllegalArgumentException when the value cannot be read due to misconfiguration 
      */
     T getValue() throws IllegalStateException, IllegalArgumentException;
+
 }

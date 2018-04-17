@@ -28,7 +28,9 @@ import java.util.Collection;
  * A {@link ServiceTarget} that provides {@link #removeServices() removal} of all services installed so far. 
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
+ * @deprecated this class will be removed in future releases.
  */
+@Deprecated
 public interface BatchServiceTarget extends ServiceTarget {
     /**
      * Removes all services installed into this target so far.

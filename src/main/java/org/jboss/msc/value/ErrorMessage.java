@@ -30,6 +30,7 @@ import java.util.List;
  * 
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  */
+@Deprecated
 class ErrorMessage {
 
     /**

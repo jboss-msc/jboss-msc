@@ -22,6 +22,8 @@
 
 package org.jboss.msc.service;
 
+import static java.lang.Thread.holdsLock;
+
 /**
  * A single service registration.
  *
@@ -31,10 +33,6 @@ package org.jboss.msc.service;
 final class ServiceRegistrationImpl extends Lockable implements Dependency {
 
     /**
-     * The service container which contains this registration.
-     */
-    private final ServiceContainerImpl container;
-    /**
      * The name of this registration.
      */
     private final ServiceName name;
@@ -42,6 +40,10 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
      * The set of dependents on this registration.
      */
     private final IdentityHashSet<Dependent> dependents = new IdentityHashSet<Dependent>(0);
+    /**
+     * The dependency value provided by this registration.
+     */
+    private final ReadableValueImpl value = new ReadableValueImpl(this);
 
     // Mutable properties
 
@@ -49,6 +51,10 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
      * The current instance.
      */
     private ServiceControllerImpl<?> instance;
+    /**
+     * The injector providing value.
+     */
+    private WritableValueImpl injector;
     /**
      * The number of dependent instances which place a demand-to-start on this registration.  If this value is >0,
      * propagate a demand to the instance, if any.
@@ -59,8 +65,7 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
      */
     private int dependentsStartedCount;
 
-    ServiceRegistrationImpl(final ServiceContainerImpl container, final ServiceName name) {
-        this.container = container;
+    ServiceRegistrationImpl(final ServiceName name) {
         this.name = name;
     }
 
@@ -81,15 +86,15 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
         }
         dependents.add(dependent);
         if (instance == null) {
-            dependent.dependencyUnavailable(name);
+            dependent.dependencyUnavailable();
             return;
         }
         synchronized (instance) {
             if (!instance.isInstallationCommitted()) {
-                dependent.dependencyUnavailable(name);
+                dependent.dependencyUnavailable();
                 return;
             }
-            instance.newDependent(name, dependent);
+            instance.newDependent(dependent);
         }
     }
 
@@ -116,13 +121,31 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
         if (instance == oldInstance) instance = null;
     }
 
-    ServiceContainerImpl getContainer() {
-        return container;
+    void setInjector(final WritableValueImpl newInjector) throws DuplicateServiceException {
+        assert newInjector != null;
+        assert isWriteLocked();
+        injector = newInjector;
+    }
+
+    void clearInjector(final WritableValueImpl oldInjector) {
+        assert oldInjector != null;
+        assert isWriteLocked();
+        if (injector == oldInjector) injector = null;
+    }
+
+    ReadableValueImpl getReadableValue() {
+        return value;
+    }
+
+    WritableValueImpl getInjector() {
+        assert holdsLock(Thread.currentThread());
+        return injector;
     }
 
     @Override
     public Object getValue() throws IllegalStateException {
         synchronized (this) {
+            if (injector != null) return injector.getValue();
             if (instance != null) return instance.getValue();
         }
         throw new IllegalStateException("Service is not installed");
