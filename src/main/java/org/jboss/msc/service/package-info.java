@@ -28,7 +28,7 @@
  * Individual service instances are controlled using the {@link org.jboss.msc.service.ServiceController} interface.  Service controllers follow
  * this strict internal state machine:
  * <p>
- * <img src="doc-files/state-machine.svg" alt="State machine image"/>
+ * <img src="doc-files/state-machine.svg" alt="State machine image">
  * <p>
  * The green boxes represent states; the red boxes below them represent possible transitions.  The "When:" condition
  * must be satisfied before a transition is taken; if it is, then the asynchronous tasks listed under "Tasks:" are

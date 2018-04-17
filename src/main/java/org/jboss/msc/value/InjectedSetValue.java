@@ -33,7 +33,7 @@ import org.jboss.msc.inject.RetainingInjector;
 /**
  * A {@link Set} value that can have entries injected into it. The underlying set is an instance of {@link LinkedHashSet}, so
  * iteration order will be consistent.
- * <p/>
+ * <p>
  * The {@link #injector()} method is used to get an injector that can inject into the set.
  *
  * @param <T> the value type

@@ -284,7 +284,7 @@ public interface ServiceController<S> extends Value<S> {
          */
         ON_DEMAND,
         /**
-         * Only come up if all dependencies are satisfied </b>and</b> at least one dependent demands to start.
+         * Only come up if all dependencies are satisfied <b>and</b> at least one dependent demands to start.
          * Once in the {@link State#UP UP} state, it will remain that way regardless of demands from dependents.
          */
         LAZY,
