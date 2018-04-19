@@ -31,7 +31,12 @@ import org.jboss.msc.value.Value;
  * @param <T> the value type
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ *
+ * @deprecated use {@link org.jboss.msc.service.ServiceBuilder#requires(org.jboss.msc.service.ServiceName)}
+ * and {@link org.jboss.msc.service.ServiceBuilder#provides(org.jboss.msc.service.ServiceName...)} methods instead.
+ * This class will be removed in a future release.
  */
+@Deprecated
 public final class ValueInjection<T> {
     private final Value<? extends T> source;
     private final Injector<? super T> target;

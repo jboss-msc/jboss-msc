@@ -22,6 +22,8 @@
 
 package org.jboss.msc.service;
 
+import java.util.function.Consumer;
+
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.value.InjectedValue;
 
@@ -30,7 +32,10 @@ import org.jboss.msc.value.InjectedValue;
  *
  * @param <T> the service type
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @deprecated Use {@link org.jboss.msc.Service#newInstance(Consumer, Object) Service.newInstance(Consumer&lt;T&gt;,T} instead.  This
+ * class will be removed in a future release.
  */
+@Deprecated
 public final class ValueInjectionService<T> implements Service<T> {
     private final InjectedValue<T> injector = new InjectedValue<T>();
 

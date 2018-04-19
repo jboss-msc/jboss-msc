@@ -22,6 +22,8 @@
 
 package org.jboss.msc.service;
 
+import java.util.function.Consumer;
+
 import org.jboss.msc.value.Value;
 
 /**
@@ -30,7 +32,10 @@ import org.jboss.msc.value.Value;
  * @param <T> the service type
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @deprecated Use {@link org.jboss.msc.Service#newInstance(Consumer, Object) Service.newInstance(Consumer&lt;T&gt;,T} instead.  This
+ * class will be removed in a future release.
  */
+@Deprecated
 public final class ValueService<T> implements Service<T> {
     private final Value<T> value;
     private volatile T valueInstance;
