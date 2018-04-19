@@ -30,8 +30,8 @@ import java.util.Map;
  *
  * @param <K> the key type
  * @param <V> the value type
- * @deprecated use {@link org.jboss.msc.service.ServiceBuilder#requires(org.jboss.msc.service.ServiceName)}
- * method instead. This class will be removed in future releases.
+ * @deprecated Use {@link org.jboss.msc.service.ServiceBuilder#requires(org.jboss.msc.service.ServiceName)}
+ * method instead. This class will be removed in a future release.
  */
 @Deprecated
 public final class MapEntry<K, V> implements Map.Entry<K, V>, Serializable {

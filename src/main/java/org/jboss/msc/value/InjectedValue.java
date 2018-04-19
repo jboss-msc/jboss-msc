@@ -31,8 +31,8 @@ import org.jboss.msc.inject.RetainingInjector;
  * @param <T> the value type
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
- * @deprecated use {@link org.jboss.msc.service.ServiceBuilder#requires(org.jboss.msc.service.ServiceName)}
- * method instead. This class will be removed in future releases.
+ * @deprecated Use {@link org.jboss.msc.service.ServiceBuilder#requires(org.jboss.msc.service.ServiceName)}
+ * method instead. This class will be removed in a future release.
  */
 @Deprecated
 public final class InjectedValue<T> extends RetainingInjector<T> implements Injector<T>, Value<T> {

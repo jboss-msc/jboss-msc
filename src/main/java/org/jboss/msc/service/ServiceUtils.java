@@ -30,7 +30,7 @@ import java.util.List;
  * A utility class for service actions.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
- * @deprecated This utility class is leveraging deprecated MSC API classes.
+ * @deprecated This class will be removed in a future release.
  */
 @Deprecated
 public final class ServiceUtils {

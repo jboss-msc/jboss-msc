@@ -32,7 +32,9 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  * is selected.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @deprecated This class will be removed in a future release.
  */
+@Deprecated
 public final class ServiceNameMapper<V> {
 
     /**

@@ -66,6 +66,7 @@ import org.jboss.msc.value.Value;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  * @deprecated use {@link org.jboss.msc.Service} instead.
+ * This class will be removed in a future release.
  */
 @Deprecated
 public interface Service<T> extends org.jboss.msc.Service, Value<T> {

@@ -30,6 +30,7 @@ package org.jboss.msc.service;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:flavia.rainone@jboss.com">Flavia Rainone</a>
  * @deprecated Service listeners are not encouraged for general user use.
+ * This class will be removed in a future release.
  */
 @Deprecated
 public abstract class AbstractServiceListener<S> implements ServiceListener<S> {

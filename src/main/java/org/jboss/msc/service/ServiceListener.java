@@ -34,6 +34,7 @@ package org.jboss.msc.service;
  *
  * @see LifecycleListener
  * @deprecated Service listeners are not encouraged for general user use. Users should use {@link LifecycleListener}s instead.
+ * This class will be removed in a future release.
  */
 @Deprecated
 public interface ServiceListener<S> {

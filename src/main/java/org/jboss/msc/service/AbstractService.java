@@ -28,7 +28,10 @@ package org.jboss.msc.service;
  * @param <T> the value type
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @deprecated use {@link org.jboss.msc.Service} instead.
+ * This class will be removed in a future release.
  */
+@Deprecated
 public abstract class AbstractService<T> implements Service<T> {
 
     /** {@inheritDoc}  This implementation does nothing. */
