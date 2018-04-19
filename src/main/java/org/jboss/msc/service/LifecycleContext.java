@@ -62,11 +62,13 @@ public interface LifecycleContext extends Executor {
     ServiceController<?> getController();
 
     /**
-     * Execute a task asynchronously using the MSC task executor.
+     * Execute a task asynchronously using the MSC task executor.  The task executor is guaranteed to never reject
+     * an execution as long as the container is up and running.  Generally, this method should only be used during
+     * the corresponding service start or stop.
      * <p>
-     * <strong>Note:</strong> This method should not be used for executing tasks that may block,
-     * particularly from within a service's {@link Service#start(StartContext)} or {@link Service#stop(StopContext)}
-     * methods. See {@link Service the Service class javadoc} for further details.
+     * <strong>Note:</strong> Executing tasks which perform operations that block infinitely (like {@link System#exit(int)}
+     * or which await conditions which are driven by other services are likely to deadlock.  Such tasks should never be
+     * executed in the service container.
      *
      * @param command the command to execute
      * @throws IllegalStateException if this method is called outside of service lifecycle methods.
