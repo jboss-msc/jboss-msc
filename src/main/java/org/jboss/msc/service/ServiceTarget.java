@@ -98,8 +98,8 @@ public interface ServiceTarget {
      * @param name the service name
      * @param value the service value
      * @return the builder for the service
-     * @deprecated use {@link #addService(ServiceName)} instead.
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #addService(ServiceName)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     <T> ServiceBuilder<T> addServiceValue(ServiceName name, Value<? extends Service<T>> value);
@@ -110,8 +110,8 @@ public interface ServiceTarget {
      * @param name the service name
      * @param service the service
      * @return the builder for the service
-     * @deprecated use {@link #addService(ServiceName)} instead.
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #addService(ServiceName)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     <T> ServiceBuilder<T> addService(ServiceName name, Service<T> service);
@@ -121,7 +121,7 @@ public interface ServiceTarget {
      *
      * @param monitors the monitors to add to the target
      * @return this target
-     * @deprecated this method will be removed in future releases.
+     * @deprecated This method will be removed in a future release.
      */
     @Deprecated
     ServiceTarget addMonitors(StabilityMonitor... monitors);
@@ -131,8 +131,8 @@ public interface ServiceTarget {
      *
      * @param listener the listener to add to the target
      * @return this target
-     * @deprecated use {@link #addListener(LifecycleListener)} instead.
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #addListener(LifecycleListener)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceTarget addListener(ServiceListener<Object> listener);
@@ -142,8 +142,8 @@ public interface ServiceTarget {
      *
      * @param listeners a list of listeners to add to the target
      * @return this target
-     * @deprecated use {@link #addListener(LifecycleListener)} instead.
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #addListener(LifecycleListener)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceTarget addListener(ServiceListener<Object>... listeners);
@@ -153,8 +153,8 @@ public interface ServiceTarget {
      *
      * @param listeners a collection of listeners to add to the target
      * @return this target
-     * @deprecated use {@link #addListener(LifecycleListener)} instead.
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #addListener(LifecycleListener)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceTarget addListener(Collection<ServiceListener<Object>> listeners);
@@ -164,8 +164,8 @@ public interface ServiceTarget {
      *
      * @param listener the listener to remove
      * @return this target
-     * @deprecated use {@link #removeListener(LifecycleListener)} instead.
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #removeListener(LifecycleListener)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceTarget removeListener(ServiceListener<Object> listener);
@@ -174,7 +174,7 @@ public interface ServiceTarget {
      * Returns a set of the monitors added to this target.
      * 
      * @return the monitors added to this target
-     * @deprecated this method will be removed in future releases.
+     * @deprecated This method will be removed in a future release.
      */
     @Deprecated
     Set<StabilityMonitor> getMonitors();
@@ -183,7 +183,7 @@ public interface ServiceTarget {
      * Returns a set of the listeners added to this target.
      * 
      * @return the listeners added to this target
-     * @deprecated this method will be removed in future releases.
+     * @deprecated This method will be removed in a future release.
      */
     @Deprecated
     Set<ServiceListener<Object>> getListeners();
@@ -193,7 +193,7 @@ public interface ServiceTarget {
      *
      * @param dependency the dependency to add to the target
      * @return this target
-     * @deprecated this method will be removed in future releases.
+     * @deprecated This method will be removed in a future release.
      */
     @Deprecated
     ServiceTarget addDependency(ServiceName dependency);
@@ -203,7 +203,7 @@ public interface ServiceTarget {
      *
      * @param dependencies a list of dependencies to add to the target
      * @return this target
-     * @deprecated this method will be removed in future releases.
+     * @deprecated This method will be removed in a future release.
      */
     @Deprecated
     ServiceTarget addDependency(ServiceName... dependencies);
@@ -213,7 +213,7 @@ public interface ServiceTarget {
      *
      * @param dependencies a collection of dependencies to add to this target
      * @return this target
-     * @deprecated this method will be removed in future releases.
+     * @deprecated This method will be removed in a future release.
      */
     @Deprecated
     ServiceTarget addDependency(Collection<ServiceName> dependencies);
@@ -223,7 +223,7 @@ public interface ServiceTarget {
      *
      * @param dependency the dependency
      * @return this target
-     * @deprecated this method will be removed in future releases.
+     * @deprecated This method will be removed in a future release.
      */
     @Deprecated
     ServiceTarget removeDependency(ServiceName dependency);
@@ -232,7 +232,7 @@ public interface ServiceTarget {
      * Returns a set of all dependencies added to this target.
      * 
      * @return all dependencies of this target
-     * @deprecated this method will be removed in future releases.
+     * @deprecated This method will be removed in a future release.
      */
     @Deprecated
     Set<ServiceName> getDependencies();
@@ -241,7 +241,7 @@ public interface ServiceTarget {
      * Create a new batch service target, which is used to install described services in this target.
      *
      * @return the new batch service target
-     * @deprecated this method will be removed in future releases.
+     * @deprecated This method will be removed in a future release.
      */
     @Deprecated
     BatchServiceTarget batchTarget();

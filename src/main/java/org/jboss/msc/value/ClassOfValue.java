@@ -26,8 +26,8 @@ package org.jboss.msc.value;
  * A value which returns the {@code Class} object of another value.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
- * @deprecated use {@link org.jboss.msc.service.ServiceBuilder#requires(org.jboss.msc.service.ServiceName)}
- * method instead. This class will be removed in future releases.
+ * @deprecated Use {@link org.jboss.msc.service.ServiceBuilder#requires(org.jboss.msc.service.ServiceName)}
+ * method instead. This class will be removed in a future release.
  */
 @Deprecated
 public final class ClassOfValue<T> implements Value<Class<? extends T>> {

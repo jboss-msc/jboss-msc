@@ -69,6 +69,7 @@ public interface LifecycleContext extends Executor {
      * methods. See {@link Service the Service class javadoc} for further details.
      *
      * @param command the command to execute
+     * @throws IllegalStateException if this method is called outside of service lifecycle methods.
      */
     @Override
     void execute(Runnable command);

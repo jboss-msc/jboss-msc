@@ -1969,16 +1969,22 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         }
 
         public final void execute(final Runnable command) {
-            doExecute(Collections.<Runnable>singletonList(new Runnable() {
-                public void run() {
-                    final ClassLoader contextClassLoader = setTCCL(getCL(command.getClass()));
-                    try {
-                        command.run();
-                    } finally {
-                        setTCCL(contextClassLoader);
-                    }
+            if (command == null) return;
+            synchronized (lock) {
+                if ((state & (COMPLETED | FAILED)) != 0) {
+                    throw new IllegalStateException("Lifecycle context is no longer valid");
                 }
-            }));
+                doExecute(Collections.<Runnable>singletonList(new Runnable() {
+                    public void run() {
+                        final ClassLoader contextClassLoader = setTCCL(getCL(command.getClass()));
+                        try {
+                            command.run();
+                        } finally {
+                            setTCCL(contextClassLoader);
+                        }
+                    }
+                }));
+            }
         }
     }
 

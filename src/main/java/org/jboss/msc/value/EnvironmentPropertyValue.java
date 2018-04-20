@@ -31,8 +31,8 @@ import java.security.PrivilegedAction;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @see System#getenv(String)
- * @deprecated use {@link org.jboss.msc.service.ServiceBuilder#requires(org.jboss.msc.service.ServiceName)}
- * method instead. This class will be removed in future releases.
+ * @deprecated Use {@link org.jboss.msc.service.ServiceBuilder#requires(org.jboss.msc.service.ServiceName)}
+ * method instead. This class will be removed in a future release.
  */
 @Deprecated
 public final class EnvironmentPropertyValue implements Value<String>, PrivilegedAction<String> {

@@ -262,9 +262,10 @@ public class LifecycleContextTestCase extends AbstractServiceTest{
         assertEquals(Integer.valueOf(56), contextService.getValue());
 
         final StartContext startContext = contextService.getStartContext();
-        final DummyRunnable runnable = new DummyRunnable();
-        startContext.execute(runnable);
-        assertTrue(runnable.isRun());
+        try {
+            startContext.execute(new DummyRunnable());
+            fail("IllegalStateException expected");
+        } catch (IllegalStateException ignored) {}
     }
 
     @Test
@@ -285,9 +286,10 @@ public class LifecycleContextTestCase extends AbstractServiceTest{
         assertNull(contextService.getValue());
 
         final StopContext stopContext = contextService.getStopContext();
-        final DummyRunnable runnable = new DummyRunnable();
-        stopContext.execute(runnable);
-        assertTrue(runnable.isRun());
+        try {
+            stopContext.execute(new DummyRunnable());
+            fail("IllegalStateException expected");
+        } catch (IllegalStateException ignored) {}
     }
 
     private static class StartService implements Runnable {

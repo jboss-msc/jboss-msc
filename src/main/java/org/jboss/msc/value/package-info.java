@@ -22,5 +22,6 @@
 
 /**
  * Classes which implement various indirect value types.  See {@link org.jboss.msc.value.Value}.
+ * @deprecated this package will be removed in a future release.
  */
 package org.jboss.msc.value;

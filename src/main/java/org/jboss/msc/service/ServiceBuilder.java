@@ -144,8 +144,8 @@ public interface ServiceBuilder<T> {
      * @return this builder
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
-     * @deprecated use {@link #requires(ServiceName)} instead
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #requires(ServiceName)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceBuilder<T> addDependencies(ServiceName... dependencies);
@@ -159,7 +159,7 @@ public interface ServiceBuilder<T> {
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
-     * This method will be removed in future releases.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceBuilder<T> addDependencies(DependencyType dependencyType, ServiceName... dependencies);
@@ -171,8 +171,8 @@ public interface ServiceBuilder<T> {
      * @return this builder
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
-     * @deprecated use {@link #requires(ServiceName)} instead
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #requires(ServiceName)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceBuilder<T> addDependencies(Iterable<ServiceName> dependencies);
@@ -186,7 +186,7 @@ public interface ServiceBuilder<T> {
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
-     * This method will be removed in future releases.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceBuilder<T> addDependencies(DependencyType dependencyType, Iterable<ServiceName> dependencies);
@@ -199,8 +199,8 @@ public interface ServiceBuilder<T> {
      * @return an injection builder for optionally injecting the dependency
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
-     * @deprecated use {@link #requires(ServiceName)} instead
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #requires(ServiceName)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceBuilder<T> addDependency(ServiceName dependency);
@@ -215,7 +215,7 @@ public interface ServiceBuilder<T> {
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
-     * This method will be removed in future releases.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceBuilder<T> addDependency(DependencyType dependencyType, ServiceName dependency);
@@ -229,8 +229,8 @@ public interface ServiceBuilder<T> {
      * @return this builder
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
-     * @deprecated use {@link #requires(ServiceName)} instead
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #requires(ServiceName)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceBuilder<T> addDependency(ServiceName dependency, Injector<Object> target);
@@ -246,7 +246,7 @@ public interface ServiceBuilder<T> {
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
-     * This method will be removed in future releases.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceBuilder<T> addDependency(DependencyType dependencyType, ServiceName dependency, Injector<Object> target);
@@ -263,8 +263,8 @@ public interface ServiceBuilder<T> {
      * @return this builder
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
-     * @deprecated use {@link #requires(ServiceName)} instead
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #requires(ServiceName)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     <I> ServiceBuilder<T> addDependency(ServiceName dependency, Class<I> type, Injector<I> target);
@@ -283,7 +283,7 @@ public interface ServiceBuilder<T> {
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
-     * This method will be removed in future releases.
+     * This method will be removed in a future release.
      */
     @Deprecated
     <I> ServiceBuilder<T> addDependency(DependencyType dependencyType, ServiceName dependency, Class<I> type, Injector<I> target);
@@ -298,8 +298,8 @@ public interface ServiceBuilder<T> {
      * @return this builder
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
-     * @deprecated use {@link #requires(ServiceName)} instead
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #requires(ServiceName)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     <I> ServiceBuilder<T> addInjection(Injector<? super I> target, I value);
@@ -314,8 +314,8 @@ public interface ServiceBuilder<T> {
      * @return this builder
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
-     * @deprecated use {@link #requires(ServiceName)} instead
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #requires(ServiceName)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     <I> ServiceBuilder<T> addInjectionValue(Injector<? super I> target, Value<I> value);
@@ -330,8 +330,8 @@ public interface ServiceBuilder<T> {
      * @return this builder
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
-     * @deprecated use {@link #provides(ServiceName...)} instead
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #provides(ServiceName...)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceBuilder<T> addInjection(Injector<? super T> target);
@@ -343,8 +343,8 @@ public interface ServiceBuilder<T> {
      * @return this builder
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
-     * @deprecated use {@link #addMonitor(StabilityMonitor)} instead
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #addMonitor(StabilityMonitor)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceBuilder<T> addMonitors(final StabilityMonitor... monitors);
@@ -356,8 +356,8 @@ public interface ServiceBuilder<T> {
      * @return this builder
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
-     * @deprecated use {@link #addListener(LifecycleListener)} instead
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #addListener(LifecycleListener)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceBuilder<T> addListener(ServiceListener<? super T> listener);
@@ -369,8 +369,8 @@ public interface ServiceBuilder<T> {
      * @return this builder
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
-     * @deprecated use {@link #addListener(LifecycleListener)} instead
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #addListener(LifecycleListener)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceBuilder<T> addListener(ServiceListener<? super T>... listeners);
@@ -382,8 +382,8 @@ public interface ServiceBuilder<T> {
      * @return this builder
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
-     * @deprecated use {@link #addListener(LifecycleListener)} instead.
-     * This method will be removed in future releases.
+     * @deprecated Use {@link #addListener(LifecycleListener)} instead.
+     * This method will be removed in a future release.
      */
     @Deprecated
     ServiceBuilder<T> addListener(Collection<? extends ServiceListener<? super T>> listeners);
@@ -392,7 +392,7 @@ public interface ServiceBuilder<T> {
      * The dependency type.
      *
      * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
-     * This enum will be removed in future releases.
+     * This enum will be removed in a future release.
      */
     @Deprecated
     enum DependencyType {
@@ -403,10 +403,7 @@ public interface ServiceBuilder<T> {
         REQUIRED,
         /**
          * An optional dependency.
-         *
-         * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
          */
-        @Deprecated
         OPTIONAL,
         ;
     }
