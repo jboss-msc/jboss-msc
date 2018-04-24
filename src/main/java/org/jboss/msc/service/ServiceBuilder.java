@@ -38,8 +38,8 @@ import java.util.function.Supplier;
  * Single service can provide multiple values which can be requested by dependent services.
  * Every named value service provides must be specified via {@link #provides(ServiceName...)} method.
  * <p>
- * Once all required and provided dependencies are defined, references to all {@link Value}s
- * and {@link Injector}s should be passed to service instance so they can be accessed by service
+ * Once all required and provided dependencies are defined, references to all {@link Consumer}s
+ * and {@link Supplier}s should be passed to service instance so they can be accessed by service
  * at runtime.
  * <p>
  * Implementations of this interface are not thread safe.
