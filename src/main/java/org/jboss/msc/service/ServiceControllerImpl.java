@@ -90,11 +90,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     /**
      * The set of registered service listeners.
      */
-    private final IdentityHashSet<ServiceListener<? super S>> listeners;
+    private final Set<ServiceListener<? super S>> listeners;
     /**
      * Lifecycle listeners.
      */
-    private final IdentityHashSet<LifecycleListener> lifecycleListeners;
+    private final Set<LifecycleListener> lifecycleListeners;
     /**
      * Container shutdown listener.
      */
@@ -102,7 +102,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     /**
      * The set of registered stability monitors.
      */
-    private final IdentityHashSet<StabilityMonitor> monitors;
+    private final Set<StabilityMonitor> monitors;
     /**
      * Required dependencies by this service.
      */
@@ -118,7 +118,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     /**
      * The children of this service (only valid during {@link State#UP}).
      */
-    private final IdentityHashSet<ServiceControllerImpl<?>> children;
+    private final Set<ServiceControllerImpl<?>> children;
     /**
      * The start exception.
      */
@@ -183,7 +183,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     /**
      * Tasks executed last on transition outside the lock.
      */
-    private final List<Runnable> listenerTransitionTasks = new ArrayList<Runnable>();
+    private final List<Runnable> listenerTransitionTasks = new ArrayList<>();
     /**
      * The service target for adding child services (can be {@code null} if none
      * were added).
@@ -210,9 +210,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         this.outInjections = outInjections;
         this.requires = requires;
         this.provides = provides;
-        this.listeners = new IdentityHashSet<ServiceListener<? super S>>(listeners);
-        this.lifecycleListeners = new IdentityHashSet<LifecycleListener>(lifecycleListeners);
-        this.monitors = new IdentityHashSet<StabilityMonitor>(monitors);
+        this.listeners = new IdentityHashSet<>(listeners);
+        this.lifecycleListeners = new IdentityHashSet<>(lifecycleListeners);
+        this.monitors = new IdentityHashSet<>(monitors);
         // We also need to register this controller with monitors explicitly.
         // This allows inherited monitors to have registered all child controllers
         // and later to remove them when inherited stability monitor is cleared.
@@ -222,7 +222,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         this.parent = parent;
         int depCount = requires.size();
         stoppingDependencies = parent == null ? depCount : depCount + 1;
-        children = new IdentityHashSet<ServiceControllerImpl<?>>();
+        children = new IdentityHashSet<>();
     }
 
     /**
@@ -285,7 +285,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert (state == Substate.NEW);
         assert initialMode != null;
         assert !holdsLock(this);
-        final List<Runnable> listenerAddedTasks = new ArrayList<Runnable>();
+        final List<Runnable> listenerAddedTasks = new ArrayList<>();
 
         synchronized (this) {
             if (container.isShutdown()) {
@@ -553,7 +553,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             // no movement possible
             return Collections.EMPTY_LIST;
         }
-        final List<Runnable> tasks = new ArrayList<Runnable>();
+        final List<Runnable> tasks = new ArrayList<>();
         if (postTransitionTasks(tasks)) {
             // no movement possible
             return tasks;
@@ -1084,7 +1084,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         doExecute(tasks);
     }
 
-    IdentityHashSet<ServiceControllerImpl<?>> getChildren() {
+    Set<ServiceControllerImpl<?>> getChildren() {
         assert holdsLock(this);
         return children;
     }
@@ -1281,7 +1281,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     @Override
     public synchronized Set<ServiceName> getImmediateUnavailableDependencies() {
-        final Set<ServiceName> retVal = new IdentityHashSet<ServiceName>();
+        final Set<ServiceName> retVal = new IdentityHashSet<>();
         for (Dependency dependency : requires) {
             synchronized (dependency.getLock()) {
                 if (isUnavailable(dependency)) {
@@ -1974,7 +1974,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 if ((state & (COMPLETED | FAILED)) != 0) {
                     throw new IllegalStateException("Lifecycle context is no longer valid");
                 }
-                doExecute(Collections.<Runnable>singletonList(new Runnable() {
+                doExecute(Collections.singletonList(new Runnable() {
                     public void run() {
                         final ClassLoader contextClassLoader = setTCCL(getCL(command.getClass()));
                         try {

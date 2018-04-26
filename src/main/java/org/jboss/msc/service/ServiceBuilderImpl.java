@@ -56,7 +56,7 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
     private Set<ServiceName> aliases;
     private ServiceController.Mode initialMode;
     private Map<ServiceName, ReadableValueImpl> requires;
-    private IdentityHashSet<StabilityMonitor> monitors;
+    private Set<StabilityMonitor> monitors;
     private Set<ServiceListener<? super T>> serviceListeners;
     private Set<LifecycleListener> lifecycleListeners;
     private boolean installed;

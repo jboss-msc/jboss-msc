@@ -42,7 +42,7 @@ public final class ServiceNameMapper<V> {
      */
     public static final Object ANY = new Object();
 
-    private final Node<V> root = new Node<V>();
+    private final Node<V> root = new Node<>();
 
     /**
      * Register a matcher for a specific location.
@@ -98,7 +98,7 @@ public final class ServiceNameMapper<V> {
         @SuppressWarnings("unchecked")
         private static final AtomicReferenceFieldUpdater<Node, Object> valueUpdater = AtomicReferenceFieldUpdater.newUpdater(Node.class, Object.class, "value");
 
-        private final ConcurrentMap<Object, Node<V>> childMap = new ConcurrentHashMap<Object, Node<V>>();
+        private final ConcurrentMap<Object, Node<V>> childMap = new ConcurrentHashMap<>();
         @SuppressWarnings("unused")
         private volatile V value;
 
@@ -111,7 +111,7 @@ public final class ServiceNameMapper<V> {
             }
             Node<V> child = childMap.get(key);
             if (child == null) {
-                Node<V> appearing = childMap.putIfAbsent(key, child = new Node<V>());
+                Node<V> appearing = childMap.putIfAbsent(key, child = new Node<>());
                 if (appearing != null) {
                     child = appearing;
                 }

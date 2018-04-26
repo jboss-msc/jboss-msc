@@ -91,17 +91,17 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         ServiceLogger.ROOT.greeting(Version.getVersionString());
     }
 
-    private final ConcurrentMap<ServiceName, ServiceRegistrationImpl> registry = new ConcurrentHashMap<ServiceName, ServiceRegistrationImpl>(512);
+    private final ConcurrentMap<ServiceName, ServiceRegistrationImpl> registry = new ConcurrentHashMap<>(512);
     private final long start = System.nanoTime();
 
-    private final Set<ServiceController<?>> problems = new IdentityHashSet<ServiceController<?>>();
-    private final Set<ServiceController<?>> failed = new IdentityHashSet<ServiceController<?>>();
+    private final Set<ServiceController<?>> problems = new IdentityHashSet<>();
+    private final Set<ServiceController<?>> failed = new IdentityHashSet<>();
     private final Object lock = new Object();
 
     private int unstableServices;
     private long shutdownInitiated;
 
-    private final List<TerminateListener> terminateListeners = new ArrayList<TerminateListener>(1);
+    private final List<TerminateListener> terminateListeners = new ArrayList<>(1);
     private final boolean autoShutdown;
 
     private static final class ShutdownHookHolder {
@@ -109,7 +109,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         private static boolean down = false;
 
         static {
-            containers = new HashSet<Reference<ServiceContainerImpl, Void>>();
+            containers = new HashSet<>();
             doPrivileged(new PrivilegedAction<Void>() {
                 public Void run() {
                     final Thread hook = new Thread(new Runnable() {
@@ -174,7 +174,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
         public List<String> queryServiceNames() {
             final Set<ServiceName> names = registry.keySet();
-            final ArrayList<String> list = new ArrayList<String>(names.size());
+            final List<String> list = new ArrayList<>(names.size());
             for (ServiceName serviceName : names) {
                 list.add(serviceName.getCanonicalName());
             }
@@ -184,7 +184,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
         public List<ServiceStatus> queryServiceStatuses() {
             final Collection<ServiceRegistrationImpl> registrations = registry.values();
-            final ArrayList<ServiceStatus> list = new ArrayList<ServiceStatus>(registrations.size());
+            final List<ServiceStatus> list = new ArrayList<>(registrations.size());
             for (ServiceRegistrationImpl registration : registrations) {
                 final ServiceControllerImpl<?> instance = registration.getDependencyController();
                 if (instance != null) list.add(instance.getStatus());
@@ -230,7 +230,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
         public String dumpServicesToGraphDescription() {
             final List<ServiceStatus> statuses = queryServiceStatuses();
-            final Map<String, String> aliases = new HashMap<String, String>();
+            final Map<String, String> aliases = new HashMap<>();
             final StringBuilder builder = new StringBuilder();
             builder.append("digraph Services {\n    node [shape=record];\n    graph [rankdir=\"RL\"];\n");
             for (ServiceStatus status : statuses) {
@@ -255,7 +255,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             for (ServiceStatus status : statuses) {
                 final String serviceName = status.getServiceName();
                 final String[] dependencies = status.getDependencies();
-                final Set<String> filteredDependencies = new HashSet<String>(Arrays.asList(dependencies));
+                final Set<String> filteredDependencies = new HashSet<>(Arrays.asList(dependencies));
                 final String parentName = status.getParentName();
                 if (parentName != null) filteredDependencies.add(parentName);
                 for (String dependency : filteredDependencies) {
@@ -324,7 +324,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
          */
         private Collection<ServiceStatus> queryServicesByStatus(String status) {
             final Collection<ServiceRegistrationImpl> registrations = registry.values();
-            final ArrayList<ServiceStatus> list = new ArrayList<ServiceStatus>(registrations.size());
+            final List<ServiceStatus> list = new ArrayList<>(registrations.size());
             for (ServiceRegistrationImpl registration : registrations) {
                 final ServiceControllerImpl<?> instance = registration.getDependencyController();
                 if (instance != null) {
@@ -381,7 +381,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             //noinspection ThisEscapedInObjectConstruction
             else {
                 //noinspection ThisEscapedInObjectConstruction
-                set.add(new WeakReference<ServiceContainerImpl, Void>(this, null, new Reaper<ServiceContainerImpl, Void>() {
+                set.add(new WeakReference<>(this, null, new Reaper<ServiceContainerImpl, Void>() {
                     public void reap(final Reference<ServiceContainerImpl, Void> reference) {
                         ShutdownHookHolder.containers.remove(reference);
                     }
@@ -574,8 +574,8 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             out.printf("(Registry is empty)\n");
         } else {
             int i = 0;
-            Set<ServiceControllerImpl<?>> set = new HashSet<ServiceControllerImpl<?>>();
-            for (ServiceName name : new TreeSet<ServiceName>(registry.keySet())) {
+            Set<ServiceControllerImpl<?>> set = new HashSet<>();
+            for (ServiceName name : new TreeSet<>(registry.keySet())) {
                 final ServiceRegistrationImpl registration = registry.get(name);
                 if (registration != null) {
                     final ServiceControllerImpl<?> instance = registration.getDependencyController();
@@ -679,7 +679,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
     @Override
     public List<ServiceName> getServiceNames() {
-        final List<ServiceName> result = new ArrayList<ServiceName>(registry.size());
+        final List<ServiceName> result = new ArrayList<>(registry.size());
         for (Map.Entry<ServiceName, ServiceRegistrationImpl> registryEntry: registry.entrySet()) {
             if (registryEntry.getValue().getDependencyController() != null) {
                 result.add(registryEntry.getKey());
@@ -693,7 +693,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         apply(serviceBuilder);
 
         // Initialize registrations and injectors map
-        final Map<ServiceRegistrationImpl, WritableValueImpl> provides = new LinkedHashMap<ServiceRegistrationImpl, WritableValueImpl>();
+        final Map<ServiceRegistrationImpl, WritableValueImpl> provides = new LinkedHashMap<>();
         Entry<ServiceName, WritableValueImpl> entry;
         for (Iterator<Entry<ServiceName, WritableValueImpl>> j = serviceBuilder.getProvides().entrySet().iterator(); j.hasNext(); ) {
             entry = j.next();
@@ -701,16 +701,16 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
 
         // Create the list of dependencies
-        final List<ValueInjection<?>> outInjections = new ArrayList<ValueInjection<?>>();
+        final List<ValueInjection<?>> outInjections = new ArrayList<>();
         // set up outInjections with an InjectedValue
-        final InjectedValue<T> serviceValue = new InjectedValue<T>();
+        final InjectedValue<T> serviceValue = new InjectedValue<>();
         for (final Injector<? super T> outInjection : serviceBuilder.getOutInjections()) {
-            outInjections.add(new ValueInjection<T>(serviceValue, outInjection));
+            outInjections.add(new ValueInjection<>(serviceValue, outInjection));
         }
 
         // Dependencies
         final Map<ServiceName, AbstractServiceBuilder.Dependency> dependencyMap = serviceBuilder.getDependencies();
-        final Set<Dependency> requires = new HashSet<Dependency>();
+        final Set<Dependency> requires = new HashSet<>();
         final List<ValueInjection<?>> valueInjections = serviceBuilder.getValueInjections();
         ServiceRegistrationImpl dependencyRegistration;
         Dependency dependency;
@@ -724,7 +724,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             }
             requires.add(dependency);
             for (Injector<Object> injector : dependencyDefinition.getInjectorList()) {
-                valueInjections.add(new ValueInjection<Object>(dependency, injector));
+                valueInjections.add(new ValueInjection<>(dependency, injector));
             }
         }
         final ValueInjection<?>[] valueInjectionArray = valueInjections.toArray(new ValueInjection<?>[valueInjections.size()]);
@@ -737,7 +737,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
 
         // Next create the actual controller
-        final ServiceControllerImpl<T> instance = new ServiceControllerImpl<T>(this, serviceBuilder.getServiceId(), aliases, serviceBuilder.getService(),
+        final ServiceControllerImpl<T> instance = new ServiceControllerImpl<>(this, serviceBuilder.getServiceId(), aliases, serviceBuilder.getService(),
                 requires, provides, valueInjectionArray, outInjectionArray,
                 serviceBuilder.getMonitors(), serviceBuilder.getServiceListeners(), serviceBuilder.getLifecycleListeners(), serviceBuilder.getParent());
         boolean ok = false;
@@ -776,8 +776,8 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
      * @throws CircularDependencyException if a dependency cycle involving {@code instance} is detected
      */
     private <T> void detectCircularity(ServiceControllerImpl<T> instance) throws CircularDependencyException {
-        final Set<ServiceControllerImpl<?>> visited = new IdentityHashSet<ServiceControllerImpl<?>>();
-        final Deque<ServiceName> visitStack = new ArrayDeque<ServiceName>();
+        final Set<ServiceControllerImpl<?>> visited = new IdentityHashSet<>();
+        final Deque<ServiceName> visitStack = new ArrayDeque<>();
         visitStack.push(instance.getName());
         for (ServiceRegistrationImpl registration : instance.getRegistrations()) {
             synchronized (registration) {
@@ -786,7 +786,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
     }
 
-    private void detectCircularity(IdentityHashSet<? extends Dependent> dependents, ServiceControllerImpl<?> instance, Set<ServiceControllerImpl<?>> visited,  Deque<ServiceName> visitStack) {
+    private void detectCircularity(Set<? extends Dependent> dependents, ServiceControllerImpl<?> instance, Set<ServiceControllerImpl<?>> visited,  Deque<ServiceName> visitStack) {
         for (Dependent dependent: dependents) {
             final ServiceControllerImpl<?> controller = dependent.getDependentController();
             if (controller == null) continue; // [MSC-145] optional dependencies may return null
@@ -876,7 +876,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 }
             };
             if (EnhancedQueueExecutor.DISABLE_HINT) {
-                delegate = new ThreadPoolExecutor(corePoolSize, maximumPoolSize, keepAliveTime, unit, new LinkedBlockingQueue<Runnable>(), threadFactory, POLICY) {
+                delegate = new ThreadPoolExecutor(corePoolSize, maximumPoolSize, keepAliveTime, unit, new LinkedBlockingQueue<>(), threadFactory, POLICY) {
                     protected void afterExecute(final Runnable r, final Throwable t) {
                         super.afterExecute(r, t);
                         if (t != null) {

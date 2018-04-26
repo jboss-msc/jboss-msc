@@ -78,7 +78,7 @@ abstract class AbstractServiceBuilder<T> implements ServiceBuilder<T> {
     static final class Dependency {
         private final ServiceName name;
         private DependencyType dependencyType;
-        private List<Injector<Object>> injectorList = new ArrayList<Injector<Object>>(0);
+        private List<Injector<Object>> injectorList = new ArrayList<>(0);
 
         Dependency(final ServiceName name, final DependencyType dependencyType) {
             this.name = name;

@@ -50,15 +50,15 @@ import java.util.function.Supplier;
 final class ObsoleteServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
 
     private final org.jboss.msc.Service service;
-    private final Map<ServiceName, WritableValueImpl> provides = new LinkedHashMap<ServiceName, WritableValueImpl>();
-    private final Set<ServiceName> aliases = new HashSet<ServiceName>();
+    private final Map<ServiceName, WritableValueImpl> provides = new LinkedHashMap<>();
+    private final Set<ServiceName> aliases = new HashSet<>();
+    private final Set<StabilityMonitor> monitors = new IdentityHashSet<>();
+    private final Map<ServiceName, Dependency> dependencies = new HashMap<>(0);
+    private final Set<ServiceListener<? super T>> listeners = new IdentityHashSet<>(0);
+    private final Set<LifecycleListener> lifecycleListeners = new IdentityHashSet<>(0);
+    private final List<ValueInjection<?>> valueInjections = new ArrayList<>(0);
+    private final List<Injector<? super T>> outInjections = new ArrayList<>(0);
     private ServiceController.Mode initialMode = ServiceController.Mode.ACTIVE;
-    private final IdentityHashSet<StabilityMonitor> monitors = new IdentityHashSet<StabilityMonitor>();
-    private final Map<ServiceName, Dependency> dependencies = new HashMap<ServiceName, Dependency>(0);
-    private final Set<ServiceListener<? super T>> listeners = new IdentityHashSet<ServiceListener<? super T>>(0);
-    private final Set<LifecycleListener> lifecycleListeners = new IdentityHashSet<LifecycleListener>(0);
-    private final List<ValueInjection<?>> valueInjections = new ArrayList<ValueInjection<?>>(0);
-    private final List<Injector<? super T>> outInjections = new ArrayList<Injector<? super T>>(0);
     private boolean installed = false;
 
     ObsoleteServiceBuilderImpl(ServiceName serviceId, ServiceTargetImpl serviceTarget, final Service<T> service, final ServiceControllerImpl<?> parent) {
@@ -195,13 +195,13 @@ final class ObsoleteServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
 
     @Override
     public <I> ServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {
-        return addInjectionValue(target, new ImmediateValue<I>(value));
+        return addInjectionValue(target, new ImmediateValue<>(value));
     }
 
     @Override
     public <I> ServiceBuilder<T> addInjectionValue(final Injector<? super I> target, final Value<I> value) {
         checkAlreadyInstalled();
-        valueInjections.add(new ValueInjection<I>(value, target));
+        valueInjections.add(new ValueInjection<>(value, target));
         return this;
     }
 

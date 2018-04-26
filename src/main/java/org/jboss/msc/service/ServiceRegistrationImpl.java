@@ -39,7 +39,7 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
     /**
      * The set of dependents on this registration.
      */
-    private final IdentityHashSet<Dependent> dependents = new IdentityHashSet<Dependent>(0);
+    private final IdentityHashSet<Dependent> dependents = new IdentityHashSet<>(0);
     /**
      * The dependency value provided by this registration.
      */
