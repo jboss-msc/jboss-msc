@@ -40,7 +40,7 @@ class BatchServiceTargetImpl extends ServiceTargetImpl implements BatchServiceTa
 
     BatchServiceTargetImpl(final ServiceTargetImpl parent) {
         super(parent);
-        addedServiceControllers = new HashSet<ServiceController<?>>();
+        addedServiceControllers = new HashSet<>();
     }
 
     @Override
@@ -67,7 +67,7 @@ class BatchServiceTargetImpl extends ServiceTargetImpl implements BatchServiceTa
 
     @Override
     public <T> ServiceBuilder<T> addService(ServiceName name, Service<T> service) {
-        return addServiceValue(name, new ImmediateValue<Service<T>>(service));
+        return addServiceValue(name, new ImmediateValue<>(service));
     }
 
     // these are overridden for covariant return type only

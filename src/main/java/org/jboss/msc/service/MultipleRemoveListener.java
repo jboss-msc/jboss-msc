@@ -57,7 +57,7 @@ public final class MultipleRemoveListener<T> extends AbstractServiceListener<Obj
      * @return the remove listener
      */
     public static <T> MultipleRemoveListener<T> create(final Callback<T> callback, final T attachment) {
-        return new MultipleRemoveListener<T>(callback, attachment);
+        return new MultipleRemoveListener<>(callback, attachment);
     }
 
     /**
@@ -67,7 +67,7 @@ public final class MultipleRemoveListener<T> extends AbstractServiceListener<Obj
      * @return the remove listener
      */
     public static MultipleRemoveListener<Runnable> create(final Runnable task) {
-        return new MultipleRemoveListener<Runnable>(new Callback<Runnable>() {
+        return new MultipleRemoveListener<>(new Callback<Runnable>() {
             public void handleDone(final Runnable parameter) {
                 if (parameter != null) parameter.run();
             }
@@ -81,7 +81,7 @@ public final class MultipleRemoveListener<T> extends AbstractServiceListener<Obj
      * @return the remove listener
      */
     public static MultipleRemoveListener<LifecycleContext> create(final LifecycleContext lifecycleContext) {
-        return new MultipleRemoveListener<LifecycleContext>(LIFECYCLE_CONTEXT_CALLBACK, lifecycleContext);
+        return new MultipleRemoveListener<>(LIFECYCLE_CONTEXT_CALLBACK, lifecycleContext);
     }
 
     @SuppressWarnings({ "RawUseOfParameterizedType" })

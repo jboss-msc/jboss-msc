@@ -37,10 +37,10 @@ import org.jboss.msc.value.InjectedValue;
  */
 @Deprecated
 public final class ValueInjectionService<T> implements Service<T> {
-    private final InjectedValue<T> injector = new InjectedValue<T>();
+    private final InjectedValue<T> injector = new InjectedValue<>();
 
     /** {@inheritDoc} */
-    public void start(final StartContext context) throws StartException {
+    public void start(final StartContext context) {
     }
 
     /** {@inheritDoc} */

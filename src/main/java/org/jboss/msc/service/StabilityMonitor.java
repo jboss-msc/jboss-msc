@@ -89,12 +89,12 @@ public final class StabilityMonitor {
 
     private final Object stabilityLock = new Object();
     private final Object controllersLock = new Object();
-    private final Set<ServiceController<?>> problems = new IdentityHashSet<ServiceController<?>>();
-    private final Set<ServiceController<?>> failed = new IdentityHashSet<ServiceController<?>>();
+    private final Set<ServiceController<?>> problems = new IdentityHashSet<>();
+    private final Set<ServiceController<?>> failed = new IdentityHashSet<>();
+    private IdentityHashSet<ServiceControllerImpl<?>> controllers = new IdentityHashSet<>();
     private boolean addInProgress;
     private boolean cleanupInProgress;
     private boolean removeInProgress;
-    private IdentityHashSet<ServiceControllerImpl<?>> controllers = new IdentityHashSet<ServiceControllerImpl<?>>();
     private int unstableServices;
 
     /**
@@ -193,7 +193,7 @@ public final class StabilityMonitor {
                 if (cleanupInProgress) return;
                 cleanupInProgress = true;
                 controllers = this.controllers;
-                this.controllers = new IdentityHashSet<ServiceControllerImpl<?>>();
+                this.controllers = new IdentityHashSet<>();
                 failed.clear();
                 problems.clear();
                 unstableServices = 0;

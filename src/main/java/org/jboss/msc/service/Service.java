@@ -103,5 +103,5 @@ public interface Service<T> extends org.jboss.msc.Service, Value<T> {
     /**
      * A value which resolves to the {@link #NULL null service}.
      */
-    Value<Service<Void>> NULL_VALUE = new ImmediateValue<Service<Void>>(NULL);
+    Value<Service<Void>> NULL_VALUE = new ImmediateValue<>(NULL);
 }

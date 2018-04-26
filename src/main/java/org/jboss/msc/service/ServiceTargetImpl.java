@@ -22,9 +22,11 @@
 
 package org.jboss.msc.service;
 
+import static java.util.Collections.synchronizedSet;
+import static java.util.Collections.unmodifiableSet;
+
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -41,10 +43,10 @@ import org.jboss.msc.value.Value;
 class ServiceTargetImpl implements ServiceTarget {
 
     private final ServiceTargetImpl parent;
-    private final Set<ServiceListener<Object>> listeners = Collections.synchronizedSet(new IdentityHashSet<ServiceListener<Object>>());
-    private final Set<LifecycleListener> lifecycleListeners = Collections.synchronizedSet(new IdentityHashSet<LifecycleListener>());
-    private final Set<ServiceName> dependencies = Collections.synchronizedSet(new HashSet<ServiceName>());
-    private final Set<StabilityMonitor> monitors = Collections.synchronizedSet(new IdentityHashSet<StabilityMonitor>());
+    private final Set<ServiceListener<Object>> listeners = synchronizedSet(new IdentityHashSet<>());
+    private final Set<LifecycleListener> lifecycleListeners = synchronizedSet(new IdentityHashSet<>());
+    private final Set<ServiceName> dependencies = synchronizedSet(new HashSet<>());
+    private final Set<StabilityMonitor> monitors = synchronizedSet(new IdentityHashSet<>());
 
     ServiceTargetImpl(final ServiceTargetImpl parent) {
         if (parent == null) {
@@ -70,7 +72,7 @@ class ServiceTargetImpl implements ServiceTarget {
     }
 
     protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Service<T> service, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
-        return new ObsoleteServiceBuilderImpl<T>(name, this, service, parent);
+        return new ObsoleteServiceBuilderImpl<>(name, this, service, parent);
     }
 
     protected ServiceBuilder<?> createServiceBuilder(final ServiceName name, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
@@ -169,12 +171,12 @@ class ServiceTargetImpl implements ServiceTarget {
 
     @Override
     public Set<StabilityMonitor> getMonitors() {
-        return Collections.unmodifiableSet(monitors);
+        return unmodifiableSet(monitors);
     }
 
     @Override
     public Set<ServiceListener<Object>> getListeners() {
-        return Collections.unmodifiableSet(listeners);
+        return unmodifiableSet(listeners);
     }
 
     @Override
@@ -221,7 +223,7 @@ class ServiceTargetImpl implements ServiceTarget {
 
     @Override
     public Set<ServiceName> getDependencies() {
-        return Collections.unmodifiableSet(dependencies);
+        return unmodifiableSet(dependencies);
     }
 
     /**
