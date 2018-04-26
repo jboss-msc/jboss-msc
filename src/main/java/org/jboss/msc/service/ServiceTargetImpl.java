@@ -73,8 +73,8 @@ class ServiceTargetImpl implements ServiceTarget {
         return new ObsoleteServiceBuilderImpl<T>(name, this, service, parent);
     }
 
-    protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
-        return new ServiceBuilderImpl<T>(name, this, parent);
+    protected ServiceBuilder<?> createServiceBuilder(final ServiceName name, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
+        return new ServiceBuilderImpl<>(name, this, parent);
     }
 
     @Override
@@ -89,7 +89,7 @@ class ServiceTargetImpl implements ServiceTarget {
     }
 
     @Override
-    public <T> ServiceBuilder<T> addService(final ServiceName name) {
+    public ServiceBuilder<?> addService(final ServiceName name) {
         if (name == null) {
             throw new IllegalArgumentException("name is null");
         }

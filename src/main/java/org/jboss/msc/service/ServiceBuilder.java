@@ -107,7 +107,7 @@ public interface ServiceBuilder<T> {
      * @param service the service instance
      * @return this configurator
      */
-     ServiceBuilder<T> setInstance(org.jboss.msc.Service service);
+    ServiceBuilder<T> setInstance(org.jboss.msc.Service service);
 
     /**
      * Adds a stability monitor to be added to the service.

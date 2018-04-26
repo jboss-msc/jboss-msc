@@ -79,7 +79,7 @@ public interface ServiceTarget {
      * @param name the service name
      * @return new service configurator
      */
-    <T> ServiceBuilder<T> addService(ServiceName name);
+    ServiceBuilder<?> addService(ServiceName name);
 
     /**
      * Create a sub-target using this as the parent target.
