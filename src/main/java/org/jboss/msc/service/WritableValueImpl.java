@@ -53,6 +53,11 @@ final class WritableValueImpl implements Consumer<Object> {
             if (state == State.STARTING) {
                 value = newValue;
                 return;
+            } else if (state == State.STOPPING) {
+                if (newValue != null) {
+                    throw new IllegalArgumentException("Null parameter expected");
+                }
+                return;
             }
         }
         throw new IllegalStateException("Outside of Service lifecycle method");
