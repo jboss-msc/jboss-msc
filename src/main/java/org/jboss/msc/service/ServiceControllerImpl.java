@@ -2060,7 +2060,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             return super.createServiceBuilder(name, service, ServiceControllerImpl.this);
         }
 
-        protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final ServiceControllerImpl<?> parent) {
+        protected ServiceBuilder<?> createServiceBuilder(final ServiceName name, final ServiceControllerImpl<?> parent) {
             return super.createServiceBuilder(name, ServiceControllerImpl.this);
         }
 

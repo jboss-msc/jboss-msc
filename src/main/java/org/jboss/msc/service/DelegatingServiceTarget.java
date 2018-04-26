@@ -79,7 +79,7 @@ public class DelegatingServiceTarget implements ServiceTarget {
     }
 
     /** {@inheritDoc} */
-    public <T> ServiceBuilder<T> addService(ServiceName name) {
+    public ServiceBuilder<?> addService(ServiceName name) {
         return getDelegate().addService(name);
     }
 

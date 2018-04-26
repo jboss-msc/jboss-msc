@@ -59,7 +59,7 @@ public class MultiValueServicesTestCase extends AbstractServiceTest {
     @Test
     public void usingJustNewAPI() throws Exception {
         StabilityMonitor monitor = new StabilityMonitor();
-        ServiceBuilder<HttpConfigService> sb1 = serviceContainer.addService(HTTP_CONFIG);
+        ServiceBuilder<?> sb1 = serviceContainer.addService(HTTP_CONFIG);
         Consumer<String> hostInjector = sb1.provides(HTTP_HOST);
         Consumer<Integer> portInjector = sb1.provides(HTTP_PORT);
         sb1.setInstance(new HttpConfigService(hostInjector, portInjector));
@@ -68,7 +68,7 @@ public class MultiValueServicesTestCase extends AbstractServiceTest {
         assertNotNull(configController);
         assertEquals(configController.getName(), HTTP_CONFIG);
 
-        ServiceBuilder<HttpServer> sb2 = serviceContainer.addService(HTTP_SERVER);
+        ServiceBuilder<?> sb2 = serviceContainer.addService(HTTP_SERVER);
         Supplier<String> hostValue = sb2.requires(HTTP_HOST);
         Supplier<Integer> portValue = sb2.requires(HTTP_PORT);
         HttpServer server = new HttpServer(hostValue, portValue);
@@ -107,7 +107,7 @@ public class MultiValueServicesTestCase extends AbstractServiceTest {
         assertNotNull(legacyPortServiceController);
         assertEquals(legacyPortServiceController.getName(), HTTP_PORT);
 
-        ServiceBuilder<HttpServer> sb3 = serviceContainer.addService(HTTP_SERVER);
+        ServiceBuilder<?> sb3 = serviceContainer.addService(HTTP_SERVER);
         Supplier<String> hostValue = sb3.requires(HTTP_HOST);
         Supplier<Integer> portValue = sb3.requires(HTTP_PORT);
         HttpServer server = new HttpServer(hostValue, portValue);
@@ -137,7 +137,7 @@ public class MultiValueServicesTestCase extends AbstractServiceTest {
     @Test
     public void mixingNewAndOldAPI() throws Exception {
         StabilityMonitor monitor = new StabilityMonitor();
-        ServiceBuilder<HttpConfigService> sb1 = serviceContainer.addService(HTTP_CONFIG);
+        ServiceBuilder<?> sb1 = serviceContainer.addService(HTTP_CONFIG);
         Consumer<String> hostInjector = sb1.provides(HTTP_HOST);
         Consumer<Integer> portInjector = sb1.provides(HTTP_PORT);
         sb1.setInstance(new HttpConfigService(hostInjector, portInjector));
@@ -181,7 +181,7 @@ public class MultiValueServicesTestCase extends AbstractServiceTest {
 
     private void serviceTargetUsingLegacyAPIScenario(final ServiceTarget target) throws Exception {
         StabilityMonitor monitor = new StabilityMonitor();
-        ServiceBuilder<HttpConfigService> sb = serviceContainer.addService(DUMMY_SERVICE);
+        ServiceBuilder<?> sb = serviceContainer.addService(DUMMY_SERVICE);
         sb.addMonitor(monitor);
         sb.setInitialMode(ServiceController.Mode.ON_DEMAND);
         ServiceController dummyServiceController = sb.install();
@@ -197,7 +197,7 @@ public class MultiValueServicesTestCase extends AbstractServiceTest {
         target.addListener(serviceListener);
         target.addListener(lifecycleListener);
 
-        ServiceBuilder<HttpConfigService> sb1 = target.addService(HTTP_CONFIG);
+        ServiceBuilder<?> sb1 = target.addService(HTTP_CONFIG);
         Consumer<String> hostInjector = sb1.provides(HTTP_HOST);
         Consumer<Integer> portInjector = sb1.provides(HTTP_PORT);
         sb1.setInstance(new HttpConfigService(hostInjector, portInjector));
@@ -205,7 +205,7 @@ public class MultiValueServicesTestCase extends AbstractServiceTest {
         assertNotNull(configController);
         assertEquals(configController.getName(), HTTP_CONFIG);
 
-        ServiceBuilder<HttpServer> sb2 = target.addService(HTTP_SERVER);
+        ServiceBuilder<?> sb2 = target.addService(HTTP_SERVER);
         Supplier<String> hostValue = sb2.requires(HTTP_HOST);
         Supplier<Integer> portValue = sb2.requires(HTTP_PORT);
         HttpServer server = new HttpServer(hostValue, portValue);
