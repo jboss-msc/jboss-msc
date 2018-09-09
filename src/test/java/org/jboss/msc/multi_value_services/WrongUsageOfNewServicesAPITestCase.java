@@ -205,38 +205,6 @@ public class WrongUsageOfNewServicesAPITestCase extends AbstractServiceTest {
 
     /**
      * It is forbidden to call ServiceBuilder.requires()
-     * after ServiceBuilder.setInstance() method call.
-     */
-    @SuppressWarnings("unchecked")
-    @Test
-    public void requiresCalledAfterSetInstance() {
-        ServiceBuilder sb = serviceContainer.addService(ID);
-        sb.provides(FOO);
-        sb.setInstance(null);
-        try {
-            sb.requires(BAR);
-            fail("IllegalStateException expected");
-        } catch (IllegalStateException ignored) {}
-    }
-
-    /**
-     * It is forbidden to call ServiceBuilder.provides()
-     * after ServiceBuilder.setInstance() method call.
-     */
-    @SuppressWarnings("unchecked")
-    @Test
-    public void providesCalledAfterSetInstance() {
-        ServiceBuilder sb = serviceContainer.addService(ID);
-        sb.provides(FOO);
-        sb.setInstance(null);
-        try {
-            sb.provides(BAR);
-            fail("IllegalStateException expected");
-        } catch (IllegalStateException ignored) {}
-    }
-
-    /**
-     * It is forbidden to call ServiceBuilder.requires()
      * after ServiceBuilder.install() method call.
      */
     @Test
@@ -325,20 +293,6 @@ public class WrongUsageOfNewServicesAPITestCase extends AbstractServiceTest {
         } catch (IllegalArgumentException ignored) {}
         try {
             sb.provides(BLA, BAR);
-            fail("IllegalArgumentException expected");
-        } catch (IllegalArgumentException ignored) {}
-    }
-
-    /**
-     * It is forbidden to call ServiceBuilder.requires() with same parameter twice.
-     */
-    @Test
-    public void requiresCalledTwiceWithSameParam() {
-        ServiceBuilder sb = serviceContainer.addService(ID);
-        sb.requires(FOO);
-        sb.requires(BAR);
-        try {
-            sb.requires(FOO);
             fail("IllegalArgumentException expected");
         } catch (IllegalArgumentException ignored) {}
     }

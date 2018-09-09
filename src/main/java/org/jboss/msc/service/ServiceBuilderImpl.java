@@ -23,12 +23,14 @@
 package org.jboss.msc.service;
 
 import static java.lang.Thread.currentThread;
-import static java.util.Collections.emptyList;
 
 import org.jboss.msc.Service;
 import org.jboss.msc.inject.Injector;
+import org.jboss.msc.inject.Injectors;
+import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
@@ -36,7 +38,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -46,6 +47,7 @@ import java.util.function.Supplier;
  *
  * @param <T> the type of service being built
  *
+ * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
@@ -55,11 +57,19 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
     private Service service;
     private Set<ServiceName> aliases;
     private ServiceController.Mode initialMode;
-    private Map<ServiceName, ReadableValueImpl> requires;
+    private Map<ServiceName, Dependency> requires;
     private Set<StabilityMonitor> monitors;
     private Set<ServiceListener<? super T>> serviceListeners;
     private Set<LifecycleListener> lifecycleListeners;
+    private List<ValueInjection<?>> valueInjections;
+    private List<Injector<? super T>> outInjections;
     private boolean installed;
+
+    ServiceBuilderImpl(final ServiceName serviceId, final ServiceTargetImpl serviceTarget, final org.jboss.msc.service.Service<T> service, final ServiceControllerImpl<?> parent) {
+        this(serviceId, serviceTarget, parent);
+        if (service == null) throw new IllegalArgumentException("Service can not be null");
+        this.service = service;
+    }
 
     ServiceBuilderImpl(final ServiceName serviceId, final ServiceTargetImpl serviceTarget, final ServiceControllerImpl<?> parent) {
         super(serviceId, serviceTarget, parent);
@@ -72,13 +82,12 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
         assertNotInstalled();
         assertNotNull(aliases);
         assertThreadSafety();
-        assertServiceNotConfigured();
-        for (ServiceName alias : aliases) {
+        for (final ServiceName alias : aliases) {
             assertNotNull(alias);
             assertNotRequired(alias, false);
         }
         // implementation
-        for (ServiceName alias : aliases) {
+        for (final ServiceName alias : aliases) {
             if (!alias.equals(getServiceId()) && addAliasInternal(alias)) {
                 addProvidesInternal(alias, null);
             }
@@ -93,13 +102,11 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
         assertNotInstalled();
         assertNotNull(dependency);
         assertThreadSafety();
-        assertServiceNotConfigured();
         assertNotInstanceId(dependency);
-        assertNotRequired(dependency, true);
         assertNotProvided(dependency, true);
         // implementation
         final ReadableValueImpl retVal = getServiceTarget().getOrCreateRegistration(dependency).getReadableValue();
-        addRequiresInternal(dependency, retVal);
+        addRequiresInternal(dependency, DependencyType.REQUIRED);
         return (Supplier<V>)retVal;
     }
 
@@ -110,15 +117,14 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
         assertNotInstalled();
         assertNotNull(dependencies);
         assertThreadSafety();
-        assertServiceNotConfigured();
-        for (ServiceName dependency : dependencies) {
+        for (final ServiceName dependency : dependencies) {
             assertNotNull(dependency);
             assertNotRequired(dependency, false);
             assertNotProvided(dependency, false);
         }
         // implementation
         final WritableValueImpl retVal = new WritableValueImpl();
-        for (ServiceName dependency : dependencies) {
+        for (final ServiceName dependency : dependencies) {
             addProvidesInternal(dependency, retVal);
         }
         return (Consumer<V>)retVal;
@@ -183,6 +189,194 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
         return getServiceTarget().install(this);
     }
 
+    // deprecated methods
+
+    @Override
+    public ServiceBuilder<T> addMonitors(final StabilityMonitor... monitors) {
+        // preconditions
+        assertNotInstalled();
+        assertThreadSafety();
+        // implementation
+        if (monitors != null) {
+            for (final StabilityMonitor monitor : monitors) {
+                if (monitor != null) {
+                    addMonitorInternal(monitor);
+                }
+            }
+        }
+        return this;
+    }
+
+    @Override
+    public ServiceBuilder<T> addDependencies(final ServiceName... dependencies) {
+        return addDependencies(DependencyType.REQUIRED, dependencies);
+    }
+
+    @Override
+    public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final ServiceName... dependencies) {
+        // preconditions
+        assertNotInstalled();
+        assertNotNull(dependencyType);
+        assertNotNull(dependencies);
+        assertThreadSafety();
+        for (final ServiceName dependency : dependencies) {
+            assertNotNull(dependency);
+        }
+        // implementation
+        for (final ServiceName dependency : dependencies) {
+            addRequiresInternal(dependency, dependencyType);
+        }
+        return this;
+    }
+
+    @Override
+    public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> newDependencies) {
+        return addDependencies(DependencyType.REQUIRED, newDependencies);
+    }
+
+    @Override
+    public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final Iterable<ServiceName> dependencies) {
+        // preconditions
+        assertNotInstalled();
+        assertNotNull(dependencyType);
+        assertNotNull(dependencies);
+        assertThreadSafety();
+        for (final ServiceName dependency : dependencies) {
+            assertNotNull(dependency);
+        }
+        // implementation
+        for (final ServiceName dependency : dependencies) {
+            addRequiresInternal(dependency, dependencyType);
+        }
+        return this;
+    }
+
+    @Override
+    public ServiceBuilder<T> addDependency(final ServiceName dependency) {
+        return addDependency(DependencyType.REQUIRED, dependency);
+    }
+
+    @Override
+    public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency) {
+        // preconditions
+        assertNotInstalled();
+        assertNotNull(dependencyType);
+        assertNotNull(dependency);
+        assertThreadSafety();
+        // implementation
+        addRequiresInternal(dependency, dependencyType);
+        return this;
+    }
+
+    @Override
+    public ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
+        return addDependency(DependencyType.REQUIRED, dependency, target);
+    }
+
+    @Override
+    public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Injector<Object> target) {
+        // preconditions
+        assertNotInstalled();
+        assertNotNull(dependencyType);
+        assertNotNull(dependency);
+        assertNotNull(target);
+        assertThreadSafety();
+        // implementation
+        addRequiresInternal(dependency, dependencyType).getInjectorList().add(target);
+        return this;
+    }
+
+    @Override
+    public <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
+        return addDependency(DependencyType.REQUIRED, dependency, type, target);
+    }
+
+    @Override
+    public <I> ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Class<I> type, final Injector<I> target) {
+        // preconditions
+        assertNotInstalled();
+        assertNotNull(dependencyType);
+        assertNotNull(dependency);
+        assertNotNull(type);
+        assertNotNull(target);
+        assertThreadSafety();
+        // implementation
+        addRequiresInternal(dependency, dependencyType).getInjectorList().add(Injectors.cast(target, type));
+        return this;
+    }
+
+    @Override
+    public <I> ServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {
+        return addInjectionValue(target, new ImmediateValue<>(value));
+    }
+
+    @Override
+    public <I> ServiceBuilder<T> addInjectionValue(final Injector<? super I> target, final Value<I> value) {
+        // preconditions
+        assertNotInstalled();
+        assertNotNull(target);
+        assertNotNull(value);
+        assertThreadSafety();
+        // implementation
+        addValueInjectionInternal(new ValueInjection<>(value, target));
+        return this;
+    }
+
+    @Override
+    public ServiceBuilder<T> addInjection(final Injector<? super T> target) {
+        // preconditions
+        assertNotInstalled();
+        assertNotNull(target);
+        assertNotNull(target);
+        assertThreadSafety();
+        // implementation
+        addOutInjectionInternal(target);
+        return this;
+    }
+
+    @Override
+    public ServiceBuilder<T> addListener(final ServiceListener<? super T> listener) {
+        // preconditions
+        assertNotInstalled();
+        assertNotNull(listener);
+        assertThreadSafety();
+        // implementation
+        addListenerInternal(listener);
+        return this;
+    }
+
+    @Override
+    public ServiceBuilder<T> addListener(final ServiceListener<? super T>... listeners) {
+        // preconditions
+        assertNotInstalled();
+        assertNotNull(listeners);
+        for (final ServiceListener<? super T> listener : listeners) {
+            assertNotNull(listener);
+        }
+        assertThreadSafety();
+        // implementation
+        for (final ServiceListener<? super T> listener : listeners) {
+            addListenerInternal(listener);
+        }
+        return this;
+    }
+
+    @Override
+    public ServiceBuilder<T> addListener(final Collection<? extends ServiceListener<? super T>> listeners) {
+        // preconditions
+        assertNotInstalled();
+        assertNotNull(listeners);
+        for (final ServiceListener<? super T> listener : listeners) {
+            assertNotNull(listener);
+        }
+        assertThreadSafety();
+        // implementation
+        for (final ServiceListener<? super T> listener : listeners) {
+            addListenerInternal(listener);
+        }
+        return this;
+    }
+
     // implementation internals
 
     void addServiceListenersNoCheck(final Set<? extends ServiceListener<? super T>> listeners) {
@@ -195,13 +389,13 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
 
     void addLifecycleListenersNoCheck(final Set<LifecycleListener> listeners) {
         if (listeners == null || listeners.isEmpty()) return;
-        for (LifecycleListener listener : listeners) {
+        for (final LifecycleListener listener : listeners) {
             if (listener != null) addListenerInternal(listener);
         }
     }
 
     void addMonitorsNoCheck(final Collection<? extends StabilityMonitor> monitors) {
-        for (StabilityMonitor monitor : monitors) {
+        for (final StabilityMonitor monitor : monitors) {
             if (monitor != null) addMonitorInternal(monitor);
         }
     }
@@ -209,11 +403,11 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
     void addDependenciesNoCheck(final Iterable<ServiceName> dependencies) {
         // For backward compatibility reasons when
         // service dependencies are defined via ServiceTarget
-        for (ServiceName dependency : dependencies) {
+        for (final ServiceName dependency : dependencies) {
             if (dependency == null) continue;
             if (requires != null && requires.containsKey(dependency)) continue; // dependency already required
             if (provides != null && provides.containsKey(dependency)) continue; // cannot depend on ourselves
-            addRequiresInternal(dependency, null);
+            addRequiresInternal(dependency, DependencyType.REQUIRED);
         }
     }
 
@@ -221,12 +415,19 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
         return service;
     }
 
-    void addRequiresInternal(final ServiceName name, final ReadableValueImpl dependency) {
+    private Dependency addRequiresInternal(final ServiceName name, final DependencyType dependencyType) {
         if (requires == null) requires = new HashMap<>();
         if (requires.size() == ServiceControllerImpl.MAX_DEPENDENCIES) {
             throw new IllegalArgumentException("Too many dependencies specified (max is " + ServiceControllerImpl.MAX_DEPENDENCIES + ")");
         }
+        final Dependency existing = requires.get(name);
+        if (existing != null) {
+            if (dependencyType == DependencyType.REQUIRED) existing.setDependencyType(DependencyType.REQUIRED);
+            return existing;
+        }
+        final Dependency dependency = new Dependency(name, dependencyType);
         requires.put(name, dependency);
+        return dependency;
     }
 
     boolean addAliasInternal(final ServiceName alias) {
@@ -256,6 +457,21 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
         lifecycleListeners.add(listener);
     }
 
+    void addListenerInternal(final ServiceListener<? super T> listener) {
+        if (serviceListeners == null) serviceListeners = new IdentityHashSet<>();
+        serviceListeners.add(listener);
+    }
+
+    void addValueInjectionInternal(final ValueInjection<?> valueInjection) {
+        if (valueInjections == null) valueInjections = new ArrayList<>();
+        valueInjections.add(valueInjection);
+    }
+
+    void addOutInjectionInternal(final Injector<? super T> outInjection) {
+        if (outInjections == null) outInjections = new ArrayList<>();
+        outInjections.add(outInjection);
+    }
+
     Collection<ServiceName> getServiceAliases() {
         return aliases == null ? Collections.emptySet() : aliases;
     }
@@ -265,12 +481,7 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
     }
 
     Map<ServiceName, Dependency> getDependencies() {
-        if (requires == null) return Collections.emptyMap();
-        final Map<ServiceName, Dependency> retVal = new HashMap<>(requires.size());
-        for (Entry<ServiceName, ReadableValueImpl> entry : requires.entrySet()) {
-            retVal.put(entry.getKey(), new Dependency(entry.getKey(), DependencyType.REQUIRED));
-        }
-        return retVal;
+        return requires == null ? Collections.emptyMap() : requires;
     }
 
     Set<StabilityMonitor> getMonitors() {
@@ -297,11 +508,11 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
     }
 
     List<Injector<? super T>> getOutInjections() {
-        return emptyList();
+        return outInjections == null ? new ArrayList<>() : outInjections;
     }
 
     List<ValueInjection<?>> getValueInjections() {
-        return emptyList();
+        return valueInjections == null ? new ArrayList<>() : valueInjections;
     }
 
     // implementation assertions
@@ -309,12 +520,6 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
     private void assertNotInstalled() {
         if (installed) {
             throw new IllegalStateException("ServiceBuilder already installed");
-        }
-    }
-
-    private void assertProvidesCalled() {
-        if (provides == null || provides.isEmpty()) {
-            throw new IllegalStateException("ServiceBuilder.provides() must be called first");
         }
     }
 
@@ -341,7 +546,6 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
     }
 
     private void assertNotProvided(final ServiceName dependency, final boolean processingRequires) {
-        if (provides == null) return;
         if (processingRequires) {
             if (provides.containsKey(dependency)) {
                 throw new IllegalArgumentException("Cannot both require and provide same dependency:" + dependency);
@@ -375,93 +579,6 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
         if (mode == ServiceController.Mode.REMOVE) {
             throw new IllegalArgumentException("Initial service mode cannot be REMOVE");
         }
-    }
-
-    // Forbidden method calls
-
-    @Override
-    public ServiceBuilder<T> addMonitors(final StabilityMonitor... monitors) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ServiceBuilder<T> addDependencies(final ServiceName... newDependencies) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final ServiceName... newDependencies) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> newDependencies) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final Iterable<ServiceName> newDependencies) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ServiceBuilder<T> addDependency(final ServiceName dependency) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Injector<Object> target) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <I> ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Class<I> type, final Injector<I> target) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <I> ServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <I> ServiceBuilder<T> addInjectionValue(final Injector<? super I> target, final Value<I> value) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ServiceBuilder<T> addInjection(final Injector<? super T> target) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ServiceBuilder<T> addListener(final ServiceListener<? super T> listener) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ServiceBuilder<T> addListener(final ServiceListener<? super T>... listeners) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ServiceBuilder<T> addListener(final Collection<? extends ServiceListener<? super T>> listeners) {
-        throw new UnsupportedOperationException();
     }
 
 }

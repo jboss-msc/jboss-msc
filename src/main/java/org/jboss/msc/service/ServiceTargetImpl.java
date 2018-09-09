@@ -72,7 +72,7 @@ class ServiceTargetImpl implements ServiceTarget {
     }
 
     protected <T> ServiceBuilder<T> createServiceBuilder(final ServiceName name, final Service<T> service, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
-        return new ObsoleteServiceBuilderImpl<>(name, this, service, parent);
+        return new ServiceBuilderImpl<>(name, this, service, parent);
     }
 
     protected ServiceBuilder<?> createServiceBuilder(final ServiceName name, final ServiceControllerImpl<?> parent) throws IllegalArgumentException {
