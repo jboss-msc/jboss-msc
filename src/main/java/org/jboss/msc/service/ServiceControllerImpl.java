@@ -1203,7 +1203,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             final boolean leavingRestState = isStableRestState();
             if (lifecycleListeners.contains(listener)) return;
             lifecycleListeners.add(listener);
-            if (state == Substate.UP) {
+            if (state == Substate.NEW) {
+                return;
+            } else if (state == Substate.UP) {
                 listenerTransitionTasks.add(new LifecycleListenerTask(listener, LifecycleEvent.UP));
             } else if (state == Substate.DOWN) {
                 listenerTransitionTasks.add(new LifecycleListenerTask(listener, LifecycleEvent.DOWN));
