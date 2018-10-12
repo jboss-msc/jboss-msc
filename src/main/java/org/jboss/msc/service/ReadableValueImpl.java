@@ -29,7 +29,7 @@ import java.util.function.Supplier;
  */
 final class ReadableValueImpl implements Supplier<Object> {
 
-    private ServiceRegistrationImpl dependency;
+    private final ServiceRegistrationImpl dependency;
 
     ReadableValueImpl(final ServiceRegistrationImpl dependency) {
         this.dependency = dependency;
