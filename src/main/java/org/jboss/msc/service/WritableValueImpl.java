@@ -32,7 +32,7 @@ import java.util.function.Consumer;
 final class WritableValueImpl implements Consumer<Object> {
 
     private volatile ServiceController controller;
-    Object value;
+    volatile Object value;
 
     Object getValue() {
         final ServiceController controller = this.controller;
