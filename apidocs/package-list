@@ -1,0 +1,5 @@
+org.jboss.msc
+org.jboss.msc.inject
+org.jboss.msc.service
+org.jboss.msc.service.management
+org.jboss.msc.value
