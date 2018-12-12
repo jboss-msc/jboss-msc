@@ -5,7 +5,7 @@ JBoss MSC is a lightweight open source dependency injection container for the Ja
 
 ## Documentation
 
-https://jboss-msc.github.io/jboss-msc/manual/
+https://jboss-msc.github.io/jboss-msc/
 
 ## Issue Tracker
 
