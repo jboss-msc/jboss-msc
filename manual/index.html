@@ -11,15 +11,56 @@
   <body>
     <h1>JBoss Modular Service Container - Reference Manual</h1>
     <p>
-      <ol>
-        <li><a href="#1">About</a></li>
-      </ol>
+      <ul>
+        <li><a href="#1">1. About</a></li>
+	<li><a href="#2">2. Key Abstractions</a></li>
+	<ul>
+          <li><a href="#2.1">2.1 Service</a></li>
+          <li><a href="#2.2">2.2 Service Controller</a></li>
+          <li><a href="#2.3">2.3 Service Registry</a></li>
+          <li><a href="#2.4">2.4 Service Container</a></li>
+        </ul>
+      </ul>
     </p>
     <p>
-      <a name="#1"/><h2>About</h2>
-      <b>JBoss Modular Service Container (JBoss MSC)</b> is a lightweight open source dependency injection container for the Java platform.
+      <a name="1"/><h2>About</h2>
+      <b>JBoss Modular Service Container (JBoss MSC)</b> is a lightweight highly concurrent
+      open source dependency injection container for the Java platform.
       It is developed under the <a href="../LICENSE.txt">GNU Lesser General Public License</a>.
       The latest API documentation is available <a href="../apidocs/index.html">here</a>.
+    </p>
+    <a name="2"/><h2>Key Abstractions</h2>
+    <p>
+      <b>JBoss MSC</b> was created with the following key abstractions in mind:
+    </p>
+    <a name="2.1"/><h3>2.1 Service</h3>
+    <p>
+      The most important abstraction is <b><a href="../apidocs/org/jboss/msc/Service.html">Service</a></b>.
+      Services must be installed into <a href="#2.4">Service Container</a> to be functional.
+      Once <b>Service</b> is installed it <i>can be started and stopped at any time
+      from any thread</i> and so every <b>Service</b> <i>implementation must be thread safe</i>
+      and protect any mutable states appropriately.
+      Every <b>Service</b> has two lifecycle phases - <i>start phase</i> and <i>stop phase</i>.
+      Services can start and stop either <i>synchronously</i> or <i>asynchronously</i>.
+      Furthermore every <b>Service</b> has:
+      <ul>
+        <li><i>identity</i> and optional <i>alias(es)</i> - these can be used for <b>Service</b>'s associated <a href="#2.2">Service Controller</a> retrieval from <a href="#2.3">Service Container</a></li>
+	<li><i>mode</i> - defines <b>Service</b> starting policy</li>
+        <li><i>dependencies</i> - <b>Service</b> may require values provided by other services</li>
+        <li><i>dependents</i> - <b>Service</b> may provide values required by other services</li>
+      </ul>
+    </p>
+    <a name="2.2"/><h3>2.2 Service Controller</h3>
+    <p>
+      TODO
+    </p>
+    <a name="2.3"/><h3>2.3 Service Registry</h3>
+    <p>
+      TODO
+    </p>
+    <a name="2.4"/><h3>2.4 Service Container</h3>
+    <p>
+      TODO
     </p>
   </body>
 </html>
