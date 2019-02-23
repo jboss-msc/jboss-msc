@@ -5,62 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="keywords" content="Java, injection, JBoss, MSC">
     <title>
-      JBoss Modular Service Container - Reference Manual
+      JBoss MSC
     </title>
   </head>
   <body>
-    <h1>JBoss Modular Service Container - Reference Manual</h1>
+    <h1>JBoss Modular Service Container</h1>
     <p>
       <ul>
         <li><a href="#1">1. About</a></li>
-	<li><a href="#2">2. Key Abstractions</a></li>
-	<ul>
+        <li><a href="#2">2. Basic Concepts</a></li>
+        <ul>
           <li><a href="#2.1">2.1 Service</a></li>
           <li><a href="#2.2">2.2 Service Controller</a></li>
-          <li><a href="#2.3">2.3 Service Registry</a></li>
-          <li><a href="#2.4">2.4 Service Container</a></li>
+          <li><a href="#2.3">2.3 Service Container</a></li>
         </ul>
       </ul>
     </p>
     <p>
-      <a name="1"/><h2>About</h2>
-      <b>JBoss Modular Service Container (JBoss MSC)</b> is a lightweight highly concurrent
-      open source dependency injection container for the Java platform.
-      It is developed under the <a href="../LICENSE.txt">GNU Lesser General Public License</a>.
+      <a name="1"/><h2>1. About</h2>
+      <b>JBoss Modular Service Container</b> (JBoss MSC) is a lightweight highly concurrent
+      dependency injection container for <a href="https://www.oracle.com/java/">Java</a>.
+      It is developed under the <a href="../LICENSE.txt">LGPL 2.1</a> license.
       The latest API documentation is available <a href="../apidocs/index.html">here</a>.
     </p>
-    <a name="2"/><h2>Key Abstractions</h2>
+    <a name="2"/><h2>2. Basic Concepts</h2>
     <p>
-      <b>JBoss MSC</b> was created with the following key abstractions in mind:
+      <b>JBoss MSC</b> is built on three key abstractions.
     </p>
     <a name="2.1"/><h3>2.1 Service</h3>
     <p>
-      The most important abstraction is <b><a href="../apidocs/org/jboss/msc/Service.html">Service</a></b>.
-      Services must be installed into <a href="#2.4">Service Container</a> to be functional.
-      Once <b>Service</b> is installed it <i>can be started and stopped at any time
-      from any thread</i> and so every <b>Service</b> <i>implementation must be thread safe</i>
-      and protect any mutable states appropriately.
-      Every <b>Service</b> has two lifecycle phases - <i>start phase</i> and <i>stop phase</i>.
+      <a href="../apidocs/org/jboss/msc/Service.html">Service</a>
+      must be installed into <a href="#2.4">service container</a> to become functional.
+      Every service has two lifecycle phases - <i>start phase</i> and <i>stop phase</i>.
       Services can start and stop either <i>synchronously</i> or <i>asynchronously</i>.
-      Furthermore every <b>Service</b> has:
+      Furthermore every service has:
       <ul>
-        <li><i>identity</i> and optional <i>alias(es)</i> - these can be used for <b>Service</b>'s associated <a href="#2.2">Service Controller</a> retrieval from <a href="#2.3">Service Container</a></li>
-	<li><i>mode</i> - defines <b>Service</b> starting policy</li>
-        <li><i>dependencies</i> - <b>Service</b> may require values provided by other services</li>
-        <li><i>dependents</i> - <b>Service</b> may provide values required by other services</li>
+        <li><i>identity</i> - used for service's
+        associated service controller retrieval from service container</li>
+        <li><i>dependencies</i> - service may require values provided by other services</li>
+        <li><i>dependents</i> - service may provide values required by other services</li>
+        <li><i>mode</i> - defines service's starting policy</li>
+	<li><i>state</i> - current state of service</li>
       </ul>
     </p>
     <a name="2.2"/><h3>2.2 Service Controller</h3>
     <p>
-      TODO
+      Every <a href="#2.1">service</a> successfully installed into <a href="#2.3">service container</a> has associated <a href="../apidocs/org/jboss/msc/service/ServiceController.html">service controller</a> with it.
+      Service controllers are useful for adding / removing <a href="../apidocs/org/jboss/msc/service/LifecycleListener.html">lifecycle listener</a>s
+      to / from service at runtime, they can be used to change service mode at runtime (this includes also scheduling service for removal)  or to retrieve some useful
+      information about service such as its <i>name</i>, <i>mode</i>, <i>state</i>, <i>unavailable dependencies</i> and so on.
     </p>
-    <a name="2.3"/><h3>2.3 Service Registry</h3>
+    <a name="2.3"/><h3>2.3 Service Container</h3>
     <p>
-      TODO
-    </p>
-    <a name="2.4"/><h3>2.4 Service Container</h3>
-    <p>
-      TODO
+      Every successfully installed service is stored in <a href="../apidocs/org/jboss/msc/service/ServiceContainer.html">service container</a>.
+      Service container provides information about available services and provides accessors
+      for retrieving service controllers associated with installed services.
+      Service container also provides <i>shutdown</i> mechanism to stop it.
     </p>
   </body>
 </html>
