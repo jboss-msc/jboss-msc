@@ -138,7 +138,7 @@
                     <footer><![CDATA[JBoss Modular Service Container  ]]>${project.version}</footer>
                     <bottom><![CDATA[<i>Copyright &#169; 2012 JBoss, a division of Red Hat, Inc.</i>]]></bottom>
                     <links>
-                        <link>http://java.sun.com/javase/8/docs/api/</link>
+                        <link>https://docs.oracle.com/javase/8/docs/api/</link>
                     </links>
                 </configuration>
             </plugin>
