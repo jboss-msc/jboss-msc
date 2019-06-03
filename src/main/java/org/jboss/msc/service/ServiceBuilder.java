@@ -52,16 +52,6 @@ import java.util.function.Supplier;
 public interface ServiceBuilder<T> {
 
     /**
-     * Adds aliases for this service.
-     *
-     * @param aliases the service names to use as aliases
-     * @return the builder
-     * @throws UnsupportedOperationException if this service builder
-     * wasn't created via {@link ServiceTarget#addService(ServiceName)} method.
-     */
-    ServiceBuilder<T> addAliases(ServiceName... aliases);
-
-    /**
      * Specifies dependency value required by service. There can be multiple dependencies service may depend on.
      *
      * @param name required dependency name
@@ -136,6 +126,19 @@ public interface ServiceBuilder<T> {
     ////////////////////////
     // DEPRECATED METHODS //
     ////////////////////////
+
+    /**
+     * Adds aliases for this service.
+     *
+     * @param aliases the service names to use as aliases
+     * @return the builder
+     * @throws UnsupportedOperationException if this service builder
+     * wasn't created via {@link ServiceTarget#addService(ServiceName)} method.
+     * @deprecated Use {@link #provides(ServiceName...)} instead.
+     * This method will be removed in a future release.
+     */
+    @Deprecated
+    ServiceBuilder<T> addAliases(ServiceName... aliases);
 
     /**
      * Add multiple, non-injected dependencies.
