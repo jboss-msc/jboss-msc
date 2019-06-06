@@ -242,10 +242,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             synchronized (lock) {
                 lock.acquireWrite();
                 try {
-                    registration.setInstance(this);
+                    registration.set(this, injector);
                     if (injector != null) {
                         injector.setInstance(this);
-                        registration.setInjector(injector);
                     }
                 } finally {
                     lock.releaseWrite();
@@ -1882,6 +1881,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             ServiceRegistrationImpl registration;
             WritableValueImpl injector;
             Lockable lock;
+            boolean removeRegistration;
             for (Entry<ServiceRegistrationImpl, WritableValueImpl> provided : provides.entrySet()) {
                 registration = provided.getKey();
                 injector = provided.getValue();
@@ -1889,10 +1889,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 synchronized (lock) {
                     lock.acquireWrite();
                     try {
-                        registration.clearInstance(ServiceControllerImpl.this);
                         if (injector != null) {
                             injector.setInstance(null);
-                            registration.clearInjector(injector);
+                        }
+                        removeRegistration = registration.clear(ServiceControllerImpl.this);
+                        if (removeRegistration) {
+                            container.removeRegistration(registration);
                         }
                     } finally {
                         lock.releaseWrite();

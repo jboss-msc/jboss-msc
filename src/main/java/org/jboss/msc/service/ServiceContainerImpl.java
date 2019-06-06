@@ -72,7 +72,6 @@ import org.jboss.modules.ref.WeakReference;
 import org.jboss.msc.Version;
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.ServiceController.Mode;
-import org.jboss.msc.service.ServiceController.Substate;
 import org.jboss.msc.service.management.ServiceContainerMXBean;
 import org.jboss.msc.service.management.ServiceStatus;
 import org.jboss.msc.value.InjectedValue;
@@ -635,14 +634,14 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         if (registration == null) {
             registration = new ServiceRegistrationImpl(name);
             ServiceRegistrationImpl existing = registry.putIfAbsent(name, registration);
-            if(existing != null) {
-                return existing;
-            } else {
-                return registration;
-            }
+            return existing != null ? existing : registration;
         } else {
             return registration;
         }
+    }
+
+    void removeRegistration(final ServiceRegistrationImpl registration) {
+        registry.remove(registration.getName(), registration);
     }
 
     @Override
