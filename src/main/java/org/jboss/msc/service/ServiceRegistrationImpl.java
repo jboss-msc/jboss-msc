@@ -64,6 +64,10 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
      * The number of started dependent instances.
      */
     private int dependentsStartedCount;
+    /**
+     * Indicates whether this registration was removed.
+     */
+    private boolean removed;
 
     ServiceRegistrationImpl(final ServiceName name) {
         this.name = name;
@@ -81,6 +85,9 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
     @Override
     public void addDependent(final Dependent dependent) {
         assert isWriteLocked();
+        if (removed) {
+            throw new IllegalStateException("Registration was removed from registry");
+        }
         if (dependents.contains(dependent)) {
             throw new IllegalStateException("Dependent already exists on this registration");
         }
@@ -104,33 +111,30 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
         dependents.remove(dependent);
     }
 
-    void setInstance(final ServiceControllerImpl<?> newInstance) throws DuplicateServiceException {
+    void set(final ServiceControllerImpl<?> newInstance, final WritableValueImpl newInjector) throws DuplicateServiceException {
         assert newInstance != null;
         assert isWriteLocked();
+        if (removed) {
+            throw new IllegalStateException("Registration was removed from registry");
+        }
         if (instance != null) {
             throw new DuplicateServiceException(String.format("Service %s is already registered", name.getCanonicalName()));
         }
         instance = newInstance;
+        injector = newInjector;
         if (demandedByCount > 0) instance.addDemands(demandedByCount);
         if (dependentsStartedCount > 0) instance.dependentsStarted(dependentsStartedCount);
     }
 
-    void clearInstance(final ServiceControllerImpl<?> oldInstance) {
+    boolean clear(final ServiceControllerImpl<?> oldInstance) {
         assert oldInstance != null;
         assert isWriteLocked();
-        if (instance == oldInstance) instance = null;
-    }
-
-    void setInjector(final WritableValueImpl newInjector) throws DuplicateServiceException {
-        assert newInjector != null;
-        assert isWriteLocked();
-        injector = newInjector;
-    }
-
-    void clearInjector(final WritableValueImpl oldInjector) {
-        assert oldInjector != null;
-        assert isWriteLocked();
-        if (injector == oldInjector) injector = null;
+        if (instance == oldInstance) {
+            instance = null;
+            injector = null;
+            removed = dependents.size() == 0;
+        }
+        return removed;
     }
 
     ReadableValueImpl getReadableValue() {
