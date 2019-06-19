@@ -630,14 +630,26 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     ServiceRegistrationImpl getOrCreateRegistration(final ServiceName name) {
         final ConcurrentMap<ServiceName, ServiceRegistrationImpl> registry = this.registry;
         ServiceRegistrationImpl registration;
-        registration = registry.get(name);
-        if (registration == null) {
-            registration = new ServiceRegistrationImpl(name);
-            ServiceRegistrationImpl existing = registry.putIfAbsent(name, registration);
-            return existing != null ? existing : registration;
-        } else {
-            return registration;
-        }
+        boolean success;
+        do {
+            registration = registry.get(name);
+            if (registration == null) {
+                registration = new ServiceRegistrationImpl(name);
+                ServiceRegistrationImpl existing = registry.putIfAbsent(name, registration);
+                if (existing != null) {
+                    registration = existing;
+                }
+            }
+            synchronized (registration) {
+                registration.acquireWrite();
+                try {
+                    success = registration.addPendingDependent();
+                } finally {
+                    registration.releaseWrite();
+                }
+            }
+        } while (!success);
+        return registration;
     }
 
     void removeRegistration(final ServiceRegistrationImpl registration) {

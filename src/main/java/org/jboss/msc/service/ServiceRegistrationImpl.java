@@ -65,6 +65,10 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
      */
     private int dependentsStartedCount;
     /**
+     * The number of dependents being currently installed into the container.
+     */
+    private int pendingDependents;
+    /**
      * Indicates whether this registration was removed.
      */
     private boolean removed;
@@ -82,16 +86,26 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
         return dependents;
     }
 
+    boolean addPendingDependent() {
+        assert isWriteLocked();
+        if (removed) {
+            // failed
+            return false;
+        } else {
+            // success
+            pendingDependents++;
+            return true;
+        }
+    }
+
     @Override
     public void addDependent(final Dependent dependent) {
         assert isWriteLocked();
-        if (removed) {
-            throw new IllegalStateException("Registration was removed from registry");
-        }
         if (dependents.contains(dependent)) {
             throw new IllegalStateException("Dependent already exists on this registration");
         }
         dependents.add(dependent);
+        pendingDependents--;
         if (instance == null) {
             dependent.dependencyUnavailable();
             return;
@@ -114,9 +128,6 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
     void set(final ServiceControllerImpl<?> newInstance, final WritableValueImpl newInjector) throws DuplicateServiceException {
         assert newInstance != null;
         assert isWriteLocked();
-        if (removed) {
-            throw new IllegalStateException("Registration was removed from registry");
-        }
         if (instance != null) {
             throw new DuplicateServiceException(String.format("Service %s is already registered", name.getCanonicalName()));
         }
@@ -132,7 +143,7 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
         if (instance == oldInstance) {
             instance = null;
             injector = null;
-            removed = dependents.size() == 0;
+            removed = dependents.size() == 0 && pendingDependents == 0;
         }
         return removed;
     }
