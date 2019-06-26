@@ -1436,11 +1436,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (!monitors.add(monitor)) return;
             if (!isStableRestState()) {
                 monitor.incrementUnstableServices();
-                if (state == Substate.START_FAILED) {
-                    monitor.addFailed(this);
-                } else if (state == Substate.PROBLEM) {
-                    monitor.addProblem(this);
-                }
+            }
+            if (state == Substate.START_FAILED) {
+                monitor.addFailed(this);
+            } else if (state == Substate.PROBLEM) {
+                monitor.addProblem(this);
             }
         }
     }
@@ -1450,10 +1450,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         synchronized (this) {
             if (!monitors.remove(monitor)) return;
             if (!isStableRestState()) {
-                monitor.removeProblem(this);
-                monitor.removeFailed(this);
                 monitor.decrementUnstableServices();
             }
+            monitor.removeProblem(this);
+            monitor.removeFailed(this);
         }
     }
 
