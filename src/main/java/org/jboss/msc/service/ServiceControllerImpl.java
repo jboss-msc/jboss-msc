@@ -1430,35 +1430,37 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return b.toString();
     }
 
-    void addMonitor(final StabilityMonitor stabilityMonitor) {
+    void addMonitor(final StabilityMonitor monitor) {
         assert !holdsLock(this);
         synchronized (this) {
-            if (monitors.add(stabilityMonitor) && !isStableRestState()) {
-                stabilityMonitor.incrementUnstableServices();
+            if (!monitors.add(monitor)) return;
+            if (!isStableRestState()) {
+                monitor.incrementUnstableServices();
                 if (state == Substate.START_FAILED) {
-                    stabilityMonitor.addFailed(this);
+                    monitor.addFailed(this);
                 } else if (state == Substate.PROBLEM) {
-                    stabilityMonitor.addProblem(this);
+                    monitor.addProblem(this);
                 }
             }
         }
     }
 
-    void removeMonitor(final StabilityMonitor stabilityMonitor) {
+    void removeMonitor(final StabilityMonitor monitor) {
         assert !holdsLock(this);
         synchronized (this) {
-            if (monitors.remove(stabilityMonitor) && !isStableRestState()) {
-                stabilityMonitor.removeProblem(this);
-                stabilityMonitor.removeFailed(this);
-                stabilityMonitor.decrementUnstableServices();
+            if (!monitors.remove(monitor)) return;
+            if (!isStableRestState()) {
+                monitor.removeProblem(this);
+                monitor.removeFailed(this);
+                monitor.decrementUnstableServices();
             }
         }
     }
 
-    void removeMonitorNoCallback(final StabilityMonitor stabilityMonitor) {
+    void removeMonitorNoCallback(final StabilityMonitor monitor) {
         assert !holdsLock(this);
         synchronized (this) {
-            monitors.remove(stabilityMonitor);
+            monitors.remove(monitor);
         }
     }
 
