@@ -398,9 +398,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 for (StabilityMonitor monitor : monitors) {
                     monitor.decrementUnstableServices();
                 }
-                if (shutdownListener != null && state == Substate.REMOVED) {
-                    shutdownListener.controllerDied();
-                    shutdownListener = null;
+                if (state == Substate.REMOVED) {
+                    for (StabilityMonitor monitor : monitors) {
+                        monitor.removeControllerNoCallback(this);
+                    }
+                    if (shutdownListener != null) {
+                        shutdownListener.controllerDied();
+                        shutdownListener = null;
+                    }
                 }
             }
         }
@@ -726,18 +731,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case CANCELLED_to_REMOVED:
                     getListenerTasks(LifecycleEvent.REMOVED, listenerTransitionTasks);
-                    for (StabilityMonitor monitor : monitors) {
-                        monitor.removeControllerNoCallback(this);
-                    }
                     listeners.clear();
                     lifecycleListeners.clear();
                     break;
                 case REMOVING_to_REMOVED: {
                     getListenerTasks(LifecycleEvent.REMOVED, listenerTransitionTasks);
                     tasks.add(new RemoveTask());
-                    for (StabilityMonitor monitor : monitors) {
-                        monitor.removeControllerNoCallback(this);
-                    }
                     listeners.clear();
                     lifecycleListeners.clear();
                     break;
