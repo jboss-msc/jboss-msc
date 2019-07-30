@@ -668,24 +668,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     @Override
     public ServiceController<?> getService(final ServiceName serviceName) {
         final ServiceRegistrationImpl registration = registry.get(serviceName);
-        if (registration != null) {
-            final ServiceControllerImpl controller = registration.getDependencyController();
-            if (controller != null) {
-                if (serviceName.equals(controller.getName())) {
-                    // requested service represents service identity
-                    return controller;
-                }
-                for (ServiceName alias : controller.getAliases()) {
-                    if (alias.equals(serviceName)) {
-                        // requested service represents service alias
-                        return controller;
-                    }
-                }
-            } else {
-                // it is forbidden to retrieve controller for services defined via ServiceBuilder.provides() method
-            }
-        }
-        return null;
+        return registration == null ? null : registration.getDependencyController();
     }
 
     @Override
