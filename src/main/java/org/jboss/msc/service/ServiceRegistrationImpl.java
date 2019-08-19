@@ -152,11 +152,6 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
         return value;
     }
 
-    WritableValueImpl getInjector() {
-        assert holdsLock(Thread.currentThread());
-        return injector;
-    }
-
     @Override
     public Object getValue() throws IllegalStateException {
         synchronized (this) {
