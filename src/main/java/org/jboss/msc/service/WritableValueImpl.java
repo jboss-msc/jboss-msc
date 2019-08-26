@@ -31,17 +31,12 @@ import java.util.function.Consumer;
  */
 final class WritableValueImpl implements Consumer<Object> {
 
+    private static final Object UNDEFINED = new Object();
     private volatile ServiceController controller;
-    volatile Object value;
+    volatile Object value = UNDEFINED;
 
     Object getValue() {
-        final ServiceController controller = this.controller;
-        if (controller != null) synchronized (controller) {
-            final State state = controller.getState();
-            if (state == State.UP) {
-                return value;
-            }
-        }
+        if (UNDEFINED != value) return value;
         throw new IllegalStateException("Service unavailable");
     }
 
@@ -57,6 +52,7 @@ final class WritableValueImpl implements Consumer<Object> {
                 if (newValue != null) {
                     throw new IllegalArgumentException("Null parameter expected");
                 }
+                value = UNDEFINED;
                 return;
             }
         }
@@ -68,7 +64,7 @@ final class WritableValueImpl implements Consumer<Object> {
         if (controller != null) synchronized (controller) {
             final State state = controller.getState();
             if (state == State.STARTING || state == State.STOPPING) {
-                value = null;
+                value = UNDEFINED;
                 return;
             }
         }

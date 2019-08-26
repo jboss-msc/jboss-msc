@@ -50,11 +50,11 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
     /**
      * The current instance.
      */
-    private ServiceControllerImpl<?> instance;
+    private volatile ServiceControllerImpl<?> instance;
     /**
      * The injector providing value.
      */
-    private WritableValueImpl injector;
+    private volatile WritableValueImpl injector;
     /**
      * The number of dependent instances which place a demand-to-start on this registration.  If this value is >0,
      * propagate a demand to the instance, if any.
@@ -152,17 +152,12 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
         return value;
     }
 
-    WritableValueImpl getInjector() {
-        assert holdsLock(Thread.currentThread());
-        return injector;
-    }
-
     @Override
     public Object getValue() throws IllegalStateException {
-        synchronized (this) {
-            if (injector != null) return injector.getValue();
-            if (instance != null) return instance.getValue();
-        }
+        final WritableValueImpl injector = this.injector;
+        if (injector != null) return injector.getValue();
+        final ServiceControllerImpl instance = this.instance;
+        if (instance != null) return instance.getValue();
         throw new IllegalStateException("Service is not installed");
     }
 

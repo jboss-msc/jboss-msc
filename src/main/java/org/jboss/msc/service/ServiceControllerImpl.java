@@ -398,9 +398,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 for (StabilityMonitor monitor : monitors) {
                     monitor.decrementUnstableServices();
                 }
-                if (shutdownListener != null && state == Substate.REMOVED) {
-                    shutdownListener.controllerDied();
-                    shutdownListener = null;
+                if (state == Substate.REMOVED) {
+                    for (StabilityMonitor monitor : monitors) {
+                        monitor.removeControllerNoCallback(this);
+                    }
+                    if (shutdownListener != null) {
+                        shutdownListener.controllerDied();
+                        shutdownListener = null;
+                    }
                 }
             }
         }
@@ -726,18 +731,12 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case CANCELLED_to_REMOVED:
                     getListenerTasks(LifecycleEvent.REMOVED, listenerTransitionTasks);
-                    for (StabilityMonitor monitor : monitors) {
-                        monitor.removeControllerNoCallback(this);
-                    }
                     listeners.clear();
                     lifecycleListeners.clear();
                     break;
                 case REMOVING_to_REMOVED: {
                     getListenerTasks(LifecycleEvent.REMOVED, listenerTransitionTasks);
                     tasks.add(new RemoveTask());
-                    for (StabilityMonitor monitor : monitors) {
-                        monitor.removeControllerNoCallback(this);
-                    }
                     listeners.clear();
                     lifecycleListeners.clear();
                     break;
@@ -1430,35 +1429,37 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return b.toString();
     }
 
-    void addMonitor(final StabilityMonitor stabilityMonitor) {
+    void addMonitor(final StabilityMonitor monitor) {
         assert !holdsLock(this);
         synchronized (this) {
-            if (monitors.add(stabilityMonitor) && !isStableRestState()) {
-                stabilityMonitor.incrementUnstableServices();
-                if (state == Substate.START_FAILED) {
-                    stabilityMonitor.addFailed(this);
-                } else if (state == Substate.PROBLEM) {
-                    stabilityMonitor.addProblem(this);
-                }
+            if (!monitors.add(monitor)) return;
+            if (!isStableRestState()) {
+                monitor.incrementUnstableServices();
+            }
+            if (state == Substate.START_FAILED) {
+                monitor.addFailed(this);
+            } else if (state == Substate.PROBLEM) {
+                monitor.addProblem(this);
             }
         }
     }
 
-    void removeMonitor(final StabilityMonitor stabilityMonitor) {
+    void removeMonitor(final StabilityMonitor monitor) {
         assert !holdsLock(this);
         synchronized (this) {
-            if (monitors.remove(stabilityMonitor) && !isStableRestState()) {
-                stabilityMonitor.removeProblem(this);
-                stabilityMonitor.removeFailed(this);
-                stabilityMonitor.decrementUnstableServices();
+            if (!monitors.remove(monitor)) return;
+            if (!isStableRestState()) {
+                monitor.decrementUnstableServices();
             }
+            monitor.removeProblem(this);
+            monitor.removeFailed(this);
         }
     }
 
-    void removeMonitorNoCallback(final StabilityMonitor stabilityMonitor) {
+    void removeMonitorNoCallback(final StabilityMonitor monitor) {
         assert !holdsLock(this);
         synchronized (this) {
-            monitors.remove(stabilityMonitor);
+            monitors.remove(monitor);
         }
     }
 
