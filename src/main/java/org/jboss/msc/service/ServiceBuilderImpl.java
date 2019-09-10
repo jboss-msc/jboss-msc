@@ -110,9 +110,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         assertNotInstanceId(dependency);
         assertNotProvided(dependency, true);
         // implementation
-        final ReadableValueImpl retVal = serviceTarget.getOrCreateRegistration(dependency).getReadableValue();
-        addRequiresInternal(dependency, DependencyType.REQUIRED);
-        return (Supplier<V>)retVal;
+        return (Supplier<V>) addRequiresInternal(dependency, DependencyType.REQUIRED).getRegistration().getReadableValue();
     }
 
     @Override
@@ -430,7 +428,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
             if (dependencyType == DependencyType.REQUIRED) existing.setDependencyType(DependencyType.REQUIRED);
             return existing;
         }
-        final Dependency dependency = new Dependency(name, dependencyType);
+        final Dependency dependency = new Dependency(name, dependencyType, serviceTarget.getOrCreateRegistration(name, true));
         requires.put(name, dependency);
         return dependency;
     }
@@ -588,16 +586,18 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     static final class Dependency {
         private final ServiceName name;
+        private final ServiceRegistrationImpl registration;
         private DependencyType dependencyType;
         private List<Injector<Object>> injectorList = new ArrayList<>(0);
 
-        Dependency(final ServiceName name, final DependencyType dependencyType) {
+        Dependency(final ServiceName name, final DependencyType dependencyType, final ServiceRegistrationImpl registration) {
             this.name = name;
             this.dependencyType = dependencyType;
+            this.registration = registration;
         }
 
-        ServiceName getName() {
-            return name;
+        ServiceRegistrationImpl getRegistration() {
+            return registration;
         }
 
         List<Injector<Object>> getInjectorList() {

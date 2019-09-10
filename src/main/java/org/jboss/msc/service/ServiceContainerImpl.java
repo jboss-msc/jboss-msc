@@ -627,7 +627,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
      * @param name the service name
      * @return the registration
      */
-    ServiceRegistrationImpl getOrCreateRegistration(final ServiceName name) {
+    ServiceRegistrationImpl getOrCreateRegistration(final ServiceName name, final boolean isDependent) {
         final ConcurrentMap<ServiceName, ServiceRegistrationImpl> registry = this.registry;
         ServiceRegistrationImpl registration;
         boolean success;
@@ -640,13 +640,17 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                     registration = existing;
                 }
             }
-            synchronized (registration) {
-                registration.acquireWrite();
-                try {
-                    success = registration.addPendingDependent();
-                } finally {
-                    registration.releaseWrite();
+            if (isDependent) {
+                synchronized (registration) {
+                    registration.acquireWrite();
+                    try {
+                        success = registration.addPendingDependent();
+                    } finally {
+                        registration.releaseWrite();
+                    }
                 }
+            } else {
+                success = true;
             }
         } while (!success);
         return registration;
@@ -691,7 +695,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         Entry<ServiceName, WritableValueImpl> entry;
         for (Iterator<Entry<ServiceName, WritableValueImpl>> j = serviceBuilder.getProvides().entrySet().iterator(); j.hasNext(); ) {
             entry = j.next();
-            provides.put(getOrCreateRegistration(entry.getKey()), entry.getValue());
+            provides.put(getOrCreateRegistration(entry.getKey(), false), entry.getValue());
         }
 
         // Create the list of dependencies
@@ -706,13 +710,9 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         final Map<ServiceName, ServiceBuilderImpl.Dependency> dependencyMap = serviceBuilder.getDependencies();
         final Set<Dependency> requires = new HashSet<>();
         final List<ValueInjection<?>> valueInjections = serviceBuilder.getValueInjections();
-        ServiceRegistrationImpl dependencyRegistration;
         Dependency dependency;
-        ServiceBuilderImpl.Dependency dependencyDefinition;
-        for (Entry<ServiceName, ServiceBuilderImpl.Dependency> dependencyEntry : dependencyMap.entrySet()) {
-            dependencyRegistration = getOrCreateRegistration(dependencyEntry.getKey());
-            dependency = dependencyRegistration;
-            dependencyDefinition = dependencyEntry.getValue();
+        for (ServiceBuilderImpl.Dependency dependencyDefinition : dependencyMap.values()) {
+            dependency = dependencyDefinition.getRegistration();
             if (dependencyDefinition.getDependencyType() == ServiceBuilder.DependencyType.OPTIONAL) {
                 dependency = new OptionalDependencyImpl(dependency);
             }
