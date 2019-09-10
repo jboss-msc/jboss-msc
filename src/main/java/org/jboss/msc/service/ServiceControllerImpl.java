@@ -2052,7 +2052,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             super(parentTarget);
         }
 
-        <T> ServiceController<T> install(final AbstractServiceBuilder<T> serviceBuilder) throws ServiceRegistryException {
+        <T> ServiceController<T> install(final ServiceBuilderImpl<T> serviceBuilder) throws ServiceRegistryException {
             if (! valid) {
                 throw new IllegalStateException("Service target is no longer valid");
             }
