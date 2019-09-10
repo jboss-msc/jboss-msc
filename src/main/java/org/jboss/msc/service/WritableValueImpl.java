@@ -36,6 +36,7 @@ final class WritableValueImpl implements Consumer<Object> {
     volatile Object value = UNDEFINED;
 
     Object getValue() {
+        final Object value = this.value;
         if (UNDEFINED != value) return value;
         throw new IllegalStateException("Service unavailable");
     }
