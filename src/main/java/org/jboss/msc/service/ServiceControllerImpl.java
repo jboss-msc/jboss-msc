@@ -29,7 +29,6 @@ import static org.jboss.msc.service.SecurityUtils.setTCCL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -40,7 +39,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.management.ServiceStatus;
 
 /**

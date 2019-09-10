@@ -22,8 +22,6 @@
 
 package org.jboss.msc.service;
 
-import static java.lang.Thread.holdsLock;
-
 /**
  * A single service registration.
  *
