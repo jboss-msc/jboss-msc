@@ -56,7 +56,7 @@ class BatchServiceTargetImpl extends ServiceTargetImpl implements BatchServiceTa
         }
     }
 
-    <T> ServiceController<T> install(final AbstractServiceBuilder<T> serviceBuilder) throws ServiceRegistryException {
+    <T> ServiceController<T> install(final ServiceBuilderImpl<T> serviceBuilder) throws ServiceRegistryException {
         final ServiceController<T> controller = super.install(serviceBuilder);
         final Collection<ServiceController<?>> controllers = addedServiceControllers;
         synchronized (controllers) {

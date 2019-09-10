@@ -231,7 +231,7 @@ class ServiceTargetImpl implements ServiceTarget {
      * 
      * @param serviceBuilder serviceBuilder which listeners and dependencies will be added to.
      */
-    void apply(AbstractServiceBuilder<?> serviceBuilder) {
+    void apply(ServiceBuilderImpl<?> serviceBuilder) {
         synchronized (monitors) {
             serviceBuilder.addMonitorsNoCheck(monitors);
         }
@@ -255,7 +255,7 @@ class ServiceTargetImpl implements ServiceTarget {
      *
      * @throws ServiceRegistryException if a service registry issue occurred during installation
      */
-    <T> ServiceController<T> install(AbstractServiceBuilder<T> serviceBuilder) throws ServiceRegistryException {
+    <T> ServiceController<T> install(ServiceBuilderImpl<T> serviceBuilder) throws ServiceRegistryException {
         apply(serviceBuilder);
         return parent.install(serviceBuilder);
     }

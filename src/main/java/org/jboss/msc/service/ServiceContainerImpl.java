@@ -683,7 +683,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     }
 
     @Override
-    <T> ServiceController<T> install(final AbstractServiceBuilder<T> serviceBuilder) throws DuplicateServiceException {
+    <T> ServiceController<T> install(final ServiceBuilderImpl<T> serviceBuilder) throws DuplicateServiceException {
         apply(serviceBuilder);
 
         // Initialize registrations and injectors map
@@ -703,13 +703,13 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
 
         // Dependencies
-        final Map<ServiceName, AbstractServiceBuilder.Dependency> dependencyMap = serviceBuilder.getDependencies();
+        final Map<ServiceName, ServiceBuilderImpl.Dependency> dependencyMap = serviceBuilder.getDependencies();
         final Set<Dependency> requires = new HashSet<>();
         final List<ValueInjection<?>> valueInjections = serviceBuilder.getValueInjections();
         ServiceRegistrationImpl dependencyRegistration;
         Dependency dependency;
-        AbstractServiceBuilder.Dependency dependencyDefinition;
-        for (Entry<ServiceName, AbstractServiceBuilder.Dependency> dependencyEntry : dependencyMap.entrySet()) {
+        ServiceBuilderImpl.Dependency dependencyDefinition;
+        for (Entry<ServiceName, ServiceBuilderImpl.Dependency> dependencyEntry : dependencyMap.entrySet()) {
             dependencyRegistration = getOrCreateRegistration(dependencyEntry.getKey());
             dependency = dependencyRegistration;
             dependencyDefinition = dependencyEntry.getValue();
@@ -731,9 +731,9 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
 
         // Next create the actual controller
-        final ServiceControllerImpl<T> instance = new ServiceControllerImpl<>(this, serviceBuilder.getServiceId(), aliases, serviceBuilder.getService(),
+        final ServiceControllerImpl<T> instance = new ServiceControllerImpl<>(this, serviceBuilder.serviceId, aliases, serviceBuilder.getService(),
                 requires, provides, valueInjectionArray, outInjectionArray,
-                serviceBuilder.getMonitors(), serviceBuilder.getServiceListeners(), serviceBuilder.getLifecycleListeners(), serviceBuilder.getParent());
+                serviceBuilder.getMonitors(), serviceBuilder.getServiceListeners(), serviceBuilder.getLifecycleListeners(), serviceBuilder.parent);
         boolean ok = false;
         try {
             serviceValue.setValue(instance);
