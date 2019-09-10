@@ -260,8 +260,8 @@ class ServiceTargetImpl implements ServiceTarget {
         return parent.install(serviceBuilder);
     }
 
-    ServiceRegistrationImpl getOrCreateRegistration(final ServiceName name) {
-        return parent.getOrCreateRegistration(name);
+    ServiceRegistrationImpl getOrCreateRegistration(final ServiceName name, final boolean isDependent) {
+        return parent.getOrCreateRegistration(name, isDependent);
     }
 
     @Override
