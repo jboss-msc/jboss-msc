@@ -62,7 +62,7 @@ public class MSC164TestCase extends AbstractServiceTest {
         dependencyController.setMode(ServiceController.Mode.REMOVE);
         dependentController.setMode(ServiceController.Mode.REMOVE);
         sm.awaitStability();
-        assertTrue(dependentController.getSubstate() == ServiceController.Substate.REMOVED);
+        assertTrue(dependentController.getSubstate() == ServiceController.Substate.TERMINATED);
     }
 
     /* Service that fails on first start attempt, but succeeds on retry */

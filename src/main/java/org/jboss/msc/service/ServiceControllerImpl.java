@@ -396,7 +396,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 for (StabilityMonitor monitor : monitors) {
                     monitor.decrementUnstableServices();
                 }
-                if (state == Substate.REMOVED) {
+                if (state == Substate.TERMINATED) {
                     for (StabilityMonitor monitor : monitors) {
                         monitor.removeControllerNoCallback(this);
                     }
@@ -524,8 +524,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             case CANCELLED: {
                 return Transition.CANCELLED_to_REMOVED;
             }
-            case REMOVED:
-            {
+            case REMOVED: {
+                return Transition.REMOVED_to_TERMINATED;
+            }
+            case TERMINATED: {
                 // no possible actions
                 break;
             }
@@ -728,13 +730,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case CANCELLED_to_REMOVED:
-                    getListenerTasks(LifecycleEvent.REMOVED, listenerTransitionTasks);
-                    listeners.clear();
-                    lifecycleListeners.clear();
                     break;
                 case REMOVING_to_REMOVED: {
-                    getListenerTasks(LifecycleEvent.REMOVED, listenerTransitionTasks);
                     tasks.add(new RemoveTask());
+                    break;
+                }
+                case REMOVED_to_TERMINATED: {
+                    getListenerTasks(LifecycleEvent.REMOVED, listenerTransitionTasks);
                     listeners.clear();
                     lifecycleListeners.clear();
                     break;
@@ -988,6 +990,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         if (state == Substate.DOWN && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;
         if (state == Substate.START_REQUESTED && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;
         if (state == Substate.NEW || state == Substate.CANCELLED || state == Substate.REMOVED) return true;
+        if (state == Substate.TERMINATED) return true;
         return false;
     }
 
@@ -1181,7 +1184,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     void addListener(final ContainerShutdownListener listener) {
         assert !holdsLock(this);
         synchronized (this) {
-            if (state == Substate.REMOVED && asyncTasks == 0) {
+            if (state == Substate.TERMINATED && asyncTasks == 0) {
                 return; // controller is dead
             }
             if (shutdownListener != null) {
@@ -1207,7 +1210,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 listenerTransitionTasks.add(new LifecycleListenerTask(listener, LifecycleEvent.DOWN));
             } else if (state == Substate.START_FAILED) {
                 listenerTransitionTasks.add(new LifecycleListenerTask(listener, LifecycleEvent.FAILED));
-            } else if (state == Substate.REMOVED) {
+            } else if (state == Substate.TERMINATED) {
                 listenerTransitionTasks.add(new LifecycleListenerTask(listener, LifecycleEvent.REMOVED));
             }
             tasks = transition();

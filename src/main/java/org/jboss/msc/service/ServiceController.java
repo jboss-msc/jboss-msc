@@ -245,7 +245,7 @@ public interface ServiceController<S> extends Value<S> {
          */
         STOPPING,
         /**
-         * Removed from the container.
+         * Service was removed from the container.
          */
         REMOVED,
         ;
@@ -380,7 +380,11 @@ public interface ServiceController<S> extends Value<S> {
         /**
          * Service has been removed.
          */
-        REMOVED(State.REMOVED, true),
+        REMOVED(State.REMOVED, false),
+        /**
+         * Service has been terminated.
+         */
+        TERMINATED(State.REMOVED, true),
         ;
         private final State state;
         private final boolean restState;
@@ -493,6 +497,10 @@ public interface ServiceController<S> extends Value<S> {
          * Transition from {@link Substate#REMOVING REMOVING} to {@link Substate#REMOVED REMOVED}.
          */
         REMOVING_to_REMOVED(Substate.REMOVING, Substate.REMOVED),
+        /**
+         * Transition from {@link Substate#REMOVED REMOVED} to {@link Substate#TERMINATED TERMINATED}.
+         */
+        REMOVED_to_TERMINATED(Substate.REMOVED, Substate.TERMINATED),
         /**
          * Transition from {@link Substate#REMOVING REMOVING} to {@link Substate#DOWN DOWN}.
          * @deprecated was never supposed to work
