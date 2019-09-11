@@ -1896,7 +1896,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         }
                         removeRegistration = registration.clear(ServiceControllerImpl.this);
                         if (removeRegistration) {
-                            container.removeRegistration(registration);
+                            container.removeRegistration(registration.getName());
                         }
                     } finally {
                         lock.releaseWrite();
@@ -1908,7 +1908,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 synchronized (lock) {
                     lock.acquireWrite();
                     try {
-                        dependency.removeDependent(ServiceControllerImpl.this);
+                        removeRegistration = dependency.removeDependent(ServiceControllerImpl.this);
+                        if (removeRegistration) {
+                            container.removeRegistration(dependency.getName());
+                        }
                     } finally {
                         lock.releaseWrite();
                     }
