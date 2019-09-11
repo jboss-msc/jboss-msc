@@ -50,8 +50,11 @@ import java.util.function.Supplier;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
+final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
+    final ServiceName serviceId;
+    final ServiceControllerImpl<?> parent;
+    private final ServiceTargetImpl serviceTarget;
     private final Thread thread = currentThread();
     private final Map<ServiceName, WritableValueImpl> provides = new HashMap<>();
     private Service service;
@@ -72,7 +75,9 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
     }
 
     ServiceBuilderImpl(final ServiceName serviceId, final ServiceTargetImpl serviceTarget, final ServiceControllerImpl<?> parent) {
-        super(serviceId, serviceTarget, parent);
+        this.serviceId = serviceId;
+        this.serviceTarget = serviceTarget;
+        this.parent = parent;
         addProvidesInternal(serviceId, null);
     }
 
@@ -88,7 +93,7 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
         }
         // implementation
         for (final ServiceName alias : aliases) {
-            if (!alias.equals(getServiceId()) && addAliasInternal(alias)) {
+            if (!alias.equals(serviceId) && addAliasInternal(alias)) {
                 addProvidesInternal(alias, null);
             }
         }
@@ -105,9 +110,7 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
         assertNotInstanceId(dependency);
         assertNotProvided(dependency, true);
         // implementation
-        final ReadableValueImpl retVal = getServiceTarget().getOrCreateRegistration(dependency).getReadableValue();
-        addRequiresInternal(dependency, DependencyType.REQUIRED);
-        return (Supplier<V>)retVal;
+        return (Supplier<V>) addRequiresInternal(dependency, DependencyType.REQUIRED).getRegistration().getReadableValue();
     }
 
     @Override
@@ -186,7 +189,7 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
         installed = true;
         if (service == null) service = Service.NULL;
         if (initialMode == null) initialMode = ServiceController.Mode.ACTIVE;
-        return getServiceTarget().install(this);
+        return serviceTarget.install(this);
     }
 
     // deprecated methods
@@ -425,7 +428,7 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
             if (dependencyType == DependencyType.REQUIRED) existing.setDependencyType(DependencyType.REQUIRED);
             return existing;
         }
-        final Dependency dependency = new Dependency(name, dependencyType);
+        final Dependency dependency = new Dependency(name, dependencyType, serviceTarget.getOrCreateRegistration(name, true));
         requires.put(name, dependency);
         return dependency;
     }
@@ -485,7 +488,7 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
     }
 
     Set<StabilityMonitor> getMonitors() {
-        ServiceControllerImpl parent = getParent();
+        ServiceControllerImpl parent = this.parent;
         while (parent != null) {
             synchronized (parent) {
                 addMonitorsNoCheck(parent.getMonitors());
@@ -530,7 +533,7 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
     }
 
     private void assertNotInstanceId(final ServiceName dependency) {
-        if (getServiceId().equals(dependency)) {
+        if (serviceId.equals(dependency)) {
             throw new IllegalArgumentException("Cannot both require and provide same dependency:" + dependency);
         }
     }
@@ -578,6 +581,35 @@ final class ServiceBuilderImpl<T> extends AbstractServiceBuilder<T> {
     private static void assertNotRemove(final ServiceController.Mode mode) {
         if (mode == ServiceController.Mode.REMOVE) {
             throw new IllegalArgumentException("Initial service mode cannot be REMOVE");
+        }
+    }
+
+    static final class Dependency {
+        private final ServiceName name;
+        private final ServiceRegistrationImpl registration;
+        private DependencyType dependencyType;
+        private List<Injector<Object>> injectorList = new ArrayList<>(0);
+
+        Dependency(final ServiceName name, final DependencyType dependencyType, final ServiceRegistrationImpl registration) {
+            this.name = name;
+            this.dependencyType = dependencyType;
+            this.registration = registration;
+        }
+
+        ServiceRegistrationImpl getRegistration() {
+            return registration;
+        }
+
+        List<Injector<Object>> getInjectorList() {
+            return injectorList;
+        }
+
+        DependencyType getDependencyType() {
+            return dependencyType;
+        }
+
+        void setDependencyType(final DependencyType dependencyType) {
+            this.dependencyType = dependencyType;
         }
     }
 

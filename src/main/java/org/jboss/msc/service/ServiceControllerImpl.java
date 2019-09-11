@@ -29,7 +29,6 @@ import static org.jboss.msc.service.SecurityUtils.setTCCL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -40,7 +39,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.management.ServiceStatus;
 
 /**
@@ -1360,10 +1358,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     String dumpServiceDetails() {
         final StringBuilder b = new StringBuilder();
-        IdentityHashSet<Dependent> dependents;
+        Set<Dependent> dependents = new IdentityHashSet<>();
         for (ServiceRegistrationImpl registration : provides.keySet()) {
             synchronized (registration) {
-                dependents = registration.getDependents().clone();
+                dependents.addAll(registration.getDependents());
             }
             b.append("Service Name: ").append(registration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
             for (Dependent dependent : dependents) {
@@ -2054,7 +2052,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             super(parentTarget);
         }
 
-        <T> ServiceController<T> install(final AbstractServiceBuilder<T> serviceBuilder) throws ServiceRegistryException {
+        <T> ServiceController<T> install(final ServiceBuilderImpl<T> serviceBuilder) throws ServiceRegistryException {
             if (! valid) {
                 throw new IllegalStateException("Service target is no longer valid");
             }
