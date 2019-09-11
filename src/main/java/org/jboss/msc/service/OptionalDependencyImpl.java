@@ -45,10 +45,10 @@ final class OptionalDependencyImpl implements Dependency, Dependent {
     }
 
     @Override
-    public void removeDependent(final Dependent dependent) {
+    public boolean removeDependent(final Dependent dependent) {
         assert this.dependent == dependent;
-        dependency.removeDependent(this);
         this.dependent = null;
+        return dependency.removeDependent(this);
     }
 
     @Override

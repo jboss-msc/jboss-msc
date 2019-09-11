@@ -627,7 +627,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
      * @param name the service name
      * @return the registration
      */
-    ServiceRegistrationImpl getOrCreateRegistration(final ServiceName name, final boolean isDependent) {
+    ServiceRegistrationImpl getOrCreateRegistration(final ServiceName name) {
         final ConcurrentMap<ServiceName, ServiceRegistrationImpl> registry = this.registry;
         ServiceRegistrationImpl registration;
         boolean success;
@@ -640,24 +640,20 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                     registration = existing;
                 }
             }
-            if (isDependent) {
-                synchronized (registration) {
-                    registration.acquireWrite();
-                    try {
-                        success = registration.addPendingDependent();
-                    } finally {
-                        registration.releaseWrite();
-                    }
+            synchronized (registration) {
+                registration.acquireWrite();
+                try {
+                    success = registration.addPendingInstallation();
+                } finally {
+                    registration.releaseWrite();
                 }
-            } else {
-                success = true;
             }
         } while (!success);
         return registration;
     }
 
-    void removeRegistration(final ServiceRegistrationImpl registration) {
-        registry.remove(registration.getName(), registration);
+    void removeRegistration(final ServiceName name) {
+        registry.remove(name);
     }
 
     @Override
@@ -695,7 +691,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         Entry<ServiceName, WritableValueImpl> entry;
         for (Iterator<Entry<ServiceName, WritableValueImpl>> j = serviceBuilder.getProvides().entrySet().iterator(); j.hasNext(); ) {
             entry = j.next();
-            provides.put(getOrCreateRegistration(entry.getKey(), false), entry.getValue());
+            provides.put(getOrCreateRegistration(entry.getKey()), entry.getValue());
         }
 
         // Create the list of dependencies
