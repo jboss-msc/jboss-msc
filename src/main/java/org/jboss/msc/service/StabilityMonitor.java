@@ -426,9 +426,9 @@ public final class StabilityMonitor {
         // under stabilityLock because of deadlock possibility. Thus we tolerate that
         // the snapshot can be little bit out of date until controllersLock is obtained
         // plus controllers mode and state can be changed during the statistics collection phase.
-        final Set<ServiceControllerImpl<?>> controllers;
+        final Set<ServiceControllerImpl<?>> controllers = new IdentityHashSet<>();
         synchronized (controllersLock) {
-            controllers = this.controllers.clone(); 
+            controllers.addAll(this.controllers); 
         }
         // collect statistics
         int active = 0, lazy = 0, onDemand = 0, never = 0, passive = 0, started = 0;
