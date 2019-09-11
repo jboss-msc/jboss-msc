@@ -22,6 +22,7 @@
 
 package org.jboss.msc.service;
 
+import java.util.HashSet;
 import java.util.Set;
 import org.junit.Test;
 
@@ -37,8 +38,8 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
     public void testSimpleInstallation() {
         final ServiceBuilder<Void> builder = serviceContainer.addService(ServiceName.of("Test1"), Service.NULL);
         final ServiceController<Void> controller = builder.install();
-        final Set<Object> problem = new IdentityHashSet<Object>();
-        final Set<Object> failed = new IdentityHashSet<Object>();
+        final Set<Object> problem = new HashSet<Object>();
+        final Set<Object> failed = new HashSet<Object>();
         try {
             serviceContainer.awaitStability(failed, problem);
         } catch (InterruptedException e) {
@@ -74,8 +75,8 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         builder = serviceContainer.addService(ServiceName.of("Test2"), Service.NULL);
         builder.setInitialMode(ServiceController.Mode.ON_DEMAND);
         final ServiceController<?> controller2 = builder.install();
-        final Set<Object> problem = new IdentityHashSet<Object>();
-        final Set<Object> failed = new IdentityHashSet<Object>();
+        final Set<Object> problem = new HashSet<Object>();
+        final Set<Object> failed = new HashSet<Object>();
         try {
             serviceContainer.awaitStability(failed, problem);
         } catch (InterruptedException e) {
@@ -93,8 +94,8 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         final ServiceController<Void> controller = builder.install();
         final StabilityMonitor stabilityMonitor = new StabilityMonitor();
         stabilityMonitor.addController(controller);
-        final Set<Object> problem = new IdentityHashSet<Object>();
-        final Set<Object> failed = new IdentityHashSet<Object>();
+        final Set<Object> problem = new HashSet<Object>();
+        final Set<Object> failed = new HashSet<Object>();
         try {
             stabilityMonitor.awaitStability(failed, problem);
         } catch (InterruptedException e) {
@@ -133,8 +134,8 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         builder.setInitialMode(ServiceController.Mode.ON_DEMAND);
         final ServiceController<?> controller2 = builder.install();
         stabilityMonitor.addController(controller2);
-        final Set<Object> problem = new IdentityHashSet<Object>();
-        final Set<Object> failed = new IdentityHashSet<Object>();
+        final Set<Object> problem = new HashSet<Object>();
+        final Set<Object> failed = new HashSet<Object>();
         final StabilityStatistics statistics = new StabilityStatistics();
         try {
             stabilityMonitor.awaitStability(failed, problem, statistics);
@@ -201,8 +202,8 @@ public final class ContainerStabilityTestCase extends AbstractServiceTest {
         builder.setInitialMode(ServiceController.Mode.ON_DEMAND);
         final ServiceController<?> controller2 = builder.install();
         stabilityMonitor.addController(controller2);
-        final Set<Object> problem = new IdentityHashSet<Object>();
-        final Set<Object> failed = new IdentityHashSet<Object>();
+        final Set<Object> problem = new HashSet<Object>();
+        final Set<Object> failed = new HashSet<Object>();
         final StabilityStatistics statistics = new StabilityStatistics();
         try {
             stabilityMonitor.awaitStability(failed, problem, statistics);

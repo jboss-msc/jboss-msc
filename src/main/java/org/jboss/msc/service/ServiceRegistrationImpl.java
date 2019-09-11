@@ -22,6 +22,8 @@
 
 package org.jboss.msc.service;
 
+import java.util.Set;
+
 /**
  * A single service registration.
  *
@@ -37,7 +39,7 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
     /**
      * The set of dependents on this registration.
      */
-    private final IdentityHashSet<Dependent> dependents = new IdentityHashSet<>(0);
+    private final Set<Dependent> dependents = new IdentityHashSet<>();
     /**
      * The dependency value provided by this registration.
      */
@@ -80,7 +82,7 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
         return this;
     }
 
-    IdentityHashSet<Dependent> getDependents() {
+    Set<Dependent> getDependents() {
         return dependents;
     }
 

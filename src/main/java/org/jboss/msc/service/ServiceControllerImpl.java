@@ -1358,10 +1358,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     String dumpServiceDetails() {
         final StringBuilder b = new StringBuilder();
-        IdentityHashSet<Dependent> dependents;
+        Set<Dependent> dependents = new IdentityHashSet<>();
         for (ServiceRegistrationImpl registration : provides.keySet()) {
             synchronized (registration) {
-                dependents = registration.getDependents().clone();
+                dependents.addAll(registration.getDependents());
             }
             b.append("Service Name: ").append(registration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
             for (Dependent dependent : dependents) {
