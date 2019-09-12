@@ -44,8 +44,9 @@ interface Dependency extends Value<Object> {
      * Remove dependent from this dependency
      *
      * @param dependent removed dependent
+     * @return true if registration must be removed from registry
      */
-    void removeDependent(final Dependent dependent);
+    boolean removeDependent(final Dependent dependent);
 
     /**
      * Add demand on this dependency.

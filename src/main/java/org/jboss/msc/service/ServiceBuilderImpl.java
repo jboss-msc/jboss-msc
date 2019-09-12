@@ -428,7 +428,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
             if (dependencyType == DependencyType.REQUIRED) existing.setDependencyType(DependencyType.REQUIRED);
             return existing;
         }
-        final Dependency dependency = new Dependency(name, dependencyType, serviceTarget.getOrCreateRegistration(name, true));
+        final Dependency dependency = new Dependency(name, dependencyType, serviceTarget.getOrCreateRegistration(name));
         requires.put(name, dependency);
         return dependency;
     }
