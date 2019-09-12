@@ -20,12 +20,13 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.service;
+package org.jboss.msc.issues;
 
 import static org.junit.Assert.assertTrue;
 
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.inject.SetMethodInjector;
+import org.jboss.msc.service.*;
 import org.jboss.msc.value.ImmediateValue;
 import org.junit.Test;
 
