@@ -660,7 +660,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     public ServiceController<?> getRequiredService(final ServiceName serviceName) throws ServiceNotFoundException {
         final ServiceController<?> controller = getService(serviceName);
         if (controller == null) {
-            throw new ServiceNotFoundException("Service " + serviceName + " not found");
+            throw new ServiceNotFoundException(serviceName + " not found");
         }
         return controller;
     }
