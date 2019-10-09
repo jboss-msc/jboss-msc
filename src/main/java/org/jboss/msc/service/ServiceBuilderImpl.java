@@ -428,7 +428,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
             if (dependencyType == DependencyType.REQUIRED) existing.setDependencyType(DependencyType.REQUIRED);
             return existing;
         }
-        final Dependency dependency = new Dependency(name, dependencyType, serviceTarget.getOrCreateRegistration(name));
+        final Dependency dependency = new Dependency(dependencyType, serviceTarget.getOrCreateRegistration(name));
         requires.put(name, dependency);
         return dependency;
     }
@@ -585,13 +585,11 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     }
 
     static final class Dependency {
-        private final ServiceName name;
         private final ServiceRegistrationImpl registration;
         private DependencyType dependencyType;
         private List<Injector<Object>> injectorList = new ArrayList<>(0);
 
-        Dependency(final ServiceName name, final DependencyType dependencyType, final ServiceRegistrationImpl registration) {
-            this.name = name;
+        Dependency(final DependencyType dependencyType, final ServiceRegistrationImpl registration) {
             this.dependencyType = dependencyType;
             this.registration = registration;
         }
