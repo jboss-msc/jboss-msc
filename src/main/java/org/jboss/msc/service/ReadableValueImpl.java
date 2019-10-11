@@ -29,9 +29,9 @@ import java.util.function.Supplier;
  */
 final class ReadableValueImpl implements Supplier<Object> {
 
-    private final ServiceRegistrationImpl dependency;
+    private final Dependency dependency;
 
-    ReadableValueImpl(final ServiceRegistrationImpl dependency) {
+    ReadableValueImpl(final Dependency dependency) {
         this.dependency = dependency;
     }
 
