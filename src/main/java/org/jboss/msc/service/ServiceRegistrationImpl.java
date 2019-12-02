@@ -132,7 +132,7 @@ final class ServiceRegistrationImpl extends Lockable implements Dependency {
         assert isWriteLocked();
         pendingInstallation--;
         if (instance != null) {
-            throw new DuplicateServiceException(String.format("Service %s is already registered", name.getCanonicalName()));
+            throw new DuplicateServiceException(String.format("Service can not be registered, corresponding host and context path is already registered by service %s", name.getCanonicalName()));
         }
         instance = newInstance;
         injector = newInjector;
