@@ -70,16 +70,6 @@ public class DelegatingServiceContainer implements ServiceContainer {
     }
 
     /** {@inheritDoc} */
-    public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
-        return getServiceTargetDelegate().addServiceValue(name, value);
-    }
-
-    /** {@inheritDoc} */
-    public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
-        return getServiceTargetDelegate().addService(name, service);
-    }
-
-    /** {@inheritDoc} */
     public ServiceBuilder<?> addService(final ServiceName name) throws IllegalArgumentException {
         return getServiceTargetDelegate().addService(name);
     }
@@ -91,104 +81,14 @@ public class DelegatingServiceContainer implements ServiceContainer {
     }
 
     /** {@inheritDoc} */
-    @Deprecated
-    public ServiceContainer addListener(final ServiceListener<Object> listener) {
-        getServiceTargetDelegate().addListener(listener);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    public ServiceContainer addListener(final ServiceListener<Object>... listeners) {
-        getServiceTargetDelegate().addListener(listeners);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    public ServiceContainer addListener(final Collection<ServiceListener<Object>> listeners) {
-        getServiceTargetDelegate().addListener(listeners);
-        return this;
-    }
-
-    /** {@inheritDoc} */
     public ServiceContainer removeListener(final LifecycleListener listener) {
         getServiceTargetDelegate().removeListener(listener);
         return this;
     }
 
     /** {@inheritDoc} */
-    @Deprecated
-    public ServiceContainer removeListener(final ServiceListener<Object> listener) {
-        getServiceTargetDelegate().removeListener(listener);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public Set<ServiceListener<Object>> getListeners() {
-        return getServiceTargetDelegate().getListeners();
-    }
-
-    /** {@inheritDoc} */
-    public ServiceTarget addMonitor(StabilityMonitor monitor) {
-        getServiceTargetDelegate().addMonitor(monitor);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceTarget addMonitors(StabilityMonitor... monitors) {
-        getServiceTargetDelegate().addMonitors(monitors);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceTarget removeMonitor(StabilityMonitor monitor) {
-        getServiceTargetDelegate().removeMonitor(monitor);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public Set<StabilityMonitor> getMonitors() {
-        return getServiceTargetDelegate().getMonitors();
-    }
-
-    /** {@inheritDoc} */
-    public ServiceContainer addDependency(final ServiceName dependency) {
-        getServiceTargetDelegate().addDependency(dependency);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceContainer addDependency(final ServiceName... dependencies) {
-        getServiceTargetDelegate().addDependency(dependencies);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceContainer addDependency(final Collection<ServiceName> dependencies) {
-        getServiceTargetDelegate().addDependency(dependencies);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public ServiceContainer removeDependency(final ServiceName dependency) {
-        getServiceTargetDelegate().removeDependency(dependency);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    public Set<ServiceName> getDependencies() {
-        return getServiceTargetDelegate().getDependencies();
-    }
-
-    /** {@inheritDoc} */
     public ServiceTarget subTarget() {
         return getServiceTargetDelegate().subTarget();
-    }
-
-    /** {@inheritDoc} */
-    public BatchServiceTarget batchTarget() {
-        return getServiceTargetDelegate().batchTarget();
     }
 
     /** {@inheritDoc} */
@@ -205,6 +105,10 @@ public class DelegatingServiceContainer implements ServiceContainer {
     public List<ServiceName> getServiceNames() {
         return getServiceRegistryDelegate().getServiceNames();
     }
+
+    ///////////////////////////
+    // UNIMPLEMENTED METHODS //
+    ///////////////////////////
 
     /** {@inheritDoc} */
     public String getName() {
@@ -275,6 +179,123 @@ public class DelegatingServiceContainer implements ServiceContainer {
     @Override
     public boolean awaitStability(final long timeout, final TimeUnit unit, final Set<? super ServiceController<?>> failed, final Set<? super ServiceController<?>> problem) throws InterruptedException {
         throw new UnsupportedOperationException();
+    }
+
+    ////////////////////////
+    // DEPRECATED METHODS //
+    ////////////////////////
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
+        return getServiceTargetDelegate().addServiceValue(name, value);
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
+        return getServiceTargetDelegate().addService(name, service);
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public ServiceContainer addListener(final ServiceListener<Object> listener) {
+        getServiceTargetDelegate().addListener(listener);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public ServiceContainer addListener(final ServiceListener<Object>... listeners) {
+        getServiceTargetDelegate().addListener(listeners);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public ServiceContainer addListener(final Collection<ServiceListener<Object>> listeners) {
+        getServiceTargetDelegate().addListener(listeners);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public ServiceContainer removeListener(final ServiceListener<Object> listener) {
+        getServiceTargetDelegate().removeListener(listener);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public Set<ServiceListener<Object>> getListeners() {
+        return getServiceTargetDelegate().getListeners();
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public ServiceTarget addMonitor(StabilityMonitor monitor) {
+        getServiceTargetDelegate().addMonitor(monitor);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public ServiceTarget addMonitors(StabilityMonitor... monitors) {
+        getServiceTargetDelegate().addMonitors(monitors);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public ServiceTarget removeMonitor(StabilityMonitor monitor) {
+        getServiceTargetDelegate().removeMonitor(monitor);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public Set<StabilityMonitor> getMonitors() {
+        return getServiceTargetDelegate().getMonitors();
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public ServiceContainer addDependency(final ServiceName dependency) {
+        getServiceTargetDelegate().addDependency(dependency);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public ServiceContainer addDependency(final ServiceName... dependencies) {
+        getServiceTargetDelegate().addDependency(dependencies);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public ServiceContainer addDependency(final Collection<ServiceName> dependencies) {
+        getServiceTargetDelegate().addDependency(dependencies);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public ServiceContainer removeDependency(final ServiceName dependency) {
+        getServiceTargetDelegate().removeDependency(dependency);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public Set<ServiceName> getDependencies() {
+        return getServiceTargetDelegate().getDependencies();
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public BatchServiceTarget batchTarget() {
+        return getServiceTargetDelegate().batchTarget();
     }
 
 }

@@ -59,13 +59,6 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     }
 
     /** {@inheritDoc} */
-    @Override
-    public ServiceBuilder<T> addAliases(final ServiceName... aliases) {
-        getDelegate().addAliases(aliases);
-        return this;
-    }
-
-    /** {@inheritDoc} */
     public <V> Supplier<V> requires(final ServiceName name) {
         return getDelegate().requires(name);
     }
@@ -88,12 +81,6 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     }
 
     /** {@inheritDoc} */
-    public ServiceBuilder<T> addMonitor(final StabilityMonitor monitor) {
-        getDelegate().addMonitor(monitor);
-        return this;
-    }
-
-    /** {@inheritDoc} */
     public ServiceBuilder<T> addListener(final LifecycleListener listener) {
         getDelegate().addListener(listener);
         return this;
@@ -107,6 +94,14 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     ////////////////////////
     // DEPRECATED METHODS //
     ////////////////////////
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
+    public ServiceBuilder<T> addAliases(final ServiceName... aliases) {
+        getDelegate().addAliases(aliases);
+        return this;
+    }
 
     /** {@inheritDoc} */
     @Deprecated
@@ -209,6 +204,14 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     @Override
     public ServiceBuilder<T> addInjection(final Injector<? super T> target) {
         getDelegate().addInjection(target);
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
+    public ServiceBuilder<T> addMonitor(final StabilityMonitor monitor) {
+        getDelegate().addMonitor(monitor);
         return this;
     }
 
