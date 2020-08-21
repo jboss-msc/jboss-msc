@@ -47,7 +47,10 @@ package org.jboss.msc.service;
  *
  * @see StabilityMonitor
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ * @deprecated Stability monitors are unreliable - do not use them.
+ * This class will be removed in a future release.
  */
+@Deprecated
 public final class StabilityStatistics {
     
     private int active;

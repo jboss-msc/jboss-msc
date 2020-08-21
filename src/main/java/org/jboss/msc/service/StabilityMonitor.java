@@ -84,7 +84,10 @@ import java.util.concurrent.TimeUnit;
  * @see StabilityStatistics
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ * @deprecated Stability monitors are unreliable - do not use them.
+ * This class will be removed in a future release.
  */
+@Deprecated
 public final class StabilityMonitor {
 
     private final Object stabilityLock = new Object();

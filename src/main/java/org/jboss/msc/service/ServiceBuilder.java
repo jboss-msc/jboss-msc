@@ -100,14 +100,6 @@ public interface ServiceBuilder<T> {
     ServiceBuilder<T> setInstance(org.jboss.msc.Service service);
 
     /**
-     * Adds a stability monitor to be added to the service.
-     *
-     * @param monitor the monitor to add to the service
-     * @return this builder
-     */
-    ServiceBuilder<T> addMonitor(StabilityMonitor monitor);
-
-    /**
      * Adds a service listener to be added to the service.
      *
      * @param listener the listener to add to the service
@@ -338,7 +330,18 @@ public interface ServiceBuilder<T> {
      */
     @Deprecated
     ServiceBuilder<T> addInjection(Injector<? super T> target);
-    
+
+    /**
+     * Adds a stability monitor to be added to the service.
+     *
+     * @param monitor the monitor to add to the service
+     * @return this builder
+     * @deprecated Stability monitors are unreliable - do not use them.
+     * This method will be removed in a future release.
+     */
+    @Deprecated
+    ServiceBuilder<T> addMonitor(StabilityMonitor monitor);
+
     /**
      * Add service stability monitors that will be added to this service.
      * 
@@ -346,7 +349,7 @@ public interface ServiceBuilder<T> {
      * @return this builder
      * @throws UnsupportedOperationException if this service builder
      * was created via {@link ServiceTarget#addService(ServiceName)} method.
-     * @deprecated Use {@link #addMonitor(StabilityMonitor)} instead.
+     * @deprecated Stability monitors are unreliable - do not use them.
      * This method will be removed in a future release.
      */
     @Deprecated
