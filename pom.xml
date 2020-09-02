@@ -46,11 +46,11 @@
     </licenses>
 
     <properties>
-        <version.jboss-logmanager>2.1.1.Final</version.jboss-logmanager>
-        <version.jboss-logging>3.3.1.Final</version.jboss-logging>
-        <version.jboss-logging-processor>2.1.0.Final</version.jboss-logging-processor>
-        <version.jboss-modules>1.8.1.Final</version.jboss-modules>
-        <version.org.jboss.threads>2.3.2.Final</version.org.jboss.threads>
+        <version.jboss-logmanager>2.1.17.Final</version.jboss-logmanager>
+        <version.jboss-logging>3.4.1.Final</version.jboss-logging>
+        <version.jboss-logging-processor>2.2.1.Final</version.jboss-logging-processor>
+        <version.jboss-modules>1.10.2.Final</version.jboss-modules>
+        <version.org.jboss.threads>2.4.0.Final</version.org.jboss.threads>
         <version.junit>4.12</version.junit>
     </properties>
 
@@ -59,6 +59,7 @@
             <groupId>org.jboss.threads</groupId>
             <artifactId>jboss-threads</artifactId>
             <version>${version.org.jboss.threads}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.jboss.logging</groupId>
