@@ -26,7 +26,6 @@ import org.jboss.msc.service.LifecycleContext;
 import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
-import org.jboss.threads.AsyncFuture;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -63,7 +62,7 @@ import java.util.function.Consumer;
  * in order to increase parallelism and reduce resource consumption.  Examples of such operations include:
  * <ul>
  *     <li>Operations which run in the background and signal completion via a callback</li>
- *     <li>Operations which use a callback-driven {@code Future} variant like {@link CompletableFuture} or {@link AsyncFuture}</li>
+ *     <li>Operations which use a callback-driven {@code Future} variant like {@link CompletableFuture}
  * </ul>
  * <p>
  * Lifecycle operations which can benefit from parallel execution of work should consider use of the {@link LifecycleContext#execute(Runnable)}
