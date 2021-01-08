@@ -29,7 +29,7 @@
     <parent>
         <groupId>org.jboss</groupId>
         <artifactId>jboss-parent</artifactId>
-        <version>26</version>
+        <version>37</version>
     </parent>
 
     <groupId>org.jboss.msc</groupId>
@@ -46,12 +46,12 @@
     </licenses>
 
     <properties>
-        <version.junit>4.12</version.junit>
+        <version.junit>4.13.1</version.junit>
         <version.jboss-logging>3.4.1.Final</version.jboss-logging>
         <version.jboss-logging-processor>2.2.1.Final</version.jboss-logging-processor>
         <version.jboss-logmanager>2.1.17.Final</version.jboss-logmanager>
-        <version.jboss-modules>1.10.2.Final</version.jboss-modules>
-        <version.jboss-threads>2.4.0.Final</version.jboss-threads>
+        <version.jboss-modules>1.11.0.Final</version.jboss-modules>
+        <version.jboss-threads>3.2.0.Final</version.jboss-threads>
     </properties>
 
     <dependencies>
