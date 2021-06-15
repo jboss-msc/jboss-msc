@@ -330,7 +330,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         // preconditions
         assertNotInstalled();
         assertNotNull(target);
-        assertNotNull(target);
         assertThreadSafety();
         // implementation
         addOutInjectionInternal(target);
@@ -562,7 +561,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     private void assertServiceNotConfigured() {
         if (service != null) {
-            throw new IllegalStateException("Detected addAliases(), requires(), provides() or setService() call after setService() method call");
+            throw new IllegalStateException("Detected addAliases(), requires(), provides() or setInstance() call after setInstance() method call");
         }
     }
 
