@@ -26,6 +26,7 @@ import org.jboss.msc.inject.Injector;
 import org.jboss.msc.value.Value;
 
 import java.util.Collection;
+import java.util.ConcurrentModificationException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -42,7 +43,8 @@ import java.util.function.Supplier;
  * and {@link Supplier}s should be passed to service instance so they can be accessed by service
  * at runtime.
  * <p>
- * Implementations of this interface are not thread safe.
+ * Implementations of this interface are thread safe because they rely on thread confinement.
+ * The builder instance can be used only by thread that created it.
  *
  * @param <T> service value type if service provides single value
  *
@@ -52,28 +54,36 @@ import java.util.function.Supplier;
 public interface ServiceBuilder<T> {
 
     /**
-     * Specifies dependency value required by service. There can be multiple dependencies service may depend on.
+     * Specifies value name required by service. There can be multiple values service may depend on.
      *
      * @param name required dependency name
      * @param <V> required dependency value type
      * @return readonly dependency reference
-     * @throws IllegalStateException if this method
-     * have been called after {@link #setInstance(org.jboss.msc.Service)} method.
-     * @throws UnsupportedOperationException if this service builder
-     * wasn't created via {@link ServiceTarget#addService(ServiceName)} method.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalArgumentException if value <code>name</code> was before used as parameter either in
+     * {@link ServiceTarget#addService(ServiceName)} method when creating this builder instance or
+     * in {@link #provides(ServiceName...)} method call. Value can be either required or provided but not both.
+     * @throws IllegalStateException if this method have been called after {@link #install()} method.
+     * @throws NullPointerException if <code>name</code> parameter is null.
      */
     <V> Supplier<V> requires(ServiceName name);
 
     /**
-     * Specifies injector provided by service. There can be multiple injectors service may provide.
+     * Specifies value provided by service. There can be multiple names for the same value.
+     * At least one <code>name</code> parameter must be provided to this method. If there are more <code>names</code>
+     * in the vararg array then the first one is called provided value name and other are called provided value aliases.
      *
-     * @param names provided dependency names
-     * @param <V> provided dependency value type
+     * @param names provided value name (and its aliases)
+     * @param <V> provided value type
      * @return writable dependency reference
-     * @throws IllegalStateException if this method
-     * have been called after {@link #setInstance(org.jboss.msc.Service)} method.
-     * @throws UnsupportedOperationException if this service builder
-     * wasn't created via {@link ServiceTarget#addService(ServiceName)} method.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalArgumentException if value <code>name</code> was before used as parameter in
+     * in {@link #requires(ServiceName)} method call. Value can be either required or provided but not both.
+     * @throws IllegalStateException if this method have been called after {@link #install()} method.
+     * @throws NullPointerException if <code>names</code> parameter is <code>null</code> or any value of the vararg
+     * array is <code>null</code>.
      */
     <V> Consumer<V> provides(ServiceName... names);
 
@@ -82,6 +92,12 @@ public interface ServiceBuilder<T> {
      *
      * @param mode initial service mode
      * @return this builder
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalArgumentException if <code>mode</code> is {@link ServiceController.Mode#REMOVE}.
+     * @throws IllegalStateException if this method have been either called twice or it was called after
+     * {@link #install()} method.
+     * @throws NullPointerException if <code>mode</code> parameter is <code>null</code>.
      */
     ServiceBuilder<T> setInitialMode(ServiceController.Mode mode);
 
@@ -90,12 +106,16 @@ public interface ServiceBuilder<T> {
      * without this method being called then <code>NULL</code> service will be
      * installed into the container.
      * <p>
-     * When this method have been called then all subsequent
+     * Once this method have been called then all subsequent
      * calls of {@link #requires(ServiceName)}, and {@link #provides(ServiceName...)}
-     * methods will fail.
+     * methods will fail because their return values should be provided to service instance.
      *
      * @param service the service instance
      * @return this configurator
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been either called twice or it was called after
+     * {@link #install()} method.
      */
     ServiceBuilder<T> setInstance(org.jboss.msc.Service service);
 
@@ -104,6 +124,10 @@ public interface ServiceBuilder<T> {
      *
      * @param listener the listener to add to the service
      * @return this builder
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()} method.
+     * @throws NullPointerException if <code>listener</code> parameter is <code>null</code>.
      */
     ServiceBuilder<T> addListener(LifecycleListener listener);
 
@@ -111,6 +135,9 @@ public interface ServiceBuilder<T> {
      * Installs configured service into the container.
      *
      * @return installed service controller
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called twice.
      * @throws ServiceRegistryException if installation fails for any reason
      */
     ServiceController<T> install();
@@ -124,10 +151,15 @@ public interface ServiceBuilder<T> {
      *
      * @param aliases the service names to use as aliases
      * @return the builder
-     * @throws UnsupportedOperationException if this service builder
-     * wasn't created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Use {@link #provides(ServiceName...)} instead.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalArgumentException if value <code>name</code> was before used as parameter in
+     * in {@link #requires(ServiceName)} method call. Value can be either required or provided but not both.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>aliases</code> parameter is <code>null</code> or any value of the vararg
+     * array is <code>null</code>.
      */
     @Deprecated
     ServiceBuilder<T> addAliases(ServiceName... aliases);
@@ -137,10 +169,13 @@ public interface ServiceBuilder<T> {
      *
      * @param dependencies the service names to depend on
      * @return this builder
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Use {@link #requires(ServiceName)} instead.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>dependencies</code> parameter is <code>null</code> or any value of the vararg
+     * array is <code>null</code>.
      */
     @Deprecated
     ServiceBuilder<T> addDependencies(ServiceName... dependencies);
@@ -151,10 +186,13 @@ public interface ServiceBuilder<T> {
      * @param dependencyType the dependency type; must not be {@code null}
      * @param dependencies the service names to depend on
      * @return this builder
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>dependencyType</code> or <code>dependencies</code> parameter is
+     * <code>null</code> or any value of the vararg array is <code>null</code>.
      */
     @Deprecated
     ServiceBuilder<T> addDependencies(DependencyType dependencyType, ServiceName... dependencies);
@@ -164,10 +202,13 @@ public interface ServiceBuilder<T> {
      *
      * @param dependencies the service names to depend on
      * @return this builder
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Use {@link #requires(ServiceName)} instead.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>dependencies</code> parameter is <code>null</code> or any value of
+     * the iterable is <code>null</code>.
      */
     @Deprecated
     ServiceBuilder<T> addDependencies(Iterable<ServiceName> dependencies);
@@ -178,10 +219,13 @@ public interface ServiceBuilder<T> {
      * @param dependencyType the dependency type; must not be {@code null}
      * @param dependencies the service names to depend on
      * @return this builder
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>dependencyType</code> or <code>dependencies</code> parameter is
+     * <code>null</code> or any value of the iterable is <code>null</code>.
      */
     @Deprecated
     ServiceBuilder<T> addDependencies(DependencyType dependencyType, Iterable<ServiceName> dependencies);
@@ -192,10 +236,12 @@ public interface ServiceBuilder<T> {
      *
      * @param dependency the name of the dependency
      * @return an injection builder for optionally injecting the dependency
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Use {@link #requires(ServiceName)} instead.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>dependency</code> parameter is <code>null</code>.
      */
     @Deprecated
     ServiceBuilder<T> addDependency(ServiceName dependency);
@@ -207,10 +253,13 @@ public interface ServiceBuilder<T> {
      * @param dependencyType the dependency type; must not be {@code null}
      * @param dependency the name of the dependency
      * @return an injection builder for optionally injecting the dependency
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>dependencyType</code> or <code>dependency</code> parameter is
+     * <code>null</code>.
      */
     @Deprecated
     ServiceBuilder<T> addDependency(DependencyType dependencyType, ServiceName dependency);
@@ -222,10 +271,12 @@ public interface ServiceBuilder<T> {
      * @param dependency the name of the dependency
      * @param target the injector into which the dependency should be stored
      * @return this builder
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Use {@link #requires(ServiceName)} instead.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>dependency</code> or <code>target</code> parameter is <code>null</code>.
      */
     @Deprecated
     ServiceBuilder<T> addDependency(ServiceName dependency, Injector<Object> target);
@@ -238,10 +289,13 @@ public interface ServiceBuilder<T> {
      * @param dependency the name of the dependency
      * @param target the injector into which the dependency should be stored
      * @return this builder
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>dependencyType</code> or <code>dependency</code> or <code>target</code>
+     * parameter is <code>null</code>.
      */
     @Deprecated
     ServiceBuilder<T> addDependency(DependencyType dependencyType, ServiceName dependency, Injector<Object> target);
@@ -256,10 +310,13 @@ public interface ServiceBuilder<T> {
      * @param target the injector into which the dependency should be stored
      * @param <I> the type of the value of the dependency
      * @return this builder
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Use {@link #requires(ServiceName)} instead.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>dependency</code> or <code>type</code> or <code>target</code>
+     * parameter is <code>null</code>.
      */
     @Deprecated
     <I> ServiceBuilder<T> addDependency(ServiceName dependency, Class<I> type, Injector<I> target);
@@ -275,10 +332,13 @@ public interface ServiceBuilder<T> {
      * @param target the injector into which the dependency should be stored
      * @param <I> the type of the value of the dependency
      * @return this builder
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Optional dependencies are <em>unsafe</em> and should not be used.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>dependencyType</code> or <code>dependency</code> or <code>type</code>
+     * or <code>target</code> parameter is <code>null</code>.
      */
     @Deprecated
     <I> ServiceBuilder<T> addDependency(DependencyType dependencyType, ServiceName dependency, Class<I> type, Injector<I> target);
@@ -291,10 +351,12 @@ public interface ServiceBuilder<T> {
      * @param value the injection value
      * @param <I> the injection type
      * @return this builder
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Use {@link #requires(ServiceName)} instead.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>target</code> or <code>value</code> parameter is <code>null</code>.
      */
     @Deprecated
     <I> ServiceBuilder<T> addInjection(Injector<? super I> target, I value);
@@ -307,10 +369,12 @@ public interface ServiceBuilder<T> {
      * @param value the injection value
      * @param <I> the injection type
      * @return this builder
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Use {@link #requires(ServiceName)} instead.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>target</code> or <code>value</code> parameter is <code>null</code>.
      */
     @Deprecated
     <I> ServiceBuilder<T> addInjectionValue(Injector<? super I> target, Value<I> value);
@@ -323,10 +387,12 @@ public interface ServiceBuilder<T> {
      *
      * @param target the injector target
      * @return this builder
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Use {@link #provides(ServiceName...)} instead.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>target</code> parameter is <code>null</code>.
      */
     @Deprecated
     ServiceBuilder<T> addInjection(Injector<? super T> target);
@@ -338,6 +404,10 @@ public interface ServiceBuilder<T> {
      * @return this builder
      * @deprecated Stability monitors are unreliable - do not use them.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>monitor</code> parameter is <code>null</code>.
      */
     @Deprecated
     ServiceBuilder<T> addMonitor(StabilityMonitor monitor);
@@ -347,10 +417,13 @@ public interface ServiceBuilder<T> {
      * 
      * @param monitors a list of stability monitors to add to the service
      * @return this builder
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Stability monitors are unreliable - do not use them.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>monitors</code> parameter is <code>null</code> or any value of the vararg
+     * array is <code>null</code>.
      */
     @Deprecated
     ServiceBuilder<T> addMonitors(final StabilityMonitor... monitors);
@@ -360,10 +433,12 @@ public interface ServiceBuilder<T> {
      *
      * @param listener the listener to add to the service
      * @return this builder
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Use {@link #addListener(LifecycleListener)} instead.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>listener</code> parameter is <code>null</code>.
      */
     @Deprecated
     ServiceBuilder<T> addListener(ServiceListener<? super T> listener);
@@ -373,10 +448,13 @@ public interface ServiceBuilder<T> {
      *
      * @param listeners a list of listeners to add to the service
      * @return this builder
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Use {@link #addListener(LifecycleListener)} instead.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>listeners</code> parameter is <code>null</code> or any value of the vararg
+     * array is <code>null</code>.
      */
     @Deprecated
     ServiceBuilder<T> addListener(ServiceListener<? super T>... listeners);
@@ -386,10 +464,13 @@ public interface ServiceBuilder<T> {
      *
      * @param listeners a collection of listeners to add to the service
      * @return this builder
-     * @throws UnsupportedOperationException if this service builder
-     * was created via {@link ServiceTarget#addService(ServiceName)} method.
      * @deprecated Use {@link #addListener(LifecycleListener)} instead.
      * This method will be removed in a future release.
+     * @throws ConcurrentModificationException if builder is shared between threads.
+     * Only thread that created the builder can manipulate it.
+     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
+     * @throws NullPointerException if <code>listeners</code> parameter is <code>null</code> or any value of the
+     * <code>listeners</code> collection is <code>null</code>.
      */
     @Deprecated
     ServiceBuilder<T> addListener(Collection<? extends ServiceListener<? super T>> listeners);
