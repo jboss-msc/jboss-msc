@@ -382,7 +382,10 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 //noinspection ThisEscapedInObjectConstruction
                 set.add(new WeakReference<>(this, null, new Reaper<ServiceContainerImpl, Void>() {
                     public void reap(final Reference<ServiceContainerImpl, Void> reference) {
-                        ShutdownHookHolder.containers.remove(reference);
+                        final Set<Reference<ServiceContainerImpl, Void>> set = ShutdownHookHolder.containers;
+                        synchronized (set) {
+                            set.remove(reference);
+                        }
                     }
                 }));
             }
@@ -538,6 +541,19 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             down = true;
             shutdownInitiated = System.nanoTime();
         }
+        // unregistering shutdown hook
+        final Set<Reference<ServiceContainerImpl, Void>> set = ShutdownHookHolder.containers;
+        synchronized (set) {
+            if (!ShutdownHookHolder.down) {
+                for (Iterator<Reference<ServiceContainerImpl, Void>> i = set.iterator(); i.hasNext(); ) {
+                    if (i.next().get() == this) {
+                        i.remove();
+                        break;
+                    }
+                }
+            }
+        }
+        // shutting down all services
         final ContainerShutdownListener shutdownListener = new ContainerShutdownListener(new Runnable() {
             public void run() {
                 executor.shutdown();
