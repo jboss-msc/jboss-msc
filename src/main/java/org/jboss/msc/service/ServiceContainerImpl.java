@@ -85,8 +85,17 @@ import org.jboss.threads.EnhancedQueueExecutor;
 final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceContainer {
 
     private static final AtomicInteger SERIAL = new AtomicInteger(1);
+    private static final MBeanServer MBEAN_SERVER;
 
     static {
+        MBeanServer mBeanServer = null;
+        try {
+            mBeanServer = ManagementFactory.getPlatformMBeanServer();
+        } catch (final Exception e) {
+            ServiceLogger.ROOT.mbeanServerNotAvailable(e);
+        } finally {
+            MBEAN_SERVER = mBeanServer;
+        }
         ServiceLogger.ROOT.greeting(Version.getVersionString());
     }
 
@@ -156,7 +165,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     private final ContainerExecutor executor;
 
     private final String name;
-    private final MBeanServer mBeanServer;
     private final ObjectName objectName;
 
     private final ServiceContainerMXBean containerMXBean = new ServiceContainerMXBean() {
@@ -360,15 +368,15 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         this.name = name;
         executor = new ContainerExecutor(coreSize, maxSize, timeOut, timeOutUnit);
         ObjectName objectName = null;
-        MBeanServer mBeanServer = null;
-        try {
-            objectName = new ObjectName("jboss.msc", ObjectProperties.properties(property("type", "container"), property("name", name)));
-            mBeanServer = ManagementFactory.getPlatformMBeanServer();
-            mBeanServer.registerMBean(containerMXBean, objectName);
-        } catch (Exception e) {
-            ServiceLogger.ROOT.mbeanFailed(e);
+        if (MBEAN_SERVER != null) {
+            try {
+                objectName = new ObjectName("jboss.msc", ObjectProperties.properties(property("type", "container"), property("name", name)));
+                MBEAN_SERVER.registerMBean(containerMXBean, objectName);
+            } catch (Exception e) {
+                ServiceLogger.ROOT.mbeanFailed(e);
+                objectName = null;
+            }
         }
-        this.mBeanServer = mBeanServer;
         this.objectName = objectName;
         final Set<Reference<ServiceContainerImpl, Void>> set = ShutdownHookHolder.containers;
         synchronized (set) {
@@ -390,11 +398,11 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 }));
             }
         }
-        if (objectName != null && mBeanServer != null) {
+        if (objectName != null && MBEAN_SERVER != null) {
             addTerminateListener(new TerminateListener() {
                 public void handleTermination(final Info info) {
                     try {
-                        ServiceContainerImpl.this.mBeanServer.unregisterMBean(ServiceContainerImpl.this.objectName);
+                        ServiceContainerImpl.MBEAN_SERVER.unregisterMBean(ServiceContainerImpl.this.objectName);
                     } catch (Exception ignored) {
                     }
                 }
