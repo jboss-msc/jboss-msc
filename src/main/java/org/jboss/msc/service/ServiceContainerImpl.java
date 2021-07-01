@@ -378,16 +378,16 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             }
         }
         this.objectName = objectName;
+    }
+
+    void registerShutdownCleaner() {
         final Set<Reference<ServiceContainerImpl, Void>> set = ShutdownHookHolder.containers;
         synchronized (set) {
-            // if the shutdown hook was triggered, then no services can ever come up in any new containers.
             if (ShutdownHookHolder.down) {
+                // if the shutdown hook was triggered, then no services can ever come up in any new containers.
                 terminateInfo = new TerminateListener.Info(System.nanoTime(), System.nanoTime());
                 down = true;
-            }
-            //noinspection ThisEscapedInObjectConstruction
-            else {
-                //noinspection ThisEscapedInObjectConstruction
+            } else {
                 set.add(new WeakReference<>(this, null, new Reaper<ServiceContainerImpl, Void>() {
                     public void reap(final Reference<ServiceContainerImpl, Void> reference) {
                         final Set<Reference<ServiceContainerImpl, Void>> set = ShutdownHookHolder.containers;
@@ -398,11 +398,14 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 }));
             }
         }
-        if (objectName != null && MBEAN_SERVER != null) {
+    }
+
+    void registerMBeanCleaner() {
+        if (objectName != null) {
             addTerminateListener(new TerminateListener() {
                 public void handleTermination(final Info info) {
                     try {
-                        ServiceContainerImpl.MBEAN_SERVER.unregisterMBean(ServiceContainerImpl.this.objectName);
+                        MBEAN_SERVER.unregisterMBean(objectName);
                     } catch (Exception ignored) {
                     }
                 }

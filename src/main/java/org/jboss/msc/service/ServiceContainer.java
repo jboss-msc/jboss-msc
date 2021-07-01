@@ -247,7 +247,10 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(String name, int coreSize, long keepAliveTime, TimeUnit keepAliveTimeUnit, boolean autoShutdown) {
-            return new ServiceContainerImpl(name, calculateCoreSize(coreSize), keepAliveTime, keepAliveTimeUnit, autoShutdown);
+            final ServiceContainerImpl container = new ServiceContainerImpl(name, calculateCoreSize(coreSize), keepAliveTime, keepAliveTimeUnit, autoShutdown);
+            container.registerShutdownCleaner();
+            container.registerMBeanCleaner();
+            return container;
         }
 
         private static int calculateCoreSize() {
