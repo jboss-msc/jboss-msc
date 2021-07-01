@@ -282,8 +282,12 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
             Assert.checkMinimumParameter("maxSize", coreSize, maxSize);
             Assert.checkMinimumParameter("keepAliveTime", 1, keepAliveTime);
             Assert.checkNotNullParam("keepAliveTimeUnit", keepAliveTimeUnit);
-            return new ServiceContainerImpl(name, coreSize, maxSize, keepAliveTime, keepAliveTimeUnit, autoShutdown);
+            final ServiceContainerImpl container = new ServiceContainerImpl(name, coreSize, maxSize, keepAliveTime, keepAliveTimeUnit, autoShutdown);
+            container.registerShutdownCleaner();
+            container.registerMBeanCleaner();
+            return container;
         }
+
     }
 
     /**
