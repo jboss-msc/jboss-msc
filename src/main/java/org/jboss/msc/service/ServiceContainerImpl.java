@@ -110,7 +110,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     private long shutdownInitiated;
 
     private final List<TerminateListener> terminateListeners = new ArrayList<>(1);
-    private final boolean autoShutdown;
 
     private static final class ShutdownHookThread extends Thread {
         final Reference<ServiceContainer, Void> containerRef;
@@ -336,7 +335,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     };
 
     ServiceContainerImpl(String name, int coreSize, int maxSize, long timeOut, TimeUnit timeOutUnit, final boolean autoShutdown) {
-        this.autoShutdown = autoShutdown;
         final int serialNo = SERIAL.getAndIncrement();
         if (name == null) {
             name = String.format("anonymous-%d", Integer.valueOf(serialNo));
@@ -425,10 +423,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             }
             assert unstableServices >= 0; 
         }
-    }
-
-    boolean isAutoShutdown() {
-        return autoShutdown;
     }
 
     public String getName() {
