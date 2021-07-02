@@ -130,6 +130,18 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 }
             });
         }
+
+        @Override
+        public void run() {
+            final ServiceContainer container = containerRef.get();
+            if (container == null) return;
+            container.shutdown();
+            try {
+                container.awaitTermination();
+            } catch (InterruptedException ie) {
+                // ignored
+            }
+        }
     }
 
     private volatile TerminateListener.Info terminateInfo;
