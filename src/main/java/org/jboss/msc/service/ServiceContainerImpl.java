@@ -85,8 +85,17 @@ import org.jboss.threads.EnhancedQueueExecutor;
 final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceContainer {
 
     private static final AtomicInteger SERIAL = new AtomicInteger(1);
+    private static final MBeanServer MBEAN_SERVER;
 
     static {
+        MBeanServer mBeanServer = null;
+        try {
+            mBeanServer = ManagementFactory.getPlatformMBeanServer();
+        } catch (final Exception e) {
+            ServiceLogger.ROOT.mbeanServerNotAvailable(e);
+        } finally {
+            MBEAN_SERVER = mBeanServer;
+        }
         ServiceLogger.ROOT.greeting(Version.getVersionString());
     }
 
@@ -101,51 +110,37 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     private long shutdownInitiated;
 
     private final List<TerminateListener> terminateListeners = new ArrayList<>(1);
-    private final boolean autoShutdown;
 
-    private static final class ShutdownHookHolder {
-        private static final Set<Reference<ServiceContainerImpl, Void>> containers;
-        private static boolean down = false;
+    private static final class ShutdownHookThread extends Thread {
+        final Reference<ServiceContainer, Void> containerRef;
 
-        static {
-            containers = new HashSet<>();
-            doPrivileged(new PrivilegedAction<Void>() {
-                public Void run() {
-                    final Thread hook = new Thread(new Runnable() {
-                        public void run() {
-                            // shut down all services in all containers.
-                            final Set<Reference<ServiceContainerImpl, Void>> set = containers;
-                            final LatchListener listener;
-                            synchronized (set) {
-                                down = true;
-                                listener = new LatchListener(set.size());
-                                for (Reference<ServiceContainerImpl, Void> containerRef : set) {
-                                    final ServiceContainerImpl container = containerRef.get();
-                                    if (container == null || !container.isAutoShutdown()) {
-                                        listener.countDown();
-                                        continue;
-                                    }
-                                    container.addTerminateListener(listener);
-                                    container.shutdown();
-                                }
-                                set.clear();
-                            }
-                            // wait for all services to finish.
-                            for (;;) try {
-                                listener.await();
-                                break;
-                            } catch (InterruptedException e) {
-                            }
-                        }
-                    }, "MSC Shutdown Thread");
-                    hook.setDaemon(false);
-                    Runtime.getRuntime().addShutdownHook(hook);
-                    return null;
+        private ShutdownHookThread(final ServiceContainer container) {
+            setName(container.getName() + " MSC Shutdown Thread");
+            setDaemon(false);
+            containerRef = new WeakReference<>(container, null, new Reaper<ServiceContainer, Void>() {
+                public void reap(final Reference<ServiceContainer, Void> containerRef) {
+                    final ServiceContainer container = containerRef.get();
+                    if (container == null) return;
+                    container.shutdown();
+                    try {
+                        container.awaitTermination();
+                    } catch (InterruptedException ie) {
+                        // ignored
+                    }
                 }
             });
         }
 
-        private ShutdownHookHolder() {
+        @Override
+        public void run() {
+            final ServiceContainer container = containerRef.get();
+            if (container == null) return;
+            container.shutdown();
+            try {
+                container.awaitTermination();
+            } catch (InterruptedException ie) {
+                // ignored
+            }
         }
     }
 
@@ -156,8 +151,8 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     private final ContainerExecutor executor;
 
     private final String name;
-    private final MBeanServer mBeanServer;
     private final ObjectName objectName;
+    private final Thread shutdownThread;
 
     private final ServiceContainerMXBean containerMXBean = new ServiceContainerMXBean() {
         public ServiceStatus getServiceStatus(final String name) {
@@ -352,7 +347,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     };
 
     ServiceContainerImpl(String name, int coreSize, long timeOut, TimeUnit timeOutUnit, final boolean autoShutdown) {
-        this.autoShutdown = autoShutdown;
         final int serialNo = SERIAL.getAndIncrement();
         if (name == null) {
             name = String.format("anonymous-%d", Integer.valueOf(serialNo));
@@ -360,41 +354,43 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         this.name = name;
         executor = new ContainerExecutor(coreSize, coreSize, timeOut, timeOutUnit);
         ObjectName objectName = null;
-        MBeanServer mBeanServer = null;
-        try {
-            objectName = new ObjectName("jboss.msc", ObjectProperties.properties(property("type", "container"), property("name", name)));
-            mBeanServer = ManagementFactory.getPlatformMBeanServer();
-            mBeanServer.registerMBean(containerMXBean, objectName);
-        } catch (Exception e) {
-            ServiceLogger.ROOT.mbeanFailed(e);
+        if (MBEAN_SERVER != null) {
+            try {
+                objectName = new ObjectName("jboss.msc", ObjectProperties.properties(property("type", "container"), property("name", name)));
+                MBEAN_SERVER.registerMBean(containerMXBean, objectName);
+            } catch (Exception e) {
+                ServiceLogger.ROOT.mbeanFailed(e);
+                objectName = null;
+            }
         }
-        this.mBeanServer = mBeanServer;
         this.objectName = objectName;
-        final Set<Reference<ServiceContainerImpl, Void>> set = ShutdownHookHolder.containers;
-        synchronized (set) {
-            // if the shutdown hook was triggered, then no services can ever come up in any new containers.
-            if (ShutdownHookHolder.down) {
-                terminateInfo = new TerminateListener.Info(System.nanoTime(), System.nanoTime());
-                down = true;
-            }
-            //noinspection ThisEscapedInObjectConstruction
-            else {
-                //noinspection ThisEscapedInObjectConstruction
-                set.add(new WeakReference<>(this, null, new Reaper<ServiceContainerImpl, Void>() {
-                    public void reap(final Reference<ServiceContainerImpl, Void> reference) {
-                        final Set<Reference<ServiceContainerImpl, Void>> set = ShutdownHookHolder.containers;
-                        synchronized (set) {
-                            set.remove(reference);
+        this.shutdownThread = autoShutdown ? new ShutdownHookThread(this) : null;
+    }
+
+    void registerShutdownCleaner() {
+        if (shutdownThread == null) return;
+        try {
+            doPrivileged(
+                    new PrivilegedAction<Void>() {
+                        @Override
+                        public Void run() {
+                            Runtime.getRuntime().addShutdownHook(shutdownThread);
+                            return null;
                         }
-                    }
-                }));
-            }
+                    });
+        } catch (IllegalStateException ex) {
+            // if the shutdown hook was triggered, then no services can ever come up in any new containers.
+            terminateInfo = new TerminateListener.Info(System.nanoTime(), System.nanoTime());
+            down = true;
         }
-        if (objectName != null && mBeanServer != null) {
+    }
+
+    void registerMBeanCleaner() {
+        if (objectName != null) {
             addTerminateListener(new TerminateListener() {
                 public void handleTermination(final Info info) {
                     try {
-                        ServiceContainerImpl.this.mBeanServer.unregisterMBean(ServiceContainerImpl.this.objectName);
+                        MBEAN_SERVER.unregisterMBean(objectName);
                     } catch (Exception ignored) {
                     }
                 }
@@ -439,10 +435,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             }
             assert unstableServices >= 0; 
         }
-    }
-
-    boolean isAutoShutdown() {
-        return autoShutdown;
     }
 
     public String getName() {
@@ -542,15 +534,18 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             shutdownInitiated = System.nanoTime();
         }
         // unregistering shutdown hook
-        final Set<Reference<ServiceContainerImpl, Void>> set = ShutdownHookHolder.containers;
-        synchronized (set) {
-            if (!ShutdownHookHolder.down) {
-                for (Iterator<Reference<ServiceContainerImpl, Void>> i = set.iterator(); i.hasNext(); ) {
-                    if (i.next().get() == this) {
-                        i.remove();
-                        break;
-                    }
-                }
+        if (shutdownThread != null) {
+            try {
+                doPrivileged(
+                        new PrivilegedAction<Void>() {
+                            @Override
+                            public Void run() {
+                                Runtime.getRuntime().removeShutdownHook(shutdownThread);
+                                return null;
+                            }
+                        });
+            } catch (IllegalStateException ignored) {
+                // shutdown hook was already initiated
             }
         }
         // shutting down all services

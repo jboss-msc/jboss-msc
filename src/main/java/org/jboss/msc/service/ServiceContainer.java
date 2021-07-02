@@ -160,7 +160,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create() {
-            return new ServiceContainerImpl(null, calculateCoreSize(), 30L, TimeUnit.SECONDS, true);
+            return create(null, calculateCoreSize(), 30L, TimeUnit.SECONDS, true);
         }
 
         /**
@@ -170,7 +170,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(String name) {
-            return new ServiceContainerImpl(name, calculateCoreSize(), 30L, TimeUnit.SECONDS, true);
+            return create(name, calculateCoreSize(), 30L, TimeUnit.SECONDS, true);
         }
 
         /**
@@ -183,7 +183,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(int coreSize, long keepAliveTime, TimeUnit keepAliveTimeUnit) {
-            return new ServiceContainerImpl(null, calculateCoreSize(coreSize), keepAliveTime, keepAliveTimeUnit, true);
+            return create(null, calculateCoreSize(coreSize), keepAliveTime, keepAliveTimeUnit, true);
         }
 
         /**
@@ -197,7 +197,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(String name, int coreSize, long keepAliveTime, TimeUnit keepAliveTimeUnit) {
-            return new ServiceContainerImpl(name, calculateCoreSize(coreSize), keepAliveTime, keepAliveTimeUnit, true);
+            return create(name, calculateCoreSize(coreSize), keepAliveTime, keepAliveTimeUnit, true);
         }
 
         /**
@@ -207,7 +207,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(boolean autoShutdown) {
-            return new ServiceContainerImpl(null, calculateCoreSize(), 30L, TimeUnit.SECONDS, autoShutdown);
+            return create(null, calculateCoreSize(), 30L, TimeUnit.SECONDS, autoShutdown);
         }
 
         /**
@@ -218,7 +218,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(String name, boolean autoShutdown) {
-            return new ServiceContainerImpl(name, calculateCoreSize(), 30L, TimeUnit.SECONDS, autoShutdown);
+            return create(name, calculateCoreSize(), 30L, TimeUnit.SECONDS, autoShutdown);
         }
 
         /**
@@ -232,7 +232,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(int coreSize, long keepAliveTime, TimeUnit keepAliveTimeUnit, boolean autoShutdown) {
-            return new ServiceContainerImpl(null, calculateCoreSize(coreSize), keepAliveTime, keepAliveTimeUnit, autoShutdown);
+            return create(null, calculateCoreSize(coreSize), keepAliveTime, keepAliveTimeUnit, autoShutdown);
         }
 
         /**
@@ -247,7 +247,10 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(String name, int coreSize, long keepAliveTime, TimeUnit keepAliveTimeUnit, boolean autoShutdown) {
-            return new ServiceContainerImpl(name, calculateCoreSize(coreSize), keepAliveTime, keepAliveTimeUnit, autoShutdown);
+            final ServiceContainerImpl container = new ServiceContainerImpl(name, calculateCoreSize(coreSize), keepAliveTime, keepAliveTimeUnit, autoShutdown);
+            container.registerShutdownCleaner();
+            container.registerMBeanCleaner();
+            return container;
         }
 
         private static int calculateCoreSize() {
