@@ -164,7 +164,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create() {
-            return new ServiceContainerImpl(null, CORE_THREADS_COUNT, MAX_THREADS_COUNT, 30L, TimeUnit.SECONDS, true);
+            return create(null, CORE_THREADS_COUNT, MAX_THREADS_COUNT, 30L, TimeUnit.SECONDS, true);
         }
 
         /**
@@ -174,7 +174,7 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
          * @return a new service container instance
          */
         public static ServiceContainer create(String name) {
-            return new ServiceContainerImpl(name, CORE_THREADS_COUNT, MAX_THREADS_COUNT, 30L, TimeUnit.SECONDS, true);
+            return create(name, CORE_THREADS_COUNT, MAX_THREADS_COUNT, 30L, TimeUnit.SECONDS, true);
         }
 
         /**
@@ -282,8 +282,12 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
             Assert.checkMinimumParameter("maxSize", coreSize, maxSize);
             Assert.checkMinimumParameter("keepAliveTime", 1, keepAliveTime);
             Assert.checkNotNullParam("keepAliveTimeUnit", keepAliveTimeUnit);
-            return new ServiceContainerImpl(name, coreSize, maxSize, keepAliveTime, keepAliveTimeUnit, autoShutdown);
+            final ServiceContainerImpl container = new ServiceContainerImpl(name, coreSize, maxSize, keepAliveTime, keepAliveTimeUnit, autoShutdown);
+            container.registerShutdownCleaner();
+            container.registerMBeanCleaner();
+            return container;
         }
+
     }
 
     /**

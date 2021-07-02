@@ -107,4 +107,8 @@ interface ServiceLogger {
     @Message(id = 12, value = "Injection failed for service %s")
     void injectFailed(@Cause Throwable cause, ServiceName serviceName);
 
+    @LogMessage(level = WARN)
+    @Message(id = 13, value = "Failed to retrieve platform MBeanServer")
+    void mbeanServerNotAvailable(@Cause Exception e);
+
 }
