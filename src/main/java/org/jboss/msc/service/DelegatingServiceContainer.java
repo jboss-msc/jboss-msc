@@ -292,10 +292,4 @@ public class DelegatingServiceContainer implements ServiceContainer {
         return getServiceTargetDelegate().getDependencies();
     }
 
-    /** {@inheritDoc} */
-    @Deprecated
-    public BatchServiceTarget batchTarget() {
-        return getServiceTargetDelegate().batchTarget();
-    }
-
 }

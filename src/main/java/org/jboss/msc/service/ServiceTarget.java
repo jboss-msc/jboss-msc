@@ -245,13 +245,4 @@ public interface ServiceTarget {
     @Deprecated
     Set<ServiceName> getDependencies();
 
-    /**
-     * Create a new batch service target, which is used to install described services in this target.
-     *
-     * @return the new batch service target
-     * @deprecated This method will be removed in a future release.
-     */
-    @Deprecated
-    BatchServiceTarget batchTarget();
-
 }

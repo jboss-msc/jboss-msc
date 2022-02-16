@@ -191,13 +191,6 @@ public class DelegatingServiceTarget implements ServiceTarget {
     /** {@inheritDoc} */
     @Deprecated
     @Override
-    public BatchServiceTarget batchTarget() {
-        return getDelegate().batchTarget();
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
     public ServiceTarget addMonitors(final StabilityMonitor... monitors) {
         getDelegate().addMonitors(monitors);
         return this;

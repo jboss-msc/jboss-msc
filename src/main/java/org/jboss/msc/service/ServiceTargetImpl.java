@@ -268,9 +268,4 @@ class ServiceTargetImpl implements ServiceTarget {
     public ServiceTarget subTarget() {
         return new ServiceTargetImpl(this);
     }
-
-    @Override
-    public BatchServiceTarget batchTarget() {
-        return new BatchServiceTargetImpl(this);
-    }
 }
