@@ -114,24 +114,8 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     /** {@inheritDoc} */
     @Deprecated
     @Override
-    public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final ServiceName... dependencies) {
-        getDelegate().addDependencies(dependencyType, dependencies);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
     public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> dependencies) {
         getDelegate().addDependencies(dependencies);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final Iterable<ServiceName> dependencies) {
-        getDelegate().addDependencies(dependencyType, dependencies);
         return this;
     }
 
@@ -146,14 +130,6 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     /** {@inheritDoc} */
     @Deprecated
     @Override
-    public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency) {
-        getDelegate().addDependency(dependencyType, dependency);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
     public ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
         getDelegate().addDependency(dependency, target);
         return this;
@@ -162,24 +138,8 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     /** {@inheritDoc} */
     @Deprecated
     @Override
-    public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Injector<Object> target) {
-        getDelegate().addDependency(dependencyType, dependency, target);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
     public <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
         getDelegate().addDependency(dependency, type, target);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public <I> ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Class<I> type, final Injector<I> target) {
-        getDelegate().addDependency(dependencyType, dependency, type, target);
         return this;
     }
 

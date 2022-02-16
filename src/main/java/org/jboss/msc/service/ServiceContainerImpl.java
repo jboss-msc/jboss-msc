@@ -720,9 +720,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         Dependency dependency;
         for (ServiceBuilderImpl.Dependency dependencyDefinition : dependencyMap.values()) {
             dependency = dependencyDefinition.getRegistration();
-            if (dependencyDefinition.getDependencyType() == ServiceBuilder.DependencyType.OPTIONAL) {
-                dependency = new OptionalDependencyImpl(dependency);
-            }
             requires.add(dependency);
             for (Injector<Object> injector : dependencyDefinition.getInjectorList()) {
                 valueInjections.add(new ValueInjection<>(dependency, injector));

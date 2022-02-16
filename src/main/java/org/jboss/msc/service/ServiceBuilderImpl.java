@@ -110,7 +110,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         assertNotInstanceId(dependency);
         assertNotProvided(dependency, true);
         // implementation
-        return (Supplier<V>) addRequiresInternal(dependency, DependencyType.REQUIRED).getRegistration().getReadableValue();
+        return (Supplier<V>) addRequiresInternal(dependency).getRegistration().getReadableValue();
     }
 
     @Override
@@ -212,14 +212,8 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     @Override
     public ServiceBuilder<T> addDependencies(final ServiceName... dependencies) {
-        return addDependencies(DependencyType.REQUIRED, dependencies);
-    }
-
-    @Override
-    public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final ServiceName... dependencies) {
         // preconditions
         assertNotInstalled();
-        assertNotNull(dependencyType);
         assertNotNull(dependencies);
         assertThreadSafety();
         for (final ServiceName dependency : dependencies) {
@@ -227,21 +221,15 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         }
         // implementation
         for (final ServiceName dependency : dependencies) {
-            addRequiresInternal(dependency, dependencyType);
+            addRequiresInternal(dependency);
         }
         return this;
     }
 
     @Override
-    public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> newDependencies) {
-        return addDependencies(DependencyType.REQUIRED, newDependencies);
-    }
-
-    @Override
-    public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final Iterable<ServiceName> dependencies) {
+    public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> dependencies) {
         // preconditions
         assertNotInstalled();
-        assertNotNull(dependencyType);
         assertNotNull(dependencies);
         assertThreadSafety();
         for (final ServiceName dependency : dependencies) {
@@ -249,62 +237,44 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         }
         // implementation
         for (final ServiceName dependency : dependencies) {
-            addRequiresInternal(dependency, dependencyType);
+            addRequiresInternal(dependency);
         }
         return this;
     }
 
     @Override
     public ServiceBuilder<T> addDependency(final ServiceName dependency) {
-        return addDependency(DependencyType.REQUIRED, dependency);
-    }
-
-    @Override
-    public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency) {
         // preconditions
         assertNotInstalled();
-        assertNotNull(dependencyType);
         assertNotNull(dependency);
         assertThreadSafety();
         // implementation
-        addRequiresInternal(dependency, dependencyType);
+        addRequiresInternal(dependency);
         return this;
     }
 
     @Override
     public ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
-        return addDependency(DependencyType.REQUIRED, dependency, target);
-    }
-
-    @Override
-    public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Injector<Object> target) {
         // preconditions
         assertNotInstalled();
-        assertNotNull(dependencyType);
         assertNotNull(dependency);
         assertNotNull(target);
         assertThreadSafety();
         // implementation
-        addRequiresInternal(dependency, dependencyType).getInjectorList().add(target);
+        addRequiresInternal(dependency).getInjectorList().add(target);
         return this;
     }
 
     @Override
     public <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
-        return addDependency(DependencyType.REQUIRED, dependency, type, target);
-    }
-
-    @Override
-    public <I> ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Class<I> type, final Injector<I> target) {
         // preconditions
         assertNotInstalled();
-        assertNotNull(dependencyType);
         assertNotNull(dependency);
         assertNotNull(type);
         assertNotNull(target);
         assertThreadSafety();
         // implementation
-        addRequiresInternal(dependency, dependencyType).getInjectorList().add(Injectors.cast(target, type));
+        addRequiresInternal(dependency).getInjectorList().add(Injectors.cast(target, type));
         return this;
     }
 
@@ -409,7 +379,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
             if (dependency == null) continue;
             if (requires != null && requires.containsKey(dependency)) continue; // dependency already required
             if (provides != null && provides.containsKey(dependency)) continue; // cannot depend on ourselves
-            addRequiresInternal(dependency, DependencyType.REQUIRED);
+            addRequiresInternal(dependency);
         }
     }
 
@@ -417,17 +387,16 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return service;
     }
 
-    private Dependency addRequiresInternal(final ServiceName name, final DependencyType dependencyType) {
+    private Dependency addRequiresInternal(final ServiceName name) {
         if (requires == null) requires = new HashMap<>();
         if (requires.size() == ServiceControllerImpl.MAX_DEPENDENCIES) {
             throw new IllegalArgumentException("Too many dependencies specified (max is " + ServiceControllerImpl.MAX_DEPENDENCIES + ")");
         }
         final Dependency existing = requires.get(name);
         if (existing != null) {
-            if (dependencyType == DependencyType.REQUIRED) existing.setDependencyType(DependencyType.REQUIRED);
             return existing;
         }
-        final Dependency dependency = new Dependency(dependencyType, serviceTarget.getOrCreateRegistration(name));
+        final Dependency dependency = new Dependency(serviceTarget.getOrCreateRegistration(name));
         requires.put(name, dependency);
         return dependency;
     }
@@ -585,11 +554,9 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     static final class Dependency {
         private final ServiceRegistrationImpl registration;
-        private DependencyType dependencyType;
         private List<Injector<Object>> injectorList = new ArrayList<>(0);
 
-        Dependency(final DependencyType dependencyType, final ServiceRegistrationImpl registration) {
-            this.dependencyType = dependencyType;
+        Dependency(final ServiceRegistrationImpl registration) {
             this.registration = registration;
         }
 
@@ -599,14 +566,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
         List<Injector<Object>> getInjectorList() {
             return injectorList;
-        }
-
-        DependencyType getDependencyType() {
-            return dependencyType;
-        }
-
-        void setDependencyType(final DependencyType dependencyType) {
-            this.dependencyType = dependencyType;
         }
     }
 
