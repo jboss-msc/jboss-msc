@@ -89,15 +89,6 @@ public interface ServiceController<S> extends Value<S> {
     State getState();
 
     /**
-     * Get the current service controller substate.
-     *
-     * @return the current substate
-     * @deprecated this method will be removed in a future release
-     */
-    @Deprecated
-    Substate getSubstate();
-
-    /**
      * Get the service value.
      *
      * @return the service value

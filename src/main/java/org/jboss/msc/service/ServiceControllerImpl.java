@@ -1471,7 +1471,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         TRANSITION,
     }
 
-    public Substate getSubstate() {
+    private Substate getSubstate() {
         synchronized (this) {
             return state;
         }
