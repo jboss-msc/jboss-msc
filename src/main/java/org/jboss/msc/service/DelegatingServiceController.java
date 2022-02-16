@@ -175,12 +175,6 @@ public class DelegatingServiceController<S> implements ServiceController<S> {
 
     /** {@inheritDoc} */
     @Override
-    public Set<ServiceName> getImmediateUnavailableDependencies() {
-        return getDelegate().getImmediateUnavailableDependencies();
-    }
-
-    /** {@inheritDoc} */
-    @Override
     public Collection<ServiceName> getUnavailableDependencies() {
         return getDelegate().getUnavailableDependencies();
     }

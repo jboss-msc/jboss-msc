@@ -1277,11 +1277,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     @Override
     public Collection<ServiceName> getUnavailableDependencies() {
-        return getImmediateUnavailableDependencies();
-    }
-
-    @Override
-    public Set<ServiceName> getImmediateUnavailableDependencies() {
         final Set<ServiceName> retVal = new IdentityHashSet<>();
         for (Dependency dependency : requires) {
             synchronized (dependency.getLock()) {

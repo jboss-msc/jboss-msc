@@ -201,15 +201,6 @@ public interface ServiceController<S> extends Value<S> {
     void retry();
 
     /**
-     * Get the complete list of immediate dependencies that are unavailable.
-     * 
-     * @return a set containing the names of all unavailable immediate dependencies
-     * @deprecated use {@link #getUnavailableDependencies()} instead
-     */
-    @Deprecated
-    Set<ServiceName> getImmediateUnavailableDependencies();
-
-    /**
      * Get the complete list of dependencies that are unavailable.
      *
      * @return a set containing the names of all unavailable dependencies
