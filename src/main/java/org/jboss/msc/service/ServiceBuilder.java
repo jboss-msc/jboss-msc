@@ -301,20 +301,4 @@ public interface ServiceBuilder<T> {
     @Deprecated
     ServiceBuilder<T> addMonitor(StabilityMonitor monitor);
 
-    /**
-     * Add service stability monitors that will be added to this service.
-     * 
-     * @param monitors a list of stability monitors to add to the service
-     * @return this builder
-     * @deprecated Stability monitors are unreliable - do not use them.
-     * This method will be removed in a future release.
-     * @throws ConcurrentModificationException if builder is shared between threads.
-     * Only thread that created the builder can manipulate it.
-     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
-     * @throws NullPointerException if <code>monitors</code> parameter is <code>null</code> or any value of the vararg
-     * array is <code>null</code>.
-     */
-    @Deprecated
-    ServiceBuilder<T> addMonitors(final StabilityMonitor... monitors);
-
 }

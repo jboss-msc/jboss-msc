@@ -194,22 +194,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     // deprecated methods
 
     @Override
-    public ServiceBuilder<T> addMonitors(final StabilityMonitor... monitors) {
-        // preconditions
-        assertNotInstalled();
-        assertThreadSafety();
-        // implementation
-        if (monitors != null) {
-            for (final StabilityMonitor monitor : monitors) {
-                if (monitor != null) {
-                    addMonitorInternal(monitor);
-                }
-            }
-        }
-        return this;
-    }
-
-    @Override
     public ServiceBuilder<T> addDependencies(final ServiceName... dependencies) {
         // preconditions
         assertNotInstalled();
