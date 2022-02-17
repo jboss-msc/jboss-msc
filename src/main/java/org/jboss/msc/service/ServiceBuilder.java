@@ -163,38 +163,6 @@ public interface ServiceBuilder<T> {
     ServiceBuilder<T> addAliases(ServiceName... aliases);
 
     /**
-     * Add multiple, non-injected dependencies.
-     *
-     * @param dependencies the service names to depend on
-     * @return this builder
-     * @deprecated Use {@link #requires(ServiceName)} instead.
-     * This method will be removed in a future release.
-     * @throws ConcurrentModificationException if builder is shared between threads.
-     * Only thread that created the builder can manipulate it.
-     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
-     * @throws NullPointerException if <code>dependencies</code> parameter is <code>null</code> or any value of the vararg
-     * array is <code>null</code>.
-     */
-    @Deprecated
-    ServiceBuilder<T> addDependencies(ServiceName... dependencies);
-
-    /**
-     * Add multiple, non-injected dependencies.
-     *
-     * @param dependencies the service names to depend on
-     * @return this builder
-     * @deprecated Use {@link #requires(ServiceName)} instead.
-     * This method will be removed in a future release.
-     * @throws ConcurrentModificationException if builder is shared between threads.
-     * Only thread that created the builder can manipulate it.
-     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
-     * @throws NullPointerException if <code>dependencies</code> parameter is <code>null</code> or any value of
-     * the iterable is <code>null</code>.
-     */
-    @Deprecated
-    ServiceBuilder<T> addDependencies(Iterable<ServiceName> dependencies);
-
-    /**
      * Add a dependency.  Calling this method multiple times for the same service name will only add it as a
      * dependency one time; however this may be useful to specify multiple injections for one dependency.
      *

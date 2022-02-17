@@ -192,38 +192,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     // deprecated methods
 
     @Override
-    public ServiceBuilder<T> addDependencies(final ServiceName... dependencies) {
-        // preconditions
-        assertNotInstalled();
-        assertNotNull(dependencies);
-        assertThreadSafety();
-        for (final ServiceName dependency : dependencies) {
-            assertNotNull(dependency);
-        }
-        // implementation
-        for (final ServiceName dependency : dependencies) {
-            addRequiresInternal(dependency);
-        }
-        return this;
-    }
-
-    @Override
-    public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> dependencies) {
-        // preconditions
-        assertNotInstalled();
-        assertNotNull(dependencies);
-        assertThreadSafety();
-        for (final ServiceName dependency : dependencies) {
-            assertNotNull(dependency);
-        }
-        // implementation
-        for (final ServiceName dependency : dependencies) {
-            addRequiresInternal(dependency);
-        }
-        return this;
-    }
-
-    @Override
     public ServiceBuilder<T> addDependency(final ServiceName dependency) {
         // preconditions
         assertNotInstalled();
