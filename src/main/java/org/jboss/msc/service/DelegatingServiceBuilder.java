@@ -104,14 +104,6 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     /** {@inheritDoc} */
     @Deprecated
     @Override
-    public ServiceBuilder<T> addDependency(final ServiceName dependency) {
-        getDelegate().addDependency(dependency);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
     public ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
         getDelegate().addDependency(dependency, target);
         return this;

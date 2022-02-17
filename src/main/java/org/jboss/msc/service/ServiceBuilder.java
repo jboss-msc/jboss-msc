@@ -163,22 +163,6 @@ public interface ServiceBuilder<T> {
     ServiceBuilder<T> addAliases(ServiceName... aliases);
 
     /**
-     * Add a dependency.  Calling this method multiple times for the same service name will only add it as a
-     * dependency one time; however this may be useful to specify multiple injections for one dependency.
-     *
-     * @param dependency the name of the dependency
-     * @return an injection builder for optionally injecting the dependency
-     * @deprecated Use {@link #requires(ServiceName)} instead.
-     * This method will be removed in a future release.
-     * @throws ConcurrentModificationException if builder is shared between threads.
-     * Only thread that created the builder can manipulate it.
-     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
-     * @throws NullPointerException if <code>dependency</code> parameter is <code>null</code>.
-     */
-    @Deprecated
-    ServiceBuilder<T> addDependency(ServiceName dependency);
-
-    /**
      * Add a service dependency.  Calling this method multiple times for the same service name will only add it as a
      * dependency one time; however this may be useful to specify multiple injections for one dependency.
      *
