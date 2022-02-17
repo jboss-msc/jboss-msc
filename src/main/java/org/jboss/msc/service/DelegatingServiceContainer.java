@@ -199,40 +199,6 @@ public class DelegatingServiceContainer implements ServiceContainer {
 
     /** {@inheritDoc} */
     @Deprecated
-    public ServiceContainer addListener(final ServiceListener<Object> listener) {
-        getServiceTargetDelegate().addListener(listener);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    public ServiceContainer addListener(final ServiceListener<Object>... listeners) {
-        getServiceTargetDelegate().addListener(listeners);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    public ServiceContainer addListener(final Collection<ServiceListener<Object>> listeners) {
-        getServiceTargetDelegate().addListener(listeners);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    public ServiceContainer removeListener(final ServiceListener<Object> listener) {
-        getServiceTargetDelegate().removeListener(listener);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    public Set<ServiceListener<Object>> getListeners() {
-        return getServiceTargetDelegate().getListeners();
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
     public ServiceTarget addMonitor(StabilityMonitor monitor) {
         getServiceTargetDelegate().addMonitor(monitor);
         return this;

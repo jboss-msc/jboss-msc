@@ -62,7 +62,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     private ServiceController.Mode initialMode;
     private Map<ServiceName, Dependency> requires;
     private Set<StabilityMonitor> monitors;
-    private Set<ServiceListener<? super T>> serviceListeners;
     private Set<LifecycleListener> lifecycleListeners;
     private List<ValueInjection<?>> valueInjections;
     private List<Injector<? super T>> outInjections;
@@ -306,58 +305,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return this;
     }
 
-    @Override
-    public ServiceBuilder<T> addListener(final ServiceListener<? super T> listener) {
-        // preconditions
-        assertNotInstalled();
-        assertNotNull(listener);
-        assertThreadSafety();
-        // implementation
-        addListenerInternal(listener);
-        return this;
-    }
-
-    @Override
-    public ServiceBuilder<T> addListener(final ServiceListener<? super T>... listeners) {
-        // preconditions
-        assertNotInstalled();
-        assertNotNull(listeners);
-        for (final ServiceListener<? super T> listener : listeners) {
-            assertNotNull(listener);
-        }
-        assertThreadSafety();
-        // implementation
-        for (final ServiceListener<? super T> listener : listeners) {
-            addListenerInternal(listener);
-        }
-        return this;
-    }
-
-    @Override
-    public ServiceBuilder<T> addListener(final Collection<? extends ServiceListener<? super T>> listeners) {
-        // preconditions
-        assertNotInstalled();
-        assertNotNull(listeners);
-        for (final ServiceListener<? super T> listener : listeners) {
-            assertNotNull(listener);
-        }
-        assertThreadSafety();
-        // implementation
-        for (final ServiceListener<? super T> listener : listeners) {
-            addListenerInternal(listener);
-        }
-        return this;
-    }
-
     // implementation internals
-
-    void addServiceListenersNoCheck(final Set<? extends ServiceListener<? super T>> listeners) {
-        // For backward compatibility reasons when
-        // ServiceListeners are defined via ServiceTarget
-        if (listeners == null || listeners.isEmpty()) return;
-        if (serviceListeners == null) serviceListeners = new IdentityHashSet<>();
-        serviceListeners.addAll(listeners);
-    }
 
     void addLifecycleListenersNoCheck(final Set<LifecycleListener> listeners) {
         if (listeners == null || listeners.isEmpty()) return;
@@ -428,11 +376,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         lifecycleListeners.add(listener);
     }
 
-    void addListenerInternal(final ServiceListener<? super T> listener) {
-        if (serviceListeners == null) serviceListeners = new IdentityHashSet<>();
-        serviceListeners.add(listener);
-    }
-
     void addValueInjectionInternal(final ValueInjection<?> valueInjection) {
         if (valueInjections == null) valueInjections = new ArrayList<>();
         valueInjections.add(valueInjection);
@@ -464,10 +407,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
             }
         }
         return monitors == null ? Collections.emptySet() : monitors;
-    }
-
-    Set<ServiceListener<? super T>> getServiceListeners() {
-        return serviceListeners == null ? Collections.emptySet() : serviceListeners;
     }
 
     Set<LifecycleListener> getLifecycleListeners() {

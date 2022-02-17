@@ -134,50 +134,6 @@ public interface ServiceTarget {
     ServiceTarget removeMonitor(StabilityMonitor monitor);
 
     /**
-     * Add a service listener that will be added to all the ServiceBuilders installed in this target.
-     *
-     * @param listener the listener to add to the target
-     * @return this target
-     * @deprecated Use {@link #addListener(LifecycleListener)} instead.
-     * This method will be removed in a future release.
-     */
-    @Deprecated
-    ServiceTarget addListener(ServiceListener<Object> listener);
-
-    /**
-     * Add a list of service listener that will be added to all ServiceBuilders installed in this target.
-     *
-     * @param listeners a list of listeners to add to the target
-     * @return this target
-     * @deprecated Use {@link #addListener(LifecycleListener)} instead.
-     * This method will be removed in a future release.
-     */
-    @Deprecated
-    ServiceTarget addListener(ServiceListener<Object>... listeners);
-
-    /**
-     * Add a collection of service listener that will be added to all ServiceBuilders installed in this target.
-     *
-     * @param listeners a collection of listeners to add to the target
-     * @return this target
-     * @deprecated Use {@link #addListener(LifecycleListener)} instead.
-     * This method will be removed in a future release.
-     */
-    @Deprecated
-    ServiceTarget addListener(Collection<ServiceListener<Object>> listeners);
-
-    /**
-     * Remove a listener from this target, if it exists.
-     *
-     * @param listener the listener to remove
-     * @return this target
-     * @deprecated Use {@link #removeListener(LifecycleListener)} instead.
-     * This method will be removed in a future release.
-     */
-    @Deprecated
-    ServiceTarget removeListener(ServiceListener<Object> listener);
-
-    /**
      * Returns a set of the monitors added to this target.
      * 
      * @return the monitors added to this target
@@ -186,15 +142,6 @@ public interface ServiceTarget {
      */
     @Deprecated
     Set<StabilityMonitor> getMonitors();
-
-    /**
-     * Returns a set of the listeners added to this target.
-     * 
-     * @return the listeners added to this target
-     * @deprecated This method will be removed in a future release.
-     */
-    @Deprecated
-    Set<ServiceListener<Object>> getListeners();
 
     /**
      * Add a dependency that will be added to the all ServiceBuilders installed in this target.

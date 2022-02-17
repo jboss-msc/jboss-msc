@@ -23,7 +23,6 @@
 package org.jboss.msc.service;
 
 import java.util.Collection;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -136,21 +135,7 @@ public class DelegatingServiceController<S> implements ServiceController<S> {
 
     /** {@inheritDoc} */
     @Override
-    @Deprecated
-    public void addListener(final ServiceListener<? super S> listener) {
-        getDelegate().addListener(listener);
-    }
-
-    /** {@inheritDoc} */
-    @Override
     public void removeListener(final LifecycleListener listener) {
-        getDelegate().removeListener(listener);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    @Deprecated
-    public void removeListener(final ServiceListener<? super S> listener) {
         getDelegate().removeListener(listener);
     }
 

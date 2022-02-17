@@ -23,7 +23,6 @@
 package org.jboss.msc.service;
 
 import java.util.Collection;
-import java.util.Set;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -154,30 +153,11 @@ public interface ServiceController<S> extends Value<S> {
     void addListener(LifecycleListener listener);
 
     /**
-     * Add a service listener.  The listener's "listener added" callback will be invoked from the same thread that calls
-     * this method.  Then, the method corresponding to the current service state is called.
-     *
-     * @param serviceListener the service listener
-     * @deprecated use {@link #addListener(LifecycleListener)} instead
-     */
-    @Deprecated
-    void addListener(ServiceListener<? super S> serviceListener);
-
-    /**
      * Remove a lifecycle listener.
      *
      * @param listener the lifecycle listener to remove
      */
     void removeListener(LifecycleListener listener);
-
-    /**
-     * Remove a service listener.
-     *
-     * @param serviceListener the service listener to remove
-     * @deprecated use {@link #removeListener(LifecycleListener)} instead
-     */
-    @Deprecated
-    void removeListener(ServiceListener<? super S> serviceListener);
 
     /**
      * Get the reason why the last start failed.

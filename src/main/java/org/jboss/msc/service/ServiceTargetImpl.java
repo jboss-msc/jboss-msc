@@ -43,7 +43,6 @@ import org.jboss.msc.value.Value;
 class ServiceTargetImpl implements ServiceTarget {
 
     private final ServiceTargetImpl parent;
-    private final Set<ServiceListener<Object>> listeners = synchronizedSet(new IdentityHashSet<>());
     private final Set<LifecycleListener> lifecycleListeners = synchronizedSet(new IdentityHashSet<>());
     private final Set<ServiceName> dependencies = synchronizedSet(new HashSet<>());
     private final Set<StabilityMonitor> monitors = synchronizedSet(new IdentityHashSet<>());
@@ -98,13 +97,6 @@ class ServiceTargetImpl implements ServiceTarget {
         return createServiceBuilder(name, null);
     }
 
-    public ServiceTarget addListener(final ServiceListener<Object> listener) {
-        if (listener != null) {
-            listeners.add(listener);
-        }
-        return this;
-    }
-
     public ServiceTarget addListener(final LifecycleListener listener) {
         if (listener != null) {
             lifecycleListeners.add(listener);
@@ -132,34 +124,11 @@ class ServiceTargetImpl implements ServiceTarget {
         return this;
     }
 
-    public ServiceTarget addListener(final ServiceListener<Object>... listeners) {
-        if (listeners != null) {
-            this.listeners.addAll(Arrays.asList(listeners));
-        }
-        return this;
-    }
-
-    public ServiceTarget addListener(final Collection<ServiceListener<Object>> listeners) {
-        if (listeners != null) {
-            this.listeners.addAll(listeners);
-        }
-        return this;
-    }
-    
     @Override
     public ServiceTarget removeMonitor(final StabilityMonitor monitor) {
         if (monitor != null) {
             monitors.remove(monitor);
         }
-        return this;
-    }
-
-    @Override
-    public ServiceTarget removeListener(final ServiceListener<Object> listener) {
-        if (listener == null) {
-            return this;
-        }
-        listeners.remove(listener);
         return this;
     }
 
@@ -172,11 +141,6 @@ class ServiceTargetImpl implements ServiceTarget {
     @Override
     public Set<StabilityMonitor> getMonitors() {
         return unmodifiableSet(monitors);
-    }
-
-    @Override
-    public Set<ServiceListener<Object>> getListeners() {
-        return unmodifiableSet(listeners);
     }
 
     @Override
@@ -234,9 +198,6 @@ class ServiceTargetImpl implements ServiceTarget {
     void apply(ServiceBuilderImpl<?> serviceBuilder) {
         synchronized (monitors) {
             serviceBuilder.addMonitorsNoCheck(monitors);
-        }
-        synchronized (listeners) {
-            serviceBuilder.addServiceListenersNoCheck(listeners);
         }
         synchronized (lifecycleListeners) {
             serviceBuilder.addLifecycleListenersNoCheck(lifecycleListeners);
