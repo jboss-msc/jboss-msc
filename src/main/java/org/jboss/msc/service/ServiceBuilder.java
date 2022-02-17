@@ -249,24 +249,6 @@ public interface ServiceBuilder<T> {
     <I> ServiceBuilder<T> addDependency(ServiceName dependency, Class<I> type, Injector<I> target);
 
     /**
-     * Add an injection.  The given value will be injected into the given injector before service start, and uninjected
-     * after service stop.
-     *
-     * @param target the injection target
-     * @param value the injection value
-     * @param <I> the injection type
-     * @return this builder
-     * @deprecated Use {@link #requires(ServiceName)} instead.
-     * This method will be removed in a future release.
-     * @throws ConcurrentModificationException if builder is shared between threads.
-     * Only thread that created the builder can manipulate it.
-     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
-     * @throws NullPointerException if <code>target</code> or <code>value</code> parameter is <code>null</code>.
-     */
-    @Deprecated
-    <I> ServiceBuilder<T> addInjection(Injector<? super I> target, I value);
-
-    /**
      * Adds a stability monitor to be added to the service.
      *
      * @param monitor the monitor to add to the service

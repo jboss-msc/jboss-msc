@@ -707,7 +707,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         // Dependencies
         final Map<ServiceName, ServiceBuilderImpl.Dependency> dependencyMap = serviceBuilder.getDependencies();
         final Set<Dependency> requires = new HashSet<>();
-        final List<ValueInjection<?>> valueInjections = serviceBuilder.getValueInjections();
+        final List<ValueInjection<?>> valueInjections = new ArrayList<>();
         Dependency dependency;
         for (ServiceBuilderImpl.Dependency dependencyDefinition : dependencyMap.values()) {
             dependency = dependencyDefinition.getRegistration();
