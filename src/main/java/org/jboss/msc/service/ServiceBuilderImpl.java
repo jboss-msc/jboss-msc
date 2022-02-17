@@ -282,8 +282,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return addInjectionValue(target, new ImmediateValue<>(value));
     }
 
-    @Override
-    public <I> ServiceBuilder<T> addInjectionValue(final Injector<? super I> target, final Value<I> value) {
+    private <I> ServiceBuilder<T> addInjectionValue(final Injector<? super I> target, final Value<I> value) {
         // preconditions
         assertNotInstalled();
         assertNotNull(target);

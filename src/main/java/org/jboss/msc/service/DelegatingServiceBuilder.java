@@ -22,9 +22,7 @@
 
 package org.jboss.msc.service;
 
-import java.util.Collection;
 import org.jboss.msc.inject.Injector;
-import org.jboss.msc.value.Value;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -148,14 +146,6 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     @Override
     public <I> ServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {
         getDelegate().addInjection(target, value);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public <I> ServiceBuilder<T> addInjectionValue(final Injector<? super I> target, final Value<I> value) {
-        getDelegate().addInjectionValue(target, value);
         return this;
     }
 
