@@ -64,7 +64,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     private Set<StabilityMonitor> monitors;
     private Set<LifecycleListener> lifecycleListeners;
     private List<ValueInjection<?>> valueInjections;
-    private List<Injector<? super T>> outInjections;
     private boolean installed;
 
     ServiceBuilderImpl(final ServiceName serviceId, final ServiceTargetImpl serviceTarget, final org.jboss.msc.service.Service<T> service, final ServiceControllerImpl<?> parent) {
@@ -277,17 +276,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         return this;
     }
 
-    @Override
-    public ServiceBuilder<T> addInjection(final Injector<? super T> target) {
-        // preconditions
-        assertNotInstalled();
-        assertNotNull(target);
-        assertThreadSafety();
-        // implementation
-        addOutInjectionInternal(target);
-        return this;
-    }
-
     // implementation internals
 
     void addLifecycleListenersNoCheck(final Set<LifecycleListener> listeners) {
@@ -364,11 +352,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         valueInjections.add(valueInjection);
     }
 
-    void addOutInjectionInternal(final Injector<? super T> outInjection) {
-        if (outInjections == null) outInjections = new ArrayList<>();
-        outInjections.add(outInjection);
-    }
-
     Collection<ServiceName> getServiceAliases() {
         return aliases == null ? Collections.emptySet() : aliases;
     }
@@ -398,10 +381,6 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
     ServiceController.Mode getInitialMode() {
         return initialMode;
-    }
-
-    List<Injector<? super T>> getOutInjections() {
-        return outInjections == null ? new ArrayList<>() : outInjections;
     }
 
     List<ValueInjection<?>> getValueInjections() {

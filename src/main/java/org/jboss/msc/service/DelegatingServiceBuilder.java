@@ -152,14 +152,6 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     /** {@inheritDoc} */
     @Deprecated
     @Override
-    public ServiceBuilder<T> addInjection(final Injector<? super T> target) {
-        getDelegate().addInjection(target);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
     public ServiceBuilder<T> addMonitor(final StabilityMonitor monitor) {
         getDelegate().addMonitor(monitor);
         return this;

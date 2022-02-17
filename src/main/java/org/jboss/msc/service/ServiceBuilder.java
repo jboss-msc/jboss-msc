@@ -23,9 +23,7 @@
 package org.jboss.msc.service;
 
 import org.jboss.msc.inject.Injector;
-import org.jboss.msc.value.Value;
 
-import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -267,24 +265,6 @@ public interface ServiceBuilder<T> {
      */
     @Deprecated
     <I> ServiceBuilder<T> addInjection(Injector<? super I> target, I value);
-
-    /**
-     * Add an injection of this service into another target.  The given injector will be given this service after
-     * start, and uninjected when this service stops.
-     * <p> Differently from other injection types, failures to perform an outward injection will not result in a failure
-     * to start the service.
-     *
-     * @param target the injector target
-     * @return this builder
-     * @deprecated Use {@link #provides(ServiceName...)} instead.
-     * This method will be removed in a future release.
-     * @throws ConcurrentModificationException if builder is shared between threads.
-     * Only thread that created the builder can manipulate it.
-     * @throws IllegalStateException if this method have been called after {@link #install()}  method.
-     * @throws NullPointerException if <code>target</code> parameter is <code>null</code>.
-     */
-    @Deprecated
-    ServiceBuilder<T> addInjection(Injector<? super T> target);
 
     /**
      * Adds a stability monitor to be added to the service.
