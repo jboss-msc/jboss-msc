@@ -32,112 +32,112 @@ enum Transition {
     // New transitions should be added to the end.  Unused transitions should be retained as "deprecated" for
     // binary compatibility.
     /**
-     * Transition from {@link ServiceController.Substate#START_REQUESTED START_REQUESTED} to {@link ServiceController.Substate#DOWN DOWN}.
+     * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#DOWN DOWN}.
      */
-    START_REQUESTED_to_DOWN(ServiceController.Substate.START_REQUESTED, ServiceController.Substate.DOWN),
+    START_REQUESTED_to_DOWN(Substate.START_REQUESTED, Substate.DOWN),
     /**
-     * Transition from {@link ServiceController.Substate#START_REQUESTED START_REQUESTED} to {@link ServiceController.Substate#PROBLEM PROBLEM}.
+     * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#PROBLEM PROBLEM}.
      */
-    START_REQUESTED_to_PROBLEM(ServiceController.Substate.START_REQUESTED, ServiceController.Substate.PROBLEM),
+    START_REQUESTED_to_PROBLEM(Substate.START_REQUESTED, Substate.PROBLEM),
     /**
-     * Transition from {@link ServiceController.Substate#START_REQUESTED START_REQUESTED} to {@link ServiceController.Substate#START_INITIATING START_INITIATING}.
+     * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#START_INITIATING START_INITIATING}.
      */
-    START_REQUESTED_to_START_INITIATING(ServiceController.Substate.START_REQUESTED, ServiceController.Substate.START_INITIATING),
+    START_REQUESTED_to_START_INITIATING(Substate.START_REQUESTED, Substate.START_INITIATING),
     /**
-     * Transition from {@link ServiceController.Substate#PROBLEM PROBLEM} to {@link ServiceController.Substate#START_REQUESTED START_REQUESTED}.
+     * Transition from {@link Substate#PROBLEM PROBLEM} to {@link Substate#START_REQUESTED START_REQUESTED}.
      */
-    PROBLEM_to_START_REQUESTED(ServiceController.Substate.PROBLEM, ServiceController.Substate.START_REQUESTED),
+    PROBLEM_to_START_REQUESTED(Substate.PROBLEM, Substate.START_REQUESTED),
     /**
-     * Transition from {@link ServiceController.Substate#START_INITIATING START_INITIATING} to {@link ServiceController.Substate#STARTING STARTING}.
+     * Transition from {@link Substate#START_INITIATING START_INITIATING} to {@link Substate#STARTING STARTING}.
      */
-    START_INITIATING_to_STARTING (ServiceController.Substate.START_INITIATING, ServiceController.Substate.STARTING),
+    START_INITIATING_to_STARTING (Substate.START_INITIATING, Substate.STARTING),
     /**
-     * Transition from {@link ServiceController.Substate#START_INITIATING START_INITIATING} to {@link ServiceController.Substate#START_REQUESTED START_REQUESTED}.
+     * Transition from {@link Substate#START_INITIATING START_INITIATING} to {@link Substate#START_REQUESTED START_REQUESTED}.
      */
-    START_INITIATING_to_START_REQUESTED (ServiceController.Substate.START_INITIATING, ServiceController.Substate.START_REQUESTED),
+    START_INITIATING_to_START_REQUESTED (Substate.START_INITIATING, Substate.START_REQUESTED),
     /**
-     * Transition from {@link ServiceController.Substate#STARTING STARTING} to {@link ServiceController.Substate#UP UP}.
+     * Transition from {@link Substate#STARTING STARTING} to {@link Substate#UP UP}.
      */
-    STARTING_to_UP(ServiceController.Substate.STARTING, ServiceController.Substate.UP),
+    STARTING_to_UP(Substate.STARTING, Substate.UP),
     /**
-     * Transition from {@link ServiceController.Substate#STARTING STARTING} to {@link ServiceController.Substate#START_FAILED START_FAILED}.
+     * Transition from {@link Substate#STARTING STARTING} to {@link Substate#START_FAILED START_FAILED}.
      */
-    STARTING_to_START_FAILED(ServiceController.Substate.STARTING, ServiceController.Substate.START_FAILED),
+    STARTING_to_START_FAILED(Substate.STARTING, Substate.START_FAILED),
     /**
-     * Transition from {@link ServiceController.Substate#START_FAILED START_FAILED} to {@link ServiceController.Substate#START_INITIATING START_INITIATING}.
+     * Transition from {@link Substate#START_FAILED START_FAILED} to {@link Substate#START_INITIATING START_INITIATING}.
      */
-    START_FAILED_to_STARTING(ServiceController.Substate.START_FAILED, ServiceController.Substate.START_INITIATING),
+    START_FAILED_to_STARTING(Substate.START_FAILED, Substate.START_INITIATING),
     /**
-     * Transition from {@link ServiceController.Substate#START_FAILED START_FAILED} to {@link ServiceController.Substate#DOWN DOWN}.
+     * Transition from {@link Substate#START_FAILED START_FAILED} to {@link Substate#DOWN DOWN}.
      */
-    START_FAILED_to_DOWN(ServiceController.Substate.START_FAILED, ServiceController.Substate.DOWN),
+    START_FAILED_to_DOWN(Substate.START_FAILED, Substate.DOWN),
     /**
-     * Transition from {@link ServiceController.Substate#UP UP} to {@link ServiceController.Substate#STOP_REQUESTED STOP_REQUESTED}.
+     * Transition from {@link Substate#UP UP} to {@link Substate#STOP_REQUESTED STOP_REQUESTED}.
      */
-    UP_to_STOP_REQUESTED(ServiceController.Substate.UP, ServiceController.Substate.STOP_REQUESTED),
+    UP_to_STOP_REQUESTED(Substate.UP, Substate.STOP_REQUESTED),
     /**
-     * Transition from {@link ServiceController.Substate#STOP_REQUESTED STOP_REQUESTED} to {@link ServiceController.Substate#UP UP}.
+     * Transition from {@link Substate#STOP_REQUESTED STOP_REQUESTED} to {@link Substate#UP UP}.
      */
-    STOP_REQUESTED_to_UP(ServiceController.Substate.STOP_REQUESTED, ServiceController.Substate.UP),
+    STOP_REQUESTED_to_UP(Substate.STOP_REQUESTED, Substate.UP),
     /**
-     * Transition from {@link ServiceController.Substate#STOP_REQUESTED STOP_REQUESTED} to {@link ServiceController.Substate#STOPPING STOPPING}.
+     * Transition from {@link Substate#STOP_REQUESTED STOP_REQUESTED} to {@link Substate#STOPPING STOPPING}.
      */
-    STOP_REQUESTED_to_STOPPING(ServiceController.Substate.STOP_REQUESTED, ServiceController.Substate.STOPPING),
+    STOP_REQUESTED_to_STOPPING(Substate.STOP_REQUESTED, Substate.STOPPING),
     /**
-     * Transition from {@link ServiceController.Substate#STOPPING STOPPING} to {@link ServiceController.Substate#DOWN DOWN}.
+     * Transition from {@link Substate#STOPPING STOPPING} to {@link Substate#DOWN DOWN}.
      */
-    STOPPING_to_DOWN(ServiceController.Substate.STOPPING, ServiceController.Substate.DOWN),
+    STOPPING_to_DOWN(Substate.STOPPING, Substate.DOWN),
     /**
-     * Transition from {@link ServiceController.Substate#REMOVING REMOVING} to {@link ServiceController.Substate#REMOVED REMOVED}.
+     * Transition from {@link Substate#REMOVING REMOVING} to {@link Substate#REMOVED REMOVED}.
      */
-    REMOVING_to_REMOVED(ServiceController.Substate.REMOVING, ServiceController.Substate.REMOVED),
+    REMOVING_to_REMOVED(Substate.REMOVING, Substate.REMOVED),
     /**
-     * Transition from {@link ServiceController.Substate#REMOVED REMOVED} to {@link ServiceController.Substate#TERMINATED TERMINATED}.
+     * Transition from {@link Substate#REMOVED REMOVED} to {@link Substate#TERMINATED TERMINATED}.
      */
-    REMOVED_to_TERMINATED(ServiceController.Substate.REMOVED, ServiceController.Substate.TERMINATED),
+    REMOVED_to_TERMINATED(Substate.REMOVED, Substate.TERMINATED),
     /**
-     * Transition from {@link ServiceController.Substate#REMOVING REMOVING} to {@link ServiceController.Substate#DOWN DOWN}.
+     * Transition from {@link Substate#REMOVING REMOVING} to {@link Substate#DOWN DOWN}.
      * @deprecated was never supposed to work
      */
     @Deprecated
-    REMOVING_to_DOWN(ServiceController.Substate.REMOVING, ServiceController.Substate.DOWN),
+    REMOVING_to_DOWN(Substate.REMOVING, Substate.DOWN),
     /**
-     * Transition from {@link ServiceController.Substate#DOWN DOWN} to {@link ServiceController.Substate#REMOVING REMOVING}.
+     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#REMOVING REMOVING}.
      */
-    DOWN_to_REMOVING(ServiceController.Substate.DOWN, ServiceController.Substate.REMOVING),
+    DOWN_to_REMOVING(Substate.DOWN, Substate.REMOVING),
     /**
-     * Transition from {@link ServiceController.Substate#DOWN DOWN} to {@link ServiceController.Substate#START_REQUESTED START_REQUESTED}.
+     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#START_REQUESTED START_REQUESTED}.
      */
-    DOWN_to_START_REQUESTED(ServiceController.Substate.DOWN, ServiceController.Substate.START_REQUESTED),
+    DOWN_to_START_REQUESTED(Substate.DOWN, Substate.START_REQUESTED),
     /**
-     * Transition from {@link ServiceController.Substate#DOWN DOWN} to {@link ServiceController.Substate#WAITING WAITING}.
+     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#WAITING WAITING}.
      */
-    DOWN_to_WAITING(ServiceController.Substate.DOWN, ServiceController.Substate.WAITING),
+    DOWN_to_WAITING(Substate.DOWN, Substate.WAITING),
     /**
-     * Transition from {@link ServiceController.Substate#DOWN DOWN} to {@link ServiceController.Substate#WONT_START WONT_START}.
+     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#WONT_START WONT_START}.
      */
-    DOWN_to_WONT_START(ServiceController.Substate.DOWN, ServiceController.Substate.WONT_START),
+    DOWN_to_WONT_START(Substate.DOWN, Substate.WONT_START),
     /**
-     * Transition from {@link ServiceController.Substate#WAITING WAITING} to {@link ServiceController.Substate#DOWN DOWN}.
+     * Transition from {@link Substate#WAITING WAITING} to {@link Substate#DOWN DOWN}.
      */
-    WAITING_to_DOWN(ServiceController.Substate.WAITING, ServiceController.Substate.DOWN),
+    WAITING_to_DOWN(Substate.WAITING, Substate.DOWN),
     /**
-     * Transition from {@link ServiceController.Substate#WONT_START WONT_START} to {@link ServiceController.Substate#DOWN DOWN}.
+     * Transition from {@link Substate#WONT_START WONT_START} to {@link Substate#DOWN DOWN}.
      */
-    WONT_START_to_DOWN(ServiceController.Substate.WONT_START, ServiceController.Substate.DOWN),
+    WONT_START_to_DOWN(Substate.WONT_START, Substate.DOWN),
     /**
-     * Transition from {@link ServiceController.Substate#CANCELLED} to {@link ServiceController.Substate#REMOVED}.
+     * Transition from {@link Substate#CANCELLED} to {@link Substate#REMOVED}.
      */
-    CANCELLED_to_REMOVED(ServiceController.Substate.CANCELLED, ServiceController.Substate.REMOVED),
+    CANCELLED_to_REMOVED(Substate.CANCELLED, Substate.REMOVED),
     /**
-     * Transition from {@link ServiceController.Substate#NEW} to {@link ServiceController.Substate#DOWN}.
+     * Transition from {@link Substate#NEW} to {@link Substate#DOWN}.
      */
-    NEW_to_DOWN(ServiceController.Substate.NEW, ServiceController.Substate.DOWN);
+    NEW_to_DOWN(Substate.NEW, Substate.DOWN);
 
-    private final ServiceController.Substate before;
-    private final ServiceController.Substate after;
+    private final Substate before;
+    private final Substate after;
 
-    Transition(final ServiceController.Substate before, final ServiceController.Substate after) {
+    Transition(final Substate before, final Substate after) {
         this.before = before;
         this.after = after;
     }
@@ -195,7 +195,7 @@ enum Transition {
      *
      * @return the source state
      */
-    public ServiceController.Substate getBefore() {
+    public Substate getBefore() {
         return before;
     }
 
@@ -204,7 +204,7 @@ enum Transition {
      *
      * @return the target state
      */
-    public ServiceController.Substate getAfter() {
+    public Substate getAfter() {
         return after;
     }
 
