@@ -97,45 +97,6 @@ public class DelegatingServiceTarget implements ServiceTarget {
     /** {@inheritDoc} */
     @Deprecated
     @Override
-    public ServiceTarget addListener(final ServiceListener<Object> listener) {
-        getDelegate().addListener(listener);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceTarget addListener(final ServiceListener<Object>... listeners) {
-        getDelegate().addListener(listeners);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceTarget addListener(final Collection<ServiceListener<Object>> listeners) {
-        getDelegate().addListener(listeners);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceTarget removeListener(final ServiceListener<Object> listener) {
-        getDelegate().removeListener(listener);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public Set<ServiceListener<Object>> getListeners() {
-        return getDelegate().getListeners();
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
     public ServiceTarget addDependency(final ServiceName dependency) {
         getDelegate().addDependency(dependency);
         return this;
@@ -186,13 +147,6 @@ public class DelegatingServiceTarget implements ServiceTarget {
     public ServiceTarget removeMonitor(final StabilityMonitor monitor) {
         getDelegate().removeMonitor(monitor);
         return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public BatchServiceTarget batchTarget() {
-        return getDelegate().batchTarget();
     }
 
     /** {@inheritDoc} */

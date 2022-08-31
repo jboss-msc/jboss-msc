@@ -82,14 +82,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private final ValueInjection<?>[] injections;
     /**
-     * The out injections of this service.
-     */
-    private final ValueInjection<?>[] outInjections;
-    /**
-     * The set of registered service listeners.
-     */
-    private final Set<ServiceListener<? super S>> listeners;
-    /**
      * Lifecycle listeners.
      */
     private final Set<LifecycleListener> lifecycleListeners;
@@ -198,17 +190,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     static final int MAX_DEPENDENCIES = (1 << 14) - 1;
 
-    ServiceControllerImpl(final ServiceContainerImpl container, final ServiceName serviceId, final ServiceName[] serviceAliases, final org.jboss.msc.Service service, final Set<Dependency> requires, final Map<ServiceRegistrationImpl, WritableValueImpl> provides, final ValueInjection<?>[] injections, final ValueInjection<?>[] outInjections, final Set<StabilityMonitor> monitors, final Set<? extends ServiceListener<? super S>> listeners, final Set<LifecycleListener> lifecycleListeners, final ServiceControllerImpl<?> parent) {
+    ServiceControllerImpl(final ServiceContainerImpl container, final ServiceName serviceId, final ServiceName[] serviceAliases, final org.jboss.msc.Service service, final Set<Dependency> requires, final Map<ServiceRegistrationImpl, WritableValueImpl> provides, final ValueInjection<?>[] injections, final Set<StabilityMonitor> monitors, final Set<LifecycleListener> lifecycleListeners, final ServiceControllerImpl<?> parent) {
         assert requires.size() <= MAX_DEPENDENCIES;
         this.container = container;
         this.serviceId = serviceId;
         this.serviceAliases = serviceAliases;
         this.service = service;
         this.injections = injections;
-        this.outInjections = outInjections;
         this.requires = requires;
         this.provides = provides;
-        this.listeners = new IdentityHashSet<>(listeners);
         this.lifecycleListeners = new IdentityHashSet<>(lifecycleListeners);
         this.monitors = new IdentityHashSet<>(monitors);
         // We also need to register this controller with monitors explicitly.
@@ -282,30 +272,14 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert (state == Substate.NEW);
         assert initialMode != null;
         assert !holdsLock(this);
-        final List<Runnable> listenerAddedTasks = new ArrayList<>();
 
-        synchronized (this) {
-            if (container.isShutdown()) {
-                throw new IllegalStateException ("Container is down");
-            }
-            final boolean leavingRestState = isStableRestState();
-            getListenerTasks(ListenerNotification.LISTENER_ADDED, listenerAddedTasks);
-            internalSetMode(initialMode);
-            // placeholder async task for running listener added tasks
-            addAsyncTasks(listenerAddedTasks.size() + 1);
-            updateStabilityState(leavingRestState);
-        }
-        for (Runnable listenerAddedTask : listenerAddedTasks) {
-            listenerAddedTask.run();
-        }
         final List<Runnable> tasks;
         synchronized (this) {
             if (container.isShutdown()) {
                 throw new IllegalStateException ("Container is down");
             }
             final boolean leavingRestState = isStableRestState();
-            // subtract one to compensate for +1 above
-            decrementAsyncTasks();
+            internalSetMode(initialMode);
             tasks = transition();
             addAsyncTasks(tasks.size());
             updateStabilityState(leavingRestState);
@@ -609,7 +583,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             if (transition == null) {
                 return tasks;
             }
-            getListenerTasks(transition, listenerTransitionTasks);
             switch (transition) {
                 case NEW_to_DOWN: {
                     getListenerTasks(LifecycleEvent.DOWN, listenerTransitionTasks);
@@ -737,7 +710,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case REMOVED_to_TERMINATED: {
                     getListenerTasks(LifecycleEvent.REMOVED, listenerTransitionTasks);
-                    listeners.clear();
                     lifecycleListeners.clear();
                     break;
                 }
@@ -766,18 +738,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             postTransitionTasks(tasks);
         }
         return tasks;
-    }
-
-    private void getListenerTasks(final Transition transition, final List<Runnable> tasks) {
-        for (ServiceListener<? super S> listener : listeners) {
-            tasks.add(new ListenerTask(listener, transition));
-        }
-    }
-
-    private void getListenerTasks(final ListenerNotification notification, final List<Runnable> tasks) {
-        for (ServiceListener<? super S> listener : listeners) {
-            tasks.add(new ListenerTask(listener, notification));
-        }
     }
 
     private void getListenerTasks(final LifecycleEvent event, final List<Runnable> tasks) {
@@ -1220,36 +1180,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         doExecute(tasks);
     }
 
-    public void addListener(final ServiceListener<? super S> listener) {
-        assert !holdsLock(this);
-        ListenerTask listenerAddedTask, listenerRemovedTask = null;
-        synchronized (this) {
-            final boolean leavingRestState = isStableRestState();
-            if (listeners.contains(listener)) {
-                // Duplicates not allowed
-                throw new IllegalArgumentException("Listener " + listener + " already present on controller for " + getName());
-            }
-            listeners.add(listener);
-            listenerAddedTask = new ListenerTask(listener, ListenerNotification.LISTENER_ADDED);
-            incrementAsyncTasks();
-            if (state == Substate.REMOVED) {
-                listenerRemovedTask = new ListenerTask(listener, Transition.REMOVING_to_REMOVED);
-                incrementAsyncTasks();
-            }
-            updateStabilityState(leavingRestState);
-        }
-        try { listenerAddedTask.run(); } finally { if (listenerRemovedTask != null) listenerRemovedTask.run(); }
-    }
-
     public void removeListener(final LifecycleListener listener) {
         synchronized (this) {
             lifecycleListeners.remove(listener);
-        }
-    }
-
-    public void removeListener(final ServiceListener<? super S> listener) {
-        synchronized (this) {
-            listeners.remove(listener);
         }
     }
 
@@ -1277,11 +1210,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     @Override
     public Collection<ServiceName> getUnavailableDependencies() {
-        return getImmediateUnavailableDependencies();
-    }
-
-    @Override
-    public Set<ServiceName> getImmediateUnavailableDependencies() {
         final Set<ServiceName> retVal = new IdentityHashSet<>();
         for (Dependency dependency : requires) {
             synchronized (dependency.getLock()) {
@@ -1469,14 +1397,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return monitors;
     }
 
-    private enum ListenerNotification {
-        /** Notify the listener that is has been added. */
-        LISTENER_ADDED,
-        /** Notifications related to the current state.  */
-        TRANSITION,
-    }
-
-    public Substate getSubstate() {
+    private Substate getSubstate() {
         synchronized (this) {
             return state;
         }
@@ -1722,7 +1643,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     uninjectProvides(provides.values());
                 } else {
                     checkProvidedValues();
-                    inject(outInjections);
                 }
             } catch (StartException e) {
                 e.setServiceName(getName());
@@ -1752,7 +1672,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
         }
         uninject(injections);
-        uninject(outInjections);
         uninjectProvides(provides.values());
     }
 
@@ -1783,7 +1702,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                 }
                 uninject(injections);
-                uninject(outInjections);
                 uninjectProvides(provides.values());
             }
             return true;
@@ -1794,52 +1712,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             try {
                 service.stop(context);
             } finally {
-                setTCCL(contextClassLoader);
-            }
-        }
-    }
-
-    private final class ListenerTask extends ControllerTask {
-        private final ListenerNotification notification;
-        private final ServiceListener<? super S> listener;
-        private final Transition transition;
-
-        ListenerTask(final ServiceListener<? super S> listener, final Transition transition) {
-            this.listener = listener;
-            this.transition = transition;
-            notification = ListenerNotification.TRANSITION;
-        }
-
-        ListenerTask(final ServiceListener<? super S> listener, final ListenerNotification notification) {
-            this.listener = listener;
-            transition = null;
-            this.notification = notification;
-        }
-
-        boolean execute() {
-            invokeListener(listener, notification, transition);
-            return true;
-        }
-
-        private void invokeListener(final ServiceListener<? super S> listener, final ListenerNotification notification, final Transition transition) {
-            // first set the TCCL
-            final ClassLoader contextClassLoader = setTCCL(getCL(listener.getClass()));
-            try {
-                switch (notification) {
-                    case TRANSITION: {
-                        listener.transition(ServiceControllerImpl.this, transition);
-                        break;
-                    }
-                    case LISTENER_ADDED: {
-                        listener.listenerAdded(ServiceControllerImpl.this);
-                        break;
-                    }
-                    default: throw new IllegalStateException();
-                }
-            } catch (Throwable t) {
-                ServiceLogger.SERVICE.listenerFailed(t, listener);
-            } finally {
-                // reset TCCL
                 setTCCL(contextClassLoader);
             }
         }
@@ -2036,7 +1908,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         void onComplete() {
             try {
                 checkProvidedValues();
-                inject(outInjections);
             } catch (Throwable t) {
                 startFailed(new StartException("Failed to start service", t, getName()), this);
             }
@@ -2046,7 +1917,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private final class StopContextImpl extends AbstractContext implements StopContext {
         void onComplete() {
             uninject(injections);
-            uninject(outInjections);
             uninjectProvides(provides.values());
         }
     }

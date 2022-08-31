@@ -22,9 +22,7 @@
 
 package org.jboss.msc.service;
 
-import java.util.Collection;
 import org.jboss.msc.inject.Injector;
-import org.jboss.msc.value.Value;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -106,70 +104,6 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     /** {@inheritDoc} */
     @Deprecated
     @Override
-    public ServiceBuilder<T> addDependencies(final ServiceName... dependencies) {
-        getDelegate().addDependencies(dependencies);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final ServiceName... dependencies) {
-        getDelegate().addDependencies(dependencyType, dependencies);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceBuilder<T> addDependencies(final Iterable<ServiceName> dependencies) {
-        getDelegate().addDependencies(dependencies);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceBuilder<T> addDependencies(final DependencyType dependencyType, final Iterable<ServiceName> dependencies) {
-        getDelegate().addDependencies(dependencyType, dependencies);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceBuilder<T> addDependency(final ServiceName dependency) {
-        getDelegate().addDependency(dependency);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency) {
-        getDelegate().addDependency(dependencyType, dependency);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceBuilder<T> addDependency(final ServiceName dependency, final Injector<Object> target) {
-        getDelegate().addDependency(dependency, target);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Injector<Object> target) {
-        getDelegate().addDependency(dependencyType, dependency, target);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
     public <I> ServiceBuilder<T> addDependency(final ServiceName dependency, final Class<I> type, final Injector<I> target) {
         getDelegate().addDependency(dependency, type, target);
         return this;
@@ -178,72 +112,8 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     /** {@inheritDoc} */
     @Deprecated
     @Override
-    public <I> ServiceBuilder<T> addDependency(final DependencyType dependencyType, final ServiceName dependency, final Class<I> type, final Injector<I> target) {
-        getDelegate().addDependency(dependencyType, dependency, type, target);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public <I> ServiceBuilder<T> addInjection(final Injector<? super I> target, final I value) {
-        getDelegate().addInjection(target, value);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public <I> ServiceBuilder<T> addInjectionValue(final Injector<? super I> target, final Value<I> value) {
-        getDelegate().addInjectionValue(target, value);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceBuilder<T> addInjection(final Injector<? super T> target) {
-        getDelegate().addInjection(target);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
     public ServiceBuilder<T> addMonitor(final StabilityMonitor monitor) {
         getDelegate().addMonitor(monitor);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceBuilder<T> addMonitors(final StabilityMonitor... monitors) {
-        getDelegate().addMonitors(monitors);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceBuilder<T> addListener(final ServiceListener<? super T> listener) {
-        getDelegate().addListener(listener);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceBuilder<T> addListener(final ServiceListener<? super T>... listeners) {
-        getDelegate().addListener(listeners);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceBuilder<T> addListener(final Collection<? extends ServiceListener<? super T>> listeners) {
-        getDelegate().addListener(listeners);
         return this;
     }
 

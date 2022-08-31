@@ -74,7 +74,6 @@ import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.ServiceController.Mode;
 import org.jboss.msc.service.management.ServiceContainerMXBean;
 import org.jboss.msc.service.management.ServiceStatus;
-import org.jboss.msc.value.InjectedValue;
 import org.jboss.threads.EnhancedQueueExecutor;
 
 /**
@@ -705,31 +704,19 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             provides.put(getOrCreateRegistration(entry.getKey()), entry.getValue());
         }
 
-        // Create the list of dependencies
-        final List<ValueInjection<?>> outInjections = new ArrayList<>();
-        // set up outInjections with an InjectedValue
-        final InjectedValue<T> serviceValue = new InjectedValue<>();
-        for (final Injector<? super T> outInjection : serviceBuilder.getOutInjections()) {
-            outInjections.add(new ValueInjection<>(serviceValue, outInjection));
-        }
-
         // Dependencies
         final Map<ServiceName, ServiceBuilderImpl.Dependency> dependencyMap = serviceBuilder.getDependencies();
         final Set<Dependency> requires = new HashSet<>();
-        final List<ValueInjection<?>> valueInjections = serviceBuilder.getValueInjections();
+        final List<ValueInjection<?>> valueInjections = new ArrayList<>();
         Dependency dependency;
         for (ServiceBuilderImpl.Dependency dependencyDefinition : dependencyMap.values()) {
             dependency = dependencyDefinition.getRegistration();
-            if (dependencyDefinition.getDependencyType() == ServiceBuilder.DependencyType.OPTIONAL) {
-                dependency = new OptionalDependencyImpl(dependency);
-            }
             requires.add(dependency);
             for (Injector<Object> injector : dependencyDefinition.getInjectorList()) {
                 valueInjections.add(new ValueInjection<>(dependency, injector));
             }
         }
         final ValueInjection<?>[] valueInjectionArray = valueInjections.toArray(new ValueInjection<?>[valueInjections.size()]);
-        final ValueInjection<?>[] outInjectionArray = outInjections.toArray(new ValueInjection<?>[outInjections.size()]);
         final Collection<ServiceName> serviceAliases = serviceBuilder.getServiceAliases();
         final ServiceName[] aliases = new ServiceName[serviceAliases.size()];
         int i = 0;
@@ -739,11 +726,10 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
 
         // Next create the actual controller
         final ServiceControllerImpl<T> instance = new ServiceControllerImpl<>(this, serviceBuilder.serviceId, aliases, serviceBuilder.getService(),
-                requires, provides, valueInjectionArray, outInjectionArray,
-                serviceBuilder.getMonitors(), serviceBuilder.getServiceListeners(), serviceBuilder.getLifecycleListeners(), serviceBuilder.parent);
+                requires, provides, valueInjectionArray,
+                serviceBuilder.getMonitors(), serviceBuilder.getLifecycleListeners(), serviceBuilder.parent);
         boolean ok = false;
         try {
-            serviceValue.setValue(instance);
             synchronized (this) {
                 if (down) {
                     ok = true; // do not rollback installation because we didn't install anything
