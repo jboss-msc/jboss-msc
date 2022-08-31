@@ -22,51 +22,43 @@
 
 package org.jboss.msc;
 
-import org.jboss.msc.service.LifecycleContext;
 import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 /**
  * A service is a thing which can be started and stopped.
  * A service may be started or stopped from any thread.
- * <p id="thread-safety">
- * Service implementation should always take care to protect any mutable state appropriately; however, the following
- * thread-safety properties and relationships are always guaranteed:
+ * Service implementation should always take care to protect any mutable state appropriately.
+ * Service may provide multiple values to its consumers.
+ * <p>
+ * When writing MSC service implementations, your {@link #start(StartContext)} and {@link #stop(StopContext)}
+ * methods must never block. This means these methods must not:
  * <ul>
- *     <li>Dependency service start operations always <em>happen-before</em> dependent service start operations</li>
- *     <li>Dependent service stop operations always <em>happen-before</em> dependency service stop operations</li>
- *     <li>Memory which is modified within a dependency service start operation will be visible to dependents (even if the writes
- *     are to non-volatile fields or were otherwise unprotected by locks or other memory barriers)</li>
+ * <li>Use network connections</li>
+ * <li>Wait for network connections</li>
+ * <li>Sleep</li>
+ * <li>Wait on a condition</li>
+ * <li>Wait on a count down latch</li>
+ * <li>Call any method which may do any of the above</li>
+ * <li>Wait for termination of a thread pool or other service</li>
+ * <li>Wait for another service to change state</li>
  * </ul>
- * In general, services do not need to concern themselves with thread safety unless they contain state which can be used
- * or manipulated outside of the service dependency graph and lifecycle operations.
- * <p>
- * Service implementations may provide multiple values to their consumers.
- * <p>
- * Lifecycle operations may block as necessary.  Note that if enough concurrent service lifecycles are blocking, it is possible
- * that the thread pool will fill and no further lifecycle operations can complete until some of the existing lifecycle operations
- * complete.
- * <p>
- * It is important that lifecycle operations do not perform tasks that will block infinitely.  One example of such a task
- * would be a stop method which calls {@link System#exit(int)}.  Such a task will never complete, causing the service container
- * to never shut down, which in turn may cause the JVM to never exit, resulting in permanent deadlock.
- * <p>
- * It is also important that services not block on conditions which may only be resolved by other services. Such situations
- * must always be modeled as service dependencies to ensure correct operation and prevent a deadlock.
- * <p>
- * Lifecycle operations which are naturally asynchronous should consider use of the {@link LifecycleContext#asynchronous()} API
- * in order to increase parallelism and reduce resource consumption.  Examples of such operations include:
+ *
+ * If your service start/stop does any of these things, you must use the asynchronous start/stop mechanism
+ * ({@link org.jboss.msc.service.LifecycleContext#asynchronous()}) and do one of the following:
+ *
  * <ul>
- *     <li>Operations which run in the background and signal completion via a callback</li>
- *     <li>Operations which use a callback-driven {@code Future} variant like {@link CompletableFuture}</li>
+ * <li>Initiate your task in start()/stop(), and utilize a callback (NIO, ThreadPoolExecutor.terminated(), etc.) to call
+ * {@link org.jboss.msc.service.LifecycleContext#complete()} when your start/stop completes instead of blocking</li>
+ * <li>Delegate your blocking task to a thread pool ({@code Executor}) which calls
+ * {@link org.jboss.msc.service.LifecycleContext#complete()} when done</li>
+ * <li>Use proper dependencies instead of explicitly waiting for services in your start/stop</li>
  * </ul>
  * <p>
- * Lifecycle operations which can benefit from parallel execution of work should consider use of the {@link LifecycleContext#execute(Runnable)}
- * API in combination with the asynchronous API.  This can allow many threads to work in parallel to complete the lifecycle step.
+ * Note that using {@link org.jboss.msc.service.LifecycleContext#execute(Runnable)} to execute the blocking task is also not permissible.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
