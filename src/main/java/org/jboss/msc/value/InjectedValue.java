@@ -55,7 +55,7 @@ public final class InjectedValue<T> extends RetainingInjector<T> implements Inje
     /**
      * Set the value to be injected to a {@code Value} instance.
      *
-     * @param value the value to set, cannot be {@code null} (though it may be {@link org.jboss.msc.value.Values#nullValue()})
+     * @param value the value to set, cannot be {@code null}
      */
     public void setValue(final Value<T> value) {
         setStoredValue(value);
