@@ -399,26 +399,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             case DOWN: {
                 if (mode == ServiceController.Mode.REMOVE) {
-                    return Transition.DOWN_to_REMOVING;
-                } else if (mode == ServiceController.Mode.NEVER) {
-                    return Transition.DOWN_to_WONT_START;
+                    return Transition.DOWN_to_REMOVED;
                 } else if (shouldStart() && (mode != Mode.PASSIVE || stoppingDependencies == 0)) {
                     return Transition.DOWN_to_START_REQUESTED;
-                } else {
-                    // mode is either LAZY or ON_DEMAND with demandedByCount == 0, or mode is PASSIVE and downDep > 0
-                    return Transition.DOWN_to_WAITING;
-                }
-            }
-            case WAITING: {
-                if (((mode != Mode.ON_DEMAND && mode != Mode.LAZY) || demandedByCount > 0) &&
-                        (mode != Mode.PASSIVE || stoppingDependencies == 0)) {
-                    return Transition.WAITING_to_DOWN;
-                }
-                break;
-            }
-            case WONT_START: {
-                if (mode != ServiceController.Mode.NEVER){
-                    return Transition.WONT_START_to_DOWN;
                 }
                 break;
             }
@@ -491,9 +474,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     return Transition.PROBLEM_to_START_REQUESTED;
                 }
                 break;
-            }
-            case REMOVING: {
-                return Transition.REMOVING_to_REMOVED;
             }
             case CANCELLED: {
                 return Transition.CANCELLED_to_REMOVED;
@@ -586,31 +566,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             switch (transition) {
                 case NEW_to_DOWN: {
                     getListenerTasks(LifecycleEvent.DOWN, listenerTransitionTasks);
-                    tasks.add(new DependencyAvailableTask());
-                    break;
-                }
-                case DOWN_to_WAITING: {
-                    tasks.add(new DependencyUnavailableTask());
-                    break;
-                }
-                case WAITING_to_DOWN: {
-                    tasks.add(new DependencyAvailableTask());
-                    break;
-                }
-                case DOWN_to_WONT_START: {
-                    tasks.add(new DependencyUnavailableTask());
-                    break;
-                }
-                case WONT_START_to_DOWN: {
-                    tasks.add(new DependencyAvailableTask());
                     break;
                 }
                 case STOPPING_to_DOWN: {
                     getListenerTasks(LifecycleEvent.DOWN, listenerTransitionTasks);
+                    tasks.add(new DependencyUnavailableTask());
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
                 case START_REQUESTED_to_DOWN: {
+                    tasks.add(new DependencyUnavailableTask());
                     break;
                 }
                 case START_REQUESTED_to_START_INITIATING: {
@@ -680,6 +645,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         monitor.removeFailed(this);
                     }
                     startException = null;
+                    tasks.add(new DependencyUnavailableTask());
                     tasks.add(new DependencyRetryingTask());
                     tasks.add(new DependentStoppedTask());
                     break;
@@ -698,13 +664,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     tasks.add(new RemoveChildrenTask());
                     break;
                 }
-                case DOWN_to_REMOVING: {
-                    tasks.add(new DependencyUnavailableTask());
-                    break;
-                }
                 case CANCELLED_to_REMOVED:
                     break;
-                case REMOVING_to_REMOVED: {
+                case DOWN_to_REMOVED: {
                     tasks.add(new RemoveTask());
                     break;
                 }
@@ -714,6 +676,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case DOWN_to_START_REQUESTED: {
+                    tasks.add(new DependencyAvailableTask());
                     break;
                 }
                 case PROBLEM_to_START_REQUESTED: {
@@ -794,7 +757,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert holdsLock(this);
         final ServiceController.Mode oldMode = mode;
         if (oldMode == Mode.REMOVE) {
-            if (state.compareTo(Substate.REMOVING) >= 0) {
+            if (state.compareTo(Substate.REMOVED) >= 0) {
                 throw new IllegalStateException("Service already removed");
             }
         }
@@ -943,14 +906,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private boolean isUnavailable() {
         assert holdsLock(this);
-        if (state == Substate.WAITING && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
-        if (state == Substate.WONT_START && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
-        if (state == Substate.REMOVING && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
+        if (state == Substate.NEW || state == Substate.CANCELLED || state == Substate.REMOVED || state == Substate.TERMINATED) return true;
         if (state == Substate.PROBLEM && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
-        if (state == Substate.DOWN && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;
+        if (state == Substate.DOWN && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
         if (state == Substate.START_REQUESTED && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;
-        if (state == Substate.NEW || state == Substate.CANCELLED || state == Substate.REMOVED) return true;
-        if (state == Substate.TERMINATED) return true;
         return false;
     }
 

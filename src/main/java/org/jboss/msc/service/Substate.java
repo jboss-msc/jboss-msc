@@ -23,11 +23,8 @@
 package org.jboss.msc.service;
 
 /**
- * A fine-grained substate of the more general basic controller {@link ServiceController.State}s.  The list of possible
- * substates may change over time, so users should not rely on its permanence.
- * @deprecated this class will be removed in a future release
+ * A fine-grained substate of the more general basic controller {@link ServiceController.State}s.
  */
-@Deprecated
 enum Substate {
     /**
      * New controller being installed.
@@ -40,15 +37,7 @@ enum Substate {
     /**
      * Controller is down.
      */
-    DOWN(ServiceController.State.DOWN, false),
-    /**
-     * Controller is waiting for an external condition to start, such as a dependent demand.
-     */
-    WAITING(ServiceController.State.DOWN, true),
-    /**
-     * Controller is configured not to start.
-     */
-    WONT_START(ServiceController.State.DOWN, true),
+    DOWN(ServiceController.State.DOWN, true),
     /**
      * Controller cannot start due to a problem with a dependency or transitive dependency.
      */
@@ -81,10 +70,6 @@ enum Substate {
      * Service is stopping.
      */
     STOPPING(ServiceController.State.STOPPING, false),
-    /**
-     * Service is being removed.
-     */
-    REMOVING(ServiceController.State.DOWN, false),
     /**
      * Service has been removed.
      */

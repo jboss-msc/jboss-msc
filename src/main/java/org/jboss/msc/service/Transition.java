@@ -23,14 +23,10 @@
 package org.jboss.msc.service;
 
 /**
- * A transition from one substate to another.  The list of possible transitions may change over time, so users
- * should not rely on its permanence.
- * @deprecated this class will be removed in a future release
+ * A transition from one substate to another.
  */
-@Deprecated
 enum Transition {
-    // New transitions should be added to the end.  Unused transitions should be retained as "deprecated" for
-    // binary compatibility.
+    // New transitions should be added to the end.
     /**
      * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#DOWN DOWN}.
      */
@@ -88,43 +84,17 @@ enum Transition {
      */
     STOPPING_to_DOWN(Substate.STOPPING, Substate.DOWN),
     /**
-     * Transition from {@link Substate#REMOVING REMOVING} to {@link Substate#REMOVED REMOVED}.
-     */
-    REMOVING_to_REMOVED(Substate.REMOVING, Substate.REMOVED),
-    /**
      * Transition from {@link Substate#REMOVED REMOVED} to {@link Substate#TERMINATED TERMINATED}.
      */
     REMOVED_to_TERMINATED(Substate.REMOVED, Substate.TERMINATED),
     /**
-     * Transition from {@link Substate#REMOVING REMOVING} to {@link Substate#DOWN DOWN}.
-     * @deprecated was never supposed to work
+     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#REMOVED REMOVED}.
      */
-    @Deprecated
-    REMOVING_to_DOWN(Substate.REMOVING, Substate.DOWN),
-    /**
-     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#REMOVING REMOVING}.
-     */
-    DOWN_to_REMOVING(Substate.DOWN, Substate.REMOVING),
+    DOWN_to_REMOVED(Substate.DOWN, Substate.REMOVED),
     /**
      * Transition from {@link Substate#DOWN DOWN} to {@link Substate#START_REQUESTED START_REQUESTED}.
      */
     DOWN_to_START_REQUESTED(Substate.DOWN, Substate.START_REQUESTED),
-    /**
-     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#WAITING WAITING}.
-     */
-    DOWN_to_WAITING(Substate.DOWN, Substate.WAITING),
-    /**
-     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#WONT_START WONT_START}.
-     */
-    DOWN_to_WONT_START(Substate.DOWN, Substate.WONT_START),
-    /**
-     * Transition from {@link Substate#WAITING WAITING} to {@link Substate#DOWN DOWN}.
-     */
-    WAITING_to_DOWN(Substate.WAITING, Substate.DOWN),
-    /**
-     * Transition from {@link Substate#WONT_START WONT_START} to {@link Substate#DOWN DOWN}.
-     */
-    WONT_START_to_DOWN(Substate.WONT_START, Substate.DOWN),
     /**
      * Transition from {@link Substate#CANCELLED} to {@link Substate#REMOVED}.
      */
