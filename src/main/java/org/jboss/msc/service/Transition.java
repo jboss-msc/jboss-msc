@@ -84,13 +84,13 @@ enum Transition {
      */
     STOPPING_to_DOWN(Substate.STOPPING, Substate.DOWN),
     /**
-     * Transition from {@link Substate#REMOVED REMOVED} to {@link Substate#TERMINATED TERMINATED}.
+     * Transition from {@link Substate#REMOVING REMOVING} to {@link Substate#TERMINATED TERMINATED}.
      */
-    REMOVED_to_TERMINATED(Substate.REMOVED, Substate.TERMINATED),
+    REMOVING_to_TERMINATED(Substate.REMOVING, Substate.TERMINATED),
     /**
-     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#REMOVED REMOVED}.
+     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#REMOVING REMOVING}.
      */
-    DOWN_to_REMOVED(Substate.DOWN, Substate.REMOVED),
+    DOWN_to_REMOVING(Substate.DOWN, Substate.REMOVING),
     /**
      * Transition from {@link Substate#DOWN DOWN} to {@link Substate#START_REQUESTED START_REQUESTED}.
      */

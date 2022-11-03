@@ -69,7 +69,7 @@ enum Substate {
     /**
      * Service has been removed.
      */
-    REMOVED(ServiceController.State.REMOVED, false),
+    REMOVING(ServiceController.State.REMOVED, false),
     /**
      * Service has been terminated.
      */
