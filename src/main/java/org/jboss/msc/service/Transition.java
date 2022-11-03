@@ -96,10 +96,6 @@ enum Transition {
      */
     DOWN_to_START_REQUESTED(Substate.DOWN, Substate.START_REQUESTED),
     /**
-     * Transition from {@link Substate#CANCELLED} to {@link Substate#REMOVED}.
-     */
-    CANCELLED_to_REMOVED(Substate.CANCELLED, Substate.REMOVED),
-    /**
      * Transition from {@link Substate#NEW} to {@link Substate#DOWN}.
      */
     NEW_to_DOWN(Substate.NEW, Substate.DOWN);

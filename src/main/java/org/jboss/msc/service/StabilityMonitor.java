@@ -40,7 +40,6 @@ import java.util.concurrent.TimeUnit;
  * 
  * <ul>
  *   <li>{@link Substate#NEW}</li>
- *   <li>{@link Substate#CANCELLED}</li>
  *   <li>{@link Substate#DOWN}</li>
  *   <li>{@link Substate#PROBLEM}</li>
  *   <li>{@link Substate#START_FAILED}</li>

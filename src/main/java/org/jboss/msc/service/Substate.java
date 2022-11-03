@@ -31,10 +31,6 @@ enum Substate {
      */
     NEW(ServiceController.State.DOWN, true),
     /**
-     * Cancelled controller installation due to duplicate or other problem.
-     */
-    CANCELLED(ServiceController.State.REMOVED, true),
-    /**
      * Controller is down.
      */
     DOWN(ServiceController.State.DOWN, true),

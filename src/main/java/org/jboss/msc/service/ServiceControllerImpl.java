@@ -295,7 +295,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
             mode = Mode.REMOVE;
-            state = Substate.CANCELLED;
+            state = Substate.REMOVED;
             removeTask = new RemoveTask();
             incrementAsyncTasks();
             updateStabilityState(leavingRestState);
@@ -310,8 +310,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     boolean isInstallationCommitted() {
         assert holdsLock(this);
-        // should not be NEW nor CANCELLED
-        return state.compareTo(Substate.CANCELLED) > 0;
+        return state.compareTo(Substate.NEW) > 0;
     }
 
     /**
@@ -474,9 +473,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     return Transition.PROBLEM_to_START_REQUESTED;
                 }
                 break;
-            }
-            case CANCELLED: {
-                return Transition.CANCELLED_to_REMOVED;
             }
             case REMOVED: {
                 return Transition.REMOVED_to_TERMINATED;
@@ -664,8 +660,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     tasks.add(new RemoveChildrenTask());
                     break;
                 }
-                case CANCELLED_to_REMOVED:
-                    break;
                 case DOWN_to_REMOVED: {
                     tasks.add(new RemoveTask());
                     break;
@@ -906,7 +900,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private boolean isUnavailable() {
         assert holdsLock(this);
-        if (state == Substate.NEW || state == Substate.CANCELLED || state == Substate.REMOVED || state == Substate.TERMINATED) return true;
+        if (state == Substate.NEW || state == Substate.REMOVED || state == Substate.TERMINATED) return true;
         if (state == Substate.PROBLEM && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
         if (state == Substate.DOWN && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
         if (state == Substate.START_REQUESTED && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;
@@ -1710,7 +1704,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private final class RemoveTask extends ControllerTask {
         boolean execute() {
             assert getMode() == ServiceController.Mode.REMOVE;
-            assert getSubstate() == Substate.REMOVED || getSubstate() == Substate.CANCELLED;
+            assert getSubstate() == Substate.REMOVED;
             ServiceRegistrationImpl registration;
             WritableValueImpl injector;
             Lockable lock;
