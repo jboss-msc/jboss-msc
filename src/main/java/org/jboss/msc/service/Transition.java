@@ -23,14 +23,10 @@
 package org.jboss.msc.service;
 
 /**
- * A transition from one substate to another.  The list of possible transitions may change over time, so users
- * should not rely on its permanence.
- * @deprecated this class will be removed in a future release
+ * A transition from one substate to another.
  */
-@Deprecated
 enum Transition {
-    // New transitions should be added to the end.  Unused transitions should be retained as "deprecated" for
-    // binary compatibility.
+    // New transitions should be added to the end.
     /**
      * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#DOWN DOWN}.
      */

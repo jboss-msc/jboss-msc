@@ -39,13 +39,13 @@ import java.util.concurrent.TimeUnit;
  * The following controller substates are considered to be in REST state:
  * 
  * <ul>
- *   <li>{@link ServiceController.Substate#NEW}</li>
- *   <li>{@link ServiceController.Substate#CANCELLED}</li>
- *   <li>{@link ServiceController.Substate#DOWN}</li>
- *   <li>{@link ServiceController.Substate#PROBLEM}</li>
- *   <li>{@link ServiceController.Substate#START_FAILED}</li>
- *   <li>{@link ServiceController.Substate#UP}</li>
- *   <li>{@link ServiceController.Substate#REMOVED}</li>
+ *   <li>{@link Substate#NEW}</li>
+ *   <li>{@link Substate#CANCELLED}</li>
+ *   <li>{@link Substate#DOWN}</li>
+ *   <li>{@link Substate#PROBLEM}</li>
+ *   <li>{@link Substate#START_FAILED}</li>
+ *   <li>{@link Substate#UP}</li>
+ *   <li>{@link Substate#TERMINATED}</li>
  * </ul>
  * 
  * Sample bulk usage:

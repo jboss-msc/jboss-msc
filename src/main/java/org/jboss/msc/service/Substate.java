@@ -23,11 +23,8 @@
 package org.jboss.msc.service;
 
 /**
- * A fine-grained substate of the more general basic controller {@link ServiceController.State}s.  The list of possible
- * substates may change over time, so users should not rely on its permanence.
- * @deprecated this class will be removed in a future release
+ * A fine-grained substate of the more general basic controller {@link ServiceController.State}s.
  */
-@Deprecated
 enum Substate {
     /**
      * New controller being installed.
