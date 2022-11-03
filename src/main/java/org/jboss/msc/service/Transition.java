@@ -84,9 +84,9 @@ enum Transition {
      */
     STOPPING_to_DOWN(Substate.STOPPING, Substate.DOWN),
     /**
-     * Transition from {@link Substate#REMOVING REMOVING} to {@link Substate#TERMINATED TERMINATED}.
+     * Transition from {@link Substate#REMOVING REMOVING} to {@link Substate#REMOVED REMOVED}.
      */
-    REMOVING_to_TERMINATED(Substate.REMOVING, Substate.TERMINATED),
+    REMOVING_to_REMOVED(Substate.REMOVING, Substate.REMOVED),
     /**
      * Transition from {@link Substate#DOWN DOWN} to {@link Substate#REMOVING REMOVING}.
      */
