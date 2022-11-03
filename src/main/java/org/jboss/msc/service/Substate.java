@@ -40,7 +40,7 @@ enum Substate {
     /**
      * Controller is down.
      */
-    DOWN(ServiceController.State.DOWN, false),
+    DOWN(ServiceController.State.DOWN, true),
     /**
      * Controller is waiting for an external condition to start, such as a dependent demand.
      */

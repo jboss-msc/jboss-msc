@@ -41,8 +41,7 @@ import java.util.concurrent.TimeUnit;
  * <ul>
  *   <li>{@link ServiceController.Substate#NEW}</li>
  *   <li>{@link ServiceController.Substate#CANCELLED}</li>
- *   <li>{@link ServiceController.Substate#WAITING}</li>
- *   <li>{@link ServiceController.Substate#WONT_START}</li>
+ *   <li>{@link ServiceController.Substate#DOWN}</li>
  *   <li>{@link ServiceController.Substate#PROBLEM}</li>
  *   <li>{@link ServiceController.Substate#START_FAILED}</li>
  *   <li>{@link ServiceController.Substate#UP}</li>

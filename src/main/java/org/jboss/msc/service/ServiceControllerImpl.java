@@ -586,31 +586,28 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             switch (transition) {
                 case NEW_to_DOWN: {
                     getListenerTasks(LifecycleEvent.DOWN, listenerTransitionTasks);
-                    tasks.add(new DependencyAvailableTask());
                     break;
                 }
                 case DOWN_to_WAITING: {
-                    tasks.add(new DependencyUnavailableTask());
                     break;
                 }
                 case WAITING_to_DOWN: {
-                    tasks.add(new DependencyAvailableTask());
                     break;
                 }
                 case DOWN_to_WONT_START: {
-                    tasks.add(new DependencyUnavailableTask());
                     break;
                 }
                 case WONT_START_to_DOWN: {
-                    tasks.add(new DependencyAvailableTask());
                     break;
                 }
                 case STOPPING_to_DOWN: {
                     getListenerTasks(LifecycleEvent.DOWN, listenerTransitionTasks);
+                    tasks.add(new DependencyUnavailableTask());
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
                 case START_REQUESTED_to_DOWN: {
+                    tasks.add(new DependencyUnavailableTask());
                     break;
                 }
                 case START_REQUESTED_to_START_INITIATING: {
@@ -680,6 +677,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         monitor.removeFailed(this);
                     }
                     startException = null;
+                    tasks.add(new DependencyUnavailableTask());
                     tasks.add(new DependencyRetryingTask());
                     tasks.add(new DependentStoppedTask());
                     break;
@@ -699,7 +697,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case DOWN_to_REMOVING: {
-                    tasks.add(new DependencyUnavailableTask());
                     break;
                 }
                 case CANCELLED_to_REMOVED:
@@ -714,6 +711,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case DOWN_to_START_REQUESTED: {
+                    tasks.add(new DependencyAvailableTask());
                     break;
                 }
                 case PROBLEM_to_START_REQUESTED: {
@@ -943,14 +941,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private boolean isUnavailable() {
         assert holdsLock(this);
-        if (state == Substate.WAITING && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
-        if (state == Substate.WONT_START && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
-        if (state == Substate.REMOVING && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
+        if (state == Substate.CANCELLED || state == Substate.REMOVING || state == Substate.REMOVED || state == Substate.TERMINATED) return true;
+        if (state == Substate.NEW || state == Substate.WAITING || state == Substate.WONT_START) return true;
         if (state == Substate.PROBLEM && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
-        if (state == Substate.DOWN && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;
+        if (state == Substate.DOWN && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
         if (state == Substate.START_REQUESTED && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;
-        if (state == Substate.NEW || state == Substate.CANCELLED || state == Substate.REMOVED) return true;
-        if (state == Substate.TERMINATED) return true;
         return false;
     }
 
