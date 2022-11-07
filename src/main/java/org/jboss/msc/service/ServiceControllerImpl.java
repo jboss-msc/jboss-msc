@@ -412,8 +412,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     if (unavailableDependencies > 0 || failCount > 0) {
                         return Transition.START_REQUESTED_to_PROBLEM;
                     }
-                    if (stoppingDependencies == 0 && runningDependents == 0) {
-                        // it is possible runningDependents > 0 if this service is optional dependency to some other service
+                    if (stoppingDependencies == 0) {
                         return Transition.START_REQUESTED_to_START_INITIATING;
                     }
                 } else {
@@ -428,10 +427,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case START_INITIATING: {
-                if (shouldStart() && runningDependents == 0 && stoppingDependencies == 0 && failCount == 0) {
+                if (shouldStart() && stoppingDependencies == 0 && failCount == 0) {
                     return Transition.START_INITIATING_to_STARTING;
                 } else {
-                    // it is possible runningDependents > 0 if this service is optional dependency to some other service
                     return Transition.START_INITIATING_to_START_REQUESTED;
                 }
             }
@@ -448,7 +446,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         if (startException == null) {
                             return Transition.START_FAILED_to_STARTING;
                         }
-                    } else if (runningDependents == 0) {
+                    } else {
                         return Transition.START_FAILED_to_DOWN;
                     }
                 }
