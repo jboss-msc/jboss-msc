@@ -331,7 +331,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private boolean shouldStart() {
         assert holdsLock(this);
-        return mode == Mode.ACTIVE || mode == Mode.PASSIVE || demandedByCount > 0 && (mode == Mode.ON_DEMAND || mode == Mode.LAZY);
+        return mode == Mode.ACTIVE || mode == Mode.PASSIVE && stoppingDependencies == 0 || demandedByCount > 0 && (mode == Mode.ON_DEMAND || mode == Mode.LAZY);
     }
 
     /**
@@ -341,7 +341,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private boolean shouldStop() {
         assert holdsLock(this);
-        return mode == Mode.REMOVE || demandedByCount == 0 && mode == Mode.ON_DEMAND || mode == Mode.NEVER;
+        return mode == Mode.REMOVE || mode == Mode.NEVER || demandedByCount == 0 && mode == Mode.ON_DEMAND;
     }
 
     /**
@@ -399,16 +399,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             case DOWN: {
                 if (mode == ServiceController.Mode.REMOVE) {
                     return Transition.DOWN_to_REMOVING;
-                } else if (shouldStart() && (mode != Mode.PASSIVE || stoppingDependencies == 0)) {
+                } else if (shouldStart()) {
                     return Transition.DOWN_to_START_REQUESTED;
                 }
                 break;
             }
             case START_REQUESTED: {
                 if (shouldStart()) {
-                    if (mode == Mode.PASSIVE && stoppingDependencies > 0) {
-                        return Transition.START_REQUESTED_to_DOWN;
-                    }
                     if (unavailableDependencies > 0 || failCount > 0) {
                         return Transition.START_REQUESTED_to_PROBLEM;
                     }
@@ -421,7 +418,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 break;
             }
             case PROBLEM: {
-                if (! shouldStart() || (unavailableDependencies == 0 && failCount == 0) || mode == Mode.PASSIVE) {
+                if (!shouldStart() || (unavailableDependencies == 0 && failCount == 0)) {
                     return Transition.PROBLEM_to_START_REQUESTED;
                 }
                 break;
