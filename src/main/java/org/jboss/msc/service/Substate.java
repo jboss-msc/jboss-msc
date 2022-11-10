@@ -39,10 +39,6 @@ enum Substate {
      */
     PROBLEM(ServiceController.State.DOWN, true),
     /**
-     * A stopped controller has been requested to start.
-     */
-    START_REQUESTED(ServiceController.State.DOWN, false),
-    /**
      * First phase of start processing.
      */
     START_INITIATING(ServiceController.State.STARTING, false),

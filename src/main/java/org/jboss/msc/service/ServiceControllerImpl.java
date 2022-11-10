@@ -400,26 +400,18 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 if (mode == ServiceController.Mode.REMOVE) {
                     return Transition.DOWN_to_REMOVING;
                 } else if (shouldStart()) {
-                    return Transition.DOWN_to_START_REQUESTED;
-                }
-                break;
-            }
-            case START_REQUESTED: {
-                if (shouldStart()) {
                     if (unavailableDependencies > 0 || failCount > 0) {
-                        return Transition.START_REQUESTED_to_PROBLEM;
+                        return Transition.DOWN_to_PROBLEM;
                     }
                     if (stoppingDependencies == 0) {
-                        return Transition.START_REQUESTED_to_START_INITIATING;
+                        return Transition.DOWN_to_START_INITIATING;
                     }
-                } else {
-                    return Transition.START_REQUESTED_to_DOWN;
                 }
                 break;
             }
             case PROBLEM: {
                 if (!shouldStart() || (unavailableDependencies == 0 && failCount == 0)) {
-                    return Transition.PROBLEM_to_START_REQUESTED;
+                    return Transition.PROBLEM_to_DOWN;
                 }
                 break;
             }
@@ -427,7 +419,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 if (shouldStart() && stoppingDependencies == 0) {
                     return Transition.START_INITIATING_to_STARTING;
                 } else {
-                    return Transition.START_INITIATING_to_START_REQUESTED;
+                    return Transition.START_INITIATING_to_DOWN;
                 }
             }
             case STARTING: {
@@ -559,24 +551,21 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     getListenerTasks(LifecycleEvent.DOWN, listenerTransitionTasks);
                     break;
                 }
-                case DOWN_to_START_REQUESTED: {
-                    break;
-                }
-                case START_REQUESTED_to_PROBLEM: {
+                case DOWN_to_PROBLEM: {
                     container.addProblem(this);
                     for (StabilityMonitor monitor : monitors) {
                         monitor.addProblem(this);
                     }
                     break;
                 }
-                case PROBLEM_to_START_REQUESTED: {
+                case PROBLEM_to_DOWN: {
                     container.removeProblem(this);
                     for (StabilityMonitor monitor : monitors) {
                         monitor.removeProblem(this);
                     }
                     break;
                 }
-                case START_REQUESTED_to_START_INITIATING: {
+                case DOWN_to_START_INITIATING: {
                     lifecycleTime = System.nanoTime();
                     tasks.add(new DependencyAvailableTask());
                     tasks.add(new DependentStartedTask());
@@ -626,10 +615,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     lifecycleListeners.clear();
                     break;
                 }
-                case START_REQUESTED_to_DOWN: {
-                    break;
-                }
-                case START_INITIATING_to_START_REQUESTED: {
+                case START_INITIATING_to_DOWN: {
                     tasks.add(new DependencyUnavailableTask());
                     tasks.add(new DependentStoppedTask());
                     break;
@@ -894,7 +880,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private boolean isUnavailable() {
         assert holdsLock(this);
         if (state == Substate.NEW || state == Substate.PROBLEM || state == Substate.REMOVING || state == Substate.REMOVED) return true;
-        if (state == Substate.START_REQUESTED && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
         if (state == Substate.DOWN && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
         if (state == Substate.START_INITIATING && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;
         return false;

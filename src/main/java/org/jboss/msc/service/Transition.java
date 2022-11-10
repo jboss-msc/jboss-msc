@@ -28,29 +28,25 @@ package org.jboss.msc.service;
 enum Transition {
     // New transitions should be added to the end.
     /**
-     * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#DOWN DOWN}.
+     * Transition from {@link Substate#START_INITIATING START_INITIATING} to {@link Substate#DOWN DOWN}.
      */
-    START_REQUESTED_to_DOWN(Substate.START_REQUESTED, Substate.DOWN),
+    START_INITIATING_to_DOWN(Substate.START_INITIATING, Substate.DOWN),
     /**
-     * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#PROBLEM PROBLEM}.
+     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#PROBLEM PROBLEM}.
      */
-    START_REQUESTED_to_PROBLEM(Substate.START_REQUESTED, Substate.PROBLEM),
+    DOWN_to_PROBLEM(Substate.DOWN, Substate.PROBLEM),
     /**
-     * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#START_INITIATING START_INITIATING}.
+     * Transition from {@link Substate#DOWN START_REQUESTED} to {@link Substate#START_INITIATING START_INITIATING}.
      */
-    START_REQUESTED_to_START_INITIATING(Substate.START_REQUESTED, Substate.START_INITIATING),
+    DOWN_to_START_INITIATING(Substate.DOWN, Substate.START_INITIATING),
     /**
-     * Transition from {@link Substate#PROBLEM PROBLEM} to {@link Substate#START_REQUESTED START_REQUESTED}.
+     * Transition from {@link Substate#PROBLEM PROBLEM} to {@link Substate#DOWN DOWN}.
      */
-    PROBLEM_to_START_REQUESTED(Substate.PROBLEM, Substate.START_REQUESTED),
+    PROBLEM_to_DOWN(Substate.PROBLEM, Substate.DOWN),
     /**
      * Transition from {@link Substate#START_INITIATING START_INITIATING} to {@link Substate#STARTING STARTING}.
      */
     START_INITIATING_to_STARTING (Substate.START_INITIATING, Substate.STARTING),
-    /**
-     * Transition from {@link Substate#START_INITIATING START_INITIATING} to {@link Substate#START_REQUESTED START_REQUESTED}.
-     */
-    START_INITIATING_to_START_REQUESTED (Substate.START_INITIATING, Substate.START_REQUESTED),
     /**
      * Transition from {@link Substate#STARTING STARTING} to {@link Substate#UP UP}.
      */
@@ -91,10 +87,6 @@ enum Transition {
      * Transition from {@link Substate#DOWN DOWN} to {@link Substate#REMOVING REMOVING}.
      */
     DOWN_to_REMOVING(Substate.DOWN, Substate.REMOVING),
-    /**
-     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#START_REQUESTED START_REQUESTED}.
-     */
-    DOWN_to_START_REQUESTED(Substate.DOWN, Substate.START_REQUESTED),
     /**
      * Transition from {@link Substate#NEW} to {@link Substate#DOWN}.
      */
