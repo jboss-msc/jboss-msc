@@ -41,7 +41,7 @@ enum Substate {
     /**
      * First phase of start processing.
      */
-    START_INITIATING(ServiceController.State.STARTING, false),
+    START_REQUESTED(ServiceController.State.DOWN, false),
     /**
      * Second phase of start processing ({@link Service#start(StartContext) start()} method invoked).
      */

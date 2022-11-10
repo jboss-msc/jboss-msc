@@ -404,7 +404,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                         return Transition.DOWN_to_PROBLEM;
                     }
                     if (stoppingDependencies == 0) {
-                        return Transition.DOWN_to_START_INITIATING;
+                        return Transition.DOWN_to_START_REQUESTED;
                     }
                 }
                 break;
@@ -415,11 +415,11 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 break;
             }
-            case START_INITIATING: {
+            case START_REQUESTED: {
                 if (shouldStart() && stoppingDependencies == 0) {
-                    return Transition.START_INITIATING_to_STARTING;
+                    return Transition.START_REQUESTED_to_STARTING;
                 } else {
-                    return Transition.START_INITIATING_to_DOWN;
+                    return Transition.START_REQUESTED_to_DOWN;
                 }
             }
             case STARTING: {
@@ -565,13 +565,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     }
                     break;
                 }
-                case DOWN_to_START_INITIATING: {
+                case DOWN_to_START_REQUESTED: {
                     lifecycleTime = System.nanoTime();
                     tasks.add(new DependencyAvailableTask());
                     tasks.add(new DependentStartedTask());
                     break;
                 }
-                case START_INITIATING_to_STARTING: {
+                case START_REQUESTED_to_STARTING: {
                     tasks.add(new StartTask());
                     break;
                 }
@@ -615,7 +615,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     lifecycleListeners.clear();
                     break;
                 }
-                case START_INITIATING_to_DOWN: {
+                case START_REQUESTED_to_DOWN: {
                     tasks.add(new DependencyUnavailableTask());
                     tasks.add(new DependentStoppedTask());
                     break;
@@ -881,7 +881,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert holdsLock(this);
         if (state == Substate.NEW || state == Substate.PROBLEM || state == Substate.REMOVING || state == Substate.REMOVED) return true;
         if (state == Substate.DOWN && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
-        if (state == Substate.START_INITIATING && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;
+        if (state == Substate.START_REQUESTED && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;
         return false;
     }
 
