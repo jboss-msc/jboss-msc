@@ -60,9 +60,9 @@ enum Transition {
      */
     STARTING_to_START_FAILED(Substate.STARTING, Substate.START_FAILED),
     /**
-     * Transition from {@link Substate#START_FAILED START_FAILED} to {@link Substate#START_INITIATING START_INITIATING}.
+     * Transition from {@link Substate#START_FAILED START_FAILED} to {@link Substate#STARTING STARTING}.
      */
-    START_FAILED_to_STARTING(Substate.START_FAILED, Substate.START_INITIATING),
+    START_FAILED_to_STARTING(Substate.START_FAILED, Substate.STARTING),
     /**
      * Transition from {@link Substate#START_FAILED START_FAILED} to {@link Substate#DOWN DOWN}.
      */
