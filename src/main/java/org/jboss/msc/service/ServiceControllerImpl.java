@@ -560,11 +560,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case DOWN_to_START_REQUESTED: {
-                    tasks.add(new DependencyAvailableTask());
                     break;
                 }
                 case START_REQUESTED_to_PROBLEM: {
-                    tasks.add(new DependencyUnavailableTask());
                     container.addProblem(this);
                     for (StabilityMonitor monitor : monitors) {
                         monitor.addProblem(this);
@@ -572,7 +570,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case PROBLEM_to_START_REQUESTED: {
-                    tasks.add(new DependencyAvailableTask());
                     container.removeProblem(this);
                     for (StabilityMonitor monitor : monitors) {
                         monitor.removeProblem(this);
@@ -581,6 +578,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 case START_REQUESTED_to_START_INITIATING: {
                     lifecycleTime = System.nanoTime();
+                    tasks.add(new DependencyAvailableTask());
                     tasks.add(new DependentStartedTask());
                     break;
                 }
@@ -629,10 +627,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     break;
                 }
                 case START_REQUESTED_to_DOWN: {
-                    tasks.add(new DependencyUnavailableTask());
                     break;
                 }
                 case START_INITIATING_to_START_REQUESTED: {
+                    tasks.add(new DependencyUnavailableTask());
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
@@ -895,10 +893,10 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private boolean isUnavailable() {
         assert holdsLock(this);
-        if (state == Substate.NEW || state == Substate.REMOVING || state == Substate.REMOVED) return true;
-        if (state == Substate.PROBLEM && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
+        if (state == Substate.NEW || state == Substate.PROBLEM || state == Substate.REMOVING || state == Substate.REMOVED) return true;
+        if (state == Substate.START_REQUESTED && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
         if (state == Substate.DOWN && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
-        if (state == Substate.START_REQUESTED && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;
+        if (state == Substate.START_INITIATING && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;
         return false;
     }
 
