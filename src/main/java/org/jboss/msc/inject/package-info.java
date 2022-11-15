@@ -21,7 +21,7 @@
  */
 
 /**
- * Classes which implement value injection.  See {@link org.jboss.msc.inject.Injector}.
- * @deprecated this package will be removed in a future release.
+ * Classes which implement value injection. See {@link org.jboss.msc.inject.Injector}.
+ * This package is deprecated and will be removed in a future release.
  */
 package org.jboss.msc.inject;
