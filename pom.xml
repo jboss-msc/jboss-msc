@@ -46,6 +46,9 @@
     </licenses>
 
     <properties>
+        <jdk.min.version>11</jdk.min.version>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
         <version.junit>4.13.1</version.junit>
         <version.jboss-logging>3.4.1.Final</version.jboss-logging>
         <version.jboss-logging-processor>2.2.1.Final</version.jboss-logging-processor>
@@ -133,7 +136,7 @@
                     <footer><![CDATA[JBoss Modular Service Container  ]]>${project.version}</footer>
                     <bottom><![CDATA[<i>Copyright &#169; 2022 Red Hat, Inc.</i>]]></bottom>
                     <links>
-                        <link>https://docs.oracle.com/javase/8/docs/api/</link>
+                        <link>https://docs.oracle.com/javase/11/docs/api/</link>
                     </links>
                 </configuration>
             </plugin>
