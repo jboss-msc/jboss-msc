@@ -40,12 +40,11 @@ import java.util.concurrent.TimeUnit;
  * 
  * <ul>
  *   <li>{@link Substate#NEW}</li>
- *   <li>{@link Substate#CANCELLED}</li>
  *   <li>{@link Substate#DOWN}</li>
  *   <li>{@link Substate#PROBLEM}</li>
  *   <li>{@link Substate#START_FAILED}</li>
  *   <li>{@link Substate#UP}</li>
- *   <li>{@link Substate#TERMINATED}</li>
+ *   <li>{@link Substate#REMOVED}</li>
  * </ul>
  * 
  * Sample bulk usage:

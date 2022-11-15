@@ -31,10 +31,6 @@ enum Substate {
      */
     NEW(ServiceController.State.DOWN, true),
     /**
-     * Cancelled controller installation due to duplicate or other problem.
-     */
-    CANCELLED(ServiceController.State.REMOVED, true),
-    /**
      * Controller is down.
      */
     DOWN(ServiceController.State.DOWN, true),
@@ -43,13 +39,9 @@ enum Substate {
      */
     PROBLEM(ServiceController.State.DOWN, true),
     /**
-     * A stopped controller has been requested to start.
-     */
-    START_REQUESTED(ServiceController.State.DOWN, false),
-    /**
      * First phase of start processing.
      */
-    START_INITIATING(ServiceController.State.STARTING, false),
+    START_REQUESTED(ServiceController.State.DOWN, false),
     /**
      * Second phase of start processing ({@link Service#start(StartContext) start()} method invoked).
      */
@@ -73,11 +65,11 @@ enum Substate {
     /**
      * Service has been removed.
      */
-    REMOVED(ServiceController.State.REMOVED, false),
+    REMOVING(ServiceController.State.REMOVED, false),
     /**
      * Service has been terminated.
      */
-    TERMINATED(ServiceController.State.REMOVED, true),
+    REMOVED(ServiceController.State.REMOVED, true),
     ;
     private final ServiceController.State state;
     private final boolean restState;

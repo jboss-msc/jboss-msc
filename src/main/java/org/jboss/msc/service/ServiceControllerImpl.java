@@ -295,7 +295,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         synchronized (this) {
             final boolean leavingRestState = isStableRestState();
             mode = Mode.REMOVE;
-            state = Substate.CANCELLED;
+            state = Substate.REMOVING;
             removeTask = new RemoveTask();
             incrementAsyncTasks();
             updateStabilityState(leavingRestState);
@@ -310,8 +310,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     boolean isInstallationCommitted() {
         assert holdsLock(this);
-        // should not be NEW nor CANCELLED
-        return state.compareTo(Substate.CANCELLED) > 0;
+        return state.compareTo(Substate.NEW) > 0;
     }
 
     /**
@@ -332,7 +331,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private boolean shouldStart() {
         assert holdsLock(this);
-        return mode == Mode.ACTIVE || mode == Mode.PASSIVE || demandedByCount > 0 && (mode == Mode.ON_DEMAND || mode == Mode.LAZY);
+        return mode == Mode.ACTIVE || mode == Mode.PASSIVE && stoppingDependencies == 0 || demandedByCount > 0 && (mode == Mode.ON_DEMAND || mode == Mode.LAZY);
     }
 
     /**
@@ -342,7 +341,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      */
     private boolean shouldStop() {
         assert holdsLock(this);
-        return mode == Mode.REMOVE || demandedByCount == 0 && mode == Mode.ON_DEMAND || mode == Mode.NEVER;
+        return mode == Mode.REMOVE || mode == Mode.NEVER || demandedByCount == 0 && mode == Mode.ON_DEMAND;
     }
 
     /**
@@ -370,7 +369,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 for (StabilityMonitor monitor : monitors) {
                     monitor.decrementUnstableServices();
                 }
-                if (state == Substate.TERMINATED) {
+                if (state == Substate.REMOVED) {
                     for (StabilityMonitor monitor : monitors) {
                         monitor.removeControllerNoCallback(this);
                     }
@@ -399,15 +398,52 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
             }
             case DOWN: {
                 if (mode == ServiceController.Mode.REMOVE) {
-                    return Transition.DOWN_to_REMOVED;
-                } else if (shouldStart() && (mode != Mode.PASSIVE || stoppingDependencies == 0)) {
-                    return Transition.DOWN_to_START_REQUESTED;
+                    return Transition.DOWN_to_REMOVING;
+                } else if (shouldStart()) {
+                    if (unavailableDependencies > 0 || failCount > 0) {
+                        return Transition.DOWN_to_PROBLEM;
+                    }
+                    if (stoppingDependencies == 0) {
+                        return Transition.DOWN_to_START_REQUESTED;
+                    }
                 }
                 break;
             }
-            case STOPPING: {
+            case PROBLEM: {
+                if (!shouldStart() || (unavailableDependencies == 0 && failCount == 0)) {
+                    return Transition.PROBLEM_to_DOWN;
+                }
+                break;
+            }
+            case START_REQUESTED: {
+                if (shouldStart() && stoppingDependencies == 0) {
+                    return Transition.START_REQUESTED_to_STARTING;
+                } else {
+                    return Transition.START_REQUESTED_to_DOWN;
+                }
+            }
+            case STARTING: {
+                if (startException == null) {
+                    return Transition.STARTING_to_UP;
+                } else {
+                    return Transition.STARTING_to_START_FAILED;
+                }
+            }
+            case START_FAILED: {
                 if (children.isEmpty()) {
-                    return Transition.STOPPING_to_DOWN;
+                    if (shouldStart() && stoppingDependencies == 0) {
+                        if (startException == null) {
+                            return Transition.START_FAILED_to_STARTING;
+                        }
+                    } else {
+                        return Transition.START_FAILED_to_DOWN;
+                    }
+                }
+                break;
+            }
+            case UP: {
+                if (shouldStop() || stoppingDependencies > 0) {
+                    return Transition.UP_to_STOP_REQUESTED;
                 }
                 break;
             }
@@ -419,69 +455,16 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
                 break;
             }
-            case UP: {
-                if (shouldStop() || stoppingDependencies > 0) {
-                    return Transition.UP_to_STOP_REQUESTED;
-                }
-                break;
-            }
-            case START_FAILED: {
+            case STOPPING: {
                 if (children.isEmpty()) {
-                    if (shouldStart() && stoppingDependencies == 0) {
-                        if (startException == null) {
-                            return Transition.START_FAILED_to_STARTING;
-                        }
-                    } else if (runningDependents == 0) {
-                        return Transition.START_FAILED_to_DOWN;
-                    }
+                    return Transition.STOPPING_to_DOWN;
                 }
                 break;
             }
-            case START_INITIATING: {
-                if (shouldStart() && runningDependents == 0 && stoppingDependencies == 0 && failCount == 0) {
-                    return Transition.START_INITIATING_to_STARTING;
-                } else {
-                    // it is possible runningDependents > 0 if this service is optional dependency to some other service
-                    return Transition.START_INITIATING_to_START_REQUESTED;
-                }
-            }
-            case STARTING: {
-                if (startException == null) {
-                    return Transition.STARTING_to_UP;
-                } else {
-                    return Transition.STARTING_to_START_FAILED;
-                }
-            }
-            case START_REQUESTED: {
-                if (shouldStart()) {
-                    if (mode == Mode.PASSIVE && stoppingDependencies > 0) {
-                        return Transition.START_REQUESTED_to_DOWN;
-                    }
-                    if (unavailableDependencies > 0 || failCount > 0) {
-                        return Transition.START_REQUESTED_to_PROBLEM;
-                    }
-                    if (stoppingDependencies == 0 && runningDependents == 0) {
-                        // it is possible runningDependents > 0 if this service is optional dependency to some other service
-                        return Transition.START_REQUESTED_to_START_INITIATING;
-                    }
-                } else {
-                    return Transition.START_REQUESTED_to_DOWN;
-                }
-                break;
-            }
-            case PROBLEM: {
-                if (! shouldStart() || (unavailableDependencies == 0 && failCount == 0) || mode == Mode.PASSIVE) {
-                    return Transition.PROBLEM_to_START_REQUESTED;
-                }
-                break;
-            }
-            case CANCELLED: {
-                return Transition.CANCELLED_to_REMOVED;
+            case REMOVING: {
+                return Transition.REMOVING_to_REMOVED;
             }
             case REMOVED: {
-                return Transition.REMOVED_to_TERMINATED;
-            }
-            case TERMINATED: {
                 // no possible actions
                 break;
             }
@@ -568,27 +551,33 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     getListenerTasks(LifecycleEvent.DOWN, listenerTransitionTasks);
                     break;
                 }
-                case STOPPING_to_DOWN: {
-                    getListenerTasks(LifecycleEvent.DOWN, listenerTransitionTasks);
-                    tasks.add(new DependencyUnavailableTask());
-                    tasks.add(new DependentStoppedTask());
-                    break;
-                }
-                case START_REQUESTED_to_DOWN: {
-                    tasks.add(new DependencyUnavailableTask());
-                    break;
-                }
-                case START_REQUESTED_to_START_INITIATING: {
-                    lifecycleTime = System.nanoTime();
-                    tasks.add(new DependentStartedTask());
-                    break;
-                }
-                case START_REQUESTED_to_PROBLEM: {
-                    tasks.add(new DependencyUnavailableTask());
+                case DOWN_to_PROBLEM: {
                     container.addProblem(this);
                     for (StabilityMonitor monitor : monitors) {
                         monitor.addProblem(this);
                     }
+                    break;
+                }
+                case PROBLEM_to_DOWN: {
+                    container.removeProblem(this);
+                    for (StabilityMonitor monitor : monitors) {
+                        monitor.removeProblem(this);
+                    }
+                    break;
+                }
+                case DOWN_to_START_REQUESTED: {
+                    lifecycleTime = System.nanoTime();
+                    tasks.add(new DependencyAvailableTask());
+                    tasks.add(new DependentStartedTask());
+                    break;
+                }
+                case START_REQUESTED_to_STARTING: {
+                    tasks.add(new StartTask());
+                    break;
+                }
+                case STARTING_to_UP: {
+                    getListenerTasks(LifecycleEvent.UP, listenerTransitionTasks);
+                    tasks.add(new DependencyStartedTask());
                     break;
                 }
                 case UP_to_STOP_REQUESTED: {
@@ -601,8 +590,37 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     tasks.add(new DependencyStoppedTask());
                     break;
                 }
-                case STARTING_to_UP: {
-                    getListenerTasks(LifecycleEvent.UP, listenerTransitionTasks);
+                case STOP_REQUESTED_to_STOPPING: {
+                    ChildServiceTarget childTarget = this.childTarget;
+                    if (childTarget != null) {
+                        childTarget.valid = false;
+                        this.childTarget = null;
+                    }
+                    tasks.add(new StopTask());
+                    tasks.add(new RemoveChildrenTask());
+                    break;
+                }
+                case STOPPING_to_DOWN: {
+                    getListenerTasks(LifecycleEvent.DOWN, listenerTransitionTasks);
+                    tasks.add(new DependencyUnavailableTask());
+                    tasks.add(new DependentStoppedTask());
+                    break;
+                }
+                case DOWN_to_REMOVING: {
+                    tasks.add(new RemoveTask());
+                    break;
+                }
+                case REMOVING_to_REMOVED: {
+                    getListenerTasks(LifecycleEvent.REMOVED, listenerTransitionTasks);
+                    lifecycleListeners.clear();
+                    break;
+                }
+                case START_REQUESTED_to_DOWN: {
+                    tasks.add(new DependencyUnavailableTask());
+                    tasks.add(new DependentStoppedTask());
+                    break;
+                }
+                case STOP_REQUESTED_to_UP: {
                     tasks.add(new DependencyStartedTask());
                     break;
                 }
@@ -621,23 +639,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     tasks.add(new RemoveChildrenTask());
                     break;
                 }
-                case START_FAILED_to_STARTING: {
-                    container.removeFailed(this);
-                    for (StabilityMonitor monitor : monitors) {
-                        monitor.removeFailed(this);
-                    }
-                    tasks.add(new DependencyRetryingTask());
-                    tasks.add(new StartTask());
-                    break;
-                }
-                case START_INITIATING_to_STARTING: {
-                    tasks.add(new StartTask());
-                    break;
-                }
-                case START_INITIATING_to_START_REQUESTED: {
-                    tasks.add(new DependentStoppedTask());
-                    break;
-                }
                 case START_FAILED_to_DOWN: {
                     getListenerTasks(LifecycleEvent.DOWN, listenerTransitionTasks);
                     container.removeFailed(this);
@@ -650,41 +651,13 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                     tasks.add(new DependentStoppedTask());
                     break;
                 }
-                case STOP_REQUESTED_to_UP: {
-                    tasks.add(new DependencyStartedTask());
-                    break;
-                }
-                case STOP_REQUESTED_to_STOPPING: {
-                    ChildServiceTarget childTarget = this.childTarget;
-                    if (childTarget != null) {
-                        childTarget.valid = false;
-                        this.childTarget = null;
-                    }
-                    tasks.add(new StopTask());
-                    tasks.add(new RemoveChildrenTask());
-                    break;
-                }
-                case CANCELLED_to_REMOVED:
-                    break;
-                case DOWN_to_REMOVED: {
-                    tasks.add(new RemoveTask());
-                    break;
-                }
-                case REMOVED_to_TERMINATED: {
-                    getListenerTasks(LifecycleEvent.REMOVED, listenerTransitionTasks);
-                    lifecycleListeners.clear();
-                    break;
-                }
-                case DOWN_to_START_REQUESTED: {
-                    tasks.add(new DependencyAvailableTask());
-                    break;
-                }
-                case PROBLEM_to_START_REQUESTED: {
-                    tasks.add(new DependencyAvailableTask());
-                    container.removeProblem(this);
+                case START_FAILED_to_STARTING: {
+                    container.removeFailed(this);
                     for (StabilityMonitor monitor : monitors) {
-                        monitor.removeProblem(this);
+                        monitor.removeFailed(this);
                     }
+                    tasks.add(new DependencyRetryingTask());
+                    tasks.add(new StartTask());
                     break;
                 }
                 default: {
@@ -757,7 +730,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         assert holdsLock(this);
         final ServiceController.Mode oldMode = mode;
         if (oldMode == Mode.REMOVE) {
-            if (state.compareTo(Substate.REMOVED) >= 0) {
+            if (state.compareTo(Substate.REMOVING) >= 0) {
                 throw new IllegalStateException("Service already removed");
             }
         }
@@ -906,8 +879,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     private boolean isUnavailable() {
         assert holdsLock(this);
-        if (state == Substate.NEW || state == Substate.CANCELLED || state == Substate.REMOVED || state == Substate.TERMINATED) return true;
-        if (state == Substate.PROBLEM && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
+        if (state == Substate.NEW || state == Substate.PROBLEM || state == Substate.REMOVING || state == Substate.REMOVED) return true;
         if (state == Substate.DOWN && finishedTask(DEPENDENCY_UNAVAILABLE_TASK)) return true;
         if (state == Substate.START_REQUESTED && unfinishedTask(DEPENDENCY_AVAILABLE_TASK)) return true;
         return false;
@@ -1103,7 +1075,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     void addListener(final ContainerShutdownListener listener) {
         assert !holdsLock(this);
         synchronized (this) {
-            if (state == Substate.TERMINATED && asyncTasks == 0) {
+            if (state == Substate.REMOVED && asyncTasks == 0) {
                 return; // controller is dead
             }
             if (shutdownListener != null) {
@@ -1129,7 +1101,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 listenerTransitionTasks.add(new LifecycleListenerTask(listener, LifecycleEvent.DOWN));
             } else if (state == Substate.START_FAILED) {
                 listenerTransitionTasks.add(new LifecycleListenerTask(listener, LifecycleEvent.FAILED));
-            } else if (state == Substate.TERMINATED) {
+            } else if (state == Substate.REMOVED) {
                 listenerTransitionTasks.add(new LifecycleListenerTask(listener, LifecycleEvent.REMOVED));
             }
             tasks = transition();
@@ -1710,7 +1682,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     private final class RemoveTask extends ControllerTask {
         boolean execute() {
             assert getMode() == ServiceController.Mode.REMOVE;
-            assert getSubstate() == Substate.REMOVED || getSubstate() == Substate.CANCELLED;
+            assert getSubstate() == Substate.REMOVING;
             ServiceRegistrationImpl registration;
             WritableValueImpl injector;
             Lockable lock;

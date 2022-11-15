@@ -32,25 +32,21 @@ enum Transition {
      */
     START_REQUESTED_to_DOWN(Substate.START_REQUESTED, Substate.DOWN),
     /**
-     * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#PROBLEM PROBLEM}.
+     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#PROBLEM PROBLEM}.
      */
-    START_REQUESTED_to_PROBLEM(Substate.START_REQUESTED, Substate.PROBLEM),
+    DOWN_to_PROBLEM(Substate.DOWN, Substate.PROBLEM),
     /**
-     * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#START_INITIATING START_INITIATING}.
+     * Transition from {@link Substate#DOWN START_REQUESTED} to {@link Substate#START_REQUESTED START_REQUESTED}.
      */
-    START_REQUESTED_to_START_INITIATING(Substate.START_REQUESTED, Substate.START_INITIATING),
+    DOWN_to_START_REQUESTED(Substate.DOWN, Substate.START_REQUESTED),
     /**
-     * Transition from {@link Substate#PROBLEM PROBLEM} to {@link Substate#START_REQUESTED START_REQUESTED}.
+     * Transition from {@link Substate#PROBLEM PROBLEM} to {@link Substate#DOWN DOWN}.
      */
-    PROBLEM_to_START_REQUESTED(Substate.PROBLEM, Substate.START_REQUESTED),
+    PROBLEM_to_DOWN(Substate.PROBLEM, Substate.DOWN),
     /**
-     * Transition from {@link Substate#START_INITIATING START_INITIATING} to {@link Substate#STARTING STARTING}.
+     * Transition from {@link Substate#START_REQUESTED START_REQUESTED} to {@link Substate#STARTING STARTING}.
      */
-    START_INITIATING_to_STARTING (Substate.START_INITIATING, Substate.STARTING),
-    /**
-     * Transition from {@link Substate#START_INITIATING START_INITIATING} to {@link Substate#START_REQUESTED START_REQUESTED}.
-     */
-    START_INITIATING_to_START_REQUESTED (Substate.START_INITIATING, Substate.START_REQUESTED),
+    START_REQUESTED_to_STARTING (Substate.START_REQUESTED, Substate.STARTING),
     /**
      * Transition from {@link Substate#STARTING STARTING} to {@link Substate#UP UP}.
      */
@@ -60,9 +56,9 @@ enum Transition {
      */
     STARTING_to_START_FAILED(Substate.STARTING, Substate.START_FAILED),
     /**
-     * Transition from {@link Substate#START_FAILED START_FAILED} to {@link Substate#START_INITIATING START_INITIATING}.
+     * Transition from {@link Substate#START_FAILED START_FAILED} to {@link Substate#STARTING STARTING}.
      */
-    START_FAILED_to_STARTING(Substate.START_FAILED, Substate.START_INITIATING),
+    START_FAILED_to_STARTING(Substate.START_FAILED, Substate.STARTING),
     /**
      * Transition from {@link Substate#START_FAILED START_FAILED} to {@link Substate#DOWN DOWN}.
      */
@@ -84,21 +80,13 @@ enum Transition {
      */
     STOPPING_to_DOWN(Substate.STOPPING, Substate.DOWN),
     /**
-     * Transition from {@link Substate#REMOVED REMOVED} to {@link Substate#TERMINATED TERMINATED}.
+     * Transition from {@link Substate#REMOVING REMOVING} to {@link Substate#REMOVED REMOVED}.
      */
-    REMOVED_to_TERMINATED(Substate.REMOVED, Substate.TERMINATED),
+    REMOVING_to_REMOVED(Substate.REMOVING, Substate.REMOVED),
     /**
-     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#REMOVED REMOVED}.
+     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#REMOVING REMOVING}.
      */
-    DOWN_to_REMOVED(Substate.DOWN, Substate.REMOVED),
-    /**
-     * Transition from {@link Substate#DOWN DOWN} to {@link Substate#START_REQUESTED START_REQUESTED}.
-     */
-    DOWN_to_START_REQUESTED(Substate.DOWN, Substate.START_REQUESTED),
-    /**
-     * Transition from {@link Substate#CANCELLED} to {@link Substate#REMOVED}.
-     */
-    CANCELLED_to_REMOVED(Substate.CANCELLED, Substate.REMOVED),
+    DOWN_to_REMOVING(Substate.DOWN, Substate.REMOVING),
     /**
      * Transition from {@link Substate#NEW} to {@link Substate#DOWN}.
      */
