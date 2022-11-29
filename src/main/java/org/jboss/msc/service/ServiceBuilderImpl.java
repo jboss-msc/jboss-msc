@@ -26,9 +26,6 @@ import static java.lang.Thread.currentThread;
 
 import org.jboss.msc.Service;
 import org.jboss.msc.inject.Injector;
-import org.jboss.msc.inject.Injectors;
-import org.jboss.msc.value.ImmediateValue;
-import org.jboss.msc.value.Value;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -200,7 +197,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         assertNotNull(target);
         assertThreadSafety();
         // implementation
-        addRequiresInternal(dependency).getInjectorList().add(Injectors.cast(target, type));
+        addRequiresInternal(dependency).getInjectorList().add((Injector<Object>) target);
         return this;
     }
 
