@@ -23,7 +23,6 @@
 package org.jboss.msc.value;
 
 import org.jboss.msc.inject.Injector;
-import org.jboss.msc.inject.RetainingInjector;
 
 /**
  * A value which is injected from another source.  The value may only be read if the injector has populated it.

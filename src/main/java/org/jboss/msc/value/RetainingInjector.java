@@ -20,11 +20,12 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package org.jboss.msc.inject;
+package org.jboss.msc.value;
 
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import org.jboss.msc.value.ImmediateValue;
-import org.jboss.msc.value.Value;
+
+import org.jboss.msc.inject.InjectionException;
+import org.jboss.msc.inject.Injector;
 
 /**
  * An injector which retains its value.
@@ -32,11 +33,8 @@ import org.jboss.msc.value.Value;
  * @param <T> the injected value type
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
- * @deprecated Use {@link org.jboss.msc.service.ServiceBuilder#provides(org.jboss.msc.service.ServiceName...)}
- * method instead. This class will be removed in a future release.
  */
-@Deprecated
-public abstract class RetainingInjector<T> implements Injector<T> {
+abstract class RetainingInjector<T> implements Injector<T> {
 
     /**
      * The stored value.
