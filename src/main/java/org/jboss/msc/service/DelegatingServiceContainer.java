@@ -239,10 +239,4 @@ public class DelegatingServiceContainer implements ServiceContainer {
         return this;
     }
 
-    /** {@inheritDoc} */
-    @Deprecated
-    public Set<ServiceName> getDependencies() {
-        return getServiceTargetDelegate().getDependencies();
-    }
-
 }

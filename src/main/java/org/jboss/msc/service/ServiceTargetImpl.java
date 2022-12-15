@@ -23,7 +23,6 @@
 package org.jboss.msc.service;
 
 import static java.util.Collections.synchronizedSet;
-import static java.util.Collections.unmodifiableSet;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -165,11 +164,6 @@ class ServiceTargetImpl implements ServiceTarget {
         }
         dependencies.remove(dependency);
         return this;
-    }
-
-    @Override
-    public Set<ServiceName> getDependencies() {
-        return unmodifiableSet(dependencies);
     }
 
     /**

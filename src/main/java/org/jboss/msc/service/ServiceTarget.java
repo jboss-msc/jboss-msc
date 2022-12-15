@@ -162,13 +162,4 @@ public interface ServiceTarget {
     @Deprecated
     ServiceTarget removeDependency(ServiceName dependency);
 
-    /**
-     * Returns a set of all dependencies added to this target.
-     * 
-     * @return all dependencies of this target
-     * @deprecated This method will be removed in a future release.
-     */
-    @Deprecated
-    Set<ServiceName> getDependencies();
-
 }
