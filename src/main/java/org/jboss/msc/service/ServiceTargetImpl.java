@@ -23,10 +23,7 @@
 package org.jboss.msc.service;
 
 import static java.util.Collections.synchronizedSet;
-import static java.util.Collections.unmodifiableSet;
 
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -113,18 +110,6 @@ class ServiceTargetImpl implements ServiceTarget {
     }
 
     @Override
-    public ServiceTarget addMonitors(final StabilityMonitor... monitors) {
-        if (monitors != null) {
-            for (final StabilityMonitor monitor : monitors) {
-                if (monitor != null) {
-                    this.monitors.add(monitor);
-                }
-            }
-        }
-        return this;
-    }
-
-    @Override
     public ServiceTarget removeMonitor(final StabilityMonitor monitor) {
         if (monitor != null) {
             monitors.remove(monitor);
@@ -139,55 +124,12 @@ class ServiceTargetImpl implements ServiceTarget {
     }
 
     @Override
-    public Set<StabilityMonitor> getMonitors() {
-        return unmodifiableSet(monitors);
-    }
-
-    @Override
     public ServiceTarget addDependency(ServiceName dependency) {
         if (dependency == null) {
             return this;
         }
         dependencies.add(dependency);
         return this;
-    }
-
-    @Override
-    public ServiceTarget addDependency(ServiceName... dependencies) {
-        if (dependencies == null) {
-            return this;
-        }
-        final Set<ServiceName> myDependencies = this.dependencies;
-        for(ServiceName dependency : dependencies) {
-            myDependencies.add(dependency);
-        }
-        return this;
-    }
-
-    @Override
-    public ServiceTarget addDependency(Collection<ServiceName> dependencies) {
-        if (dependencies == null) {
-            return this;
-        }
-        final Set<ServiceName> myDependencies = this.dependencies;
-        for(ServiceName dependency : dependencies) {
-            myDependencies.add(dependency);
-        }
-        return this;
-    }
-
-    @Override
-    public ServiceTarget removeDependency(final ServiceName dependency) {
-        if (dependency == null) {
-            return this;
-        }
-        dependencies.remove(dependency);
-        return this;
-    }
-
-    @Override
-    public Set<ServiceName> getDependencies() {
-        return unmodifiableSet(dependencies);
     }
 
     /**

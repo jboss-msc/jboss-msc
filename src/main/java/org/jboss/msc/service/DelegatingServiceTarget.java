@@ -22,9 +22,6 @@
 
 package org.jboss.msc.service;
 
-import java.util.Collection;
-import java.util.Set;
-
 import org.jboss.msc.value.Value;
 
 /**
@@ -105,37 +102,6 @@ public class DelegatingServiceTarget implements ServiceTarget {
     /** {@inheritDoc} */
     @Deprecated
     @Override
-    public ServiceTarget addDependency(final ServiceName... dependencies) {
-        getDelegate().addDependency(dependencies);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceTarget addDependency(final Collection<ServiceName> dependencies) {
-        getDelegate().addDependency(dependencies);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceTarget removeDependency(final ServiceName dependency) {
-        getDelegate().removeDependency(dependency);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public Set<ServiceName> getDependencies() {
-        return getDelegate().getDependencies();
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
     public ServiceTarget addMonitor(final StabilityMonitor monitor) {
         getDelegate().addMonitor(monitor);
         return this;
@@ -148,20 +114,4 @@ public class DelegatingServiceTarget implements ServiceTarget {
         getDelegate().removeMonitor(monitor);
         return this;
     }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceTarget addMonitors(final StabilityMonitor... monitors) {
-        getDelegate().addMonitors(monitors);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public Set<StabilityMonitor> getMonitors() {
-        return getDelegate().getMonitors();
-    }
-
 }

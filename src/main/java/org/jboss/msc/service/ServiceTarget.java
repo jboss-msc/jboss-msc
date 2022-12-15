@@ -22,9 +22,6 @@
 
 package org.jboss.msc.service;
 
-import java.util.Collection;
-import java.util.Set;
-
 import org.jboss.msc.value.Value;
 
 /**
@@ -112,17 +109,6 @@ public interface ServiceTarget {
     ServiceTarget addMonitor(StabilityMonitor monitor);
 
     /**
-     * Add a stability monitors that will be added to all the ServiceBuilders installed in this target.
-     *
-     * @param monitors the monitors to add to the target
-     * @return this target
-     * @deprecated Stability monitors are unreliable - do not use them.
-     * This method will be removed in a future release.
-     */
-    @Deprecated
-    ServiceTarget addMonitors(StabilityMonitor... monitors);
-
-    /**
      * Remove a monitor from this target, if it exists.
      *
      * @param monitor the monitor to remove
@@ -134,16 +120,6 @@ public interface ServiceTarget {
     ServiceTarget removeMonitor(StabilityMonitor monitor);
 
     /**
-     * Returns a set of the monitors added to this target.
-     * 
-     * @return the monitors added to this target
-     * @deprecated Stability monitors are unreliable - do not use them.
-     * This method will be removed in a future release.
-     */
-    @Deprecated
-    Set<StabilityMonitor> getMonitors();
-
-    /**
      * Add a dependency that will be added to the all ServiceBuilders installed in this target.
      *
      * @param dependency the dependency to add to the target
@@ -152,44 +128,4 @@ public interface ServiceTarget {
      */
     @Deprecated
     ServiceTarget addDependency(ServiceName dependency);
-
-    /**
-     * Add a list of dependencies that will be added to the all ServiceBuilders installed in this target.
-     *
-     * @param dependencies a list of dependencies to add to the target
-     * @return this target
-     * @deprecated This method will be removed in a future release.
-     */
-    @Deprecated
-    ServiceTarget addDependency(ServiceName... dependencies);
-
-    /**
-     * Add a collection of dependencies that will be added to the all ServiceBuilders installed in this target
-     *
-     * @param dependencies a collection of dependencies to add to this target
-     * @return this target
-     * @deprecated This method will be removed in a future release.
-     */
-    @Deprecated
-    ServiceTarget addDependency(Collection<ServiceName> dependencies);
-
-    /**
-     * Remove a dependency from this target.  Subsequently defined services will not have this dependency.
-     *
-     * @param dependency the dependency
-     * @return this target
-     * @deprecated This method will be removed in a future release.
-     */
-    @Deprecated
-    ServiceTarget removeDependency(ServiceName dependency);
-
-    /**
-     * Returns a set of all dependencies added to this target.
-     * 
-     * @return all dependencies of this target
-     * @deprecated This method will be removed in a future release.
-     */
-    @Deprecated
-    Set<ServiceName> getDependencies();
-
 }
