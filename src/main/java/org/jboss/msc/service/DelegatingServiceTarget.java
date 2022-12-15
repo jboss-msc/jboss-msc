@@ -152,14 +152,6 @@ public class DelegatingServiceTarget implements ServiceTarget {
     /** {@inheritDoc} */
     @Deprecated
     @Override
-    public ServiceTarget addMonitors(final StabilityMonitor... monitors) {
-        getDelegate().addMonitors(monitors);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
     public Set<StabilityMonitor> getMonitors() {
         return getDelegate().getMonitors();
     }

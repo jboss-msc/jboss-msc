@@ -112,17 +112,6 @@ public interface ServiceTarget {
     ServiceTarget addMonitor(StabilityMonitor monitor);
 
     /**
-     * Add a stability monitors that will be added to all the ServiceBuilders installed in this target.
-     *
-     * @param monitors the monitors to add to the target
-     * @return this target
-     * @deprecated Stability monitors are unreliable - do not use them.
-     * This method will be removed in a future release.
-     */
-    @Deprecated
-    ServiceTarget addMonitors(StabilityMonitor... monitors);
-
-    /**
      * Remove a monitor from this target, if it exists.
      *
      * @param monitor the monitor to remove

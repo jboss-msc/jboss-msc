@@ -113,18 +113,6 @@ class ServiceTargetImpl implements ServiceTarget {
     }
 
     @Override
-    public ServiceTarget addMonitors(final StabilityMonitor... monitors) {
-        if (monitors != null) {
-            for (final StabilityMonitor monitor : monitors) {
-                if (monitor != null) {
-                    this.monitors.add(monitor);
-                }
-            }
-        }
-        return this;
-    }
-
-    @Override
     public ServiceTarget removeMonitor(final StabilityMonitor monitor) {
         if (monitor != null) {
             monitors.remove(monitor);
