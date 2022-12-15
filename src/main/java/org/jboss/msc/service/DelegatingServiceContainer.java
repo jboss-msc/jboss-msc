@@ -216,12 +216,4 @@ public class DelegatingServiceContainer implements ServiceContainer {
         getServiceTargetDelegate().addDependency(dependency);
         return this;
     }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    public ServiceContainer removeDependency(final ServiceName dependency) {
-        getServiceTargetDelegate().removeDependency(dependency);
-        return this;
-    }
-
 }

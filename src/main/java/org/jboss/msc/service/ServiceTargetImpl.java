@@ -132,15 +132,6 @@ class ServiceTargetImpl implements ServiceTarget {
         return this;
     }
 
-    @Override
-    public ServiceTarget removeDependency(final ServiceName dependency) {
-        if (dependency == null) {
-            return this;
-        }
-        dependencies.remove(dependency);
-        return this;
-    }
-
     /**
      * Apply listeners and dependencies to {@code serviceBuilder}.
      * 

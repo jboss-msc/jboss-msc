@@ -128,15 +128,4 @@ public interface ServiceTarget {
      */
     @Deprecated
     ServiceTarget addDependency(ServiceName dependency);
-
-    /**
-     * Remove a dependency from this target.  Subsequently defined services will not have this dependency.
-     *
-     * @param dependency the dependency
-     * @return this target
-     * @deprecated This method will be removed in a future release.
-     */
-    @Deprecated
-    ServiceTarget removeDependency(ServiceName dependency);
-
 }

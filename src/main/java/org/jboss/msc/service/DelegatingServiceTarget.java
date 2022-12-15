@@ -102,14 +102,6 @@ public class DelegatingServiceTarget implements ServiceTarget {
     /** {@inheritDoc} */
     @Deprecated
     @Override
-    public ServiceTarget removeDependency(final ServiceName dependency) {
-        getDelegate().removeDependency(dependency);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
     public ServiceTarget addMonitor(final StabilityMonitor monitor) {
         getDelegate().addMonitor(monitor);
         return this;
@@ -122,5 +114,4 @@ public class DelegatingServiceTarget implements ServiceTarget {
         getDelegate().removeMonitor(monitor);
         return this;
     }
-
 }
