@@ -143,16 +143,6 @@ public interface ServiceTarget {
     ServiceTarget addDependency(ServiceName... dependencies);
 
     /**
-     * Add a collection of dependencies that will be added to the all ServiceBuilders installed in this target
-     *
-     * @param dependencies a collection of dependencies to add to this target
-     * @return this target
-     * @deprecated This method will be removed in a future release.
-     */
-    @Deprecated
-    ServiceTarget addDependency(Collection<ServiceName> dependencies);
-
-    /**
      * Remove a dependency from this target.  Subsequently defined services will not have this dependency.
      *
      * @param dependency the dependency

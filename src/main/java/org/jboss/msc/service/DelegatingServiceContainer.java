@@ -23,7 +23,6 @@
 package org.jboss.msc.service;
 
 import java.io.PrintStream;
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -221,13 +220,6 @@ public class DelegatingServiceContainer implements ServiceContainer {
     /** {@inheritDoc} */
     @Deprecated
     public ServiceContainer addDependency(final ServiceName... dependencies) {
-        getServiceTargetDelegate().addDependency(dependencies);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    public ServiceContainer addDependency(final Collection<ServiceName> dependencies) {
         getServiceTargetDelegate().addDependency(dependencies);
         return this;
     }

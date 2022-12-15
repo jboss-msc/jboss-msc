@@ -24,7 +24,6 @@ package org.jboss.msc.service;
 
 import static java.util.Collections.synchronizedSet;
 
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -135,18 +134,6 @@ class ServiceTargetImpl implements ServiceTarget {
 
     @Override
     public ServiceTarget addDependency(ServiceName... dependencies) {
-        if (dependencies == null) {
-            return this;
-        }
-        final Set<ServiceName> myDependencies = this.dependencies;
-        for(ServiceName dependency : dependencies) {
-            myDependencies.add(dependency);
-        }
-        return this;
-    }
-
-    @Override
-    public ServiceTarget addDependency(Collection<ServiceName> dependencies) {
         if (dependencies == null) {
             return this;
         }

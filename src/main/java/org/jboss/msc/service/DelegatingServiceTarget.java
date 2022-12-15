@@ -22,9 +22,6 @@
 
 package org.jboss.msc.service;
 
-import java.util.Collection;
-import java.util.Set;
-
 import org.jboss.msc.value.Value;
 
 /**
@@ -106,14 +103,6 @@ public class DelegatingServiceTarget implements ServiceTarget {
     @Deprecated
     @Override
     public ServiceTarget addDependency(final ServiceName... dependencies) {
-        getDelegate().addDependency(dependencies);
-        return this;
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public ServiceTarget addDependency(final Collection<ServiceName> dependencies) {
         getDelegate().addDependency(dependencies);
         return this;
     }
