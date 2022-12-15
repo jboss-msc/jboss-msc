@@ -133,18 +133,6 @@ class ServiceTargetImpl implements ServiceTarget {
     }
 
     @Override
-    public ServiceTarget addDependency(ServiceName... dependencies) {
-        if (dependencies == null) {
-            return this;
-        }
-        final Set<ServiceName> myDependencies = this.dependencies;
-        for(ServiceName dependency : dependencies) {
-            myDependencies.add(dependency);
-        }
-        return this;
-    }
-
-    @Override
     public ServiceTarget removeDependency(final ServiceName dependency) {
         if (dependency == null) {
             return this;
