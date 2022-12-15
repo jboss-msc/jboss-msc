@@ -123,16 +123,6 @@ public interface ServiceTarget {
     ServiceTarget removeMonitor(StabilityMonitor monitor);
 
     /**
-     * Returns a set of the monitors added to this target.
-     * 
-     * @return the monitors added to this target
-     * @deprecated Stability monitors are unreliable - do not use them.
-     * This method will be removed in a future release.
-     */
-    @Deprecated
-    Set<StabilityMonitor> getMonitors();
-
-    /**
      * Add a dependency that will be added to the all ServiceBuilders installed in this target.
      *
      * @param dependency the dependency to add to the target

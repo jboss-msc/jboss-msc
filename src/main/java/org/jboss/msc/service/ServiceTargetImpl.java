@@ -25,7 +25,6 @@ package org.jboss.msc.service;
 import static java.util.Collections.synchronizedSet;
 import static java.util.Collections.unmodifiableSet;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -124,11 +123,6 @@ class ServiceTargetImpl implements ServiceTarget {
     public ServiceTarget removeListener(final LifecycleListener listener) {
         if (listener != null) lifecycleListeners.remove(listener);
         return this;
-    }
-
-    @Override
-    public Set<StabilityMonitor> getMonitors() {
-        return unmodifiableSet(monitors);
     }
 
     @Override

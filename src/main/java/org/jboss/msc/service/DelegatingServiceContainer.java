@@ -213,12 +213,6 @@ public class DelegatingServiceContainer implements ServiceContainer {
 
     /** {@inheritDoc} */
     @Deprecated
-    public Set<StabilityMonitor> getMonitors() {
-        return getServiceTargetDelegate().getMonitors();
-    }
-
-    /** {@inheritDoc} */
-    @Deprecated
     public ServiceContainer addDependency(final ServiceName dependency) {
         getServiceTargetDelegate().addDependency(dependency);
         return this;
