@@ -47,7 +47,7 @@ abstract class RetainingInjector<T> implements Injector<T> {
 
     /** {@inheritDoc} */
     public void inject(final T value) throws InjectionException {
-        if (! valueUpdater.compareAndSet(this, null, new ImmediateValue<T>(value))) {
+        if (! valueUpdater.compareAndSet(this, null, () -> value)) {
             throw new InjectionException("Value already set for this injector");
         }
     }
