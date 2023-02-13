@@ -27,8 +27,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.jboss.msc.value.Value;
-
 /**
  * A delegating container for things which depend on a service container rather than a specific
  * target or registry instance.
@@ -183,12 +181,6 @@ public class DelegatingServiceContainer implements ServiceContainer {
     ////////////////////////
     // DEPRECATED METHODS //
     ////////////////////////
-
-    /** {@inheritDoc} */
-    @Deprecated
-    public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
-        return getServiceTargetDelegate().addServiceValue(name, value);
-    }
 
     /** {@inheritDoc} */
     @Deprecated
