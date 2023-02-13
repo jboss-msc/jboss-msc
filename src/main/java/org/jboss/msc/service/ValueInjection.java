@@ -37,7 +37,7 @@ import org.jboss.msc.value.Value;
  * This class will be removed in a future release.
  */
 @Deprecated
-public final class ValueInjection<T> {
+final class ValueInjection<T> {
     private final Value<? extends T> source;
     private final Injector<? super T> target;
 
