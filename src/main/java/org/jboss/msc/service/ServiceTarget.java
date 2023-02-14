@@ -22,8 +22,6 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.value.Value;
-
 /**
  * The target of ServiceBuilder installations.
  *
@@ -72,18 +70,6 @@ public interface ServiceTarget {
     ////////////////////////
     // DEPRECATED METHODS //
     ////////////////////////
-
-    /**
-     * Get a builder which can be used to add a service to this target.
-     *
-     * @param name the service name
-     * @param value the service value
-     * @return the builder for the service
-     * @deprecated Use {@link #addService(ServiceName)} instead.
-     * This method will be removed in a future release.
-     */
-    @Deprecated
-    <T> ServiceBuilder<T> addServiceValue(ServiceName name, Value<? extends Service<T>> value);
 
     /**
      * Get a builder which can be used to add a service to this target.

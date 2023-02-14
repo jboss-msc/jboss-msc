@@ -22,8 +22,6 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.value.Value;
-
 /**
  * A service target which delegates to another service target.
  *
@@ -76,13 +74,6 @@ public class DelegatingServiceTarget implements ServiceTarget {
     ////////////////////////
     // DEPRECATED METHODS //
     ////////////////////////
-
-    /** {@inheritDoc} */
-    @Deprecated
-    @Override
-    public <T> ServiceBuilder<T> addServiceValue(final ServiceName name, final Value<? extends Service<T>> value) throws IllegalArgumentException {
-        return getDelegate().addServiceValue(name, value);
-    }
 
     /** {@inheritDoc} */
     @Deprecated

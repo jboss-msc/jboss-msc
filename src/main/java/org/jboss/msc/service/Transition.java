@@ -101,54 +101,6 @@ enum Transition {
     }
 
     /**
-     * Determine whether this transition causes movement from a rest state to a non-rest state.
-     *
-     * @return {@code true} if this transition leaves a rest state
-     */
-    public boolean leavesRestState() {
-        return before.isRestState() && ! after.isRestState();
-    }
-
-    /**
-     * Determine whether this transition causes movement from a non-rest state to a rest state.
-     *
-     * @return {@code true} if this transition enters a rest state
-     */
-    public boolean entersRestState() {
-        return ! before.isRestState() && after.isRestState();
-    }
-
-    /**
-     * Determine whether this transition causes entry into the given state.
-     *
-     * @param state the state
-     * @return {@code true} if the state is entered by this transition
-     */
-    public boolean enters(ServiceController.State state) {
-        return before.getState() != state && after.getState() == state;
-    }
-
-    /**
-     * Determine whether this transition causes exit from the given state.
-     *
-     * @param state the state
-     * @return {@code true} if the state is exited by this transition
-     */
-    public boolean exits(ServiceController.State state) {
-        return before.getState() == state && after.getState() != state;
-    }
-
-    /**
-     * Determine whether this substate transition retains the same given state before and after transition.
-     *
-     * @param state the state
-     * @return {@code true} if the state is retained
-     */
-    public boolean retains(ServiceController.State state) {
-        return before.getState() == state && after.getState() == state;
-    }
-
-    /**
      * Get the source state of this transition.
      *
      * @return the source state
@@ -164,21 +116,6 @@ enum Transition {
      */
     public Substate getAfter() {
         return after;
-    }
-
-    /**
-     * Determine if this transition is one of the given transitions.
-     *
-     * @param transitions the transitions to check
-     * @return {@code true} if this transition is in the set; {@code false} otherwise
-     */
-    public boolean in(Transition... transitions) {
-        for (Transition test : transitions) {
-            if (this == test) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**

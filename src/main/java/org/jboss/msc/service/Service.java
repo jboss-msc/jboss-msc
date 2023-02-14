@@ -22,7 +22,6 @@
 
 package org.jboss.msc.service;
 
-import org.jboss.msc.value.ImmediateValue;
 import org.jboss.msc.value.Value;
 
 /**
@@ -99,9 +98,4 @@ public interface Service<T> extends org.jboss.msc.Service, Value<T> {
      * A simple null service which performs no start or stop action.
      */
     Service<Void> NULL = NullService.INSTANCE;
-
-    /**
-     * A value which resolves to the {@link #NULL null service}.
-     */
-    Value<Service<Void>> NULL_VALUE = new ImmediateValue<>(NULL);
 }

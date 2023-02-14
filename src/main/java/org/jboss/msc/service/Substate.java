@@ -96,19 +96,4 @@ enum Substate {
     public ServiceController.State getState() {
         return state;
     }
-
-    /**
-     * Determine if this substate is one of the given substates.
-     *
-     * @param substates the substates to check
-     * @return {@code true} if this substate is in the set; {@code false} otherwise
-     */
-    public boolean in(Substate... substates) {
-        for (Substate test : substates) {
-            if (this == test) {
-                return true;
-            }
-        }
-        return false;
-    }
 }
