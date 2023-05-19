@@ -117,6 +117,7 @@ public class DelegatingServiceController<S> implements ServiceController<S> {
 
     /** {@inheritDoc} */
     @Override
+    @Deprecated
     public ServiceName getName() {
         return getDelegate().getName();
     }

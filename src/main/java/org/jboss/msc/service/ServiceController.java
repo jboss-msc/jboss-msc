@@ -135,7 +135,9 @@ public interface ServiceController<S> extends Value<S> {
      * Get the name of this service, if any.
      *
      * @return the name, or {@code null} if none was specified.
+     * @deprecated this method will be removed in a future release
      */
+    @Deprecated
     ServiceName getName();
 
     /**
