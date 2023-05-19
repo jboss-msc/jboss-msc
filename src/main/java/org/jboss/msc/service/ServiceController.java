@@ -23,7 +23,7 @@
 package org.jboss.msc.service;
 
 import java.util.Collection;
-
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.jboss.msc.value.Value;
@@ -135,7 +135,8 @@ public interface ServiceController<S> extends Value<S> {
      * Get the name of this service, if any.
      *
      * @return the name, or {@code null} if none was specified.
-     * @deprecated this method will be removed in a future release
+     * @see #provides()
+     * @deprecated Use {@code ServiceController#provides()} instead. This method will be removed in a future release.
      */
     @Deprecated
     ServiceName getName();
@@ -144,11 +145,32 @@ public interface ServiceController<S> extends Value<S> {
      * Get other names this service is known as.
      *
      * @return the aliases
-     * @deprecated this method will be removed in a future release
+     * @see #provides()
+     * @deprecated Use {@code ServiceController#provides()} instead. This method will be removed in a future release.
      */
     @Deprecated
     ServiceName[] getAliases();
 
+    /**
+     * Get the names of all values this service require.
+     *
+     * @return names of required values
+     */
+    Set<ServiceName> requires();
+
+    /**
+     * Get the names of all values this service provide.
+     *
+     * @return names of provided values
+     */
+    Set<ServiceName> provides();
+
+    /**
+     * Get the names of all missing values this service require.
+     *
+     * @return names of missing values
+     */
+    Set<ServiceName> missing();
     /**
      * Add a service lifecycle listener.
      *
@@ -179,7 +201,9 @@ public interface ServiceController<S> extends Value<S> {
      * Get the complete list of dependencies that are unavailable.
      *
      * @return a set containing the names of all unavailable dependencies
+     * @deprecated Use {@code ServiceController#missing()} instead. This method will be removed in a future release.
      */
+    @Deprecated
     Collection<ServiceName> getUnavailableDependencies();
 
     /**
