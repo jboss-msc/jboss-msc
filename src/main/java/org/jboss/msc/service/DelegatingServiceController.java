@@ -23,6 +23,7 @@
 package org.jboss.msc.service;
 
 import java.util.Collection;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -111,6 +112,13 @@ public class DelegatingServiceController<S> implements ServiceController<S> {
 
     /** {@inheritDoc} */
     @Override
+    @Deprecated
+    public Collection<ServiceName> getUnavailableDependencies() {
+        return getDelegate().getUnavailableDependencies();
+    }
+
+    /** {@inheritDoc} */
+    @Override
     public Service<S> getService() throws IllegalStateException {
         return getDelegate().getService();
     }
@@ -127,6 +135,24 @@ public class DelegatingServiceController<S> implements ServiceController<S> {
     @Deprecated
     public ServiceName[] getAliases() {
         return getDelegate().getAliases();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public Set<ServiceName> requires() {
+        return getDelegate().requires();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public Set<ServiceName> provides() {
+        return getDelegate().provides();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public Set<ServiceName> missing() {
+        return getDelegate().missing();
     }
 
     /** {@inheritDoc} */
@@ -151,12 +177,6 @@ public class DelegatingServiceController<S> implements ServiceController<S> {
     @Override
     public void retry() {
         getDelegate().retry();
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public Collection<ServiceName> getUnavailableDependencies() {
-        return getDelegate().getUnavailableDependencies();
     }
 
 }
