@@ -142,7 +142,9 @@ public interface ServiceController<S> extends Value<S> {
      * Get other names this service is known as.
      *
      * @return the aliases
+     * @deprecated this method will be removed in a future release
      */
+    @Deprecated
     ServiceName[] getAliases();
 
     /**

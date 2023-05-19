@@ -123,6 +123,7 @@ public class DelegatingServiceController<S> implements ServiceController<S> {
 
     /** {@inheritDoc} */
     @Override
+    @Deprecated
     public ServiceName[] getAliases() {
         return getDelegate().getAliases();
     }
