@@ -62,8 +62,8 @@ public class DelegatingServiceTarget implements ServiceTarget {
     }
 
     /** {@inheritDoc} */
-    public ServiceBuilder<?> addService(ServiceName name) {
-        return getDelegate().addService(name);
+    public ServiceBuilder<?> addService() {
+        return getDelegate().addService();
     }
 
     /** {@inheritDoc} */
@@ -78,7 +78,14 @@ public class DelegatingServiceTarget implements ServiceTarget {
     /** {@inheritDoc} */
     @Deprecated
     @Override
-    public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
+    public ServiceBuilder<?> addService(ServiceName name) {
+        return getDelegate().addService(name);
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    @Override
+    public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) {
         return getDelegate().addService(name, service);
     }
 

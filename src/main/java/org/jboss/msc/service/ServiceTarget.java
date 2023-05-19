@@ -55,10 +55,9 @@ public interface ServiceTarget {
     /**
      * Get a builder which can be used to add a service to this target.
      *
-     * @param name the service name
      * @return new service configurator
      */
-    ServiceBuilder<?> addService(ServiceName name);
+    ServiceBuilder<?> addService();
 
     /**
      * Create a sub-target using this as the parent target.
@@ -75,9 +74,19 @@ public interface ServiceTarget {
      * Get a builder which can be used to add a service to this target.
      *
      * @param name the service name
+     * @return new service configurator
+     * @deprecated Use {@link #addService()} instead.
+     * This method will be removed in a future release.
+     */
+    ServiceBuilder<?> addService(ServiceName name);
+
+    /**
+     * Get a builder which can be used to add a service to this target.
+     *
+     * @param name the service name
      * @param service the service
      * @return the builder for the service
-     * @deprecated Use {@link #addService(ServiceName)} instead.
+     * @deprecated Use {@link #addService()} instead.
      * This method will be removed in a future release.
      */
     @Deprecated

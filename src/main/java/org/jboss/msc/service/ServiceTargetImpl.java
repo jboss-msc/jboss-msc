@@ -80,6 +80,11 @@ class ServiceTargetImpl implements ServiceTarget {
         return createServiceBuilder(name, null);
     }
 
+    @Override
+    public ServiceBuilder<?> addService() {
+        return createServiceBuilder(null, null);
+    }
+
     public ServiceTarget addListener(final LifecycleListener listener) {
         if (listener != null) {
             lifecycleListeners.add(listener);
