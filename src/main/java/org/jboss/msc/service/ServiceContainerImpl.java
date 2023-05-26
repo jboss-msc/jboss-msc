@@ -763,6 +763,10 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
      * @throws CircularDependencyException if a dependency cycle involving {@code instance} is detected
      */
     private <T> void detectCircularity(ServiceControllerImpl<T> instance) throws CircularDependencyException {
+        if (isAggregationService(instance)) {
+            // aggregation services cannot introduce a dependency cycle
+            return;
+        }
         final Set<ServiceControllerImpl<?>> visited = new IdentityHashSet<>();
         final Deque<ServiceControllerImpl> visitStack = new ArrayDeque<>();
         visitStack.push(instance);
@@ -787,7 +791,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 throw new CircularDependencyException("Container " + name + " has a circular dependency: " + Arrays.asList(cycle), cycle);
             }
             if (visited.add(controller)) {
-                if (controller.getState() == ServiceController.State.REMOVED) continue;
+                if (isRemovedService(controller) || isAggregationService(controller)) continue;
                 visitStack.push(controller);
                 synchronized(controller) {
                     detectCircularity(controller.getChildren(), instance, visited, visitStack);
@@ -801,6 +805,14 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
                 visitStack.poll();
             }
         }
+    }
+
+    private static boolean isAggregationService(final ServiceControllerImpl<?> controller) {
+        return !(controller.service instanceof org.jboss.msc.service.Service) && controller.provides().isEmpty();
+    }
+
+    private static boolean isRemovedService(final ServiceControllerImpl<?> controller) {
+        return controller.getState() == ServiceController.State.REMOVED;
     }
 
     private static final AtomicInteger executorSeq = new AtomicInteger(1);
