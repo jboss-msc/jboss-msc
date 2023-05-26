@@ -29,10 +29,11 @@ import static org.jboss.msc.service.SecurityUtils.setTCCL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
@@ -76,7 +77,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     /**
      * The service itself.
      */
-    private final org.jboss.msc.Service service;
+    final org.jboss.msc.Service service;
     /**
      * The injections of this service.
      */
@@ -109,6 +110,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
      * The children of this service (only valid during {@link State#UP}).
      */
     private final Set<ServiceControllerImpl<?>> children;
+
+    private final Set<ServiceName> requiredValues;
+    private final Set<ServiceName> providedValues;
     /**
      * The start exception.
      */
@@ -198,7 +202,9 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         this.service = service;
         this.injections = injections;
         this.requires = requires;
+        this.requiredValues = unmodifiableSetOf(requires);
         this.provides = provides;
+        this.providedValues = unmodifiableSetOf(provides.keySet());
         this.lifecycleListeners = new IdentityHashSet<>(lifecycleListeners);
         this.monitors = new IdentityHashSet<>(monitors);
         // We also need to register this controller with monitors explicitly.
@@ -211,6 +217,15 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         int depCount = requires.size();
         stoppingDependencies = parent == null ? depCount : depCount + 1;
         children = new IdentityHashSet<>();
+    }
+
+    private static Set<ServiceName> unmodifiableSetOf(final Set<? extends Dependency> set) {
+        if (set.isEmpty()) return Collections.EMPTY_SET;
+        final Set<ServiceName> temp = new HashSet<>(set.size());
+        for (Dependency dependency : set) {
+            temp.add(dependency.getName());
+        }
+        return Collections.unmodifiableSet(temp);
     }
 
     /**
@@ -1072,6 +1087,18 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
         return serviceAliases.clone();
     }
 
+    public Set<ServiceName> requires() {
+        return requiredValues;
+    }
+
+    public Set<ServiceName> provides() {
+        return providedValues;
+    }
+
+    public Set<ServiceName> missing() {
+        return getUnavailableDependencies();
+    }
+
     void addListener(final ContainerShutdownListener listener) {
         assert !holdsLock(this);
         synchronized (this) {
@@ -1140,7 +1167,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     }
 
     @Override
-    public Collection<ServiceName> getUnavailableDependencies() {
+    public Set<ServiceName> getUnavailableDependencies() {
         final Set<ServiceName> retVal = new IdentityHashSet<>();
         for (Dependency dependency : requires) {
             synchronized (dependency.getLock()) {
@@ -1149,7 +1176,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
                 }
             }
         }
-        return retVal;
+        return Collections.unmodifiableSet(retVal);
     }
 
     private static boolean isUnavailable(final Dependency dependency) {
