@@ -77,7 +77,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     /**
      * The service itself.
      */
-    private final org.jboss.msc.Service service;
+    final org.jboss.msc.Service service;
     /**
      * The injections of this service.
      */
