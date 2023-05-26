@@ -61,7 +61,7 @@ public class ServiceStatus implements Serializable {
      * @param exception the service start exception
      * @param dependencyUnavailable {@code true} if some dependency is unavailable
      */
-    @ConstructorProperties({"parentName", "serviceName", "serviceClassName", "modeName", "stateName", "substateName", "dependencies", "dependencyFailed", "exception", "dependencyUnavailable"})
+    @ConstructorProperties({"parentName", "serviceName", "aliases", "serviceClassName", "modeName", "stateName", "substateName", "dependencies", "dependencyFailed", "exception", "dependencyUnavailable"})
     public ServiceStatus(final String parentName, final String serviceName, final String[] aliases, final String serviceClassName, final String modeName, final String stateName, final String substateName, final String[] dependencies, final boolean dependencyFailed, final String exception, final boolean dependencyUnavailable) {
         if (serviceName == null) {
             throw new IllegalArgumentException("serviceName is null");

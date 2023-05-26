@@ -67,8 +67,8 @@ public class DelegatingServiceContainer implements ServiceContainer {
     }
 
     /** {@inheritDoc} */
-    public ServiceBuilder<?> addService(final ServiceName name) throws IllegalArgumentException {
-        return getServiceTargetDelegate().addService(name);
+    public ServiceBuilder<?> addService() {
+        return getServiceTargetDelegate().addService();
     }
 
     /** {@inheritDoc} */
@@ -184,7 +184,13 @@ public class DelegatingServiceContainer implements ServiceContainer {
 
     /** {@inheritDoc} */
     @Deprecated
-    public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) throws IllegalArgumentException {
+    public ServiceBuilder<?> addService(final ServiceName name) {
+        return getServiceTargetDelegate().addService(name);
+    }
+
+    /** {@inheritDoc} */
+    @Deprecated
+    public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) {
         return getServiceTargetDelegate().addService(name, service);
     }
 

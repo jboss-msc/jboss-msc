@@ -72,7 +72,9 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         this.serviceId = serviceId;
         this.serviceTarget = serviceTarget;
         this.parent = parent;
-        addProvidesInternal(serviceId, null);
+        if (serviceId != null) {
+            addProvidesInternal(serviceId, null);
+        }
     }
 
     @Override
@@ -318,7 +320,7 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
     }
 
     private void assertNotInstanceId(final ServiceName dependency) {
-        if (serviceId.equals(dependency)) {
+        if (dependency.equals(serviceId)) {
             throw new IllegalArgumentException("Cannot both require and provide same dependency:" + dependency);
         }
     }
