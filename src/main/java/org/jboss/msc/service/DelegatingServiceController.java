@@ -91,50 +91,8 @@ public class DelegatingServiceController<S> implements ServiceController<S> {
 
     /** {@inheritDoc} */
     @Override
-    @Deprecated
-    public S getValue() throws IllegalStateException {
-        return getDelegate().getValue();
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    @Deprecated
-    public S awaitValue() throws IllegalStateException, InterruptedException {
-        return getDelegate().awaitValue();
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    @Deprecated
-    public S awaitValue(final long time, final TimeUnit unit) throws IllegalStateException, InterruptedException, TimeoutException {
-        return getDelegate().awaitValue(time, unit);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    @Deprecated
-    public Collection<ServiceName> getUnavailableDependencies() {
-        return getDelegate().getUnavailableDependencies();
-    }
-
-    /** {@inheritDoc} */
-    @Override
     public Service<S> getService() throws IllegalStateException {
         return getDelegate().getService();
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    @Deprecated
-    public ServiceName getName() {
-        return getDelegate().getName();
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    @Deprecated
-    public ServiceName[] getAliases() {
-        return getDelegate().getAliases();
     }
 
     /** {@inheritDoc} */
@@ -177,6 +135,52 @@ public class DelegatingServiceController<S> implements ServiceController<S> {
     @Override
     public void retry() {
         getDelegate().retry();
+    }
+
+    ////////////////////////
+    // DEPRECATED METHODS //
+    ////////////////////////
+
+    /** {@inheritDoc} */
+    @Override
+    @Deprecated
+    public S awaitValue() throws IllegalStateException, InterruptedException {
+        return getDelegate().awaitValue();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    @Deprecated
+    public S awaitValue(final long time, final TimeUnit unit) throws IllegalStateException, InterruptedException, TimeoutException {
+        return getDelegate().awaitValue(time, unit);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    @Deprecated
+    public ServiceName[] getAliases() {
+        return getDelegate().getAliases();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    @Deprecated
+    public ServiceName getName() {
+        return getDelegate().getName();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    @Deprecated
+    public S getValue() throws IllegalStateException {
+        return getDelegate().getValue();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    @Deprecated
+    public Collection<ServiceName> getUnavailableDependencies() {
+        return getDelegate().getUnavailableDependencies();
     }
 
 }
