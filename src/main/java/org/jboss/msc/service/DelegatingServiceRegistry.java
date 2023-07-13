@@ -52,16 +52,19 @@ public class DelegatingServiceRegistry implements ServiceRegistry {
     }
 
     /** {@inheritDoc} */
+    @Override
     public ServiceController<?> getRequiredService(final ServiceName serviceName) throws ServiceNotFoundException {
         return getDelegate().getRequiredService(serviceName);
     }
 
     /** {@inheritDoc} */
+    @Override
     public ServiceController<?> getService(final ServiceName serviceName) {
         return getDelegate().getService(serviceName);
     }
 
     /** {@inheritDoc} */
+    @Override
     public List<ServiceName> getServiceNames() {
         return getDelegate().getServiceNames();
     }

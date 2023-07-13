@@ -67,38 +67,45 @@ public class DelegatingServiceContainer implements ServiceContainer {
     }
 
     /** {@inheritDoc} */
+    @Override
     public ServiceBuilder<?> addService() {
         return getServiceTargetDelegate().addService();
     }
 
     /** {@inheritDoc} */
+    @Override
     public ServiceContainer addListener(final LifecycleListener listener) {
         getServiceTargetDelegate().addListener(listener);
         return this;
     }
 
     /** {@inheritDoc} */
+    @Override
     public ServiceContainer removeListener(final LifecycleListener listener) {
         getServiceTargetDelegate().removeListener(listener);
         return this;
     }
 
     /** {@inheritDoc} */
+    @Override
     public ServiceTarget subTarget() {
         return getServiceTargetDelegate().subTarget();
     }
 
     /** {@inheritDoc} */
+    @Override
     public ServiceController<?> getRequiredService(final ServiceName serviceName) throws ServiceNotFoundException {
         return getServiceRegistryDelegate().getRequiredService(serviceName);
     }
 
     /** {@inheritDoc} */
+    @Override
     public ServiceController<?> getService(final ServiceName serviceName) {
         return getServiceRegistryDelegate().getService(serviceName);
     }
 
     /** {@inheritDoc} */
+    @Override
     public List<ServiceName> getServiceNames() {
         return getServiceRegistryDelegate().getServiceNames();
     }
@@ -108,36 +115,43 @@ public class DelegatingServiceContainer implements ServiceContainer {
     ///////////////////////////
 
     /** {@inheritDoc} */
+    @Override
     public String getName() {
         throw new UnsupportedOperationException();
     }
 
     /** {@inheritDoc} */
+    @Override
     public void shutdown() {
         throw new UnsupportedOperationException();
     }
 
     /** {@inheritDoc} */
+    @Override
     public boolean isShutdown() {
         throw new UnsupportedOperationException();
     }
 
     /** {@inheritDoc} */
+    @Override
     public boolean isShutdownComplete() {
         throw new UnsupportedOperationException();
     }
 
     /** {@inheritDoc} */
+    @Override
     public void dumpServices() {
         throw new UnsupportedOperationException();
     }
 
     /** {@inheritDoc} */
+    @Override
     public void dumpServices(final PrintStream stream) {
         throw new UnsupportedOperationException();
     }
 
     /** {@inheritDoc} */
+    @Override
     public void addTerminateListener(TerminateListener listener) {
         throw new UnsupportedOperationException();
     }
@@ -184,18 +198,21 @@ public class DelegatingServiceContainer implements ServiceContainer {
 
     /** {@inheritDoc} */
     @Deprecated
+    @Override
     public ServiceBuilder<?> addService(final ServiceName name) {
         return getServiceTargetDelegate().addService(name);
     }
 
     /** {@inheritDoc} */
     @Deprecated
+    @Override
     public <T> ServiceBuilder<T> addService(final ServiceName name, final Service<T> service) {
         return getServiceTargetDelegate().addService(name, service);
     }
 
     /** {@inheritDoc} */
     @Deprecated
+    @Override
     public ServiceTarget addMonitor(StabilityMonitor monitor) {
         getServiceTargetDelegate().addMonitor(monitor);
         return this;
@@ -203,6 +220,7 @@ public class DelegatingServiceContainer implements ServiceContainer {
 
     /** {@inheritDoc} */
     @Deprecated
+    @Override
     public ServiceTarget removeMonitor(StabilityMonitor monitor) {
         getServiceTargetDelegate().removeMonitor(monitor);
         return this;
@@ -210,6 +228,7 @@ public class DelegatingServiceContainer implements ServiceContainer {
 
     /** {@inheritDoc} */
     @Deprecated
+    @Override
     public ServiceContainer addDependency(final ServiceName dependency) {
         getServiceTargetDelegate().addDependency(dependency);
         return this;

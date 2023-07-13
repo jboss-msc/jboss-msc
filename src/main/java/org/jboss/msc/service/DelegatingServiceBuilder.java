@@ -57,34 +57,40 @@ public class DelegatingServiceBuilder<T> implements ServiceBuilder<T> {
     }
 
     /** {@inheritDoc} */
+    @Override
     public <V> Supplier<V> requires(final ServiceName name) {
         return getDelegate().requires(name);
     }
 
     /** {@inheritDoc} */
+    @Override
     public <V> Consumer<V> provides(final ServiceName... names) {
         return getDelegate().provides(names);
     }
 
     /** {@inheritDoc} */
+    @Override
     public ServiceBuilder<T> setInitialMode(final ServiceController.Mode mode) {
         getDelegate().setInitialMode(mode);
         return this;
     }
 
     /** {@inheritDoc} */
+    @Override
     public ServiceBuilder<T> setInstance(final org.jboss.msc.Service service) {
         getDelegate().setInstance(service);
         return this;
     }
 
     /** {@inheritDoc} */
+    @Override
     public ServiceBuilder<T> addListener(final LifecycleListener listener) {
         getDelegate().addListener(listener);
         return this;
     }
 
     /** {@inheritDoc} */
+    @Override
     public ServiceController<T> install() {
         return getDelegate().install();
     }
