@@ -63,9 +63,6 @@ public class ServiceStatus implements Serializable {
      */
     @ConstructorProperties({"parentName", "serviceName", "aliases", "serviceClassName", "modeName", "stateName", "substateName", "dependencies", "dependencyFailed", "exception", "dependencyUnavailable"})
     public ServiceStatus(final String parentName, final String serviceName, final String[] aliases, final String serviceClassName, final String modeName, final String stateName, final String substateName, final String[] dependencies, final boolean dependencyFailed, final String exception, final boolean dependencyUnavailable) {
-        if (serviceName == null) {
-            throw new IllegalArgumentException("serviceName is null");
-        }
         if (aliases == null) {
             throw new IllegalArgumentException("aliases is null");
         }
