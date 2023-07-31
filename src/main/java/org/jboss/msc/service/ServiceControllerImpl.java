@@ -1203,7 +1203,7 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     ServiceStatus getStatus() {
         synchronized (this) {
             final String parentName = parent == null ? null : parent.getName().getCanonicalName();
-            final String name = getName().getCanonicalName();
+            final String name = (this.serviceId != null) ? this.serviceId.getCanonicalName() : null;
             final ServiceName[] aliasNames = getAliases();
             final int aliasLength = aliasNames.length;
             final String[] aliases;
