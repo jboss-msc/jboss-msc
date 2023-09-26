@@ -315,3 +315,156 @@ By following these guidelines, you can create well-behaved services in JBoss MSC
 ## Conclusion
 
 Implementing [Service](http://jboss-msc.github.io/jboss-msc/apidocs/org/jboss/msc/Service.html) in JBoss MSC allows you to encapsulate specific functionality or components within your application in a modular and organized manner. By accepting _java.util.function.Consumer_ for provided values and _java.util.function.Supplier_ for required values, you can build services that are flexible and easy to configure. Understanding thread safety and adhering to JBoss MSC's guarantees ensures the reliable operation of your services within the container.
+
+# Understanding StartContext and StopContext
+
+[Start context](http://jboss-msc.github.io/jboss-msc/apidocs/org/jboss/msc/service/StartContext.html) and [Stop context](http://jboss-msc.github.io/jboss-msc/apidocs/org/jboss/msc/service/StopContext.html)
+are important components in JBoss MSC that provide valuable capabilities during the start-up and shutdown phases of services. They offer methods for synchronous and asynchronous service installation, and proper usage of these contexts can greatly enhance the flexibility and control you have over your services.
+
+## StartContext and Synchronous Service Installation
+
+The _StartContext_ represents the context in which a service's _start()_ method is executed. It offers methods for installing services either _synchronously_ or _asynchronously_. Let's explore synchronous service installation using the _complete()_ and _fail()_ methods:
+
+### Synchronous Start Using complete() or fail() Methods Explicitly
+
+```
+@Override
+public void start(StartContext context) {
+    try {
+        // Perform initialization tasks.
+
+        // Synchronously complete service installation when ready.
+        context.complete();
+    } catch (Exception e) {
+        // Or, if an error occurs during startup, fail the installation.
+        context.fail(new StartException("Service failed to start", e));
+    }
+}
+```
+- The _context.complete()_ method indicates that the service has successfully started, allowing the container to proceed with other services that depend on it.
+- Conversely, the _context.fail()_ method can be used to indicate that the service failed to start, and it will prevent dependent services from starting.
+
+### Synchronous Start Using complete() or fail() Methods Implicitly
+
+```
+@Override
+public void start(StartContext context) throws StartException {
+    try {
+        // Perform initialization tasks.
+
+        // When this method terminates here normally without throwing exception JBoss MSC container
+        // will call context.complete() internally on behalf of the user to indicate successful installation.
+    } catch (Exception e) {
+        throw new StartException("Service failed to start", e);
+        // Or, if an error occurs during startup and either RuntimeException or subclass of StartException is thrown from this method
+        // the context.fail() is called internally by JBoss MSC container on behalf of the user to indicate failed installation of this service.
+    }
+}
+```
+
+## StartContext and Asynchronous Service Installation
+
+In scenarios where your service's _start()_ method includes asynchronous operations, you can use the _asynchronous()_ method to inform the container that the service installation is in progress. 
+To complete or fail the service installation asynchronously, you need to manage parallel execution using additional threads:
+
+### Asynchronous Start
+
+```
+@Override
+public void start(StartContext context) throws StartException {
+    // Perform asynchronous initialization tasks.
+    CompletableFuture<Void> asyncInitialization = performAsyncInitialization();
+
+    // Indicate that service installation is in progress.
+    context.asynchronous();
+
+    // Use a separate thread to complete or fail the service installation when asynchronous code is complete.
+    asyncInitialization.whenCompleteAsync((result, throwable) -> {
+        if (throwable != null) {
+            // Fail the service installation if an exception occurred.
+            context.fail(throwable);
+        } else {
+            // Complete the service installation when ready.
+            context.complete();
+        }
+    });
+}
+```
+
+- The _context.asynchronous()_ method informs the container that service installation is in progress and allows other services to start independently and use the current JBoss MSC execution thread.
+- Asynchronous initialization tasks are performed using a _CompletableFuture_ or similar asynchronous mechanism.
+- A separate thread or parallel execution is used to monitor the completion of asynchronous code.
+- When the asynchronous code is complete, either _context.fail()_ or _context.complete()_ is called accordingly.
+
+## StopContext
+
+Similarly, _StopContext_ is used during service shutdown to provide control over the shutdown process. You can use it to indicate that the service is stopping and, if necessary, manage asynchronous shutdown tasks.
+
+### Synchronous Stop Using complete() Method Explicitly
+
+```
+@Override
+public void stop(StopContext context) {
+    try {
+        // Perform cleanup tasks.
+
+        // Synchronously complete service shutdown when ready.
+        context.complete();
+    } catch (Exception e) {
+        // Or, if an error occurs during shutdown and because the stop() method can never fail in JBoss MSC, log the incident to the system console
+        Logger.log("stop method failed", throwable);
+    }
+}
+```
+- The _context.complete()_ method indicates that the service has successfully stopped, allowing the container to proceed with other services that depend on it.
+- Conversely, the shutdown failure is logged to the system console (because JBoss MSC service's stop() method can never fail) to indicate that the service failed to stop.
+
+### Synchronous Stop Using complete() Method Implicitly
+
+```
+@Override
+public void stop(StopContext context) {
+    // Perform cleanup tasks.
+
+    // When this method terminates here normally without throwing RuntimeException JBoss MSC container
+    // will call context.complete() internally on behalf of the user to indicate successful shutdown of the service.
+
+    // Or, if an error occurs during shutdown and RuntimeException is thrown from this method
+    // the JBoss MSC container will log this incident to the system console for further analysis because JBoss MSC lifecycle stop() method can never fail.
+}
+```
+### Asynchronous Stop
+
+```
+@Override
+public void stop(StopContext context) {
+    // Perform asynchronous cleanup tasks.
+    CompletableFuture<Void> asyncCleanup = performAsyncCleanup();
+
+    // Indicate that service is stopping and allow other services to continue to run.
+    context.asynchronous();
+
+    // Use a separate thread to complete or fail the service shutdown when asynchronous code is complete.
+    asyncCleanup.whenCompleteAsync((result, throwable) -> {
+        if (throwable != null) {
+            // JBoss MSC lifecycle stop() method can never fail - so we need to log the incident to the system console
+            Logger.log("stop method failed", throwable);
+        } else {
+            // Complete the service shutdown when cleanup is done.
+            context.complete();
+        }
+    });
+}
+```
+
+- The _context.asynchronous()_ method informs the container that the service is stopping but allows other services to continue running leveraging current JBoss MSC worker thread.
+- Asynchronous cleanup tasks are performed using a _CompletableFuture_ or similar asynchronous mechanism.
+- A separate thread or parallel execution is used to monitor the completion of asynchronous code.
+- When the asynchronous code is complete, either exception is logged to the system console or _context.complete()_ is called accordingly.
+
+## Conclusion
+
+_StartContext_ and _StopContext_ in JBoss MSC provide powerful capabilities for managing the start-up and shutdown phases of your services.
+Whether your services require _synchronous_ or _asynchronous_ initialization and cleanup, these contexts allow you to maintain control over
+the service lifecycle. When using asynchronous methods, it's crucial to manage parallel execution to complete or fail the service installation
+or shutdown as appropriate. By leveraging these contexts effectively, you can build robust and responsive services within the JBoss MSC container.
