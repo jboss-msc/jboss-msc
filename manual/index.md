@@ -468,3 +468,76 @@ _StartContext_ and _StopContext_ in JBoss MSC provide powerful capabilities for 
 Whether your services require _synchronous_ or _asynchronous_ initialization and cleanup, these contexts allow you to maintain control over
 the service lifecycle. When using asynchronous methods, it's crucial to manage parallel execution to complete or fail the service installation
 or shutdown as appropriate. By leveraging these contexts effectively, you can build robust and responsive services within the JBoss MSC container.
+
+# Exploring ServiceController
+
+[ServiceController](http://jboss-msc.github.io/jboss-msc/apidocs/org/jboss/msc/service/ServiceController.html) is a critical component in JBoss MSC 
+that allows you to manage and monitor services within the container. It provides valuable insights into the status and dependencies of services,
+enabling you to ensure the smooth operation of your application. In this chapter, we'll explore the possibilities that ServiceController offers.
+
+## Monitoring Running Services
+
+_ServiceController_ allows you to monitor the services that are currently running within the container.
+User will retrieve the controller instance if and only if his service is successfully installed into the service container.
+Here's an example of how to retrieve a _ServiceController_:
+
+```
+ServiceBuilder<?> sb = ... // configuring service
+ServiceController<?> controller = sb.install();
+```
+
+Once you have the _ServiceController_, you can query its state and dependencies.
+
+## Values
+
+### Required Values
+
+You can use the _requires()_ method to retrieve the set of dependency names that a service relies on. This is valuable for understanding the relationships between services in your application. For example:
+
+```
+Set<ServiceName> requiredValues = controller.requires();
+```
+
+### Provided Values
+
+To access the set of value names that a service provides, you can use the _provides()_ method on the _ServiceController_. This is useful when you need to obtain an information about values the service provides. For example:
+
+```
+Set<ServiceName> providedValues = controller.provides();
+```
+
+### Missing Values
+
+In scenarios where a service has unresolved dependencies, you can use _missing()_ method to identify the missing values. This method returns a set of unsatisfied dependencies that your service depends on. For example:
+
+```
+Set<ServiceName> missingValues = controller.missing();
+```
+
+## Service Mode and State
+
+_ServiceController_ provides information about the mode and state of a service. These attributes give you insight into whether a service is actively running, starting, stopping, or has failed to start.
+
+### Service Mode
+
+The _getMode()_ method allows you to retrieve the mode of the service. Here's the example:
+
+```
+Mode mode = controller.getMode();
+```
+
+### Service State
+
+The _getState()_ method provides the current state of the service. Here's the example:
+
+```
+State state = controller.getState();
+```
+
+## Conclusion
+
+_ServiceController_ in JBoss MSC is a powerful tool for monitoring and managing services within the container.
+With it, you can access required values, provided values, missing values, service mode, and service state.
+This information is invaluable for ensuring that your services are running correctly and resolving any issues
+that may arise during the application's lifecycle. By leveraging the capabilities of ServiceController,
+you can build robust and reliable applications that take full advantage of the JBoss MSC container.
