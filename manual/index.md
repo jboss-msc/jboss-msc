@@ -232,3 +232,86 @@ Understanding and utilizing the ServiceBuilder methods in JBoss MSC provides you
 These methods allow you to tailor your services to meet specific requirements and manage their lifecycles effectively.
 By exploring these advanced features, you can create robust and highly configurable applications using JBoss MSC.
 
+# Implementing Service
+
+In JBoss MSC (Modular Service Container), implementing [Service](http://jboss-msc.github.io/jboss-msc/apidocs/org/jboss/msc/Service.html) involves defining a service that encapsulates specific functionality or components within your application. This chapter will guide you through the process of implementing a service that accepts _java.util.function.Consumer_ for provided values by the service and _java.util.function.Supplier_ for values the service depends on, while ensuring thread safety and adhering to JBoss MSC's guarantees.
+
+## Service Implementation
+
+Let's create a sample service named HttpServerService that provides a basic example of how to implement the _org.jboss.msc.Service_ interface:
+
+```
+import org.jboss.msc.Service;
+import org.jboss.msc.service.StartContext;
+import org.jboss.msc.service.StopContext;
+
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+public class HttpServerService implements Service {
+
+    private final Supplier<Integer> httpPortSupplier;
+    private final Consumer<HttpServer> serverProvider;
+
+    public HttpServerService(Supplier<Integer> httpPortSupplier, Consumer<HttpServer> server) {
+        this.httpPortSupplier = httpPortSupplier;
+        this.serverProvider = serverProvider;
+    }
+
+    @Override
+    public void start(StartContext context) {
+        // This method is called when the service is started, and all required values (dependencies) are guaranteed to be available.
+        Integer httpPort = httpPortSupplier.get();
+        serverProvider.accept(new HttpServer(httpPort));
+
+        // Perform other initialization or start-up tasks here.
+    }
+
+    @Override
+    public void stop(StopContext context) {
+        // This method is called when the service is stopped, required values provided by other services are still guaranteed to be available.
+        serverProvider.accept(null);
+
+        // Perform other cleanup or shut-down tasks here.
+    }
+}
+```
+
+In this example:
+
+- *HttpServerService* accepts a Supplier<Integer> for values it depends on and a Consumer<HttpServer> for provided values.
+- The _start()_ method is invoked when the service is started, and it is guaranteed that the required dependencies are up at this point. You can safely access and use the dependencies within this method.
+- The _stop()_ method is called when the service is stopped, and it is guaranteed that the dependencies are still up. You can safely perform cleanup or shutdown tasks in this method.
+
+## Service Registration
+
+Once you've implemented your service, you need to register it with the ServiceContainer. Here's how you can do it:
+
+```
+ServiceContainer container = ServiceContainer.Factory.create();
+ServiceBuilder<?> sb = container.addService();
+Supplier<Integer> portSupplier = sb.requires(ServiceName.of("server.config.http.port"));
+Consumer<HttpServer> serverProvider = sb.provides(ServiceName.of("http.server.instance"));
+HttpServerService service = new HttpServerService(portSupplier, serverProvider);
+sb.setInstance(service);
+sb.install();
+```
+
+In this code:
+
+- _server.config.http.port_ is the name of the value provided by other service this _HttpServerService_ depends on.
+- _http.server.instance_ is the name of provided value of _HttpServerService_.
+- The _HttpServerService_ instance is created and installed.
+
+## Thread Safety and Guarantees
+
+JBoss MSC provides guarantees regarding thread safety during service start() and stop() methods:
+
+- In the _start()_ method, you can safely access and use your dependencies, as it is guaranteed that they are up and available.
+- In the _stop()_ method, it is also guaranteed that the dependencies are still up, allowing you to perform cleanup or shutdown tasks without concerns about the dependencies being unavailable.
+
+By following these guidelines, you can create well-behaved services in JBoss MSC that safely manage their dependencies and adhere to the container's lifecycle guarantees.
+
+## Conclusion
+
+Implementing [Service](http://jboss-msc.github.io/jboss-msc/apidocs/org/jboss/msc/Service.html) in JBoss MSC allows you to encapsulate specific functionality or components within your application in a modular and organized manner. By accepting _java.util.function.Consumer_ for provided values and _java.util.function.Supplier_ for required values, you can build services that are flexible and easy to configure. Understanding thread safety and adhering to JBoss MSC's guarantees ensures the reliable operation of your services within the container.
