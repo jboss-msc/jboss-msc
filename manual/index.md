@@ -87,7 +87,7 @@ To install Services into Service Container you must first create the ServiceBuil
 - [ServiceBuilder.requires()](http://jboss-msc.github.io/jboss-msc/apidocs/org/jboss/msc/service/ServiceBuilder.html#requires(org.jboss.msc.service.ServiceName)) method to define values your service requires from other services
 - [ServiceBuilder.provides()](http://jboss-msc.github.io/jboss-msc/apidocs/org/jboss/msc/service/ServiceBuilder.html#provides(org.jboss.msc.service.ServiceName...)) method to define values your service provides to other services
 - [ServiceBuilder.setInitialMode()](http://jboss-msc.github.io/jboss-msc/apidocs/org/jboss/msc/service/ServiceBuilder.html#setInitialMode(org.jboss.msc.service.ServiceController.Mode)) to specify the service startup mode of your services
-- [ServiceBuilder.setInstance()](http://jboss-msc.github.io/jboss-msc/apidocs/org/jboss/msc/service/ServiceBuilder.html#setInstance(org.jboss.msc.Service)) to bypass the service instance to the service installer
+- [ServiceBuilder.setInstance()](http://jboss-msc.github.io/jboss-msc/apidocs/org/jboss/msc/service/ServiceBuilder.html#setInstance(org.jboss.msc.Service)) to set the service instance to be managed by the Service Container
 - And finally call [ServiceBuilder.install()](http://jboss-msc.github.io/jboss-msc/apidocs/org/jboss/msc/service/ServiceBuilder.html#install()) to install the service into the Service Container.
 
 ## Starting the JBoss MSC Container
@@ -125,3 +125,110 @@ container.stop();
 Congratulations! You have successfully set up and started a JBoss MSC container for managing your modular services.  
 JBoss MSC provides a robust framework for managing service lifecycles and dependencies within your Java application.  
 You can now build complex applications with ease, taking advantage of the powerful features offered by JBoss MSC.
+
+# Configuring Services with ServiceBuilder and ServiceController Methods
+
+In JBoss MSC, the ServiceBuilder class provides advanced configuration options for your services.  
+You can use various ServiceBuilder methods to specify characteristics, dependencies, and behaviors of your services.  
+This chapter will explore some of the most commonly used ServiceBuilder methods for advanced service configuration.
+
+## Dependencies Between Services
+
+### Specifying Required Values from Other Services
+
+Your services may require values that are provided by other services.
+
+- **requires()**: Use this method to declare values your services require from other services.
+When a service depends on a values from another services, it won't start until its dependencies are satisfied.
+
+```
+ServiceBuilder<?> sb = container.addService();
+Supplier<Integer> httpPort = sb.requires(ServiceName.of("server.config.http.port");
+sb.setInstance(new HttpServerService(httpPort));
+sb.install();
+```
+
+### Specifying Provided Values to Other Services
+
+Your services may provide values that are required by other services.
+
+- **provides()**: Use this method to declare values you service provide to other services.
+
+```
+ServiceBuilder<?> sb = container.addService();
+Consumer<Integer> httpPort = sb.provides(ServiceName.of("server.config.http.port");
+sb.setInstance(new HttpServerConfigService(httpPort));
+sb.install();
+```
+
+## Lifecycle Configuration
+
+Every service has a [bootstrap mode](http://jboss-msc.github.io/jboss-msc/apidocs/org/jboss/msc/service/ServiceController.Mode.html) associated with it. If there is no configuration change then by default the service mode is always **Mode.ACTIVE**.
+
+- **setInitialMode()**: Configure the initial mode of a service (e.g., Mode.ACTIVE, Mode.ON_DEMAND, Mode.NEVER). The service will start in the specified mode in the container.
+
+```
+ServiceBuilder<?> sb = container.addService();
+sb.setIntialMode(Mode.LAZY); // if this method isn't called at all then default mode is always Mode.ACTIVE
+sb.setInstance(new LazyService());
+sb.install();
+```
+
+Every service at any point of time is in one of its [internal states](http://jboss-msc.github.io/jboss-msc/apidocs/org/jboss/msc/service/ServiceController.State.html).
+
+- **addListener()**: Users can attach listeners to services to monitor their lifecycle events. Listeners can perform actions before, during, or after service startup and shutdown.
+
+```
+ServiceBuilder<?> sb = container.addService();
+sb.addListener(new ServiceStateMonitoringListener());
+sb.setInstance(new MonitoredService());
+sb.install();
+```
+
+or
+
+```
+ServiceBuilder<?> sb = container.addService();
+sb.setInstance(new MonitoredService());
+ServiceController<?> ctrl = sb.install();
+// ...
+// after some time
+// ...
+ctrl.addListener(new ServiceStateMonitoringListener());
+```
+
+- **removeListener()**: Once listeners have completed their job it is possible to remove them from the service via its Service Controller.
+
+```
+ServiceBuilder<?> sb = container.addService();
+LifecycleListener listener = new ServiceStateMonitoringListener();
+sb.addListener(listener);
+sb.setInstance(new MonitoredService());
+ServiceController<?> ctrl = sb.install();
+// ...
+// after some time
+// ...
+ctrl.removeListener(listener);
+```
+
+## Service Removal
+
+- **setMode()**: In order to remove installed services from Service Container users have to call [ServiceController.setMode()](http://jboss-msc.github.io/jboss-msc/apidocs/org/jboss/msc/service/ServiceController.html#setMode(org.jboss.msc.service.ServiceController.Mode)) with _Mode.REMOVE_ parameter.
+
+```
+ServiceBuilder<?> sb = container.addService();
+sb.addListener(new ServiceStateMonitoringListener());
+sb.setInstance(new MonitoredService());
+ServiceController<?> ctrl = sb.install();
+// ...
+// after some time
+// ...
+ctrl.setMode(Mode.REMOVE);
+```
+
+## Conclusion
+
+Understanding and utilizing the ServiceBuilder methods in JBoss MSC provides you with fine-grained control over service configuration, dependencies, and behavior.
+These methods allow you to tailor your services to meet specific requirements and manage their lifecycles effectively.
+By exploring these advanced features, you can create robust and highly configurable applications using JBoss MSC.
+
