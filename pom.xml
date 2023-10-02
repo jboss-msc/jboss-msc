@@ -134,7 +134,7 @@
                     <doctitle><![CDATA[JBoss Modular Service Container ]]>${project.version}</doctitle>
                     <header><![CDATA[JBoss Modular Service Container ]]>${project.version}</header>
                     <footer><![CDATA[JBoss Modular Service Container  ]]>${project.version}</footer>
-                    <bottom><![CDATA[<i>Copyright &#169; 2022 Red Hat, Inc.</i>]]></bottom>
+                    <bottom><![CDATA[<i>Copyright &#169; 2023 Red Hat, Inc.</i>]]></bottom>
                     <links>
                         <link>https://docs.oracle.com/javase/11/docs/api/</link>
                     </links>
