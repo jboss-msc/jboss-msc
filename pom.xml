@@ -150,6 +150,7 @@
                 <configuration>
                     <archive>
                         <manifestEntries>
+                            <Automatic-Module-Name>org.jboss.msc</Automatic-Module-Name>
                             <Jar-Version>${project.version}</Jar-Version>
                             <Jar-Name>${project.artifactId}</Jar-Name>
                         </manifestEntries>
