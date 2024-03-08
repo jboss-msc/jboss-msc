@@ -29,7 +29,7 @@
     <parent>
         <groupId>org.jboss</groupId>
         <artifactId>jboss-parent</artifactId>
-        <version>41</version>
+        <version>43</version>
     </parent>
 
     <groupId>org.jboss.msc</groupId>
@@ -50,11 +50,12 @@
         <jdk.min.version>11</jdk.min.version>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
+        <version.org.jacoco>0.8.11</version.org.jacoco>
         <!-- Dependency Settings -->
         <version.jboss-logging>3.5.3.Final</version.jboss-logging>
         <version.jboss-logging-processor>2.2.1.Final</version.jboss-logging-processor>
         <version.jboss-logmanager>3.0.4.Final</version.jboss-logmanager>
-        <version.jboss-modules>2.1.2.Final</version.jboss-modules>
+        <version.jboss-modules>2.1.3.Final</version.jboss-modules>
         <version.jboss-threads>3.5.1.Final</version.jboss-threads>
         <version.junit>4.13.2</version.junit>
     </properties>
@@ -149,11 +150,31 @@
                 <configuration>
                     <archive>
                         <manifestEntries>
+                            <Automatic-Module-Name>org.jboss.msc</Automatic-Module-Name>
                             <Jar-Version>${project.version}</Jar-Version>
                             <Jar-Name>${project.artifactId}</Jar-Name>
                         </manifestEntries>
                     </archive>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${version.org.jacoco}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>generate-code-coverage-report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
