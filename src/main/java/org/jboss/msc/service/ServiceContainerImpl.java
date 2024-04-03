@@ -23,7 +23,6 @@
 package org.jboss.msc.service;
 
 import static java.security.AccessController.doPrivileged;
-import static org.jboss.modules.management.ObjectProperties.property;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -37,6 +36,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
+import java.util.Hashtable;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -65,7 +65,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
-import org.jboss.modules.management.ObjectProperties;
 import org.jboss.modules.ref.Reaper;
 import org.jboss.modules.ref.Reference;
 import org.jboss.modules.ref.WeakReference;
@@ -355,7 +354,10 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         ObjectName objectName = null;
         if (MBEAN_SERVER != null) {
             try {
-                objectName = new ObjectName("jboss.msc", ObjectProperties.properties(property("type", "container"), property("name", name)));
+                Hashtable<String, String> properties = new Hashtable<>();
+                properties.put("type", "container");
+                properties.put("name", name);
+                objectName = new ObjectName("jboss.msc", properties);
                 MBEAN_SERVER.registerMBean(containerMXBean, objectName);
             } catch (Exception e) {
                 ServiceLogger.ROOT.mbeanFailed(e);
