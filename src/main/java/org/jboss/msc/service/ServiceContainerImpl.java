@@ -28,6 +28,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.security.PrivilegedAction;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -65,9 +67,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
-import org.jboss.modules.ref.Reaper;
-import org.jboss.modules.ref.Reference;
-import org.jboss.modules.ref.WeakReference;
 import org.jboss.msc.Version;
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.ServiceController.Mode;
@@ -110,23 +109,12 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     private final List<TerminateListener> terminateListeners = new ArrayList<>(1);
 
     private static final class ShutdownHookThread extends Thread {
-        final Reference<ServiceContainer, Void> containerRef;
+        final Reference<ServiceContainer> containerRef;
 
         private ShutdownHookThread(final ServiceContainer container) {
             setName(container.getName() + " MSC Shutdown Thread");
             setDaemon(false);
-            containerRef = new WeakReference<>(container, null, new Reaper<ServiceContainer, Void>() {
-                public void reap(final Reference<ServiceContainer, Void> containerRef) {
-                    final ServiceContainer container = containerRef.get();
-                    if (container == null) return;
-                    container.shutdown();
-                    try {
-                        container.awaitTermination();
-                    } catch (InterruptedException ie) {
-                        // ignored
-                    }
-                }
-            });
+            containerRef = new WeakReference<>(container);
         }
 
         @Override
