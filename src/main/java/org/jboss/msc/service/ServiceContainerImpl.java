@@ -588,10 +588,6 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         }
     }
 
-    protected void finalize() throws Throwable {
-        shutdown();
-    }
-
     private void shutdownComplete(final long started) {
         synchronized (this) {
             terminateInfo = new TerminateListener.Info(started, System.nanoTime());
