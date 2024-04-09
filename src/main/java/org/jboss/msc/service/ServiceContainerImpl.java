@@ -23,12 +23,13 @@
 package org.jboss.msc.service;
 
 import static java.security.AccessController.doPrivileged;
-import static org.jboss.modules.management.ObjectProperties.property;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.security.PrivilegedAction;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
+import java.util.Hashtable;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -65,10 +67,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
-import org.jboss.modules.management.ObjectProperties;
-import org.jboss.modules.ref.Reaper;
-import org.jboss.modules.ref.Reference;
-import org.jboss.modules.ref.WeakReference;
 import org.jboss.msc.Version;
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.ServiceController.Mode;
@@ -111,23 +109,12 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     private final List<TerminateListener> terminateListeners = new ArrayList<>(1);
 
     private static final class ShutdownHookThread extends Thread {
-        final Reference<ServiceContainer, Void> containerRef;
+        final Reference<ServiceContainer> containerRef;
 
         private ShutdownHookThread(final ServiceContainer container) {
             setName(container.getName() + " MSC Shutdown Thread");
             setDaemon(false);
-            containerRef = new WeakReference<>(container, null, new Reaper<ServiceContainer, Void>() {
-                public void reap(final Reference<ServiceContainer, Void> containerRef) {
-                    final ServiceContainer container = containerRef.get();
-                    if (container == null) return;
-                    container.shutdown();
-                    try {
-                        container.awaitTermination();
-                    } catch (InterruptedException ie) {
-                        // ignored
-                    }
-                }
-            });
+            containerRef = new WeakReference<>(container);
         }
 
         @Override
@@ -355,7 +342,10 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         ObjectName objectName = null;
         if (MBEAN_SERVER != null) {
             try {
-                objectName = new ObjectName("jboss.msc", ObjectProperties.properties(property("type", "container"), property("name", name)));
+                Hashtable<String, String> properties = new Hashtable<>();
+                properties.put("type", "container");
+                properties.put("name", name);
+                objectName = new ObjectName("jboss.msc", properties);
                 MBEAN_SERVER.registerMBean(containerMXBean, objectName);
             } catch (Exception e) {
                 ServiceLogger.ROOT.mbeanFailed(e);

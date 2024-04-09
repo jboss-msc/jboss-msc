@@ -22,16 +22,15 @@
 
 package org.jboss.msc;
 
-import org.jboss.modules.management.ObjectProperties;
 import org.jboss.msc.service.*;
 import org.junit.*;
 
 import javax.management.*;
 import java.lang.management.ManagementFactory;
+import java.util.Hashtable;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
-import static org.jboss.modules.management.ObjectProperties.property;
 import static org.junit.Assert.assertSame;
 
 /**
@@ -120,7 +119,10 @@ public class MSC245TestCase {
     }
 
     private int getContainerRegistrySize() throws Exception {
-        final ObjectName containerON = new ObjectName("jboss.msc", ObjectProperties.properties(property("type", "container"), property("name", CONTAINER_NAME)));
+        Hashtable<String, String> properties = new Hashtable<>();
+        properties.put("type", "container");
+        properties.put("name", CONTAINER_NAME);
+        final ObjectName containerON = new ObjectName("jboss.msc", properties);
         return ((String[])server.invoke(containerON, "queryServiceNames", null, null)).length;
     }
 }
