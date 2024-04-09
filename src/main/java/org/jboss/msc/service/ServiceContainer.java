@@ -25,6 +25,7 @@ package org.jboss.msc.service;
 import static org.jboss.msc.service.SecurityUtils.getSystemProperty;
 
 import java.io.PrintStream;
+import java.lang.ref.Cleaner;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -151,6 +152,8 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
 
         private static final int MAX_THREADS_COUNT = getSystemProperty("jboss.msc.max.container.threads", 8);
 
+        private static final Cleaner cleaner = Cleaner.create();
+
         private Factory() {
         }
 
@@ -250,7 +253,9 @@ public interface ServiceContainer extends ServiceTarget, ServiceRegistry {
             final ServiceContainerImpl container = new ServiceContainerImpl(name, calculateCoreSize(coreSize), keepAliveTime, keepAliveTimeUnit, autoShutdown);
             container.registerShutdownCleaner();
             container.registerMBeanCleaner();
-            return container;
+            final ServiceContainer retVal = new LeakDetectorServiceContainer(container);
+            cleaner.register(retVal, container::shutdown);
+            return retVal;
         }
 
         private static int calculateCoreSize() {
