@@ -49,7 +49,7 @@ import java.util.function.Supplier;
  */
 final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
 
-    final ServiceName serviceId;
+    ServiceName serviceId;
     final ServiceControllerImpl<?> parent;
     private final ServiceTargetImpl serviceTarget;
     private final Thread thread = currentThread();
@@ -123,10 +123,20 @@ final class ServiceBuilderImpl<T> implements ServiceBuilder<T> {
         }
         // implementation
         final WritableValueImpl retVal = new WritableValueImpl();
+        boolean isAssigned = false;
         for (final ServiceName dependency : dependencies) {
             addProvidesInternal(dependency, retVal);
+            isAssigned = assignServiceIdIfNull(isAssigned, dependency);
         }
         return (Consumer<V>)retVal;
+    }
+
+    protected boolean assignServiceIdIfNull(boolean isAssigned, final ServiceName dependency) {
+      if (serviceId == null && !isAssigned) {
+          serviceId = dependency;
+          isAssigned = true;
+      }
+      return isAssigned;
     }
 
     @Override
