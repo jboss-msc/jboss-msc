@@ -57,7 +57,8 @@ public class MultiValueServicesTestCase extends AbstractServiceTest {
     @Test
     public void usingJustNewAPI() throws Exception {
         StabilityMonitor monitor = new StabilityMonitor();
-        ServiceBuilder<?> sb1 = serviceContainer.addService(HTTP_CONFIG);
+        ServiceBuilder<?> sb1 = serviceContainer.addService();
+        sb1.provides(HTTP_CONFIG);
         Consumer<String> hostInjector = sb1.provides(HTTP_HOST);
         Consumer<Integer> portInjector = sb1.provides(HTTP_PORT);
         sb1.setInstance(new HttpConfigService(hostInjector, portInjector));
@@ -66,7 +67,8 @@ public class MultiValueServicesTestCase extends AbstractServiceTest {
         assertNotNull(configController);
         assertEquals(configController.getName(), HTTP_CONFIG);
 
-        ServiceBuilder<?> sb2 = serviceContainer.addService(HTTP_SERVER);
+        ServiceBuilder<?> sb2 = serviceContainer.addService();
+        sb2.provides(HTTP_SERVER);
         Supplier<String> hostValue = sb2.requires(HTTP_HOST);
         Supplier<Integer> portValue = sb2.requires(HTTP_PORT);
         HttpServer server = new HttpServer(hostValue, portValue);
