@@ -29,7 +29,7 @@
     <parent>
         <groupId>org.jboss</groupId>
         <artifactId>jboss-parent</artifactId>
-        <version>43</version>
+        <version>46</version>
     </parent>
 
     <groupId>org.jboss.msc</groupId>
@@ -50,11 +50,11 @@
         <jdk.min.version>11</jdk.min.version>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        <version.org.jacoco>0.8.11</version.org.jacoco>
+        <version.org.jacoco>0.8.12</version.org.jacoco>
         <!-- Dependency Settings -->
-        <version.jboss-logging>3.5.3.Final</version.jboss-logging>
-        <version.jboss-logging-processor>2.2.1.Final</version.jboss-logging-processor>
-        <version.jboss-logmanager>3.0.4.Final</version.jboss-logmanager>
+        <version.jboss-logging>3.6.0.Final</version.jboss-logging>
+        <version.jboss-logging-processor>3.0.1.Final</version.jboss-logging-processor>
+        <version.jboss-logmanager>3.0.6.Final</version.jboss-logmanager>
         <version.jboss-threads>3.6.1.Final</version.jboss-threads>
         <version.junit>4.13.2</version.junit>
     </properties>
@@ -132,7 +132,7 @@
                     <doctitle><![CDATA[JBoss Modular Service Container ]]>${project.version}</doctitle>
                     <header><![CDATA[JBoss Modular Service Container ]]>${project.version}</header>
                     <footer><![CDATA[JBoss Modular Service Container  ]]>${project.version}</footer>
-                    <bottom><![CDATA[<i>Copyright &#169; 2023 Red Hat, Inc.</i>]]></bottom>
+                    <bottom><![CDATA[<i>Copyright &#169; 2024 Red Hat, Inc.</i>]]></bottom>
                     <links>
                         <link>https://docs.oracle.com/javase/11/docs/api/</link>
                     </links>
