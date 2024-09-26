@@ -55,7 +55,7 @@
         <version.jboss-logging>3.6.1.Final</version.jboss-logging>
         <version.jboss-logging-processor>3.0.1.Final</version.jboss-logging-processor>
         <version.jboss-logmanager>3.0.6.Final</version.jboss-logmanager>
-        <version.jboss-threads>3.6.1.Final</version.jboss-threads>
+        <version.jboss-threads>3.7.0.Final</version.jboss-threads>
         <version.junit>4.13.2</version.junit>
     </properties>
 
