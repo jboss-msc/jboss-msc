@@ -78,6 +78,7 @@ public interface ServiceTarget {
      * @deprecated Use {@link #addService()} instead.
      * This method will be removed in a future release.
      */
+    @Deprecated
     ServiceBuilder<?> addService(ServiceName name);
 
     /**
