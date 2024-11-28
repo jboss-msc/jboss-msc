@@ -29,7 +29,7 @@
     <parent>
         <groupId>org.jboss</groupId>
         <artifactId>jboss-parent</artifactId>
-        <version>43</version>
+        <version>47</version>
     </parent>
 
     <groupId>org.jboss.msc</groupId>
@@ -50,12 +50,12 @@
         <jdk.min.version>11</jdk.min.version>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        <version.org.jacoco>0.8.11</version.org.jacoco>
+        <version.org.jacoco>0.8.12</version.org.jacoco>
         <!-- Dependency Settings -->
-        <version.jboss-logging>3.5.3.Final</version.jboss-logging>
-        <version.jboss-logging-processor>2.2.1.Final</version.jboss-logging-processor>
-        <version.jboss-logmanager>3.0.4.Final</version.jboss-logmanager>
-        <version.jboss-threads>3.5.1.Final</version.jboss-threads>
+        <version.jboss-logging>3.6.1.Final</version.jboss-logging>
+        <version.jboss-logging-processor>3.0.3.Final</version.jboss-logging-processor>
+        <version.jboss-logmanager>3.1.0.Final</version.jboss-logmanager>
+        <version.jboss-threads>3.6.1.Final</version.jboss-threads>
         <version.junit>4.13.2</version.junit>
     </properties>
 
