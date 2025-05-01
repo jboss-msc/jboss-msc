@@ -24,9 +24,7 @@ package org.jboss.msc.service;
 
 import static java.security.AccessController.doPrivileged;
 
-import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
@@ -35,20 +33,15 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Deque;
 import java.util.Hashtable;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -63,6 +56,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -70,8 +64,6 @@ import javax.management.ObjectName;
 import org.jboss.msc.Version;
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.ServiceController.Mode;
-import org.jboss.msc.service.management.ServiceContainerMXBean;
-import org.jboss.msc.service.management.ServiceStatus;
 import org.jboss.threads.EnhancedQueueExecutor;
 
 /**
@@ -140,197 +132,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     private final ObjectName objectName;
     private final Thread shutdownThread;
 
-    private final ServiceContainerMXBean containerMXBean = new ServiceContainerMXBean() {
-        public ServiceStatus getServiceStatus(final String name) {
-            final ServiceRegistrationImpl registration = registry.get(ServiceName.parse(name));
-            if (registration != null) {
-                final ServiceControllerImpl<?> instance = registration.getDependencyController();
-                if (instance != null) {
-                    return instance.getStatus();
-                }
-            }
-            return null;
-        }
-
-        public List<String> queryServiceNames() {
-            final Set<ServiceName> names = registry.keySet();
-            final List<String> list = new ArrayList<>(names.size());
-            for (ServiceName serviceName : names) {
-                list.add(serviceName.getCanonicalName());
-            }
-            Collections.sort(list);
-            return list;
-        }
-
-        public List<ServiceStatus> queryServiceStatuses() {
-            final Collection<ServiceRegistrationImpl> registrations = registry.values();
-            final List<ServiceStatus> list = new ArrayList<>(registrations.size());
-            for (ServiceRegistrationImpl registration : registrations) {
-                final ServiceControllerImpl<?> instance = registration.getDependencyController();
-                if (instance != null) list.add(instance.getStatus());
-            }
-            Collections.sort(list, new Comparator<ServiceStatus>() {
-                public int compare(final ServiceStatus o1, final ServiceStatus o2) {
-                    return o1.getServiceName().compareTo(o2.getServiceName());
-                }
-            });
-            return list;
-        }
-
-        public void setServiceMode(final String name, final String mode) {
-            final ServiceRegistrationImpl registration = registry.get(ServiceName.parse(name));
-            if (registration != null) {
-                final ServiceControllerImpl<?> instance = registration.getDependencyController();
-                if (instance != null) {
-                    instance.setMode(Mode.valueOf(mode.toUpperCase(Locale.US)));
-                }
-            }
-        }
-
-        public void dumpServices() {
-            ServiceContainerImpl.this.dumpServices();
-        }
-
-        public String dumpServicesToString() {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            PrintStream ps;
-            try {
-                ps = new PrintStream(baos, false, "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                throw new IllegalStateException(e);
-            }
-            ServiceContainerImpl.this.dumpServices(ps);
-            ps.flush();
-            try {
-                return new String(baos.toByteArray(), "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                throw new IllegalStateException(e);
-            }
-        }
-
-        public String dumpServicesToGraphDescription() {
-            final List<ServiceStatus> statuses = queryServiceStatuses();
-            final Map<String, String> aliases = new HashMap<>();
-            final StringBuilder builder = new StringBuilder();
-            builder.append("digraph Services {\n    node [shape=record];\n    graph [rankdir=\"RL\"];\n");
-            for (ServiceStatus status : statuses) {
-                final String serviceName = status.getServiceName();
-                final String[] aliasesStrings = status.getAliases();
-                if (aliasesStrings != null) for (String alias : aliasesStrings) {
-                    aliases.put(alias, serviceName);
-                    aliases.put(serviceName, serviceName);
-                }
-                builder.append("    ");
-                final String quoted = serviceName.replace("\"", "\\\"");
-                builder.append('"').append(quoted).append('"');
-                builder.append(' ');
-                builder.append("[label=\"");
-                builder.append(quoted);
-                builder.append('|');
-                builder.append(status.getStateName()).append("\\ (").append(status.getSubstateName()).append(")");
-                builder.append("\"]");
-                builder.append(";\n");
-            }
-            builder.append('\n');
-            for (ServiceStatus status : statuses) {
-                final String serviceName = status.getServiceName();
-                final String[] dependencies = status.getDependencies();
-                final Set<String> filteredDependencies = new HashSet<>(Arrays.asList(dependencies));
-                final String parentName = status.getParentName();
-                if (parentName != null) filteredDependencies.add(parentName);
-                for (String dependency : filteredDependencies) {
-                    builder.append("    ").append('"').append(serviceName.replace("\"", "\\\"")).append('"');
-                    String dep = aliases.get(dependency);
-                    if (dep == null) dep = dependency;
-                    builder.append(" -> \"").append(dep.replace("\"", "\\\"")).append('"');
-                    builder.append(";\n");
-                }
-            }
-            builder.append("}\n");
-            return builder.toString();
-        }
-
-        public String dumpServiceDetails(final String serviceName) {
-            final ServiceRegistrationImpl registration = registry.get(ServiceName.parse(serviceName));
-            if (registration != null) {
-                final ServiceControllerImpl<?> instance = registration.getDependencyController();
-                if (instance != null) {
-                    return instance.dumpServiceDetails();
-                }
-            }
-            return null;
-        }
-
-        @Override
-        public void dumpServicesByStatus(String status) {
-            System.out.printf("Services for %s with status:%s\n", getName(), status);
-            Collection<ServiceStatus> services = this.queryServicesByStatus(status);
-            if (services.isEmpty()) {
-                System.out.printf("There are no services with status: %s\n", status);
-            } else {
-                this.printServiceStatus(services, System.out);
-            }
-        }
-
-        @Override
-        public String dumpServicesToStringByStatus(String status) {
-            Collection<ServiceStatus> services = this.queryServicesByStatus(status);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            PrintStream ps = null;
-            try {
-                ps = new PrintStream(baos, false, "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                throw new IllegalStateException(e);
-            }
-            ps.printf("Services for %s with status:%s\n", getName(), status);
-            if (services.isEmpty()) {
-                ps.printf("There are no services with status: %s\n", status);
-            } else {
-                this.printServiceStatus(services, ps);
-            }
-            ps.flush();
-            try {
-                return new String(baos.toByteArray(), "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                throw new IllegalStateException(e);
-            }
-        }
-
-        /**
-         * Returns a collection of {@link ServiceStatus} of services, whose {@link org.jboss.msc.service.management.ServiceStatus#getStateName() status}
-         * matches the passed <code>status</code>. Returns an empty collection if there's no such services.
-         * @param status The status that we are interested in.
-         * @return
-         */
-        private Collection<ServiceStatus> queryServicesByStatus(String status) {
-            final Collection<ServiceRegistrationImpl> registrations = registry.values();
-            final List<ServiceStatus> list = new ArrayList<>(registrations.size());
-            for (ServiceRegistrationImpl registration : registrations) {
-                final ServiceControllerImpl<?> instance = registration.getDependencyController();
-                if (instance != null) {
-                    ServiceStatus serviceStatus = instance.getStatus();
-                    if (serviceStatus.getStateName().equals(status)) {
-                        list.add(serviceStatus);
-                    }
-                }
-            }
-            return list;
-        }
-
-        /**
-         * Print the passed {@link ServiceStatus}es to the {@link PrintStream}
-         * @param serviceStatuses
-         * @param out
-         */
-        private void printServiceStatus(Collection<ServiceStatus> serviceStatuses, PrintStream out) {
-            if (serviceStatuses == null || serviceStatuses.isEmpty()) {
-                return;
-            }
-            for (ServiceStatus status : serviceStatuses) {
-                out.printf("%s\n", status);
-            }
-        }
-    };
+    private final ServiceContainerMXBeanImpl containerMXBean;
 
     ServiceContainerImpl(String name, int coreSize, long timeOut, TimeUnit timeOutUnit, final boolean autoShutdown) {
         final int serialNo = SERIAL.getAndIncrement();
@@ -340,6 +142,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         this.name = name;
         executor = new ContainerExecutor(coreSize, coreSize, timeOut, timeOutUnit);
         ObjectName objectName = null;
+        containerMXBean = new ServiceContainerMXBeanImpl(name, registry);
         if (MBEAN_SERVER != null) {
             try {
                 Hashtable<String, String> properties = new Hashtable<>();
@@ -566,25 +369,9 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
         dumpServices(System.out);
     }
 
-    public void dumpServices(PrintStream out) {
-        out.printf("Services for %s:\n", getName());
-        final Map<ServiceName, ServiceRegistrationImpl> registry = this.registry;
-        if (registry.isEmpty()) {
-            out.printf("(Registry is empty)\n");
-        } else {
-            int i = 0;
-            Set<ServiceControllerImpl<?>> set = new HashSet<>();
-            for (ServiceName name : new TreeSet<>(registry.keySet())) {
-                final ServiceRegistrationImpl registration = registry.get(name);
-                if (registration != null) {
-                    final ServiceControllerImpl<?> instance = registration.getDependencyController();
-                    if (instance != null && set.add(instance)) {
-                        i++;
-                        out.printf("%s\n", instance.getStatus());
-                    }
-                }
-            }
-            out.printf("%s services displayed\n", Integer.valueOf(i));
+    public void dumpServices(final PrintStream out) {
+        synchronized (out) {
+            containerMXBean.dumpServices(null, Functions.ServiceIdentityFunction.INSTANCE, null, out);
         }
     }
 
@@ -936,4 +723,5 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
             delegate.execute(command);
         }
     }
+
 }

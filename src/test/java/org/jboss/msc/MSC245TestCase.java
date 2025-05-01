@@ -123,6 +123,6 @@ public class MSC245TestCase {
         properties.put("type", "container");
         properties.put("name", CONTAINER_NAME);
         final ObjectName containerON = new ObjectName("jboss.msc", properties);
-        return ((String[])server.invoke(containerON, "queryServiceNames", null, null)).length;
+        return ((String[])server.invoke(containerON, "queryValues", null, null)).length;
     }
 }
