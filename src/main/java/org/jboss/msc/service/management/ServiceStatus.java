@@ -29,96 +29,101 @@ import java.io.Serializable;
  * A representation of the current status of some service.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public class ServiceStatus implements Serializable {
+public final class ServiceStatus implements Serializable, Comparable<ServiceStatus> {
 
-    private static final long serialVersionUID = 6538576441150451665L;
+    private static final long serialVersionUID = 2L;
+    private static final String[] EMPTY_STRING_ARRAY = new String[0];
 
-    private final String serviceName;
-    private final String[] aliases;
-    private final String serviceClassName;
-    private final String modeName;
-    private final String stateName;
-    private final String substateName;
-    private final String[] dependencies;
-    private final boolean dependencyFailed;
-    private final boolean dependencyUnavailable;
-    private final String parentName;
+    private final String id;
+    private final String parentId;
+    private final String[] childrenIds;
+    private final String[] requiredValues;
+    private final String[] providedValues;
+    private final String[] missingValues;
+    private final String mode;
+    private final String state;
     private final String exception;
 
     /**
-     * Construct a new instance.
+     * Constructs a new instance.
      *
-     * @param parentName the name of the parent
-     * @param serviceName the service name
-     * @param aliases the aliases of this service
-     * @param serviceClassName the name of the service class
-     * @param modeName the service mode name
-     * @param stateName the service state name
-     * @param substateName the internal service substate name
-     * @param dependencies the list of dependencies for this service
-     * @param dependencyFailed {@code true} if some dependency is failed
-     * @param exception the service start exception
-     * @param dependencyUnavailable {@code true} if some dependency is unavailable
+     * @param id runtime identification of service class
+     * @param parentId runtime identification of parent service class
+     * @param childrenIds runtime identification of children services classes
+     * @param requiredValues required values by this service
+     * @param providedValues provided values by this service
+     * @param missingValues missing values of this service
+     * @param mode the service mode
+     * @param state the service state
+     * @param exception the start failure reason
      */
-    @ConstructorProperties({"parentName", "serviceName", "aliases", "serviceClassName", "modeName", "stateName", "substateName", "dependencies", "dependencyFailed", "exception", "dependencyUnavailable"})
-    public ServiceStatus(final String parentName, final String serviceName, final String[] aliases, final String serviceClassName, final String modeName, final String stateName, final String substateName, final String[] dependencies, final boolean dependencyFailed, final String exception, final boolean dependencyUnavailable) {
-        if (aliases == null) {
-            throw new IllegalArgumentException("aliases is null");
-        }
-        if (serviceClassName == null) {
-            throw new IllegalArgumentException("serviceClassName is null");
-        }
-        if (modeName == null) {
-            throw new IllegalArgumentException("modeName is null");
-        }
-        if (stateName == null) {
-            throw new IllegalArgumentException("stateName is null");
-        }
-        if (substateName == null) {
-            throw new IllegalArgumentException("substateName is null");
-        }
-        if (dependencies == null) {
-            throw new IllegalArgumentException("dependencies is null");
-        }
-        this.serviceName = serviceName;
-        this.aliases = aliases;
-        this.serviceClassName = serviceClassName;
-        this.modeName = modeName;
-        this.stateName = stateName;
-        this.substateName = substateName;
-        this.dependencies = dependencies;
-        this.dependencyFailed = dependencyFailed;
-        this.dependencyUnavailable = dependencyUnavailable;
-        this.parentName = parentName;
+    @ConstructorProperties({"id", "parentId", "childrenIds", "requiredValues", "providedValues", "missingValues", "serviceMode", "serviceState", "startException"})
+    public ServiceStatus(final String id, final String parentId, final String[] childrenIds, final String[] requiredValues, final String[] providedValues, final String[] missingValues, final String mode, final String state, final String exception) {
+        this.id = id;
+        this.parentId = parentId;
+        this.childrenIds = childrenIds != null ? childrenIds : EMPTY_STRING_ARRAY;
+        this.requiredValues = requiredValues != null ? requiredValues : EMPTY_STRING_ARRAY;
+        this.providedValues = providedValues != null ? providedValues : EMPTY_STRING_ARRAY;
+        this.missingValues = missingValues != null ? missingValues : EMPTY_STRING_ARRAY;
+        this.mode = mode;
+        this.state = state;
         this.exception = exception;
     }
 
     /**
-     * Get the service name, as a string.
+     * Get runtime identification of service class
      *
-     * @return the service name
+     * @return the id
      */
-    public String getServiceName() {
-        return serviceName;
+    public String getId() {
+        return id;
     }
 
     /**
-     * Get the service aliases, if any, as strings.  If there are no aliases, an empty array is returned.
+     * Get runtime identification of parent service class
      *
-     * @return the service aliases
+     * @return the parent id
      */
-    public String[] getAliases() {
-        return aliases;
+    public String getParentId() {
+        return parentId;
     }
 
     /**
-     * Get the service class name, or {@code "&lt;unknown&gt;"} if not known.
+     * Get runtime identification of child service classes
      *
-     * @return the service class name
+     * @return the children ids
      */
-    public String getServiceClassName() {
-        return serviceClassName;
+    public String[] getChildrenIds() {
+        return childrenIds;
+    }
+
+    /**
+     * The list of required values by this service.
+     *
+     * @return the required value names
+     */
+    public String[] getRequiredValues() {
+        return requiredValues;
+    }
+
+    /**
+     * The list of provided values by this service.
+     *
+     * @return the provided value names
+     */
+    public String[] getProvidedValues() {
+        return providedValues;
+    }
+
+    /**
+     * The list of missing values of this service.
+     *
+     * @return the missing value names
+     */
+    public String[] getMissingValues() {
+        return missingValues;
     }
 
     /**
@@ -126,8 +131,8 @@ public class ServiceStatus implements Serializable {
      *
      * @return the service mode
      */
-    public String getModeName() {
-        return modeName;
+    public String getMode() {
+        return mode;
     }
 
     /**
@@ -135,44 +140,8 @@ public class ServiceStatus implements Serializable {
      *
      * @return the service state
      */
-    public String getStateName() {
-        return stateName;
-    }
-
-    /**
-     * Get the service internal substate, as a string.
-     *
-     * @return the service substate
-     */
-    public String getSubstateName() {
-        return substateName;
-    }
-
-    /**
-     * The list of dependency names for this service.
-     *
-     * @return the dependency names
-     */
-    public String[] getDependencies() {
-        return dependencies;
-    }
-
-    /**
-     * Determine if some dependency was failed at the time of the query.
-     *
-     * @return {@code true} if some dependency was failed
-     */
-    public boolean isDependencyFailed() {
-        return dependencyFailed;
-    }
-
-    /**
-     * Determine if some dependency was not available at the time of the query.
-     *
-     * @return {@code true} if some dependency was unavailable
-     */
-    public boolean isDependencyUnavailable() {
-        return dependencyUnavailable;
+    public String getState() {
+        return state;
     }
 
     /**
@@ -184,66 +153,62 @@ public class ServiceStatus implements Serializable {
         return exception;
     }
 
-    /**
-     * Get a string representation of the current status.
-     *
-     * @return a string representation
-     */
-    public String toString() {
-        final StringBuilder builder = new StringBuilder();
-        builder.append("Service \"").append(serviceName).append("\" ");
-        final String[] aliases = this.aliases;
-        if (aliases.length > 0) {
-            builder.append("(aliases: ");
-            for (int i = 0; i < aliases.length; i++) {
-                builder.append(aliases[i]);
-                if (i < aliases.length - 1) {
-                    builder.append(", ");
-                }
-            }
-            builder.append(") ");
-        }
-        builder.append("(class ").append(serviceClassName).append(')');
-        builder.append(" mode ").append(modeName);
-        builder.append(" state ").append(stateName);
-        if (! stateName.equals(substateName)) {
-            builder.append(" (").append(substateName).append(')');
-        }
-        String parentName = this.parentName;
-        if (parentName != null) {
-            builder.append(" (parent: ").append(parentName).append(')');
-        }
-        final String[] dependencies = this.dependencies;
-        final int dependenciesLength = dependencies.length;
-        if (dependenciesLength > 0) {
-            builder.append(" (dependencies: ");
-            for (int i = 0; i < dependenciesLength; i++) {
-                builder.append(dependencies[i]);
-                if (i < dependenciesLength - 1) {
-                    builder.append(", ");
-                }
-            }
-            builder.append(")");
-        }
-        String exception = this.exception;
-        if (exception != null && ! exception.isEmpty()) {
-            builder.append(" (failure cause: ").append(exception).append(')');
-        }
-        if (dependencyFailed) {
-            builder.append(" (has failed dependency)");
-        }
-        if (dependencyUnavailable) {
-            builder.append(" (has unavailable dependency)");
-        }
-        return builder.toString();
+    @Override
+    public int hashCode() {
+        return id.hashCode();
     }
 
-    /**
-     * Get the name of the parent service, if any.
-     *
-     * @return the parent name
-     */
-    public String getParentName() {
-        return parentName;
+    @Override
+    public boolean equals(final Object o) {
+        if (!(o instanceof ServiceStatus)) return false;
+        final ServiceStatus other = (ServiceStatus) o;
+        return id.equals(other.id);
+    }
+
+    @Override
+    public int compareTo(final ServiceStatus s) {
+        return id.compareTo(s.id);
+    }
+
+    @Override
+    public String toString() {
+        final String ls = System.lineSeparator();
+        final String indentation = " ".repeat(4);
+        final StringBuilder sb = new StringBuilder();
+        sb.append("Service").append(ls);
+        sb.append(indentation).append("id: ").append(id).append(ls);
+        if (parentId != null) {
+            sb.append(indentation).append("parent id: ").append(parentId).append(ls);
+        }
+        if (childrenIds.length > 0) {
+            sb.append(indentation).append("children ids: ").append(ls);
+            for (String childrenId : childrenIds) {
+                sb.append(indentation).append(indentation).append(childrenId).append(ls);
+            }
+        }
+        if (requiredValues.length > 0) {
+            sb.append(indentation).append("requires: ").append(ls);
+            for (String requiredValue : requiredValues) {
+                sb.append(indentation).append(indentation).append(requiredValue).append(ls);
+            }
+        }
+        if (providedValues.length > 0) {
+            sb.append(indentation).append("provides: ").append(ls);
+            for (String providedValue : providedValues) {
+                sb.append(indentation).append(indentation).append(providedValue).append(ls);
+            }
+        }
+        if (missingValues.length > 0) {
+            sb.append(indentation).append("missing: ").append(ls);
+            for (String missingValue : missingValues) {
+                sb.append(indentation).append(indentation).append(missingValue).append(ls);
+            }
+        }
+        sb.append(indentation).append("mode: ").append(mode).append(ls);
+        sb.append(indentation).append("state: ").append(state).append(ls);
+        if (exception != null && !exception.isEmpty()) {
+            sb.append(indentation).append("exception: ").append(exception).append(ls);
+        }
+        return sb.toString();
     }
 }
