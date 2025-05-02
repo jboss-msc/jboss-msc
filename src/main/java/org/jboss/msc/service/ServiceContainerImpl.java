@@ -370,9 +370,7 @@ final class ServiceContainerImpl extends ServiceTargetImpl implements ServiceCon
     }
 
     public void dumpServices(final PrintStream out) {
-        synchronized (out) {
-            containerMXBean.dumpServices(null, Functions.ServiceIdentityFunction.INSTANCE, null, out);
-        }
+        containerMXBean.dumpServices(null, Functions.ServiceIdentityFunction.INSTANCE, null, out);
     }
 
     private void shutdownComplete(final long started) {
