@@ -190,8 +190,6 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
     @SuppressWarnings("VolatileLongOrDoubleField")
     private volatile long lifecycleTime;
 
-    private static final String[] NO_STRINGS = new String[0];
-
     static final int MAX_DEPENDENCIES = (1 << 14) - 1;
 
     ServiceControllerImpl(final ServiceContainerImpl container, final ServiceName serviceId, final ServiceName[] serviceAliases, final org.jboss.msc.Service service, final Set<Dependency> requires, final Map<ServiceRegistrationImpl, WritableValueImpl> provides, final ValueInjection<?>[] injections, final Set<StabilityMonitor> monitors, final Set<LifecycleListener> lifecycleListeners, final ServiceControllerImpl<?> parent) {
@@ -1202,118 +1200,56 @@ final class ServiceControllerImpl<S> implements ServiceController<S>, Dependent 
 
     ServiceStatus getStatus() {
         synchronized (this) {
-            final String parentName = (parent != null) && (parent.serviceId != null) ? parent.serviceId.getCanonicalName() : null;
-            final String name = (this.serviceId != null) ? this.serviceId.getCanonicalName() : null;
-            final ServiceName[] aliasNames = getAliases();
-            final int aliasLength = aliasNames.length;
-            final String[] aliases;
-            if (aliasLength == 0) {
-                aliases = NO_STRINGS;
-            } else {
-                aliases = new String[aliasLength];
-                for (int i = 0; i < aliasLength; i++) {
-                    aliases[i] = aliasNames[i].getCanonicalName();
-                }
+            // id
+            final String id = service.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(service));
+
+            // parent
+            final String parentId = parent != null ? parent.service.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(parent.service)) : null;
+
+            // children
+            final Set<ServiceControllerImpl<?>> children = getChildren();
+            final String[] childrenIds = children.isEmpty() ? null : new String[children.size()];
+            int i = 0;
+            for (ServiceControllerImpl<?> child : children) {
+                childrenIds[i++] = child.service.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(child.service));
             }
-            String serviceClass = service.getClass().getName();
-            final Collection<Dependency> dependencies = requires;
-            final int dependenciesLength = dependencies.size();
-            final String[] dependencyNames;
-            if (dependenciesLength == 0) {
-                dependencyNames = NO_STRINGS;
-            } else {
-                dependencyNames = new String[dependenciesLength];
-                int i = 0;
-                for (Dependency dependency : dependencies) {
-                    dependencyNames[i++] = dependency.getName().getCanonicalName();
-                }
+
+            // requires
+            final Collection<ServiceName> requires = requires();
+            final String[] requiredValues = requires.isEmpty() ? null : new String[requires.size()];
+            int j = 0;
+            for (ServiceName requiredValue : requires) {
+                requiredValues[j++] = requiredValue.getCanonicalName();
             }
-            StartException startException = this.startException;
+
+            // provides
+            final Collection<ServiceName> provides = provides();
+            final String[] providedValues = provides.isEmpty() ? null : new String[provides.size()];
+            int k = 0;
+            for (ServiceName providedValue : provides) {
+                providedValues[k++] = providedValue.getCanonicalName();
+            }
+
+            // missing
+            final Collection<ServiceName> missing = missing();
+            final String[] missingValues = missing.isEmpty() ? null : new String[missing.size()];
+            int l = 0;
+            for (ServiceName value : missing) {
+                missingValues[l++] = value.getCanonicalName();
+            }
+
             return new ServiceStatus(
-                    parentName,
-                    name,
-                    aliases,
-                    serviceClass,
+                    id,
+                    parentId,
+                    childrenIds,
+                    requiredValues,
+                    providedValues,
+                    missingValues,
                     mode.name(),
                     state.getState().name(),
-                    state.name(),
-                    dependencyNames,
-                    failCount != 0,
-                    startException != null ? startException.toString() : null,
-                    unavailableDependencies > 0
+                    startException != null ? startException.toString() : null
             );
         }
-    }
-
-    String dumpServiceDetails() {
-        final StringBuilder b = new StringBuilder();
-        Set<Dependent> dependents = new IdentityHashSet<>();
-        for (ServiceRegistrationImpl registration : provides.keySet()) {
-            synchronized (registration) {
-                dependents.addAll(registration.getDependents());
-            }
-            b.append("Service Name: ").append(registration.getName().toString()).append(" - Dependents: ").append(dependents.size()).append('\n');
-            for (Dependent dependent : dependents) {
-                final ServiceControllerImpl<?> controller = dependent.getDependentController();
-                synchronized (controller) {
-                    b.append("        ").append(controller.getName().toString()).append(" - State: ").append(controller.state.getState()).append(" (Substate: ").append(controller.state).append(")\n");
-                }
-            }
-        }
-        synchronized (this) {
-            b.append("Children: ").append(children.size()).append('\n');
-            for (ServiceControllerImpl<?> child : children) {
-                synchronized (child) {
-                    b.append("    ").append(child.getName().toString()).append(" - State: ").append(child.state.getState()).append(" (Substate: ").append(child.state).append(")\n");
-                }
-            }
-            final Substate state = this.state;
-            b.append("State: ").append(state.getState()).append(" (Substate: ").append(state).append(")\n");
-            if (parent != null) {
-                b.append("Parent name: ").append(parent.getName()).append('\n');
-            }
-            b.append("Service Mode: ").append(mode).append('\n');
-            if (startException != null) {
-                b.append("Start Exception: ").append(startException.getClass().getName()).append(" (Message: ").append(startException.getMessage()).append(")\n");
-            }
-            String serviceObjectString = "(indeterminate)";
-            Object serviceObjectClass = "(indeterminate)";
-            try {
-                Object serviceObject = service;
-                if (serviceObject != null) {
-                    serviceObjectClass = serviceObject.getClass();
-                    serviceObjectString = serviceObject.toString();
-                }
-            } catch (Throwable ignored) {}
-            b.append("Service Object: ").append(serviceObjectString).append('\n');
-            b.append("Service Object Class: ").append(serviceObjectClass).append('\n');
-            b.append("Demanded By: ").append(demandedByCount).append('\n');
-            b.append("Stopping Dependencies: ").append(stoppingDependencies).append('\n');
-            b.append("Running Dependents: ").append(runningDependents).append('\n');
-            b.append("Fail Count: ").append(failCount).append('\n');
-            b.append("Unavailable Dep Count: ").append(unavailableDependencies).append('\n');
-            b.append("Dependencies Demanded: ").append(dependenciesDemanded ? "yes" : "no").append('\n');
-            b.append("Async Tasks: ").append(asyncTasks).append('\n');
-            if (lifecycleTime != 0L) {
-                final long elapsedNanos = System.nanoTime() - lifecycleTime;
-                final long now = System.currentTimeMillis();
-                final long stamp = now - (elapsedNanos / 1000000L);
-                b.append("Lifecycle Timestamp: ").append(lifecycleTime).append(String.format(" = %tb %<td %<tH:%<tM:%<tS.%<tL%n", stamp));
-            }
-        }
-        b.append("Dependencies: ").append(requires.size()).append('\n');
-        for (Dependency dependency : requires) {
-            final ServiceControllerImpl<?> controller = dependency.getDependencyController();
-            b.append("    ").append(dependency.getName().toString());
-            if (controller == null) {
-                b.append(" (missing)\n");
-            } else {
-                synchronized (controller) {
-                    b.append(" - State: ").append(controller.state.getState()).append(" (Substate: ").append(controller.state).append(")\n");
-                }
-            }
-        }
-        return b.toString();
     }
 
     void addMonitor(final StabilityMonitor monitor) {

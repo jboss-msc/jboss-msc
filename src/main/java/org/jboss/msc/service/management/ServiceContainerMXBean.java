@@ -22,86 +22,352 @@
 
 package org.jboss.msc.service.management;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * The service container management bean interface.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public interface ServiceContainerMXBean {
 
     /**
-     * Get the status of one service.
+     * Gets all registered values.
      *
-     * @param name the service name
-     * @return the status
+     * @return all registered values
      */
-    ServiceStatus getServiceStatus(String name);
+    Set<String> queryValues();
 
     /**
-     * Get a list of service names in this container.
-     *
-     * @return the list of names
+     * Dumps all registered values to system console.
+     * The output has no particular standard format and may change over time.
      */
-    List<String> queryServiceNames();
+    void dumpValues();
 
     /**
-     * Get a list of service statuses in this container.
+     * Dumps all registered values to string.
+     * The output has no particular standard format and may change over time.
      *
-     * @return the list of statuses
+     * @return all registered values as string
      */
-    List<ServiceStatus> queryServiceStatuses();
+    String dumpValuesToString();
 
     /**
-     * Change the mode of a service.
+     * Gets all registered service ids.
      *
-     * @param name the service name
-     * @param mode the new mode
+     * @return all registered service ids
      */
-    void setServiceMode(String name, String mode);
+    Set<String> queryServiceIds();
 
     /**
-     * Dump the container state to the console.
+     * Dumps all registered service ids to system console.
+     * The output has no particular standard format and may change over time.
+     */
+    void dumpServiceIds();
+
+    /**
+     * Dumps all registered service ids to string.
+     * The output has no particular standard format and may change over time.
+     *
+     * @return all registered service ids as string
+     */
+    String dumpServiceIdsToString();
+
+    /**
+     * Gets the statuses of all registered services.
+     *
+     * @return the statuses of all registered services
+     */
+    Set<ServiceStatus> queryServices();
+
+    /**
+     * Dumps the statuses of all registered services to system console.
+     * The output has no particular standard format and may change over time.
      */
     void dumpServices();
 
     /**
-     * Dump the container state to a big string.  The string has no particular standard format and may
-     * change over time; this method is simply a convenience.
+     * Dumps the statuses of all registered services to string.
+     * The output has no particular standard format and may change over time.
      *
-     * @return the container state, as a string
+     * @return the statuses of all registered services as string
      */
     String dumpServicesToString();
 
     /**
-     * Dump the container state to a string suitable for rendering in GraphViz or compatible tools.
+     * Gets the services that require the given value.
      *
-     * @return the container state graph
+     * @param value the name of the value
+     * @return the services that require the given value
      */
-    String dumpServicesToGraphDescription();
+    Set<ServiceStatus> queryServicesRequiringValue(String value);
 
     /**
-     * Dump all details of a service.
+     * Dumps the services that require the given value to system console.
+     * The output has no particular standard format and may change over time.
      *
-     * @param serviceName the name of the service to examine
-     * @return the details, as a string
+     * @param value the name of the value
      */
-    String dumpServiceDetails(String serviceName);
+    void dumpServicesRequiringValue(String value);
 
     /**
-     * Dump the services, whose status matches the passed <code>status</code> to the console
+     * Dumps the services that require the given value to string.
+     * The output has no particular standard format and may change over time.
      *
-     * @param status The status of the services that we are interested in
+     * @param value the name of the value
+     * @return the services that require the given value as string
      */
-    void dumpServicesByStatus(String status);
+    String dumpServicesRequiringValueToString(String value);
 
     /**
-     * Dump the services, whose status matches the passed <code>status</code>, state to a big string.
-     * The string has no particular standard format and may change over time; this method is simply a convenience.
+     * Gets the service ids that require the given value.
      *
-     * @param status The status of the services that we are interested in
-     * @return Returns the string representation of the services whose status matches the passed <code>status</code>
+     * @param value the name of the value
+     * @return the service ids that require the given value
      */
-    String dumpServicesToStringByStatus(String status);
+    Set<String> queryServiceIdsRequiringValue(String value);
+
+    /**
+     * Dumps the service ids that require the given value to system console.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param value the name of the value
+     */
+    void dumpServiceIdsRequiringValue(String value);
+
+    /**
+     * Dumps the service ids that require the given value to string.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param value the name of the value
+     * @return the service ids that require the given value as string
+     */
+    String dumpServiceIdsRequiringValueToString(String value);
+
+    /**
+     * Gets the service that provides the given value.
+     *
+     * @param value the name of the value
+     * @return the service that provides the given value
+     */
+    ServiceStatus queryServiceProvidingValue(String value);
+
+    /**
+     * Dumps the service that provides the given value to system console.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param value the name of the value
+     */
+    void dumpServiceProvidingValue(String value);
+
+    /**
+     * Dumps the service that provides the given value to string.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param value the name of the value
+     * @return the service that provides the given value as string
+     */
+    String dumpServiceProvidingValueToString(String value);
+
+    /**
+     * Gets the service id that provides the given value.
+     *
+     * @param value the name of the value
+     * @return the service id that provides the given value
+     */
+    String queryServiceIdProvidingValue(String value);
+
+    /**
+     * Dumps the service id that provides the given value to system console.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param value the name of the value
+     */
+    void dumpServiceIdProvidingValue(String value);
+
+    /**
+     * Dumps the service id that provides the given value to string.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param value the name of the value
+     * @return the service id that provides the given value as string
+     */
+    String dumpServiceIdProvidingValueToString(String value);
+
+    /**
+     * Gets the services missing the given value.
+     *
+     * @param value the name of the value
+     * @return the services missing the given value
+     */
+    Set<ServiceStatus> queryServicesMissingValue(String value);
+
+    /**
+     * Dumps the services missing the given value to system console.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param value the name of the value
+     */
+    void dumpServicesMissingValue(String value);
+
+    /**
+     * Dumps the services missing the given value to string.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param value the name of the value
+     * @return the services missing the given value as string
+     */
+    String dumpServicesMissingValueToString(String value);
+
+    /**
+     * Gets the service ids missing the given value.
+     *
+     * @param value the name of the value
+     * @return the service ids missing the given value
+     */
+    Set<String> queryServiceIdsMissingValue(String value);
+
+    /**
+     * Dumps the service ids missing the given value to system console.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param value the name of the value
+     */
+    void dumpServiceIdsMissingValue(String value);
+
+    /**
+     * Dumps the service ids missing the given value to string.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param value the name of the value
+     * @return the service ids missing the given value as string
+     */
+    String dumpServiceIdsMissingValueToString(String value);
+
+    /**
+     * Gets the service with given id.
+     *
+     * @param id the service runtime identification
+     * @return the service with given id
+     */
+    ServiceStatus queryServiceById(String id);
+
+    /**
+     * Dumps the service with given id to system console.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param id the service runtime identification
+     */
+    void dumpServiceById(String id);
+
+    /**
+     * Dumps the service with given id to string.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param id the service runtime identification
+     * @return the service with given id as string
+     */
+    String dumpServiceByIdToString(String id);
+
+    /**
+     * Gets the services in given state.
+     *
+     * @param state the name of the state
+     * @return the services in given state
+     */
+    Set<ServiceStatus> queryServicesByState(String state);
+
+    /**
+     * Dumps the services in given state to system console.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param state the name of the state
+     */
+    void dumpServicesByState(String state);
+
+    /**
+     * Dumps the services in given state to string.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param state the name of the state
+     * @return the services in given state as string
+     */
+    String dumpServicesByStateToString(String state);
+
+    /**
+     * Gets the service ids in given state.
+     *
+     * @param state the name of the state
+     * @return the service ids in given state
+     */
+    Set<String> queryServiceIdsByState(String state);
+
+    /**
+     * Dumps the service ids in given state to system console.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param state the name of the state
+     */
+    void dumpServiceIdsByState(String state);
+
+    /**
+     * Dumps the service ids in given state to string.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param state the name of the state
+     * @return the service ids in given state as string
+     */
+    String dumpServiceIdsByStateToString(String state);
+
+    /**
+     * Gets the services in given mode.
+     *
+     * @param mode the name of the mode
+     * @return the services in given mode
+     */
+    Set<ServiceStatus> queryServicesByMode(String mode);
+
+    /**
+     * Dumps the services in given mode to system console.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param mode the name of the mode
+     */
+    void dumpServicesByMode(String mode);
+
+    /**
+     * Dumps the services in given mode to string.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param mode the name of the mode
+     * @return the services in given mode as string
+     */
+    String dumpServicesByModeToString(String mode);
+
+    /**
+     * Gets the service ids in given mode.
+     *
+     * @param mode the name of the mode
+     * @return the service ids in given mode
+     */
+    Set<String> queryServiceIdsByMode(String mode);
+
+    /**
+     * Dumps the service ids in given mode to system console.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param mode the name of the mode
+     */
+    void dumpServiceIdsByMode(String mode);
+
+    /**
+     * Dumps the service ids in given mode to string.
+     * The output has no particular standard format and may change over time.
+     *
+     * @param mode the name of the mode
+     * @return the service ids in given mode as string
+     */
+    String dumpServiceIdsByModeToString(String mode);
+
 }
