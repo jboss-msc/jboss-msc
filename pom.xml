@@ -53,7 +53,7 @@
         <version.org.jacoco>0.8.12</version.org.jacoco>
         <!-- Dependency Settings -->
         <version.jboss-logging>3.6.1.Final</version.jboss-logging>
-        <version.jboss-logging-processor>3.0.3.Final</version.jboss-logging-processor>
+        <version.jboss-logging-processor>3.0.4.Final</version.jboss-logging-processor>
         <version.jboss-logmanager>3.1.2.Final</version.jboss-logmanager>
         <version.jboss-threads>3.6.1.Final</version.jboss-threads>
         <version.junit>4.13.2</version.junit>
