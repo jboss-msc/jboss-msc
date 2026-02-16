@@ -50,7 +50,7 @@
         <jdk.min.version>11</jdk.min.version>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        <version.org.jacoco>0.8.12</version.org.jacoco>
+        <version.org.jacoco>0.8.13</version.org.jacoco>
         <!-- Dependency Settings -->
         <version.jboss-logging>3.6.1.Final</version.jboss-logging>
         <version.jboss-logging-processor>3.0.3.Final</version.jboss-logging-processor>
