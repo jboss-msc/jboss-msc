@@ -22,17 +22,17 @@
 
 package org.jboss.msc;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.jboss.msc.service.CircularDependencyException;
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceName;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.function.Consumer;
 
@@ -68,7 +68,7 @@ public class DependencyCycleTestCase extends AbstractServiceTest {
     private final ServiceName serviceWName = ServiceName.of("W");
     TestLifecycleListener testListener;
 
-    @Before
+    @BeforeEach
     public void initializeTestListener() {
         testListener = new TestLifecycleListener();
         serviceContainer.addListener(testListener);

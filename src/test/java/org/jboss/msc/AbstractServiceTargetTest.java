@@ -22,9 +22,9 @@
 
 package org.jboss.msc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.function.Consumer;
 
@@ -32,8 +32,8 @@ import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceTarget;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test for {@code ServiceTarget} implementations. 
@@ -48,7 +48,7 @@ public abstract class AbstractServiceTargetTest extends AbstractServiceTest {
     protected static final ServiceName extraServiceName = ServiceName.of("service", "extra", "name");
     protected ServiceTarget serviceTarget;
 
-    @Before
+    @BeforeEach
     public void initializeServiceTarget() throws Exception {
         serviceTarget = getServiceTarget(serviceContainer);
     }

@@ -23,7 +23,9 @@
 package org.jboss.msc;
 
 import org.jboss.msc.service.*;
-import org.junit.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import javax.management.*;
 import java.lang.management.ManagementFactory;
@@ -31,7 +33,7 @@ import java.util.Hashtable;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * [MSC-245] Test that verifies fix of container registry memory leak.
@@ -53,12 +55,12 @@ public class MSC245TestCase {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void init() throws Exception {
         container = ServiceContainer.Factory.create(CONTAINER_NAME);
     }
 
-    @AfterClass
+    @AfterAll
     public static void destroy() throws Exception {
         container.shutdown();
         container.awaitTermination();
