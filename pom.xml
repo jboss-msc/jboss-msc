@@ -56,7 +56,7 @@
         <version.jboss-logging-processor>3.0.3.Final</version.jboss-logging-processor>
         <version.jboss-logmanager>3.1.2.Final</version.jboss-logmanager>
         <version.jboss-threads>3.6.1.Final</version.jboss-threads>
-        <version.junit>4.13.2</version.junit>
+        <version.junit>5.14.3</version.junit>
     </properties>
 
     <dependencies>
@@ -87,10 +87,10 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>${version.junit}</version>
-            <scope>test</scope>
+           <groupId>org.junit.jupiter</groupId>
+           <artifactId>junit-jupiter-api</artifactId>
+           <version>${version.junit}</version>
+           <scope>test</scope>
         </dependency>
     </dependencies>
 
