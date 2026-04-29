@@ -24,8 +24,8 @@ package org.jboss.msc;
 
 import org.jboss.msc.service.*;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.function.Consumer;
 
@@ -52,7 +52,7 @@ public class InstallDoesNotClearContextClassLoaderTestCase extends AbstractServi
             sb.setInstance(Service.newInstance(providedValue, sn.toString()));
             sb.install();
 
-            Assert.assertEquals(classLoader, Thread.currentThread().getContextClassLoader());
+            Assertions.assertEquals(classLoader, Thread.currentThread().getContextClassLoader());
         } finally {
             Thread.currentThread().setContextClassLoader(null);
         }
@@ -81,7 +81,7 @@ public class InstallDoesNotClearContextClassLoaderTestCase extends AbstractServi
                 public void handleEvent(ServiceController<?> controller, LifecycleEvent event) {
                 }
             });
-            Assert.assertEquals(classLoader, Thread.currentThread().getContextClassLoader());
+            Assertions.assertEquals(classLoader, Thread.currentThread().getContextClassLoader());
         } finally {
             Thread.currentThread().setContextClassLoader(null);
         }

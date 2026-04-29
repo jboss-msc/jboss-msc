@@ -22,14 +22,14 @@
 
 package org.jboss.msc;
 
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.jboss.msc.service.ServiceBuilder;
 import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceName;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.function.Consumer;
 
@@ -52,7 +52,7 @@ public class DuplicateDependencyTestCase extends AbstractServiceTest {
     private static final ServiceName firstServiceAlias = ServiceName.of("first", "alias");
     private TestLifecycleListener testListener;
 
-    @Before
+    @BeforeEach
     public void setTestListener() {
         testListener = new TestLifecycleListener();
     }

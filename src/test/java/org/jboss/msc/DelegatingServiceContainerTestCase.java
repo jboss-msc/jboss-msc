@@ -22,14 +22,14 @@
 
 package org.jboss.msc;
 
-import static junit.framework.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.jboss.msc.service.DelegatingServiceContainer;
 import org.jboss.msc.service.ServiceContainer;
 import org.jboss.msc.service.ServiceRegistry;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Runs all tests in {@link AbstractServiceRegistryTest} against {@link DelegatingServiceContainer}.

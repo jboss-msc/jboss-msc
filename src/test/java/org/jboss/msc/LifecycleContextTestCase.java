@@ -22,12 +22,12 @@
 
 package org.jboss.msc;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertNotNull;
-import static junit.framework.Assert.assertNull;
-import static junit.framework.Assert.assertTrue;
-import static junit.framework.Assert.fail;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -42,8 +42,8 @@ import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
 import org.jboss.msc.service.ServiceController.Mode;
 import org.jboss.msc.service.ServiceController.State;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test for {@link LifecycleContext} implementations.
@@ -55,7 +55,7 @@ public class LifecycleContextTestCase extends AbstractServiceTest{
     private static final ServiceName serviceName = ServiceName.of("context", "service");
     private static final TestLifecycleListener testListener = new TestLifecycleListener();
 
-    @Before
+    @BeforeEach
     public void beforeTest() {
         serviceContainer.addListener(testListener);
     }
@@ -318,7 +318,7 @@ public class LifecycleContextTestCase extends AbstractServiceTest{
         }
 
         public void assertNoError() {
-            assertNull("Unexpected throwable " + runError, runError);
+            assertNull(runError, "Unexpected throwable " + runError);
         }
     }
 
@@ -352,7 +352,7 @@ public class LifecycleContextTestCase extends AbstractServiceTest{
         }
 
         public void assertNoError() {
-            assertNull("Unexpected throwable " + runError, runError);
+            assertNull(runError, "Unexpected throwable " + runError);
         }
     }
 

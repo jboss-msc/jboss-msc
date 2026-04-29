@@ -22,8 +22,8 @@
 
 package org.jboss.msc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.jboss.msc.inject.Injector;
 import org.jboss.msc.service.LifecycleEvent;
@@ -41,7 +41,7 @@ import org.jboss.msc.value.InjectedValue;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * <a href="mailto:ropalka@redhat.com">Richard Opalka</a>

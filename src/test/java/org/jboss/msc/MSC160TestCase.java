@@ -23,12 +23,12 @@
 package org.jboss.msc;
 
 import org.jboss.msc.service.*;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * [MSC-160] Ensuring StartContext lifecycle method invariants.
@@ -45,7 +45,7 @@ public class MSC160TestCase extends AbstractServiceTest {
         final CompleteAfterFailedService cafService = new CompleteAfterFailedService(latch, providedValue);
         sb.setInstance(cafService).install();
         latch.await();
-        assertNotNull("IllegalStateException expected", cafService.e);
+        assertNotNull(cafService.e, "IllegalStateException expected");
     }
 
     @Test
@@ -56,7 +56,7 @@ public class MSC160TestCase extends AbstractServiceTest {
         final FailedAfterCompleteService facService = new FailedAfterCompleteService(latch, providedValue);
         sb.setInstance(facService).install();
         latch.await();
-        assertNotNull("IllegalStateException expected", facService.e);
+        assertNotNull(facService.e, "IllegalStateException expected");
     }
 
     private static final class FailedAfterCompleteService implements Service {

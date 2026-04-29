@@ -23,11 +23,11 @@
 package org.jboss.msc;
 
 import org.jboss.msc.service.*;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.function.Consumer;
 
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * [MSC-164] Ensuring dependents counter invariant.
