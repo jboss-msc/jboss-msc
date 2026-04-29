@@ -23,12 +23,12 @@
 package org.jboss.msc;
 
 import static java.lang.Integer.signum;
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertFalse;
-import static junit.framework.Assert.assertNull;
-import static junit.framework.Assert.assertTrue;
-import static junit.framework.Assert.fail;
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 import org.jboss.msc.service.ServiceName;
 
@@ -37,7 +37,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test for {@link ServiceName}.
@@ -49,30 +49,30 @@ public final class ServiceNameTestCase {
     @Test
     public void testIdentityCollation() {
         final ServiceName name1 = ServiceName.of("one", "two", "three");
-        assertEquals("compareTo identity equality", 0, name1.compareTo(name1));
-        assertEquals("compareTo identity equality plus non-identity component", 0, name1.append("xxx").compareTo(name1.append("xxx")));
+        assertEquals(0, name1.compareTo(name1), "compareTo identity equality");
+        assertEquals(0, name1.append("xxx").compareTo(name1.append("xxx")), "compareTo identity equality plus non-identity component");
     }
 
     @Test
     public void testEvenLengthCollation() {
-        assertEquals("compareTo 1-level equality", 0, signum(ServiceName.of("aaaa").compareTo(ServiceName.of("aaaa"))));
-        assertEquals("compareTo 2-level equality", 0, signum(ServiceName.of("aaaa", "bbbb").compareTo(ServiceName.of("aaaa", "bbbb"))));
-        assertEquals("compareTo 1-level less-than", -1, signum(ServiceName.of("@@@@").compareTo(ServiceName.of("aaaa"))));
-        assertEquals("compareTo 1-level greater-than", 1, signum(ServiceName.of("aaaa").compareTo(ServiceName.of("@@@@"))));
-        assertEquals("compareTo 2-level less-than (1)", -1, signum(ServiceName.of("xxxx", "@@@@").compareTo(ServiceName.of("xxxx", "aaaa"))));
-        assertEquals("compareTo 2-level less-than (2)", -1, signum(ServiceName.of("aaaa", "zzzz").compareTo(ServiceName.of("xxxx", "aaaa"))));
-        assertEquals("compareTo 2-level greater-than (1)", 1, signum(ServiceName.of("xxxx", "aaaa").compareTo(ServiceName.of("xxxx", "@@@@"))));
-        assertEquals("compareTo 2-level greater-than (2)", 1, signum(ServiceName.of("xxxx", "aaaa").compareTo(ServiceName.of("aaaa", "zzzz"))));
+        assertEquals(0, signum(ServiceName.of("aaaa").compareTo(ServiceName.of("aaaa"))), "compareTo 1-level equality");
+        assertEquals(0, signum(ServiceName.of("aaaa", "bbbb").compareTo(ServiceName.of("aaaa", "bbbb"))), "compareTo 2-level equality");
+        assertEquals(-1, signum(ServiceName.of("@@@@").compareTo(ServiceName.of("aaaa"))), "compareTo 1-level less-than");
+        assertEquals(1, signum(ServiceName.of("aaaa").compareTo(ServiceName.of("@@@@"))), "compareTo 1-level greater-than");
+        assertEquals(-1, signum(ServiceName.of("xxxx", "@@@@").compareTo(ServiceName.of("xxxx", "aaaa"))), "compareTo 2-level less-than (1)");
+        assertEquals(-1, signum(ServiceName.of("aaaa", "zzzz").compareTo(ServiceName.of("xxxx", "aaaa"))), "compareTo 2-level less-than (2)");
+        assertEquals(1, signum(ServiceName.of("xxxx", "aaaa").compareTo(ServiceName.of("xxxx", "@@@@"))), "compareTo 2-level greater-than (1)");
+        assertEquals(1, signum(ServiceName.of("xxxx", "aaaa").compareTo(ServiceName.of("aaaa", "zzzz"))), "compareTo 2-level greater-than (2)");
     }
 
     @Test
     public void testUnevenLengthCollation() {
-        assertEquals("compareTo uneven less-than (1)", -1, signum(ServiceName.of("aaaa").compareTo(ServiceName.of("aaaa", "bbbb"))));
-        assertEquals("compareTo uneven less-than (2)", -1, signum(ServiceName.of("aaaa").compareTo(ServiceName.of("aaab", "bbbb"))));
-        assertEquals("compareTo uneven less-than (3)", -1, signum(ServiceName.of("aaaa", "cccc", "xxxx").compareTo(ServiceName.of("aaab", "bbbb"))));
-        assertEquals("compareTo uneven greater-than (1)", 1, signum(ServiceName.of("aaaa", "bbbb").compareTo(ServiceName.of("aaaa"))));
-        assertEquals("compareTo uneven greater-than (2)", 1, signum(ServiceName.of("aaab", "bbbb").compareTo(ServiceName.of("aaaa"))));
-        assertEquals("compareTo uneven greater-than (3)", 1, signum(ServiceName.of("aaab", "bbbb").compareTo(ServiceName.of("aaaa", "cccc", "xxxx"))));
+        assertEquals(-1, signum(ServiceName.of("aaaa").compareTo(ServiceName.of("aaaa", "bbbb"))), "compareTo uneven less-than (1)");
+        assertEquals(-1, signum(ServiceName.of("aaaa").compareTo(ServiceName.of("aaab", "bbbb"))), "compareTo uneven less-than (2)");
+        assertEquals(-1, signum(ServiceName.of("aaaa", "cccc", "xxxx").compareTo(ServiceName.of("aaab", "bbbb"))), "compareTo uneven less-than (3)");
+        assertEquals(1, signum(ServiceName.of("aaaa", "bbbb").compareTo(ServiceName.of("aaaa"))), "compareTo uneven greater-than (1)");
+        assertEquals(1, signum(ServiceName.of("aaab", "bbbb").compareTo(ServiceName.of("aaaa"))), "compareTo uneven greater-than (2)");
+        assertEquals(1, signum(ServiceName.of("aaab", "bbbb").compareTo(ServiceName.of("aaaa", "cccc", "xxxx"))), "compareTo uneven greater-than (3)");
     }
 
     @Test
@@ -88,18 +88,18 @@ public final class ServiceNameTestCase {
 
     @Test
     public void testCanonicalization() {
-        assertEquals("OSGi regression case 1", ServiceName.JBOSS.append("osgi", "framework"), ServiceName.parse("jboss.osgi.framework"));
-        assertEquals("OSGi regression case 1 (hash code)", ServiceName.JBOSS.append("osgi", "framework").hashCode(), ServiceName.parse("jboss.osgi.framework").hashCode());
-        assertEquals("OSGi regression case 2", ServiceName.JBOSS.append("osgi").append("framework"), ServiceName.parse("jboss.osgi.framework"));
-        assertEquals("OSGi regression case 2 (hash code)", ServiceName.JBOSS.append("osgi").append("framework").hashCode(), ServiceName.parse("jboss.osgi.framework").hashCode());
-        assertEquals("simple canonical (string side)", "a.b.c", ServiceName.parse("a.b.c").getCanonicalName());
-        assertEquals("simple canonical", ServiceName.of("a", "b", "c"), ServiceName.parse("a.b.c"));
-        assertEquals("complex canonical (string side)", "a.\"\\r\\n\".b", ServiceName.parse("\"a\".\"\\r\\n\".b").getCanonicalName());
-        assertEquals("complex canonical (string side)", ServiceName.of("\t\b\f", "\'", "abab", "end"), ServiceName.parse("\"\\t\\b\\f\".\"\\\'\".abab.end"));
-        assertEquals("complex canonical (string side)", "\"\\t\\b\\f\".\'.abab.end", ServiceName.parse("\"\\t\\b\\f\".\"\\\'\".abab.end").getCanonicalName());
-        assertEquals("complex canonical", ServiceName.of("a", "\r\n", "b"), ServiceName.parse("\"a\".\"\\r\\n\".b"));
-        assertEquals("regression 1a", ServiceName.of("jboss", "managedbean-example.jar", "Bean"), ServiceName.parse("jboss.\"managedbean-example.jar\".Bean"));
-        assertEquals("regression 1b", "jboss.\"managedbean-example.jar\".Bean", ServiceName.of("jboss", "managedbean-example.jar", "Bean").getCanonicalName());
+        assertEquals(ServiceName.JBOSS.append("osgi", "framework"), ServiceName.parse("jboss.osgi.framework"), "OSGi regression case 1");
+        assertEquals(ServiceName.JBOSS.append("osgi", "framework").hashCode(), ServiceName.parse("jboss.osgi.framework").hashCode(), "OSGi regression case 1 (hash code)");
+        assertEquals(ServiceName.JBOSS.append("osgi").append("framework"), ServiceName.parse("jboss.osgi.framework"), "OSGi regression case 2");
+        assertEquals(ServiceName.JBOSS.append("osgi").append("framework").hashCode(), ServiceName.parse("jboss.osgi.framework").hashCode(), "OSGi regression case 2 (hash code)");
+        assertEquals("a.b.c", ServiceName.parse("a.b.c").getCanonicalName(), "simple canonical (string side)");
+        assertEquals(ServiceName.of("a", "b", "c"), ServiceName.parse("a.b.c"), "simple canonical");
+        assertEquals("a.\"\\r\\n\".b", ServiceName.parse("\"a\".\"\\r\\n\".b").getCanonicalName(), "complex canonical (string side)");
+        assertEquals(ServiceName.of("\t\b\f", "\'", "abab", "end"), ServiceName.parse("\"\\t\\b\\f\".\"\\\'\".abab.end"), "complex canonical (string side)");
+        assertEquals("\"\\t\\b\\f\".\'.abab.end", ServiceName.parse("\"\\t\\b\\f\".\"\\\'\".abab.end").getCanonicalName(), "complex canonical (string side)");
+        assertEquals(ServiceName.of("a", "\r\n", "b"), ServiceName.parse("\"a\".\"\\r\\n\".b"), "complex canonical");
+        assertEquals(ServiceName.of("jboss", "managedbean-example.jar", "Bean"), ServiceName.parse("jboss.\"managedbean-example.jar\".Bean"), "regression 1a");
+        assertEquals("jboss.\"managedbean-example.jar\".Bean", ServiceName.of("jboss", "managedbean-example.jar", "Bean").getCanonicalName(), "regression 1b");
         try {
             ServiceName.parse(" foo");
             fail("Expected exception: whitespace in simple name");
@@ -167,7 +167,7 @@ public final class ServiceNameTestCase {
     public void testInvalidServiceName() {
         // this untrusted service name can be created with of, because of performance issues
         // check that the canonicalName can be retrieved
-        assertEquals("complex canonical with ISO", "\"\\u0003 \\t\\b\\f\\0\".\"\\\"\\\"\\\\\'abab\\\\\'\".end", ServiceName.of("\u0003 \t\b\f\0", "\"\"\\'abab\\'", "end").getCanonicalName());
+        assertEquals("\"\\u0003 \\t\\b\\f\\0\".\"\\\"\\\"\\\\\'abab\\\\\'\".end", ServiceName.of("\u0003 \t\b\f\0", "\"\"\\'abab\\'", "end").getCanonicalName(), "complex canonical with ISO");
         try {
             // parse doesnt accept untrusted service names
             ServiceName.parse("\u0003 \t\b\f\0.\"\"\\'abab\\'.end");

@@ -22,8 +22,8 @@
 
 package org.jboss.msc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.function.Consumer;
 
@@ -36,7 +36,7 @@ import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.StartContext;
 import org.jboss.msc.service.StartException;
 import org.jboss.msc.service.StopContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test to verify ServiceController behavior.

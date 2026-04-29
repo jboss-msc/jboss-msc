@@ -25,22 +25,22 @@ package org.jboss.msc;
 import org.jboss.msc.service.ServiceContainer;
 import java.util.logging.Logger;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 abstract class AbstractServiceTest {
 
     protected volatile ServiceContainer serviceContainer;
     private volatile boolean shutdownOnTearDown;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         Logger.getLogger("").fine("Setting up test " + getClass());
         serviceContainer = ServiceContainer.Factory.create();
         shutdownOnTearDown = true;
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         Logger.getLogger("").fine("Tearing down test " + getClass());
         if (shutdownOnTearDown) {

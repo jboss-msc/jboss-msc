@@ -22,9 +22,9 @@
 
 package org.jboss.msc;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.jboss.msc.service.LifecycleEvent;
 import org.jboss.msc.service.LifecycleListener;
@@ -37,7 +37,7 @@ import java.util.function.Consumer;
 import java.util.concurrent.CountDownLatch;
 import java.util.ConcurrentModificationException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * <a href="mailto:ropalka@redhat.com">Richard Opalka</a>

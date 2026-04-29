@@ -22,12 +22,14 @@
 
 package org.jboss.msc;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.ArrayList;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -37,8 +39,8 @@ import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceName;
 import org.jboss.msc.service.ServiceContainer.TerminateListener;
 import org.jboss.msc.service.ServiceController.State;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Verifies the server shutdown process and related features such as {@link TerminateListener} notification, and 
@@ -51,7 +53,7 @@ public class ContainerShutdownTestCase extends AbstractServiceTest{
 
     private TestLifecycleListener testListener;
 
-    @Before
+    @BeforeEach
     public void initTestServiceListener() {
         testListener = new TestLifecycleListener();
     }
@@ -281,12 +283,12 @@ public class ContainerShutdownTestCase extends AbstractServiceTest{
     }
 
     private static final void assertTerminateListenerInfo(TerminateListener.Info terminateInfo) {
-        assertNotNull("TerminateInfo is null", terminateInfo);
+        assertNotNull(terminateInfo, "TerminateInfo is null");
         final long initiated = terminateInfo.getShutdownInitiated();
         final long completed = terminateInfo.getShutdownCompleted();
-        assertTrue("TerminateInto.shutdownInitiated is not positive long: " + initiated, initiated > 0);
-        assertTrue("TerminateInto.shutdownCompleted is not positive long: " + completed, completed > 0);
-        assertTrue("Elapsed shtudown time is not a positive long", completed - initiated > 0);
+        assertTrue(initiated > 0, "TerminateInto.shutdownInitiated is not positive long: " + initiated);
+        assertTrue(completed > 0, "TerminateInto.shutdownCompleted is not positive long: " + completed);
+        assertTrue(completed - initiated > 0, "Elapsed shtudown time is not a positive long");
     }
 
     private static class TerminationAwait implements Runnable {
